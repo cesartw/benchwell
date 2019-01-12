@@ -1,66 +1,160 @@
 package server
 
 import (
+	"regexp"
+	"strings"
+
+	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
 )
 
+type searchField struct {
+	*tview.InputField
+	list *list
+}
+
+type list struct {
+	*tview.List
+	searchField *searchField
+
+	source []string
+}
+
 // TableList ...
 type TableList struct {
-	*tview.List
+	*tview.Flex
+	list        *list
+	searchField *searchField
 
 	OnSelectTable func(string)
 }
 
 // NewTableList ...
 func NewTableList() *TableList {
-	list := &TableList{}
-	list.List = tview.NewList()
-	list.ShowSecondaryText(false)
+	list := &TableList{
+		Flex:        tview.NewFlex(),
+		list:        &list{List: tview.NewList()},
+		searchField: &searchField{InputField: tview.NewInputField()},
+	}
 
-	list.SetTitle("Tables")
-	list.SetTitleAlign(tview.AlignLeft)
-	list.SetBorder(true)
+	list.searchField.list = list.list
+	list.list.searchField = list.searchField
+
+	list.searchField.SetBorder(false)
+
+	list.list.ShowSecondaryText(false)
+	list.list.SetTitleAlign(tview.AlignLeft)
+	list.list.SetBorder(false)
+
+	list.Flex.SetBorder(true)
+	list.Flex.SetTitle("Tables")
+	list.Flex.SetDirection(tview.FlexRow)
+	list.Flex.AddItem(list.searchField, 1, 1, true)
+	list.Flex.AddItem(list.list, 0, 1, false)
+	list.Flex.SetBackgroundColor(tview.Styles.PrimitiveBackgroundColor)
+
+	list.searchField.SetChangedFunc(func(txt string) {
+		list.Filter(txt)
+	})
 
 	return list
 }
 
-// Selected
-//func (t *TableList) SelectedTable(table *tview.Table) func() {
-//return func() {
-//tl.GetItemText(tl.GetCurrentItem())
-//lorem := strings.Split("Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.", " ")
-//cols, rows := 10, 40
-//word := 0
-//for r := 0; r < rows; r++ {
-//for c := 0; c < cols; c++ {
-//color := tcell.ColorWhite
-//if c < 1 || r < 1 {
-//color = tcell.ColorYellow
-//}
-//table.SetCell(r, c,
-//tview.NewTableCell(lorem[word]).
-//SetTextColor(color).
-//SetAlign(tview.AlignCenter))
-//word = (word + 1) % len(lorem)
-//}
-//}
-//}
-//}
-
 // SetTables ...
 func (t *TableList) SetTables(tables []string) {
-	t.Clear()
+	t.list.source = tables
+
+	t.list.Clear()
 	for _, table := range tables {
-		t.AddItem(table, "", 0, func() {
-			tableName, _ := t.GetItemText(t.GetCurrentItem())
+		t.list.AddItem(table, "", 0, func() {
+			tableName, _ := t.list.GetItemText(t.list.GetCurrentItem())
 			t.onSelectTable(tableName)
 		})
 	}
-	t.SetCurrentItem(-1)
+	t.list.SetCurrentItem(-1)
 }
 
 func (t *TableList) onSelectTable(table string) {
 	if t.OnSelectTable != nil {
 		t.OnSelectTable(table)
 	}
+}
+
+type matchString func(string) bool
+
+func (f matchString) MatchString(txt string) bool {
+	return f(txt)
+}
+
+// Filter ...
+func (t *TableList) Filter(txt string) {
+	type matcher interface {
+		MatchString(string) bool
+	}
+
+	var compare matcher = matchString(func(s string) bool { return strings.Contains(s, txt) })
+
+	reg, err := regexp.Compile(txt)
+	if err == nil {
+		compare = matchString(reg.MatchString)
+	}
+
+	t.list.Clear()
+	for _, item := range t.list.source {
+		if compare.MatchString(item) {
+			t.list.AddItem(item, "", 0, func() {
+				tableName, _ := t.list.GetItemText(t.list.GetCurrentItem())
+				t.onSelectTable(tableName)
+			})
+		}
+	}
+}
+
+func (s *searchField) InputHandler() func(*tcell.EventKey, func(tview.Primitive)) {
+	return s.WrapInputHandler(func(e *tcell.EventKey, setFocus func(tview.Primitive)) {
+		switch key := e.Key(); key {
+		case tcell.KeyDown:
+			s.list.SetCurrentItem(0)
+			s.Blur()
+			setFocus(s.list)
+			return
+		case tcell.KeyUp:
+			s.list.SetCurrentItem(s.list.GetItemCount() - 1)
+			s.Blur()
+			setFocus(s.list)
+			return
+		case tcell.KeyEnter, tcell.KeyEsc, tcell.KeyTab:
+			s.list.SetCurrentItem(0)
+			s.Blur()
+			setFocus(s.list)
+			return
+		}
+
+		s.InputField.InputHandler()(e, setFocus)
+	})
+}
+
+func (l *list) InputHandler() func(*tcell.EventKey, func(tview.Primitive)) {
+	return l.WrapInputHandler(func(e *tcell.EventKey, setFocus func(tview.Primitive)) {
+		switch key := e.Key(); key {
+		case tcell.KeyDown:
+			if l.GetCurrentItem() == l.GetItemCount()-1 {
+				l.Blur()
+				setFocus(l.searchField)
+				return
+			}
+		case tcell.KeyUp:
+			if l.GetCurrentItem() == 0 {
+				l.Blur()
+				setFocus(l.searchField)
+				return
+			}
+		case tcell.KeyCtrlS:
+			l.Blur()
+			setFocus(l.searchField)
+			return
+		}
+
+		l.List.InputHandler()(e, setFocus)
+	})
 }

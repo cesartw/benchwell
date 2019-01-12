@@ -2,7 +2,7 @@ package logger
 
 import (
 	"fmt"
-	"os"
+	"io"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -53,15 +53,10 @@ func (f *logformatter) Format(entry *logrus.Entry) ([]byte, error) {
 }
 
 // NewLogger ...
-func NewLogger() Logger {
-	f, err := os.OpenFile("debug.log", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
-	if err != nil {
-		panic(err)
-	}
-
+func NewLogger(out io.Writer) Logger {
 	l := logrus.New()
 	l.SetLevel(logrus.DebugLevel)
-	l.SetOutput(f)
+	l.SetOutput(out)
 	l.SetFormatter(&logformatter{})
 	l.Info("Starting")
 

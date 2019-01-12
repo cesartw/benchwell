@@ -50,7 +50,7 @@ func NewForm() *Form {
 			cf.connection.Name = txt
 		}).
 		AddInputField("Host", "", 20, nil, func(txt string) {
-			cf.connection.Name = txt
+			cf.connection.Host = txt
 		}).
 		AddInputField("Username", "", 20, nil, func(txt string) {
 			cf.connection.Username = txt
