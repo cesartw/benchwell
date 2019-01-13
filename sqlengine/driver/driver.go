@@ -76,7 +76,7 @@ type Database interface {
 	FetchTable(tableName string, page, pageSize int64) ([]ColDef, [][]*string, error)
 	DeleteRecord(tableName string, defs []ColDef, values []*string) error
 	UpdateRecord(tableName string, cols []ColDef, values, oldValues []*string) (string, error)
-	InsertRecord(tableName string, cols []ColDef, values []*string) (string, error)
+	InsertRecord(tableName string, cols []ColDef, values []*string) ([]*string, error)
 	// Query(string, interface{}) ([]string,[]string,error)
 	// Execute(string, interface{}) (in,error)
 	Name() string

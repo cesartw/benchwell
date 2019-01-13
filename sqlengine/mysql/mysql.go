@@ -281,9 +281,9 @@ func (d *mysqlDb) InsertRecord(
 	tableName string,
 	cols []driver.ColDef,
 	values []*string,
-) (string, error) {
+) ([]*string, error) {
 	if len(cols) != len(values) {
-		return "", errors.New("columns and values count doesn't match")
+		return nil, errors.New("columns and values count doesn't match")
 	}
 
 	collist := make([]string, len(cols))
@@ -304,13 +304,75 @@ VALUES (%s)`
 
 	result, err := d.db.Exec(query, args...)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	id, err := result.LastInsertId()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return fmt.Sprintf("%d", id), nil
+	return d.fetchRecord(tableName, cols, id)
+}
+
+func (d *mysqlDb) fetchRecord(
+	tableName string,
+	cols []driver.ColDef,
+	id int64,
+) (
+	[]*string,
+	error,
+) {
+	var pk *driver.ColDef
+	for _, def := range cols {
+		if def.PK {
+			pk = &def
+			break
+		}
+	}
+	if pk == nil {
+		return nil, errors.New("table doesn't have a primary key")
+	}
+
+	query :=
+		`
+SELECT *
+FROM %s
+WHERE %s = ?`
+
+	query = fmt.Sprintf(query, tableName, pk.Name)
+
+	sqlRows, err := d.db.Query(query, id)
+	if err != nil {
+		return nil, err
+	}
+
+	defer sqlRows.Close()
+
+	columns, err := sqlRows.Columns()
+	if err != nil {
+		return nil, err
+	}
+
+	rows := make([][]*string, 0)
+
+	for sqlRows.Next() {
+		row := make([]*string, len(columns))
+		irow := make([]interface{}, len(columns))
+
+		for ci := range columns {
+			irow[ci] = &row[ci]
+		}
+
+		if err := sqlRows.Scan(irow...); err != nil {
+			return nil, err
+		}
+
+		rows = append(rows, row)
+	}
+	if err := sqlRows.Err(); err != nil {
+		return nil, err
+	}
+
+	return rows[0], err
 }

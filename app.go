@@ -2,6 +2,7 @@ package sqlhero
 
 import (
 	"context"
+	"time"
 
 	"bitbucket.org/goreorto/sqlhero/config"
 	"bitbucket.org/goreorto/sqlhero/connect"
@@ -96,7 +97,25 @@ func (app *App) newServerScreen() *server.Screen {
 		}
 
 		app.layout.SetStatus("Saved")
+		app.QueueUpdateDrawAfter(func() {
+			app.layout.SetStatus("")
+		}, 5*time.Second)
 		return true
+	}
+
+	screenServer.OnInsertRecord = func(tableName string, def []driver.ColDef, values []*string) []*string {
+		data, err := app.eng.InsertRecord(screenServer.Context(), tableName, def, values)
+		if err != nil {
+			app.layout.SetStatus("Error inserting record %s", err.Error())
+			return nil
+		}
+
+		app.layout.SetStatus("Inserted")
+		app.QueueUpdateDrawAfter(func() {
+			app.layout.SetStatus("")
+		}, 5*time.Second)
+
+		return data
 	}
 
 	screenServer.OnDeleteRecord = func(tableName string, def []driver.ColDef, row, oldRow []*string) bool {
@@ -135,9 +154,21 @@ func (app *App) newConnectScreen() *connect.Screen {
 		screenServer.SetDatabases(dbs)
 
 		app.layout.SetStatus("Connected")
+		app.QueueUpdateDrawAfter(func() {
+			app.layout.SetStatus("")
+		}, 5*time.Second)
 		app.layout.SetScreen(screenServer)
 		app.SetFocus(screenServer)
 	}
 
 	return screen
+}
+
+// QueueUpdateDrawAfter ...
+func (app *App) QueueUpdateDrawAfter(f func(), d time.Duration) {
+	t := time.NewTimer(d)
+	go func() {
+		<-t.C
+		app.QueueUpdateDraw(f)
+	}()
 }

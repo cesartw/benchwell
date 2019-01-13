@@ -13,13 +13,20 @@ type SidePanel struct {
 
 	OnSelectDatabase func(string)
 	OnSelectTable    func(string)
+
+	width int
 }
 
 // NewSidePanel ...
-func NewSidePanel() *SidePanel {
+func NewSidePanel(width int) *SidePanel {
+	if width == 0 {
+		width = 30
+	}
+
 	s := &SidePanel{
 		tableList:    NewTableList(),
 		databaseList: NewDatabaseList(),
+		width:        width,
 	}
 
 	s.databaseList.OnSelectDatabase = s.onSelectDatabase
@@ -59,8 +66,8 @@ func (s *SidePanel) onSelectTable(table string) {
 // SetRect ...
 func (s *SidePanel) SetRect(x, y, width, height int) {
 	s.Box.SetRect(x, y, width, height)
-	s.databaseList.SetRect(x, y, 34, height)
-	s.tableList.SetRect(x, y, 34, height)
+	s.databaseList.SetRect(x, y, s.width, height)
+	s.tableList.SetRect(x, y, s.width, height)
 }
 
 // Focus ...

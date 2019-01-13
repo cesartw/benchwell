@@ -16,6 +16,7 @@ type Screen struct {
 	OnSelectDatabase func(db string)
 	OnSelectTable    func(tableName string)
 	OnSaveRecord     func(string, []driver.ColDef, []*string, []*string) bool
+	OnInsertRecord   func(string, []driver.ColDef, []*string) []*string
 	OnDeleteRecord   func(string, []driver.ColDef, []*string, []*string) bool
 	OnReload         func(string)
 
@@ -26,12 +27,13 @@ type Screen struct {
 func New(app *tview.Application) *Screen {
 	s := &Screen{}
 
+	sidePanelWidth := 30
 	s.recordTable = NewRecordTable()
-	s.sidePanel = NewSidePanel()
+	s.sidePanel = NewSidePanel(sidePanelWidth)
 
 	s.Flex = tview.NewFlex().
 		SetDirection(tview.FlexColumn).
-		AddItem(s.sidePanel, 34, 1, false).
+		AddItem(s.sidePanel, sidePanelWidth, 1, false).
 		AddItem(s.recordTable, 0, 1, false)
 
 	s.sidePanel.OnSelectDatabase = s.onSelectDatabase
@@ -39,6 +41,7 @@ func New(app *tview.Application) *Screen {
 	s.recordTable.OnDeleteRecord = s.onDeleteRecord
 	s.recordTable.OnReload = s.onReload
 	s.recordTable.OnSaveRecord = s.onSaveRecord
+	s.recordTable.OnInsertRecord = s.onInsertRecord
 
 	return s
 }
@@ -103,6 +106,13 @@ func (s *Screen) onSaveRecord(tableName string, def []driver.ColDef, row, oldRow
 	if s.OnSaveRecord != nil {
 		s.OnSaveRecord(tableName, def, row, oldRow)
 	}
+}
+
+func (s *Screen) onInsertRecord(tableName string, def []driver.ColDef, row []*string) []*string {
+	if s.OnInsertRecord != nil {
+		return s.OnInsertRecord(tableName, def, row)
+	}
+	return nil
 }
 
 // Keybinds ...

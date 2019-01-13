@@ -174,15 +174,15 @@ func (e *Engine) InsertRecord(
 	tableName string,
 	defs []driver.ColDef,
 	values []*string,
-) (string, error) {
+) ([]*string, error) {
 	conn := e.connection(ctx)
 	if conn == nil {
-		return "", ErrNoConnection
+		return nil, ErrNoConnection
 	}
 
 	db := e.database(ctx)
 	if db == nil {
-		return "", ErrNoDatabase
+		return nil, ErrNoDatabase
 	}
 
 	return db.InsertRecord(tableName, defs, values)

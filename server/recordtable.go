@@ -21,6 +21,7 @@ type RecordTable struct {
 	workingData [][]*string
 
 	OnSaveRecord   func(string, []driver.ColDef, []*string, []*string)
+	OnInsertRecord func(string, []driver.ColDef, []*string) []*string
 	OnDeleteRecord func(string, []driver.ColDef, []*string, []*string) bool
 	OnReload       func(string)
 }
@@ -32,71 +33,9 @@ func NewRecordTable() *RecordTable {
 		Table:        tview.NewTable().SetBorders(true),
 		editingField: tview.NewInputField(),
 	}
+
 	t.editingField.SetBorder(true)
 	t.Table.SetSelectable(true, true)
-
-	/*
-		t.SetInputCapture(func(key *tcell.EventKey) *tcell.EventKey {
-			switch key.Rune() {
-			case 'e': // edit field
-				row, col := t.GetSelection()
-				if row == 0 {
-					return nil
-				}
-
-				t.ctrl.OnEditRecord(t.tableDef, t.workingData[row-1], col, func(values []string) {
-					if len(values) != len(t.tableDef) {
-						// TODO: report error
-						return
-					}
-
-					for col := range t.tableDef {
-						cell := t.GetCell(row, col)
-						cell.SetText(values[col])
-					}
-				})
-
-				return nil
-			case 's': // save record
-				row, _ := t.GetSelection()
-
-				values := make([]string, len(t.tableDef))
-				for i := 0; i < len(t.tableDef); i++ {
-					cell := t.GetCell(row, i)
-					values[i] = cell.Text
-				}
-
-				if row < len(t.workingData) {
-					t.ctrl.OnSaveRecord(t.tableDef, values, t.workingData[row-1])
-				} else {
-					t.ctrl.OnInsertRecord(t.tableDef, values)
-				}
-
-			case 'd': // delete
-				row, _ := t.GetSelection()
-				t.ctrl.OnDeleteRecord(t.tableDef, t.workingData[row-1])
-			case 'r': // reload
-				break
-			case 'S': // save all records
-			case 'a':
-				for i := range t.tableDef {
-					t.SetCell(len(t.workingData)+1, i,
-						tview.NewTableCell("").
-							SetTextColor(tcell.ColorWhite).
-							SetAlign(tview.AlignLeft))
-				}
-
-				t.Select(len(t.workingData)+1, 0)
-				return nil
-			default:
-				return key
-			}
-
-			t.ctrl.OnTableSelected(t.tableName)
-
-			return nil
-		})
-	*/
 
 	return t
 }
@@ -176,6 +115,22 @@ func (t *RecordTable) InputHandler() func(e *tcell.EventKey, setFocus func(p tvi
 		switch key {
 		case tcell.KeyRune:
 			switch e.Rune() {
+			case 'i':
+				row := t.Table.GetRowCount()
+				for col := range t.tableDef {
+					color := tcell.ColorWhite
+					if t.tableDef[col].PK {
+						color = tcell.ColorYellow
+					}
+
+					t.Table.SetCell(row, col,
+						tview.NewTableCell("").
+							SetTextColor(color).
+							SetAlign(tview.AlignLeft))
+				}
+
+				t.Table.Select(row, 0)
+				t.workingData = append(t.workingData, make([]*string, len(t.tableDef)))
 			case 'e':
 				row, col := t.Table.GetSelection()
 				if row == 0 {
@@ -183,10 +138,15 @@ func (t *RecordTable) InputHandler() func(e *tcell.EventKey, setFocus func(p tvi
 				}
 
 				value := t.workingData[row-1][col]
+				if value == nil {
+					t.workingData[row-1][col] = new(string)
+					value = t.workingData[row-1][col]
+				}
+
 				t.editingField.SetText(*value)
 				t.editingField.SetFinishedFunc(func(e tcell.Key) {
 					if e == tcell.KeyEnter {
-						*t.workingData[row-1][col] = t.editingField.GetText()
+						*(t.workingData[row-1][col]) = t.editingField.GetText()
 						t.Table.GetCell(row, col).SetText(t.editingField.GetText())
 					}
 
@@ -203,12 +163,30 @@ func (t *RecordTable) InputHandler() func(e *tcell.EventKey, setFocus func(p tvi
 					return
 				}
 
-				if t.OnSaveRecord != nil {
-					_ = t.workingData[row-1]
-					_ = t.sourceData[row-1]
-					t.OnSaveRecord(t.tableName, t.tableDef, t.workingData[row-1], t.sourceData[row-1])
+				if len(t.sourceData) < row-2 {
+					if t.OnSaveRecord != nil {
+						t.OnSaveRecord(t.tableName, t.tableDef, t.workingData[row-1], t.sourceData[row-1])
+						t.sourceData[row-1] = t.workingData[row-1]
+					}
+				} else {
+					if t.OnInsertRecord != nil {
+						data := t.OnInsertRecord(t.tableName, t.tableDef, t.workingData[row-1])
+						if data == nil {
+							return
+						}
+						t.workingData[row-1] = data
+						t.sourceData = append(t.sourceData, t.workingData[row-1])
+
+						for col, d := range data {
+							if d == nil {
+								continue
+							}
+							t.Table.GetCell(row, col).SetText(*d)
+						}
+
+					}
 				}
-				t.sourceData[row-1] = t.workingData[row-1]
+
 			case 'd':
 				row, _ := t.Table.GetSelection()
 				if row == 0 {
