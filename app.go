@@ -130,7 +130,7 @@ func (app *App) newServerScreen() *server.Screen {
 }
 
 func (app *App) newConnectScreen() *connect.Screen {
-	screen := connect.New(app.Application, app.conf)
+	screen := connect.New(app.conf)
 
 	screen.OnConnect = func(c config.Connection) {
 		app.layout.SetStatus("Connecting...")

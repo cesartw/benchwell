@@ -16,10 +16,12 @@ type Screen struct {
 	OnTest    func(config.Connection)
 	OnSave    func(*config.Connection)
 	OnConnect func(config.Connection)
+
+	focused tview.Primitive
 }
 
 // New ...
-func New(app *tview.Application, conf *config.Config) *Screen {
+func New(conf *config.Config) *Screen {
 	s := &Screen{}
 
 	// FORM
@@ -31,12 +33,14 @@ func New(app *tview.Application, conf *config.Config) *Screen {
 
 	s.list.OnSelectConnection = func(con *config.Connection) {
 		s.form.SetConnection(con)
-		app.SetFocus(s.form)
+		s.focusdelegate(s.form)
+		s.list.Blur()
 	}
 
 	s.list.OnNewConnection = func() {
 		s.form.SetConnection(nil)
-		app.SetFocus(s.form)
+		s.focusdelegate(s.form)
+		s.list.Blur()
 	}
 
 	s.list.OnDeleteConnection = func(con *config.Connection) {
@@ -108,4 +112,23 @@ func (s *Screen) Keybinds() map[tcell.Key]tview.Primitive {
 		tcell.KeyCtrlL: s.list,
 		tcell.KeyCtrlN: s.form,
 	}
+}
+
+// Focus ...
+func (s *Screen) Focus(_ func(tview.Primitive)) {
+	s.focused = s.list
+	s.list.Focus(s.focusdelegate)
+}
+
+func (s *Screen) focusdelegate(p tview.Primitive) {
+	if s.focused != nil {
+		s.focused.Blur()
+	}
+	s.focused = p
+	p.Focus(s.focusdelegate)
+}
+
+// InputHandler ...
+func (s *Screen) InputHandler() func(*tcell.EventKey, func(tview.Primitive)) {
+	return s.focused.InputHandler()
 }

@@ -108,8 +108,8 @@ func (t *RecordTable) SetRect(x, y, width, height int) {
 }
 
 // InputHandler ...
-func (t *RecordTable) InputHandler() func(e *tcell.EventKey, setFocus func(p tview.Primitive)) {
-	return t.WrapInputHandler(func(e *tcell.EventKey, setFocus func(p tview.Primitive)) {
+func (t *RecordTable) InputHandler() func(*tcell.EventKey, func(tview.Primitive)) {
+	return t.WrapInputHandler(func(e *tcell.EventKey, setFocus func(tview.Primitive)) {
 		key := e.Key()
 
 		switch key {

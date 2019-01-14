@@ -22,11 +22,11 @@ type ConnectionList struct {
 func NewConnectionList() *ConnectionList {
 	list := &ConnectionList{}
 	list.List = tview.NewList()
-	list.ShowSecondaryText(false)
+	list.List.ShowSecondaryText(false)
 
-	list.SetTitle("Favorities")
-	list.SetTitleAlign(tview.AlignLeft)
-	list.SetBorder(true)
+	list.List.SetTitle("Favorities")
+	list.List.SetTitleAlign(tview.AlignLeft)
+	list.List.SetBorder(true)
 
 	list.List.SetSelectedFunc(func(i int, _ string, _ string, _ rune) {
 		if i == 0 {
@@ -50,19 +50,19 @@ func NewConnectionList() *ConnectionList {
 
 // SetConnections ...
 func (c *ConnectionList) SetConnections(cs []*config.Connection) {
-	c.Clear()
+	c.List.Clear()
 	c.connections = cs
 
-	c.AddItem("New connection", "", rune('n'), nil)
+	c.List.AddItem("New connection", "", rune('n'), nil)
 	for i := 0; i < len(c.connections); i++ {
-		c.AddItem(c.connections[i].Name, "", rune(strconv.Itoa(i)[0]), nil)
+		c.List.AddItem(c.connections[i].Name, "", rune(strconv.Itoa(i)[0]), nil)
 	}
 }
 
 // AddConnection ...
 func (c *ConnectionList) AddConnection(conn *config.Connection) {
 	c.connections = append(c.connections, conn)
-	c.AddItem(conn.Name, "", rune(strconv.Itoa(len(c.connections) - 1)[0]), nil)
+	c.List.AddItem(conn.Name, "", rune(strconv.Itoa(len(c.connections) - 1)[0]), nil)
 }
 
 func (c *ConnectionList) onSelectConnection(conn *config.Connection) {
@@ -85,3 +85,30 @@ func (c *ConnectionList) onDeleteConnection() {
 
 	c.OnDeleteConnection(c.connections[i-1])
 }
+
+/*
+func (c *ConnectionList) Focus(delegate func(tview.Primitive)) {
+	panic("--")
+	delegate(c.List)
+}
+
+func (c *ConnectionList) Blur() {
+	c.List.Blur()
+}
+func (c *ConnectionList) Draw(screen tcell.Screen) {
+	c.List.Draw(screen)
+}
+func (c *ConnectionList) GetFocusable() tview.Focusable {
+	return c.List
+}
+func (c *ConnectionList) GetRect() (int, int, int, int) {
+	return c.List.GetRect()
+}
+
+func (c *ConnectionList) SetRect(x, y, w, h int) {
+	c.List.SetRect(x, y, w, h)
+}
+func (c *ConnectionList) InputHandler() func(*tcell.EventKey, func(tview.Primitive)) {
+	return c.List.InputHandler()
+}
+*/
