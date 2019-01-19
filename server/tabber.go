@@ -7,6 +7,19 @@ import (
 	"github.com/rivo/tview"
 )
 
+var tabshortcut = map[rune]int{
+	'1': 0,
+	'2': 1,
+	'3': 2,
+	'4': 3,
+	'5': 4,
+	'6': 5,
+	'7': 6,
+	'8': 7,
+	'9': 8,
+	'0': 9,
+}
+
 // NewTabber ...
 func NewTabber() *Tabber {
 	t := &Tabber{
@@ -81,10 +94,10 @@ func (t *Tabber) SetRect(x, y, w, h int) {
 	}
 
 	// arrows
-	x = x + 1
+	headerx := x + 1
 	w -= 2
 
-	tabOffset := x
+	tabOffset := headerx
 	var skipped int
 	for i, tab := range t.tabs {
 		tabWidth := len(tab.PrefixedTitle(i)) + headerPadding
@@ -137,7 +150,7 @@ func (t *Tabber) Draw(screen tcell.Screen) {
 }
 
 // Focus ...
-func (t *Tabber) Focus(delegate func(tview.Primitive)) {
+func (t *Tabber) Focus(_ func(tview.Primitive)) {
 	if len(t.tabs) == 0 {
 		return
 	}
@@ -184,45 +197,78 @@ func (t *Tabber) HasFocus() bool {
 // InputHandler ...
 func (t *Tabber) InputHandler() func(*tcell.EventKey, func(tview.Primitive)) {
 	return func(e *tcell.EventKey, _ func(tview.Primitive)) {
-		// if ALT isn't on, let the current focus tab item handle the event
-		if e.Modifiers()^tcell.ModAlt != 0 {
-			t.focused.InputHandler()(e, t.focusdelegate)
-			return
-		}
-
-		shortcut := map[rune]int{
-			'1': 0,
-			'2': 1,
-			'3': 2,
-			'4': 3,
-			'5': 4,
-			'6': 5,
-			'7': 6,
-			'8': 7,
-			'9': 8,
-			'0': 9,
-		}
 		// Switch tab
-		switch e.Rune() {
-		case '1', '2', '3', '4', '5', '6', '7', '8', '9':
-			if shortcut[e.Rune()] >= len(t.tabs) {
+		if e.Modifiers()^tcell.ModAlt == 0 {
+			switch e.Rune() {
+			case '1', '2', '3', '4', '5', '6', '7', '8', '9':
+				if tabshortcut[e.Rune()] >= len(t.tabs) {
+					return
+				}
+
+				// unfocus selected tab
+				t.blurFocusedTab()
+
+				// select tab at
+				t.focusedTab = t.tabs[tabshortcut[e.Rune()]]
+				t.focusedTab.Focus(t.focusdelegate)
+
 				return
 			}
 
-			// unfocus selected tab
-			t.blurFocusedTab()
+			if e.Key() == tcell.KeyLeft {
+				for i, tab := range t.tabs {
+					if tab != t.focusedTab {
+						continue
+					}
+					t.blurFocusedTab()
+					i--
+					if i < 0 {
+						i = len(t.tabs) - 1
+					}
+					t.focusedTab = t.tabs[i%len(t.tabs)]
+					t.focusedTab.Focus(t.focusdelegate)
+					return
+				}
+			}
 
-			// select tab at
-			t.focusedTab = t.tabs[shortcut[e.Rune()]]
-			t.focusedTab.Focus(t.focusdelegate)
-
-			return
+			if e.Key() == tcell.KeyRight {
+				for i, tab := range t.tabs {
+					if tab == t.focusedTab {
+						t.blurFocusedTab()
+						i++
+						t.focusedTab = t.tabs[i%len(t.tabs)]
+						t.focusedTab.Focus(t.focusdelegate)
+						return
+					}
+				}
+			}
 		}
 
-		if e.Key() == tcell.KeyLeft {
+		// Close tab
+		if e.Key() == tcell.KeyCtrlW {
+			for i, tab := range t.tabs {
+				if tab != t.focusedTab {
+					continue
+				}
+
+				t.blurFocusedTab()
+				t.tabs = append(t.tabs[:i], t.tabs[i+1:]...)
+
+				if i >= len(t.tabs) {
+					i = len(t.tabs) - 1
+				}
+
+				if len(t.tabs) > 0 {
+					t.focusedTab = t.tabs[i]
+					t.focusedTab.Focus(t.focusdelegate)
+				}
+
+				return
+			}
 		}
 
-		if e.Key() == tcell.KeyRight {
+		if t.focused != nil {
+			t.focused.InputHandler()(e, t.focusdelegate)
 		}
 	}
 }

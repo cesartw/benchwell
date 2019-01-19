@@ -31,6 +31,7 @@ func NewSidePanel(width int) *SidePanel {
 
 	s.databaseList.OnSelectDatabase = s.onSelectDatabase
 	s.tableList.OnSelectTable = s.onSelectTable
+	s.tableList.SetTitleAlign(tview.AlignLeft)
 
 	s.Flex = tview.NewFlex().
 		SetDirection(tview.FlexRow).

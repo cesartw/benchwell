@@ -85,30 +85,3 @@ func (c *ConnectionList) onDeleteConnection() {
 
 	c.OnDeleteConnection(c.connections[i-1])
 }
-
-/*
-func (c *ConnectionList) Focus(delegate func(tview.Primitive)) {
-	panic("--")
-	delegate(c.List)
-}
-
-func (c *ConnectionList) Blur() {
-	c.List.Blur()
-}
-func (c *ConnectionList) Draw(screen tcell.Screen) {
-	c.List.Draw(screen)
-}
-func (c *ConnectionList) GetFocusable() tview.Focusable {
-	return c.List
-}
-func (c *ConnectionList) GetRect() (int, int, int, int) {
-	return c.List.GetRect()
-}
-
-func (c *ConnectionList) SetRect(x, y, w, h int) {
-	c.List.SetRect(x, y, w, h)
-}
-func (c *ConnectionList) InputHandler() func(*tcell.EventKey, func(tview.Primitive)) {
-	return c.List.InputHandler()
-}
-*/

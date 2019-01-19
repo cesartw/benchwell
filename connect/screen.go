@@ -33,14 +33,20 @@ func New(conf *config.Config) *Screen {
 
 	s.list.OnSelectConnection = func(con *config.Connection) {
 		s.form.SetConnection(con)
-		s.focusdelegate(s.form)
+
+		s.blurFocused()
 		s.list.Blur()
+		s.focused = s.form
+		s.focused.Focus(s.focusdelegate)
 	}
 
 	s.list.OnNewConnection = func() {
 		s.form.SetConnection(nil)
-		s.focusdelegate(s.form)
+
+		s.blurFocused()
 		s.list.Blur()
+		s.focused = s.form
+		s.focused.Focus(s.focusdelegate)
 	}
 
 	s.list.OnDeleteConnection = func(con *config.Connection) {
@@ -106,18 +112,36 @@ func (s *Screen) onConnect(c config.Connection) {
 	}
 }
 
-// Keybinds ...
-func (s *Screen) Keybinds() map[tcell.Key]func() tview.Primitive {
-	return map[tcell.Key]func() tview.Primitive{
-		tcell.KeyCtrlL: func() tview.Primitive { return s.list },
-		tcell.KeyCtrlN: func() tview.Primitive { return s.form },
-	}
-}
-
 // Focus ...
 func (s *Screen) Focus(_ func(tview.Primitive)) {
+	s.blurFocused()
 	s.focused = s.list
 	s.list.Focus(s.focusdelegate)
+}
+
+// InputHandler ...
+func (s *Screen) InputHandler() func(*tcell.EventKey, func(tview.Primitive)) {
+	return func(e *tcell.EventKey, _ func(tview.Primitive)) {
+		if e.Key() == tcell.KeyCtrlL {
+			s.blurFocused()
+			s.focused = s.list
+			s.focused.Focus(s.focusdelegate)
+
+			return
+		}
+
+		if e.Key() == tcell.KeyCtrlN {
+			s.blurFocused()
+			s.focused = s.form
+			s.focused.Focus(s.focusdelegate)
+
+			return
+		}
+
+		if s.focused != nil {
+			s.focused.InputHandler()(e, s.focusdelegate)
+		}
+	}
 }
 
 func (s *Screen) focusdelegate(p tview.Primitive) {
@@ -128,7 +152,9 @@ func (s *Screen) focusdelegate(p tview.Primitive) {
 	p.Focus(s.focusdelegate)
 }
 
-// InputHandler ...
-func (s *Screen) InputHandler() func(*tcell.EventKey, func(tview.Primitive)) {
-	return s.focused.InputHandler()
+func (s *Screen) blurFocused() {
+	if s.focused != nil {
+		s.focused.Blur()
+		s.focused = nil
+	}
 }

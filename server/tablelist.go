@@ -8,6 +8,12 @@ import (
 	"github.com/rivo/tview"
 )
 
+type matchString func(string) bool
+
+func (f matchString) MatchString(txt string) bool {
+	return f(txt)
+}
+
 type searchField struct {
 	*tview.InputField
 	list *list
@@ -49,7 +55,7 @@ func NewTableList() *TableList {
 	list.Flex.SetBorder(true)
 	list.Flex.SetTitle("Tables")
 	list.Flex.SetDirection(tview.FlexRow)
-	list.Flex.AddItem(list.searchField, 1, 1, true)
+	list.Flex.AddItem(list.searchField, 1, 1, false)
 	list.Flex.AddItem(list.list, 0, 1, false)
 	list.Flex.SetBackgroundColor(tview.Styles.PrimitiveBackgroundColor)
 
@@ -80,10 +86,15 @@ func (t *TableList) onSelectTable(table string) {
 	}
 }
 
-type matchString func(string) bool
-
-func (f matchString) MatchString(txt string) bool {
-	return f(txt)
+// Draw ...
+func (t *TableList) Draw(screen tcell.Screen) {
+	t.searchField.SetFieldBackgroundColor(tview.Styles.ContrastBackgroundColor)
+	t.searchField.SetFieldTextColor(tview.Styles.PrimaryTextColor)
+	if t.searchField.HasFocus() {
+		t.searchField.SetFieldBackgroundColor(tcell.ColorYellow)
+		t.searchField.SetFieldTextColor(tcell.ColorBlack)
+	}
+	t.Flex.Draw(screen)
 }
 
 // Filter ...
@@ -110,8 +121,17 @@ func (t *TableList) Filter(txt string) {
 	}
 }
 
+// Focus ...
+func (t *TableList) Focus(delegate func(tview.Primitive)) {
+	if t.list.GetCurrentItem() == -1 {
+		delegate(t.searchField)
+		return
+	}
+	delegate(t.list)
+}
+
 func (s *searchField) InputHandler() func(*tcell.EventKey, func(tview.Primitive)) {
-	return s.WrapInputHandler(func(e *tcell.EventKey, setFocus func(tview.Primitive)) {
+	return func(e *tcell.EventKey, setFocus func(tview.Primitive)) {
 		switch key := e.Key(); key {
 		case tcell.KeyDown:
 			s.list.SetCurrentItem(0)
@@ -131,11 +151,11 @@ func (s *searchField) InputHandler() func(*tcell.EventKey, func(tview.Primitive)
 		}
 
 		s.InputField.InputHandler()(e, setFocus)
-	})
+	}
 }
 
 func (l *list) InputHandler() func(*tcell.EventKey, func(tview.Primitive)) {
-	return l.WrapInputHandler(func(e *tcell.EventKey, setFocus func(tview.Primitive)) {
+	return func(e *tcell.EventKey, setFocus func(tview.Primitive)) {
 		switch key := e.Key(); key {
 		case tcell.KeyDown:
 			if l.GetCurrentItem() == l.GetItemCount()-1 {
@@ -156,5 +176,5 @@ func (l *list) InputHandler() func(*tcell.EventKey, func(tview.Primitive)) {
 		}
 
 		l.List.InputHandler()(e, setFocus)
-	})
+	}
 }

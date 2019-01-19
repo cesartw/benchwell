@@ -20,7 +20,8 @@ type Screen struct {
 	OnDeleteRecord   func(string, []driver.ColDef, []*string, []*string) bool
 	OnReload         func(string)
 
-	ctx sqlengine.Context
+	ctx     sqlengine.Context
+	focused tview.Primitive
 }
 
 // New ...
@@ -53,21 +54,6 @@ func (s *Screen) AddTableTab(tableName string) {
 	s.tabber.AddTab(tableName, recordTable, true)
 }
 
-// RecordTable ...
-func (s *Screen) RecordTable() tview.Primitive {
-	return s.tabber
-}
-
-// DatabaseList ...
-func (s *Screen) DatabaseList() tview.Primitive {
-	return s.sidePanel.databaseList
-}
-
-// TableList ...
-func (s *Screen) TableList() tview.Primitive {
-	return s.sidePanel.tableList
-}
-
 // SetDatabases ...
 func (s *Screen) SetDatabases(dbs []string) {
 	s.sidePanel.SetDatabases(dbs)
@@ -91,12 +77,24 @@ func (s *Screen) onSelectDatabase(db string) {
 	if s.OnSelectDatabase != nil {
 		s.OnSelectDatabase(db)
 	}
+
+	s.blurFocused()
+	s.sidePanel.databaseList.Blur()
+
+	s.focused = s.sidePanel.tableList
+	s.focused.Focus(s.focusdelegate)
 }
 
 func (s *Screen) onSelectTable(tableName string) {
 	if s.OnSelectTable != nil {
 		s.OnSelectTable(tableName)
 	}
+
+	s.blurFocused()
+	s.sidePanel.tableList.Blur()
+
+	s.focused = s.tabber
+	s.focused.Focus(s.focusdelegate)
 }
 
 func (s *Screen) onDeleteRecord(tableName string, def []driver.ColDef, row, oldRow []*string) bool {
@@ -126,18 +124,11 @@ func (s *Screen) onInsertRecord(tableName string, def []driver.ColDef, row []*st
 	return nil
 }
 
-// Keybinds ...
-func (s *Screen) Keybinds() map[tcell.Key]func() tview.Primitive {
-	return map[tcell.Key]func() tview.Primitive{
-		tcell.KeyCtrlD: func() tview.Primitive { return s.sidePanel.databaseList },
-		tcell.KeyCtrlT: func() tview.Primitive { return s.sidePanel.tableList },
-		tcell.KeyCtrlL: func() tview.Primitive { return s.tabber },
-	}
-}
-
 // Focus ...
-func (s *Screen) Focus(delegate func(tview.Primitive)) {
-	delegate(s.sidePanel)
+func (s *Screen) Focus(_ func(tview.Primitive)) {
+	s.blurFocused()
+	s.focused = s.sidePanel
+	s.sidePanel.Focus(s.focusdelegate)
 }
 
 // SetContext ...
@@ -148,4 +139,50 @@ func (s *Screen) SetContext(ctx sqlengine.Context) {
 // Context ...
 func (s *Screen) Context() sqlengine.Context {
 	return s.ctx
+}
+
+// InputHandler ...
+func (s *Screen) InputHandler() func(*tcell.EventKey, func(tview.Primitive)) {
+	return func(e *tcell.EventKey, _ func(tview.Primitive)) {
+		if e.Key() == tcell.KeyCtrlL {
+			s.blurFocused()
+			s.focused = s.sidePanel.tableList
+			s.focused.Focus(s.focusdelegate)
+
+			return
+		}
+
+		if e.Key() == tcell.KeyCtrlB {
+			s.blurFocused()
+			s.focused = s.sidePanel.databaseList
+			s.focused.Focus(s.focusdelegate)
+
+			return
+		}
+
+		if e.Key() == tcell.KeyCtrlT {
+			s.blurFocused()
+			s.focused = s.tabber
+			s.focused.Focus(s.focusdelegate)
+
+			return
+		}
+
+		if s.focused != nil {
+			s.focused.InputHandler()(e, s.focusdelegate)
+		}
+	}
+}
+
+func (s *Screen) focusdelegate(p tview.Primitive) {
+	s.blurFocused()
+	s.focused = p
+	p.Focus(s.focusdelegate)
+}
+
+func (s *Screen) blurFocused() {
+	if s.focused != nil {
+		s.focused.Blur()
+		s.focused = nil
+	}
 }

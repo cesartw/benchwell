@@ -20,10 +20,9 @@ type keybindable interface {
 // App ...
 type App struct {
 	*tview.Application
-	layout        *layout
-	currentScreen keybindable
-	eng           *sqlengine.Engine
-	conf          *config.Config
+	layout *layout
+	eng    *sqlengine.Engine
+	conf   *config.Config
 }
 
 // New ...
@@ -36,20 +35,10 @@ func New(conf *config.Config, eng *sqlengine.Engine) *App {
 	}
 
 	screenConnect := app.newConnectScreen()
-	app.currentScreen = screenConnect
 
 	app.layout.SetScreen(screenConnect)
 	app.SetRoot(app.layout, true)
 	app.SetFocus(app.layout.screen)
-
-	app.SetInputCapture(func(e *tcell.EventKey) *tcell.EventKey {
-		if h, ok := app.currentScreen.Keybinds()[e.Key()]; ok {
-			app.SetFocus(h())
-			return nil
-		}
-
-		return e
-	})
 
 	return app
 }
@@ -74,7 +63,6 @@ func (app *App) newServerScreen() *server.Screen {
 
 		app.layout.SetStatus("Using `%s`", db)
 		screenServer.SetTables(tables)
-		app.SetFocus(screenServer.TableList())
 	}
 
 	screenServer.OnSelectTable = func(tableName string) {
@@ -86,7 +74,6 @@ func (app *App) newServerScreen() *server.Screen {
 
 		app.layout.SetStatus("Count: %d Offset: %d Limit: %d", len(rows), 0, 20)
 		screenServer.SetData(tableName, def, rows)
-		app.SetFocus(screenServer.RecordTable())
 	}
 
 	screenServer.OnSaveRecord = func(tableName string, def []driver.ColDef, values, oldValues []*string) bool {
@@ -150,7 +137,6 @@ func (app *App) newConnectScreen() *connect.Screen {
 			return
 		}
 
-		app.currentScreen = screenServer
 		screenServer.SetDatabases(dbs)
 
 		app.layout.SetStatus("Connected")
@@ -158,7 +144,7 @@ func (app *App) newConnectScreen() *connect.Screen {
 			app.layout.SetStatus("")
 		}, 5*time.Second)
 		app.layout.SetScreen(screenServer)
-		app.SetFocus(screenServer)
+		app.SetFocus(app.layout.screen)
 	}
 
 	return screen
