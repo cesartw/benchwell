@@ -10,8 +10,8 @@ import (
 // Screen ...
 type Screen struct {
 	*tview.Flex
-	sidePanel   *SidePanel
-	recordTable *RecordTable
+	sidePanel *SidePanel
+	tabber    *Tabber
 
 	OnSelectDatabase func(db string)
 	OnSelectTable    func(tableName string)
@@ -28,27 +28,34 @@ func New(app *tview.Application) *Screen {
 	s := &Screen{}
 
 	sidePanelWidth := 30
-	s.recordTable = NewRecordTable()
 	s.sidePanel = NewSidePanel(sidePanelWidth)
+	s.tabber = NewTabber()
 
 	s.Flex = tview.NewFlex().
 		SetDirection(tview.FlexColumn).
 		AddItem(s.sidePanel, sidePanelWidth, 1, false).
-		AddItem(s.recordTable, 0, 1, false)
+		AddItem(s.tabber, 0, 1, false)
 
 	s.sidePanel.OnSelectDatabase = s.onSelectDatabase
 	s.sidePanel.OnSelectTable = s.onSelectTable
-	s.recordTable.OnDeleteRecord = s.onDeleteRecord
-	s.recordTable.OnReload = s.onReload
-	s.recordTable.OnSaveRecord = s.onSaveRecord
-	s.recordTable.OnInsertRecord = s.onInsertRecord
 
 	return s
 }
 
+// AddTableTab ...
+func (s *Screen) AddTableTab(tableName string) {
+	recordTable := NewRecordTable()
+	recordTable.OnDeleteRecord = s.onDeleteRecord
+	recordTable.OnReload = s.onReload
+	recordTable.OnSaveRecord = s.onSaveRecord
+	recordTable.OnInsertRecord = s.onInsertRecord
+
+	s.tabber.AddTab(tableName, recordTable, true)
+}
+
 // RecordTable ...
 func (s *Screen) RecordTable() tview.Primitive {
-	return s.recordTable
+	return s.tabber
 }
 
 // DatabaseList ...
@@ -73,7 +80,11 @@ func (s *Screen) SetTables(dbs []string) {
 
 // SetData ...
 func (s *Screen) SetData(tableName string, def []driver.ColDef, rows [][]*string) {
-	s.recordTable.SetData(tableName, def, rows)
+	var table *RecordTable
+
+	s.AddTableTab(tableName)
+	table = s.tabber.focusedTab.content.(*RecordTable)
+	table.SetData(tableName, def, rows)
 }
 
 func (s *Screen) onSelectDatabase(db string) {
@@ -116,11 +127,11 @@ func (s *Screen) onInsertRecord(tableName string, def []driver.ColDef, row []*st
 }
 
 // Keybinds ...
-func (s *Screen) Keybinds() map[tcell.Key]tview.Primitive {
-	return map[tcell.Key]tview.Primitive{
-		tcell.KeyCtrlD: s.sidePanel.databaseList,
-		tcell.KeyCtrlT: s.sidePanel.tableList,
-		tcell.KeyCtrlR: s.recordTable,
+func (s *Screen) Keybinds() map[tcell.Key]func() tview.Primitive {
+	return map[tcell.Key]func() tview.Primitive{
+		tcell.KeyCtrlD: func() tview.Primitive { return s.sidePanel.databaseList },
+		tcell.KeyCtrlT: func() tview.Primitive { return s.sidePanel.tableList },
+		tcell.KeyCtrlL: func() tview.Primitive { return s.tabber },
 	}
 }
 

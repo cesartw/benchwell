@@ -14,7 +14,7 @@ import (
 )
 
 type keybindable interface {
-	Keybinds() map[tcell.Key]tview.Primitive
+	Keybinds() map[tcell.Key]func() tview.Primitive
 }
 
 // App ...
@@ -43,8 +43,8 @@ func New(conf *config.Config, eng *sqlengine.Engine) *App {
 	app.SetFocus(app.layout.screen)
 
 	app.SetInputCapture(func(e *tcell.EventKey) *tcell.EventKey {
-		if p, ok := app.currentScreen.Keybinds()[e.Key()]; ok {
-			app.SetFocus(p)
+		if h, ok := app.currentScreen.Keybinds()[e.Key()]; ok {
+			app.SetFocus(h())
 			return nil
 		}
 

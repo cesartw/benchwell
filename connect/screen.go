@@ -107,10 +107,10 @@ func (s *Screen) onConnect(c config.Connection) {
 }
 
 // Keybinds ...
-func (s *Screen) Keybinds() map[tcell.Key]tview.Primitive {
-	return map[tcell.Key]tview.Primitive{
-		tcell.KeyCtrlL: s.list,
-		tcell.KeyCtrlN: s.form,
+func (s *Screen) Keybinds() map[tcell.Key]func() tview.Primitive {
+	return map[tcell.Key]func() tview.Primitive{
+		tcell.KeyCtrlL: func() tview.Primitive { return s.list },
+		tcell.KeyCtrlN: func() tview.Primitive { return s.form },
 	}
 }
 

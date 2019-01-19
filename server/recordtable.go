@@ -1,8 +1,6 @@
 package server
 
 import (
-	"fmt"
-
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
 
@@ -29,7 +27,7 @@ type RecordTable struct {
 // NewRecordTable ...
 func NewRecordTable() *RecordTable {
 	t := &RecordTable{
-		Box:          tview.NewBox().SetBorder(true).SetTitleAlign(tview.AlignLeft),
+		Box:          tview.NewBox().SetBorder(false),
 		Table:        tview.NewTable().SetBorders(true),
 		editingField: tview.NewInputField(),
 	}
@@ -48,7 +46,6 @@ func (t *RecordTable) SetData(tableName string, colDef []driver.ColDef, rows [][
 
 	t.tableDef = colDef
 	t.tableName = tableName
-	t.Box.SetTitle(fmt.Sprintf("Table: %s", tableName))
 
 	t.Table.Clear()
 
@@ -100,16 +97,26 @@ func (t *RecordTable) Draw(screen tcell.Screen) {
 	}
 }
 
+// HasFocus ...
+func (t *RecordTable) HasFocus() bool {
+	return t.Box.HasFocus() || t.Table.HasFocus() || t.editingField.HasFocus()
+}
+
+// GetFocusable ...
+func (t *RecordTable) GetFocusable() tview.Focusable {
+	return t
+}
+
 // SetRect ...
 func (t *RecordTable) SetRect(x, y, width, height int) {
 	t.Box.SetRect(x, y, width, height)
-	t.Table.SetRect(x+1, y+1, width-2, height-2)
+	t.Table.SetRect(x+1, y, width-2, height)
 	t.editingField.SetRect(x+width/2-36/2, y+height/2-1, 36, 3)
 }
 
 // InputHandler ...
 func (t *RecordTable) InputHandler() func(*tcell.EventKey, func(tview.Primitive)) {
-	return t.WrapInputHandler(func(e *tcell.EventKey, setFocus func(tview.Primitive)) {
+	return func(e *tcell.EventKey, setFocus func(tview.Primitive)) {
 		key := e.Key()
 
 		switch key {
@@ -210,5 +217,5 @@ func (t *RecordTable) InputHandler() func(*tcell.EventKey, func(tview.Primitive)
 		default:
 			t.Table.InputHandler()(e, setFocus)
 		}
-	})
+	}
 }
