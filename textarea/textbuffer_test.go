@@ -1,6 +1,7 @@
 package textarea
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -74,6 +75,37 @@ func TestComplex(t *testing.T) {
 	if string(subject.Runes()) != "a" {
 		t.Errorf("got: `%s`, expected %s", string(subject.Runes()), "a")
 	}
+
+	subject.Append('b') // ab_ _
+	if string(subject.Runes()) != "ab" {
+		t.Errorf("got: `%s`, expected %s", string(subject.Runes()), "ab")
+	}
+
+	subject.Append(10)  // ab\n_ _
+	subject.Append('c') // ab\nc_ _
+	if string(subject.Runes()) != "ab\nc" {
+		t.Errorf("got: `%s`, expected %s", string(subject.Runes()), "ab\nc")
+	}
+}
+
+func TestBasic(t *testing.T) {
+	subject := newtextbuffer(10)
+
+	subject.Append('c')
+	subject.Append('e')
+	subject.Append('s')
+	subject.Append('a')
+	subject.Append('r')
+	subject.Append(10)
+	subject.Append('c')
+	subject.Append('e')
+	subject.Append('j')
+	subject.Append('u')
+	subject.Append('d')
+	subject.Append('o')
+	if string(subject.Runes()) != "cesar\ncejudo" {
+		t.Errorf("got: `%s`, expected %s", string(subject.Runes()), "cesar\ncejudo")
+	}
 }
 
 func TestAppend(t *testing.T) {
@@ -114,7 +146,7 @@ func TestAppend(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			subject := newtextbuffer(6)
 			subject.buffer = tc.text
-			subject.xOffset = tc.cursor
+			subject.cursor = tc.cursor
 
 			subject.Append('a')
 			subject.Append('b')
@@ -122,46 +154,6 @@ func TestAppend(t *testing.T) {
 
 			if !reflect.DeepEqual(subject.buffer, tc.expected) {
 				t.Fatalf("\nexpected\t%s\ngot\t\t%s", string(tc.expected), string(subject.buffer))
-			}
-		})
-	}
-}
-
-func TestAppendPositionReset(t *testing.T) {
-	testcases := []struct {
-		name   string
-		input  []rune
-		offset int
-		line   int
-	}{
-		{
-			name:   "width",
-			input:  []rune{'a', 'b', 'c'},
-			offset: 0,
-			line:   1,
-		},
-		{
-			name:   "LF",
-			input:  []rune{'f', 10},
-			offset: 0,
-			line:   1,
-		},
-	}
-
-	for _, tc := range testcases {
-		t.Run(tc.name, func(t *testing.T) {
-			subject := newtextbuffer(3)
-
-			for _, r := range tc.input {
-				subject.Append(r)
-			}
-
-			if subject.xOffset != tc.offset {
-				t.Fatalf("\nexpected offset\t%d\ngot\t\t\t%d", tc.offset, subject.xOffset)
-			}
-
-			if subject.line != tc.line {
-				t.Fatalf("\nexpected line\t%d\ngot\t\t%d", tc.line, subject.line)
 			}
 		})
 	}
@@ -177,7 +169,7 @@ func TestRemove(t *testing.T) {
 		{
 			name:     "from empty",
 			text:     []rune{},
-			cursor:   -1,
+			cursor:   0,
 			expected: []rune{},
 		},
 		{
@@ -198,7 +190,7 @@ func TestRemove(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			subject := newtextbuffer(10)
 			subject.buffer = tc.text
-			subject.xOffset = tc.cursor
+			subject.cursor = tc.cursor
 
 			subject.Remove()
 			subject.Remove()
@@ -298,7 +290,7 @@ func TestNav(t *testing.T) {
 			def        14-17
 			ghijk      18-23
 		               24-24
-			lmnopqr    25-31
+			lmnopqr    25-32
 			           32-32
 	*/
 
@@ -307,11 +299,26 @@ func TestNav(t *testing.T) {
 		t.Fatalf("expected l got %s", string(subject.RuneAtCursor()))
 	}
 
+	subject.CursorMoveDown()
+	subject.CursorMoveDown()
+	if subject.RuneAtCursor() != 10 {
+		t.Fatalf("expected 10 got %s", string(subject.RuneAtCursor()))
+	}
+	subject.CursorMoveLeft()
+	if subject.RuneAtCursor() != 10 {
+		t.Fatalf("expected 10 got %s", string(subject.RuneAtCursor()))
+	}
+	subject.CursorMoveRight()
+	if subject.RuneAtCursor() != 10 {
+		t.Fatalf("expected 10 got %s", string(subject.RuneAtCursor()))
+	}
 	subject.CursorMoveEOL()
 	if subject.RuneAtCursor() != 10 {
-		t.Fatalf("expected 7 got %s", string(subject.RuneAtCursor()))
+		t.Fatalf("expected 10 got %s", string(subject.RuneAtCursor()))
 	}
 
+	subject.CursorMoveUp()
+	subject.CursorMoveEOL()
 	subject.CursorMoveLeft()
 	subject.CursorMoveLeft()
 	subject.CursorMoveLeft()
@@ -320,7 +327,6 @@ func TestNav(t *testing.T) {
 	subject.CursorMoveLeft()
 	subject.CursorMoveLeft()
 	if subject.RuneAtCursor() != 'l' {
-		t.Logf("\nLine: %+v\n-----:  x:%d l:%d c:%d", subject.Lines(), subject.xOffset, subject.line, subject.Cursor())
 		t.Fatalf("expected l, got %s", string(subject.RuneAtCursor()))
 	}
 
@@ -336,8 +342,10 @@ func TestNav(t *testing.T) {
 		t.Fatalf("expected o, got %s", string(subject.RuneAtCursor()))
 	}
 
+	fmt.Println(subject.atEnd, subject.cursor)
 	subject.CursorMoveUp()
 	if subject.RuneAtCursor() != 10 {
+		fmt.Println(subject.atEnd, subject.cursor)
 		t.Fatalf("expected LF(10), got %s", string(subject.RuneAtCursor()))
 	}
 

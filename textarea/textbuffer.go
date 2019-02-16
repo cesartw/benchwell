@@ -1,73 +1,42 @@
 package textarea
 
 type textBuffer struct {
-	buffer        []rune
-	w             int
-	line, xOffset int
+	buffer []rune
+	cursor int
+	atEnd  bool
 }
 
 func newtextbuffer(w int) *textBuffer {
-	if w == 0 {
-		panic("width must be greater than 0")
-	}
-
 	return &textBuffer{
 		buffer: make([]rune, 0),
-		w:      w,
 	}
 }
 
 func (t *textBuffer) Append(r rune) {
+	t.atEnd = false
+
+	if t.cursor == len(t.buffer) && r == 10 {
+		t.atEnd = true
+	}
+
 	if len(t.buffer) == 0 {
 		t.buffer = append(t.buffer, r)
-		t.xOffset = 1
+		t.cursor++
 		return
 	}
 
-	lines := t.Lines()
-	cursor := t.Cursor()
-
 	nbuffer := []rune{}
-	nbuffer = append(nbuffer, t.buffer[:cursor]...)
+	nbuffer = append(nbuffer, t.buffer[:t.cursor]...)
 	nbuffer = append(nbuffer, r)
-	nbuffer = append(nbuffer, t.buffer[cursor:]...)
+	nbuffer = append(nbuffer, t.buffer[t.cursor:]...)
 
 	t.buffer = nbuffer
-
-	t.xOffset++
-
-	// We reach the end of the line(width based)
-	if t.xOffset == lines[t.line].Len()+1 && lines[t.line].Len()+1 == t.w {
-		t.xOffset = 0
-		t.line++
-	}
-
-	if r == 10 {
-		t.xOffset = 0
-		t.line++
-	}
+	t.cursor++
 }
 
 func (t *textBuffer) SetText(s string) {
 	t.buffer = []rune(s)
-
-	t.xOffset = 0
-	t.line = 0
-
-	lines := t.Lines()
-	t.line = len(lines) - 1
-
-	if len(lines) > 0 {
-		t.xOffset = 0
-	}
-}
-
-func (t *textBuffer) SetEditingWidth(w int) {
-	if w == 0 {
-		panic("width must be greater than 0")
-	}
-
-	t.w = w
+	t.CursorMoveEOF()
 }
 
 func (t *textBuffer) Remove() bool {
@@ -75,26 +44,51 @@ func (t *textBuffer) Remove() bool {
 		return false
 	}
 
-	cursor := t.Cursor()
+	cursor := t.cursor // t.Cursor()
 	if cursor > len(t.buffer)-1 {
 		return false
 	}
 
-	if t.buffer[cursor] == 10 && t.line > 0 {
-		t.line--
-	}
-
 	t.buffer = append(t.buffer[:cursor], t.buffer[cursor+1:]...)
 
-	if t.xOffset > len(t.buffer) {
-		t.xOffset = len(t.buffer)
+	if t.cursor > len(t.buffer) {
+		t.cursor = len(t.buffer)
+	}
+
+	if t.cursor == len(t.buffer) && t.HasEOFLF() {
+		t.atEnd = true
+	}
+
+	return true
+}
+
+func (t *textBuffer) RemoveCurrentLine() bool {
+	if len(t.buffer) == 0 {
+		return false
+	}
+
+	_, lindex := t.Position()
+	line := t.Lines()[lindex]
+
+	t.buffer = append(t.buffer[:line.Start], t.buffer[line.End+1:]...)
+
+	if t.cursor > len(t.buffer) {
+		t.cursor = len(t.buffer)
+	}
+
+	if t.cursor == len(t.buffer) && t.HasEOFLF() {
+		t.atEnd = true
 	}
 
 	return true
 }
 
 func (t textBuffer) RuneAtCursor() rune {
-	return t.buffer[t.Cursor()]
+	if t.cursor >= len(t.buffer) {
+		return 0
+	}
+
+	return t.buffer[t.cursor]
 }
 
 func (t textBuffer) Runes() []rune {
@@ -110,26 +104,32 @@ func (t textBuffer) Empty() bool {
 }
 
 func (t *textBuffer) CursorMoveLeft() bool {
-	if t.xOffset == 0 {
+	if t.cursor == 0 {
 		return false
 	}
 
-	t.xOffset--
+	if t.atEnd {
+		return false
+	}
+
+	t.cursor--
+	// Prevent from abandoning line
+	if t.buffer[t.cursor] == 10 {
+		t.cursor++
+		return false
+	}
+
 	return true
 }
 
 func (t *textBuffer) CursorMoveRight() bool {
-	t.xOffset++
-
-	lines := t.Lines()
-	if len(lines) == 0 {
+	if t.RuneAtCursor() == 10 {
 		return false
 	}
 
-	line := t.Lines()[t.line]
-
-	if t.xOffset >= line.Len() {
-		t.xOffset = line.Len() - 1
+	t.cursor++
+	if t.cursor > len(t.buffer) {
+		t.cursor--
 		return false
 	}
 
@@ -138,43 +138,49 @@ func (t *textBuffer) CursorMoveRight() bool {
 
 func (t *textBuffer) CursorMoveDown() bool {
 	lines := t.Lines()
-	t.line++
 
-	if t.line >= len(lines) {
-		t.line = len(lines) - 1
+	_, curL := t.Position()
+	if curL == len(lines)-1 {
 		return false
 	}
 
-	if len(lines) == 0 {
-		t.xOffset = 0
-		return false
+	nextL := lines[curL+1]
+
+	// last line and it a LF
+	if nextL.Start == nextL.End && curL+1 == len(lines)-1 {
+		t.atEnd = true
+		t.cursor = len(t.buffer)
+		return true
 	}
 
-	line := lines[t.line]
-	if line.Start+t.xOffset > line.End {
-		t.xOffset = line.End - line.Start
+	t.cursor = nextL.Start + t.cursor - lines[curL].Start
+	if t.cursor > nextL.End {
+		t.cursor = nextL.End
 	}
 
 	return true
 }
 
 func (t *textBuffer) CursorMoveUp() bool {
-	t.line--
+	if t.atEnd {
+		t.atEnd = false
+		lines := t.Lines()
+		t.cursor = lines[len(lines)-2].Start
+		return true
+	}
 
-	if t.line < 0 {
-		t.line = 0
+	_, curL := t.Position()
+
+	if curL == 0 {
 		return false
 	}
 
 	lines := t.Lines()
-	if len(lines) == 0 {
-		t.xOffset = 0
-		return true
-	}
+	nextL := lines[curL-1]
 
-	line := lines[t.line]
-	if line.Start+t.xOffset > line.End {
-		t.xOffset = line.End - line.Start
+	t.cursor = nextL.Start + t.cursor - lines[curL].Start
+	if t.cursor > nextL.End {
+		t.cursor = nextL.End
 	}
 
 	return true
@@ -182,68 +188,51 @@ func (t *textBuffer) CursorMoveUp() bool {
 
 func (t *textBuffer) CursorMoveEOL() {
 	lines := t.Lines()
-	if len(lines) == 0 {
-		t.xOffset = 0
-		t.line = 0
-		return
-	}
-	line := lines[t.line]
-	t.xOffset = line.End - line.Start
+	_, curL := t.Position()
+
+	t.cursor = lines[curL].End
 }
 
 func (t *textBuffer) CursorMoveBOL() {
-	t.xOffset = 0
+	lines := t.Lines()
+	_, curL := t.Position()
+
+	t.cursor = lines[curL].Start
+}
+
+func (t *textBuffer) CursorMoveEOF() {
+	t.cursor = len(t.buffer)
+	if t.HasEOFLF() {
+		t.atEnd = true
+	}
+}
+
+func (t *textBuffer) CursorMoveBOF() {
+	t.cursor = 0
+	t.atEnd = false
 }
 
 func (t textBuffer) Cursor() int {
-	lines := t.Lines()
-	if len(lines) > 0 {
-		return lines[t.line].Start + t.xOffset
-	}
-
-	return t.xOffset
-
-	//cursor := t.xOffset
-	//if cursor == -1 {
-	//cursor = 0
-	//}
-
-	//lines := t.Lines()
-	//for i := 0; i < t.line; i++ {
-	//cursor += (lines[i].End - lines[i].Start + 1)
-	//}
-
-	//if t.HasEOFLF() && cursor == len(t.buffer) {
-	//return cursor - 1
-	//}
-
-	//return cursor
+	return t.cursor
 }
 
-func (t *textBuffer) SetCursor(c int) {
+func (t textBuffer) Position() (cursor int, line int) {
 	lines := t.Lines()
-	if len(lines) == 0 {
-		return
+	if t.atEnd {
+		return t.cursor, len(lines) - 1
 	}
 
-	if c == 0 {
-		t.xOffset = 0
-		t.line = 0
-	}
-
-	for i, l := range lines {
-		diff := l.End - l.Start
-		if diff > c {
-			t.xOffset = diff - c
-			t.line = i
-			return
+	for i, line := range lines {
+		if line.Start <= t.cursor && line.End >= t.cursor {
+			return t.cursor, i
 		}
-		c = c - diff
 	}
-}
 
-func (t textBuffer) Position() (int, int) {
-	return t.xOffset, t.line
+	if len(lines) > 0 {
+		return t.cursor, len(lines) - 1
+	}
+
+	return t.cursor, 0
 }
 
 // Line ..
@@ -260,7 +249,7 @@ func (t textBuffer) Lines() []Line {
 	lines := []Line{}
 
 	if len(t.buffer) == 0 {
-		return []Line{}
+		return []Line{{}}
 	}
 
 	l := Line{}
@@ -268,14 +257,6 @@ func (t textBuffer) Lines() []Line {
 		l.End = i
 
 		if t.buffer[i] == 10 {
-			lines = append(lines, l)
-			l = Line{Start: i + 1}
-
-			continue
-		}
-
-		// runes since the last break
-		if i-l.Start > 0 && (i-l.Start+1)%t.w == 0 {
 			lines = append(lines, l)
 			l = Line{Start: i + 1}
 
