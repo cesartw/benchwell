@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 
+	"bitbucket.org/goreorto/sqlhero/tviewext"
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
 )
@@ -20,6 +21,15 @@ var tabshortcut = map[rune]int{
 	'0': 9,
 }
 
+// Tabber ...
+type Tabber struct {
+	Box            *tview.Box
+	tabs           []*Tab
+	selectTabIndex int
+
+	tviewext.Navigable
+}
+
 // NewTabber ...
 func NewTabber() *Tabber {
 	t := &Tabber{
@@ -32,13 +42,15 @@ func NewTabber() *Tabber {
 	return t
 }
 
-// Tabber ...
-type Tabber struct {
-	*tview.Box
-	tabs []*Tab
+// CurrentTab ...
+func (t Tabber) CurrentTab() *Tab {
+	for _, t := range t.tabs {
+		if t.HasFocus() {
+			return t
+		}
+	}
 
-	focused    tview.Primitive
-	focusedTab *Tab
+	return nil
 }
 
 // AddTab ...
@@ -48,20 +60,17 @@ func (t *Tabber) AddTab(title string, content tview.Primitive, focus bool) {
 	}
 
 	item := &Tab{
-		content:  content,
-		header:   tview.NewTextView(),
-		title:    title,
-		hasFocus: focus,
+		content: content,
+		header:  tview.NewTextView(),
+		title:   title,
 	}
 	item.header.SetBorderPadding(0, 0, 1, 1)
+	t.tabs = append(t.tabs, item)
 
 	if focus {
-		t.blurFocusedTab()
-		t.focusedTab = item
-		t.focusedTab.Focus(t.focusdelegate)
+		t.selectTabIndex = len(t.tabs) - 1
+		t.Navigable.DelegateFocus(item.content)
 	}
-
-	t.tabs = append(t.tabs, item)
 }
 
 // SetRect ...
@@ -82,8 +91,8 @@ func (t *Tabber) SetRect(x, y, w, h int) {
 	var selectedRightEdge int
 	for i, tab := range t.tabs {
 		tabsPosition[i] = tabsWidth
-		tabsWidth += len(tab.PrefixedTitle(i)) + headerPadding
-		if tab == t.focusedTab {
+		tabsWidth += len(tab.prefixedTitle(i)) + headerPadding
+		if tab.HasFocus() {
 			selectedRightEdge = tabsWidth
 		}
 	}
@@ -100,7 +109,7 @@ func (t *Tabber) SetRect(x, y, w, h int) {
 	tabOffset := headerx
 	var skipped int
 	for i, tab := range t.tabs {
-		tabWidth := len(tab.PrefixedTitle(i)) + headerPadding
+		tabWidth := len(tab.prefixedTitle(i)) + headerPadding
 		if requiredSpace > 0 {
 			requiredSpace -= tabWidth
 			skipped++
@@ -125,9 +134,9 @@ func (t *Tabber) Draw(screen tcell.Screen) {
 	}
 
 	for i, tab := range t.tabs {
-		tab.header.SetText(tab.PrefixedTitle(i))
+		tab.header.SetText(tab.prefixedTitle(i))
 		tab.header.SetBackgroundColor(tcell.ColorDimGray)
-		if tab.hasFocus {
+		if i == t.selectTabIndex {
 			tab.header.SetBackgroundColor(tview.Styles.PrimitiveBackgroundColor)
 			tab.content.Draw(screen)
 		}
@@ -136,7 +145,7 @@ func (t *Tabber) Draw(screen tcell.Screen) {
 
 	var tabsWidth int
 	for i, tab := range t.tabs {
-		tabsWidth += len(tab.PrefixedTitle(i)) + 2
+		tabsWidth += len(tab.prefixedTitle(i)) + 2
 	}
 
 	if tabsWidth > w {
@@ -155,38 +164,13 @@ func (t *Tabber) Focus(_ func(tview.Primitive)) {
 		return
 	}
 
-	if t.focusedTab != nil {
-		return
-	}
-
-	t.focusedTab = t.tabs[0]
-	t.focusedTab.Focus(t.focusdelegate)
-}
-
-func (t *Tabber) blurFocusedTab() {
-	if t.focusedTab != nil {
-		t.focusedTab.Blur()
-		t.focusedTab = nil
-	}
-	if t.focused != nil {
-		t.focused.Blur()
-		t.focused = nil
-	}
-}
-
-func (t *Tabber) focusdelegate(p tview.Primitive) {
-	if t.focused != nil {
-		t.focused.Blur()
-	}
-
-	t.focused = p
-	t.focused.Focus(t.focusdelegate)
+	t.DelegateFocus(t.tabs[0].content)
 }
 
 // HasFocus ...
 func (t *Tabber) HasFocus() bool {
 	for _, tab := range t.tabs {
-		if tab.hasFocus {
+		if tab.HasFocus() {
 			return true
 		}
 	}
@@ -205,95 +189,74 @@ func (t *Tabber) InputHandler() func(*tcell.EventKey, func(tview.Primitive)) {
 					return
 				}
 
-				// unfocus selected tab
-				t.blurFocusedTab()
-
-				// select tab at
-				t.focusedTab = t.tabs[tabshortcut[e.Rune()]]
-				t.focusedTab.Focus(t.focusdelegate)
+				t.DelegateFocus(t.tabs[tabshortcut[e.Rune()]].content)
+				t.selectTabIndex = tabshortcut[e.Rune()]
 
 				return
 			}
 
 			if e.Key() == tcell.KeyLeft {
-				for i, tab := range t.tabs {
-					if tab != t.focusedTab {
-						continue
-					}
-					t.blurFocusedTab()
-					i--
-					if i < 0 {
-						i = len(t.tabs) - 1
-					}
-					t.focusedTab = t.tabs[i%len(t.tabs)]
-					t.focusedTab.Focus(t.focusdelegate)
-					return
+				t.selectTabIndex--
+				if t.selectTabIndex < 0 {
+					t.selectTabIndex = len(t.tabs) - 1
 				}
+				t.DelegateFocus(t.tabs[t.selectTabIndex].content)
+				return
 			}
 
 			if e.Key() == tcell.KeyRight {
-				for i, tab := range t.tabs {
-					if tab == t.focusedTab {
-						t.blurFocusedTab()
-						i++
-						t.focusedTab = t.tabs[i%len(t.tabs)]
-						t.focusedTab.Focus(t.focusdelegate)
-						return
-					}
+				t.selectTabIndex++
+				if t.selectTabIndex >= len(t.tabs) {
+					t.selectTabIndex = 0
 				}
+				t.DelegateFocus(t.tabs[t.selectTabIndex].content)
+				return
 			}
 		}
 
 		// Close tab
 		if e.Key() == tcell.KeyCtrlW {
-			for i, tab := range t.tabs {
-				if tab != t.focusedTab {
-					continue
-				}
+			t.tabs = append(t.tabs[:t.selectTabIndex], t.tabs[t.selectTabIndex+1:]...)
 
-				t.blurFocusedTab()
-				t.tabs = append(t.tabs[:i], t.tabs[i+1:]...)
-
-				if i >= len(t.tabs) {
-					i = len(t.tabs) - 1
-				}
-
-				if len(t.tabs) > 0 {
-					t.focusedTab = t.tabs[i]
-					t.focusedTab.Focus(t.focusdelegate)
-				}
-
-				return
+			if t.selectTabIndex >= len(t.tabs) {
+				t.selectTabIndex = len(t.tabs) - 1
 			}
+
+			if len(t.tabs) > 0 {
+				t.DelegateFocus(t.tabs[t.selectTabIndex].content)
+			}
+
+			return
 		}
 
-		if t.focused != nil {
-			t.focused.InputHandler()(e, t.focusdelegate)
+		if len(t.tabs) > 0 {
+			t.tabs[t.selectTabIndex].content.InputHandler()(e, t.DelegateFocus)
 		}
 	}
 }
 
 // Tab ...
 type Tab struct {
-	header   *tview.TextView
-	content  tview.Primitive
-	title    string
-	hasFocus bool
+	header  *tview.TextView
+	content tview.Primitive
+	title   string
 }
 
 // Focus ...
 func (t *Tab) Focus(delegate func(tview.Primitive)) {
-	t.hasFocus = true
 	delegate(t.content)
 }
 
 // Blur ...
 func (t *Tab) Blur() {
-	t.hasFocus = false
 	t.content.Blur()
 }
 
-// PrefixedTitle ...
-func (t *Tab) PrefixedTitle(index int) string {
+func (t Tab) prefixedTitle(index int) string {
 	return fmt.Sprintf("%d. %s", index+1, t.title)
+}
+
+// HasFocus ...
+func (t Tab) HasFocus() bool {
+	return t.content.GetFocusable().HasFocus()
 }
