@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 
 	"github.com/BurntSushi/toml"
@@ -39,6 +38,7 @@ type Connection struct {
 	Username string
 	Password string
 	Database string
+	Options  string
 }
 
 // New read $HOME/.config/sqlhero/config.toml
@@ -89,8 +89,8 @@ func (c *Config) Save() error {
 	return c.decrypt()
 }
 
-// DSN ...
-func (c Connection) DSN() string {
+// GetDSN ...
+func (c Connection) GetDSN() string {
 	b := bytes.NewBuffer([]byte{})
 	b.WriteString("mysql://")
 
@@ -117,8 +117,12 @@ func (c Connection) DSN() string {
 		b.WriteString(c.Database)
 	}
 
-	u, _ := url.Parse(b.String())
-	return u.String()
+	if c.Options != "" {
+		b.WriteString("?")
+		b.WriteString(c.Options)
+	}
+
+	return b.String()
 }
 
 func (c *Config) encrypt() error {

@@ -2,7 +2,7 @@ package driver
 
 import (
 	"fmt"
-	"net/url"
+	"reflect"
 	"strings"
 	"sync"
 )
@@ -29,22 +29,20 @@ func RegisterDriver(name string, d Driver) {
 }
 
 // Connect returns a Connection
+// TODO: dsn parsing too optimistic
 func Connect(dsn string) (Connection, error) {
-	dsnURL, err := url.Parse(dsn)
-	if err != nil {
-		return nil, err
-	}
+	colonS := strings.Split(dsn, ":")
 
 	driverMU.Lock()
-	d, ok := drivers[dsnURL.Scheme]
+	d, ok := drivers[colonS[0]]
 	driverMU.Unlock()
 
 	if !ok {
-		return nil, fmt.Errorf("unknown driver: %s", dsnURL.Scheme)
+		return nil, fmt.Errorf("unknown driver: %s", colonS[0])
 	}
 
 	// kind hacky
-	return d.Connect(strings.TrimPrefix(dsn, dsnURL.Scheme+"://"))
+	return d.Connect(strings.TrimPrefix(dsn, colonS[0]+"://"))
 }
 
 // Driver is a database implementation for SQLHero
@@ -65,7 +63,7 @@ type Connection interface {
 // ColDef describe a column
 type ColDef struct {
 	Name   string
-	Type   string
+	Type   reflect.Type
 	PK, FK bool
 }
 
@@ -73,7 +71,7 @@ type ColDef struct {
 type Database interface {
 	Tables() ([]string, error)
 	TableDefinition(tableName string) ([]ColDef, error)
-	FetchTable(tableName string, page, pageSize int64) ([]ColDef, [][]*string, error)
+	FetchTable(tableName string, page, pageSize int64) ([]ColDef, [][]interface{}, error)
 	DeleteRecord(tableName string, defs []ColDef, values []*string) error
 	UpdateRecord(tableName string, cols []ColDef, values, oldValues []*string) (string, error)
 	InsertRecord(tableName string, cols []ColDef, values []*string) ([]*string, error)

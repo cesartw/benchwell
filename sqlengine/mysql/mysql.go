@@ -136,7 +136,6 @@ func (d *mysqlDb) TableDefinition(tableName string) ([]driver.ColDef, error) {
 
 		defs = append(defs, driver.ColDef{
 			Name: name.String,
-			Type: ftype.String,
 			PK:   key.String == "PRI",
 		})
 	}
@@ -148,7 +147,11 @@ func (d *mysqlDb) TableDefinition(tableName string) ([]driver.ColDef, error) {
 	return defs, nil
 }
 
-func (d *mysqlDb) FetchTable(tableName string, limit, offset int64) (colDef []driver.ColDef, rows [][]*string, err error) {
+func (d *mysqlDb) FetchTable(
+	tableName string, limit, offset int64,
+) (
+	colDef []driver.ColDef, rows [][]interface{}, err error,
+) {
 	var sqlRows *sql.Rows
 	sqlRows, err = d.db.Query(fmt.Sprintf(`
 SELECT *
@@ -166,17 +169,16 @@ LIMIT ?, ?
 		return nil, nil, err
 	}
 
-	rows = make([][]*string, 0)
+	rows = make([][]interface{}, 0)
 
 	for sqlRows.Next() {
-		row := make([]*string, len(columns))
-		irow := make([]interface{}, len(columns))
+		row := make([]interface{}, len(columns))
 
 		for ci := range columns {
-			irow[ci] = &row[ci]
+			row[ci] = &row[ci]
 		}
 
-		if err := sqlRows.Scan(irow...); err != nil {
+		if err := sqlRows.Scan(row...); err != nil {
 			return nil, nil, err
 		}
 

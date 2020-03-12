@@ -118,8 +118,12 @@ func (e *Engine) Tables(ctx Context) ([]string, error) {
 	return db.Tables()
 }
 
-// FetchTable ...
-func (e *Engine) FetchTable(ctx Context, tableName string, limit, offset int64) ([]driver.ColDef, [][]*string, error) {
+// FetchTable returns table column definition and table data
+func (e *Engine) FetchTable(
+	ctx Context, tableName string, page, pageSize int64,
+) (
+	[]driver.ColDef, [][]interface{}, error,
+) {
 	conn := e.connection(ctx)
 	if conn == nil {
 		return nil, nil, ErrNoConnection
@@ -130,7 +134,7 @@ func (e *Engine) FetchTable(ctx Context, tableName string, limit, offset int64) 
 		return nil, nil, ErrNoDatabase
 	}
 
-	return db.FetchTable(tableName, limit, offset)
+	return db.FetchTable(tableName, page, pageSize)
 }
 
 // DeleteRecord ...
