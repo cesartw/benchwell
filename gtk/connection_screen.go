@@ -10,7 +10,7 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
-func newConnectionScreen(ctx sqlengine.Context) (*ConnectionScreen, error) {
+func (f *Factory) NewConnectionScreen(ctx sqlengine.Context) (*ConnectionScreen, error) {
 	cs := &ConnectionScreen{ctx: ctx}
 	return cs, cs.init()
 }
@@ -21,6 +21,7 @@ type ConnectionScreen struct {
 	tableList *controls.List
 	result    *controls.Result
 	dbCombo   *gtk.ComboBox
+	tabber    *gtk.Notebook
 
 	databaseNames []string
 	dbStore       *gtk.ListStore
@@ -31,6 +32,11 @@ type ConnectionScreen struct {
 func (c *ConnectionScreen) init() error {
 	var err error
 
+	c.dbStore, err = gtk.ListStoreNew(glib.TYPE_STRING)
+	if err != nil {
+		return err
+	}
+
 	c.Paned, err = gtk.PanedNew(gtk.ORIENTATION_HORIZONTAL)
 	if err != nil {
 		return err
@@ -39,29 +45,18 @@ func (c *ConnectionScreen) init() error {
 	c.Paned.SetHExpand(true)
 	c.Paned.SetVExpand(true)
 
-	frame1, err := gtk.FrameNew("")
+	// Sidebar
+
+	sideBar, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if err != nil {
 		return err
 	}
 
-	box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
-	if err != nil {
-		return err
-	}
+	sideBar.SetSizeRequest(300, -1)
 
-	frame1.Add(box)
+	c.Paned.Pack1(sideBar, false, true)
 
-	frame2, err := gtk.FrameNew("")
-	if err != nil {
-		return err
-	}
-
-	frame1.SetShadowType(gtk.SHADOW_IN)
-	frame1.SetSizeRequest(300, -1)
-	frame2.SetShadowType(gtk.SHADOW_IN)
-	frame2.SetSizeRequest(50, -1)
-
-	c.dbStore, err = gtk.ListStoreNew(glib.TYPE_STRING)
+	tableListSW, err := gtk.ScrolledWindowNew(nil, nil)
 	if err != nil {
 		return err
 	}
@@ -72,59 +67,88 @@ func (c *ConnectionScreen) init() error {
 	}
 	c.dbCombo.SetEntryTextColumn(0)
 
-	c.dbCombo.Connect("changed", c.onDatabaseSelected)
-
-	sw, err := gtk.ScrolledWindowNew(nil, nil)
-	if err != nil {
-		return err
-	}
-	sw2, err := gtk.ScrolledWindowNew(nil, nil)
-	if err != nil {
-		return err
-	}
-
 	c.tableList, err = controls.NewList(nil)
 	if err != nil {
 		return err
 	}
-	sw.Add(c.tableList)
-
-	c.result, err = controls.NewResult(nil, nil)
-	if err != nil {
-		return err
-	}
-	sw2.Add(c.result)
-	frame2.Add(sw2)
-
-	c.tableList.Connect("row-activated", c.onTableActivated)
-	c.tableList.Connect("row-selected", c.onTableSelected)
 
 	c.tableList.SetHExpand(true)
 	c.tableList.SetVExpand(true)
+	tableListSW.Add(c.tableList)
 
-	box.PackStart(c.dbCombo, false, true, 0)
-	box.PackStart(sw, true, true, 0)
+	sideBar.PackStart(c.dbCombo, false, true, 0)
+	sideBar.PackStart(tableListSW, true, true, 0)
 
-	c.Paned.Pack1(frame1, false, true)
-	c.Paned.Pack2(frame2, true, false)
+	// main section
+
+	mainSection, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
+	if err != nil {
+		return err
+	}
+
+	c.tabber, err = gtk.NotebookNew()
+	if err != nil {
+		return err
+	}
+	c.tabber.SetVExpand(true)
+	c.tabber.SetHExpand(true)
+
+	mainSection.Add(c.tabber)
+	mainSection.SetVExpand(true)
+	mainSection.SetHExpand(true)
+
+	c.Paned.Pack2(mainSection, true, false)
+
+	// signals
+
+	c.dbCombo.Connect("changed", c.onDatabaseSelected)
 
 	c.Paned.ShowAll()
 
 	return nil
 }
 
-func (c *ConnectionScreen) onTableSelected() {
-	//index, ok := c.tablenList.SelectedItemIndex()
-	//if !ok {
-	//return
-	//}
-}
+func (c *ConnectionScreen) AddTab(title string, content gtk.IWidget) error {
+	header, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
+	if err != nil {
+		return err
+	}
 
-func (c *ConnectionScreen) onTableActivated() {
-	//index, ok := c.tablenList.ActiveItemIndex()
-	//if !ok {
-	//return
-	//}
+	label, err := gtk.LabelNew(title)
+	if err != nil {
+		return err
+	}
+
+	image, err := gtk.ImageNewFromIconName("window-close", gtk.ICON_SIZE_MENU)
+	if err != nil {
+		return err
+	}
+
+	btn, err := gtk.ButtonNew()
+	if err != nil {
+		return err
+	}
+	btn.SetImage(image)
+	btn.SetRelief(gtk.RELIEF_NONE)
+	c.tabber.SetProperty("scrollable", true)
+	c.tabber.SetProperty("enable-popup", true)
+
+	header.PackStart(label, true, true, 0)
+	header.PackEnd(btn, false, false, 0)
+	header.ShowAll()
+
+	c.tabber.AppendPage(content, header)
+	c.tabber.SetTabReorderable(content, true)
+
+	btn.Connect("clicked", func() {
+		index := c.tabber.PageNum(content)
+		if index == -1 {
+			return
+		}
+		c.tabber.RemovePage(index)
+	})
+
+	return nil
 }
 
 func (c *ConnectionScreen) SetDatabases(dbs []string) {
@@ -173,8 +197,21 @@ func (c *ConnectionScreen) OnTableSelected(f interface{}) {
 	c.tableList.Connect("row-activated", f)
 }
 
-func (c *ConnectionScreen) ActiveDatabase() string {
-	return c.activeDatabase.Get().(string)
+func (c *ConnectionScreen) SetActiveDatabase(dbName string) {
+	for i, db := range c.databaseNames {
+		if db == dbName {
+			c.activeDatabase.Set(dbName)
+			c.dbCombo.SetActive(i)
+			return
+		}
+	}
+}
+
+func (c *ConnectionScreen) ActiveDatabase() (string, bool) {
+	if c.activeDatabase.Get() == nil {
+		return "", false
+	}
+	return c.activeDatabase.Get().(string), true
 }
 
 func (c *ConnectionScreen) ActiveTable() (string, bool) {

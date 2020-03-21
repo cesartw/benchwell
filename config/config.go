@@ -112,9 +112,8 @@ func (c Connection) GetDSN() string {
 	}
 	b.WriteString(")")
 
-	b.WriteString("/" + c.Database)
 	if c.Database != "" {
-		b.WriteString(c.Database)
+		b.WriteString("/" + c.Database)
 	}
 
 	if c.Options != "" {

@@ -1,12 +1,12 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"log"
 	"os"
 
 	"bitbucket.org/goreorto/sqlhero/config"
+	"bitbucket.org/goreorto/sqlhero/ctrl"
 	"bitbucket.org/goreorto/sqlhero/gtk"
 	"bitbucket.org/goreorto/sqlhero/logger"
 	"bitbucket.org/goreorto/sqlhero/sqlengine"
@@ -31,77 +31,20 @@ func main() {
 	app, err := gtk.New(appID)
 	errorCheck(err)
 
+	ctl, err := ctrl.New(ctrl.Options{
+		Engine:  eng,
+		Config:  conf,
+		Factory: app,
+	})
+	errorCheck(err)
+
 	// Connect function to application startup event, this is not required.
 	app.Connect("startup", func() {
 		log.Println("application startup")
 	})
 
 	// Connect function to application activate event
-	app.Connect("activate", func() {
-		connect, err := app.NewConnectScreen()
-		errorCheck(err)
-
-		app.Add(connect)
-
-		connect.SetConnections(conf.Connection)
-
-		connect.OnConnect(func() {
-			conn := connect.ActiveConnection()
-			ctx, err := eng.Connect(sqlengine.Context(context.TODO()), conn.GetDSN())
-			errorCheck(err)
-
-			dbNames, err := eng.Databases(ctx)
-			errorCheck(err)
-
-			connectionScr, err := app.NewConnectionScreen(ctx)
-			errorCheck(err)
-
-			connectionScr.OnDatabaseSelected(func() {
-				dbName := connectionScr.ActiveDatabase()
-				ctx, err = eng.UseDatabase(ctx, dbName)
-
-				tables, err := eng.Tables(ctx)
-				errorCheck(err)
-
-				connectionScr.SetTables(tables)
-			})
-
-			connectionScr.OnTableSelected(func() {
-				tableName, ok := connectionScr.ActiveTable()
-				if ok {
-					def, data, err := eng.FetchTable(ctx, tableName, 0, 40)
-					errorCheck(err)
-
-					connectionScr.SetTableData(def, data)
-				}
-			})
-
-			app.Remove(connect)
-			app.Add(connectionScr)
-
-			connectionScr.SetDatabases(dbNames)
-
-			app.PushStatus("Connected to `%s`", conn.Host)
-		})
-
-		connect.OnTest(func() {
-			conn := connect.ActiveConnection()
-			ctx, err := eng.Connect(sqlengine.Context(context.TODO()), conn.GetDSN())
-			if err != nil {
-				errorCheck(err)
-			}
-			app.PushStatus("Connection to `%s` was successful", conn.Host)
-			eng.Disconnect(ctx)
-		})
-
-		connect.OnSave(func() {
-			//conn := connect.ActiveConnection()
-			app.PushStatus("Saved")
-		})
-
-		app.Show()
-		app.PushStatus("Ready")
-	})
+	app.Connect("activate", ctl.OnActivate)
 
 	// Connect function to application shutdown event, this is not required.
 	app.Connect("shutdown", func() {

@@ -3,7 +3,6 @@ package gtk
 import (
 	"log"
 
-	"bitbucket.org/goreorto/sqlhero/sqlengine"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 )
@@ -36,10 +35,6 @@ func New(appid string) (*Factory, error) {
 
 func (f *Factory) NewConnectScreen() (*ConnectScreen, error) {
 	return newConnectScreen()
-}
-
-func (f *Factory) NewConnectionScreen(ctx sqlengine.Context) (*ConnectionScreen, error) {
-	return newConnectionScreen(ctx)
 }
 
 func (f *Factory) newMainScreen() (*Window, error) {
