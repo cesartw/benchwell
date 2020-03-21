@@ -11,6 +11,7 @@ require (
 	github.com/gotk3/gotk3 v0.4.1-0.20200303201101-011cec6a2372
 	github.com/lucasb-eyer/go-colorful v0.0.0-20180526135729-345fbb3dbcdb // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
+	github.com/radovskyb/watcher v1.0.7 // indirect
 	github.com/rivo/tview v0.0.0-20181226202439-36893a669792
 	github.com/sirupsen/logrus v1.2.0
 	github.com/smartystreets/goconvey v0.0.0-20190731233626-505e41936337 // indirect

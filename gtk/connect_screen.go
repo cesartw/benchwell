@@ -1,18 +1,28 @@
-package main
+package gtk
 
 import (
 	"fmt"
 
 	"bitbucket.org/goreorto/sqlhero/config"
-	"bitbucket.org/goreorto/sqlhero/ui/controls"
+	"bitbucket.org/goreorto/sqlhero/gtk/controls"
 	"github.com/gotk3/gotk3/gtk"
 )
+
+func newConnectScreen() (*ConnectScreen, error) {
+	cs := &ConnectScreen{}
+	return cs, cs.init()
+}
 
 type ConnectScreen struct {
 	*gtk.Paned
 	connectionList *controls.List
 	connections    []*config.Connection
-	activeForm     *Form
+	activeForm     *form
+
+	activeConnection controls.MVar
+	btnSave          *gtk.Button
+	btnConnect       *gtk.Button
+	btnTest          *gtk.Button
 }
 
 func (c *ConnectScreen) init() error {
@@ -53,26 +63,55 @@ func (c *ConnectScreen) init() error {
 	c.connectionList.SetVExpand(true)
 	frame1.Add(c.connectionList)
 
-	c.Paned.Pack1(frame1, false, true)
-	c.Paned.Pack2(frame2, false, false)
-
 	forms, err := c.forms()
 	if err != nil {
 		return err
 	}
 
+	btnBox, err := gtk.ButtonBoxNew(gtk.ORIENTATION_HORIZONTAL)
+	if err != nil {
+		return err
+	}
+	btnBox.SetLayout(gtk.BUTTONBOX_EDGE)
+
+	c.btnConnect, err = gtk.ButtonNew()
+	if err != nil {
+		return err
+	}
+	c.btnSave, err = gtk.ButtonNew()
+	if err != nil {
+		return err
+	}
+	c.btnTest, err = gtk.ButtonNew()
+	if err != nil {
+		return err
+	}
+
+	c.btnConnect.SetLabel("Connect")
+	c.btnTest.SetLabel("Test")
+	c.btnSave.SetLabel("Save")
+
+	btnBox.Add(c.btnConnect)
+	btnBox.Add(c.btnTest)
+	btnBox.Add(c.btnSave)
+
+	forms.Add(btnBox)
 	frame2.Add(forms)
+
+	c.Paned.Pack1(frame1, false, true)
+	c.Paned.Pack2(frame2, false, false)
+
 	c.Paned.ShowAll()
 
 	return nil
 }
 
-type Form struct {
+type form struct {
 	inputs map[string]*gtk.Entry
 	labels map[string]*gtk.Label
 }
 
-func (f *Form) New(fields []string) (*Form, error) {
+func (f *form) new(fields []string) (*form, error) {
 	f.inputs = map[string]*gtk.Entry{}
 	f.labels = map[string]*gtk.Label{}
 
@@ -95,32 +134,38 @@ func (f *Form) New(fields []string) (*Form, error) {
 	return f, nil
 }
 
-func (c *ConnectScreen) forms() (*gtk.Notebook, error) {
+func (c *ConnectScreen) forms() (*gtk.Box, error) {
+	box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
+	if err != nil {
+		return nil, err
+	}
+
 	nb, err := gtk.NotebookNew()
 	if err != nil {
 		return nil, err
 	}
+	box.Add(nb)
 
-	nb.SetSizeRequest(300, 200)
-	nb.SetVAlign(gtk.ALIGN_CENTER)
-	nb.SetHAlign(gtk.ALIGN_CENTER)
+	box.SetSizeRequest(300, 200)
+	box.SetVAlign(gtk.ALIGN_CENTER)
+	box.SetHAlign(gtk.ALIGN_CENTER)
 	nb.SetShowBorder(true)
 	nb.SetCanFocus(true)
 
-	forms := []*Form{}
-	content, label, form, err := c.nbPage("Standard", []string{"Name", "Host", "Port", "User", "Password", "Database"})
+	forms := []*form{}
+	content, label, frm, err := c.nbPage("Standard", []string{"Name", "Host", "Port", "User", "Password", "Database"})
 	if err != nil {
 		return nil, err
 	}
-	c.activeForm = form
+	c.activeForm = frm
 
-	forms = append(forms, form)
+	forms = append(forms, frm)
 	nb.AppendPage(content, label)
 
-	return nb, nil
+	return box, nil
 }
 
-func (c *ConnectScreen) nbPage(title string, fields []string) (gtk.IWidget, gtk.IWidget, *Form, error) {
+func (c *ConnectScreen) nbPage(title string, fields []string) (gtk.IWidget, gtk.IWidget, *form, error) {
 	label, err := gtk.LabelNew(title)
 	if err != nil {
 		return nil, nil, nil, err
@@ -143,7 +188,7 @@ func (c *ConnectScreen) nbPage(title string, fields []string) (gtk.IWidget, gtk.
 	hbox.PackStart(labelsBox, true, false, 5)
 	hbox.PackStart(inputsBox, false, false, 5)
 
-	frm, err := (&Form{}).New(fields)
+	frm, err := (&form{}).new(fields)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -175,6 +220,7 @@ func (c *ConnectScreen) onConnectionSelected() {
 	}
 
 	conn := c.connections[index]
+	c.activeConnection.Set(conn)
 
 	c.activeForm.inputs["Name"].SetText(conn.Name)
 	c.activeForm.inputs["Host"].SetText(conn.Host)
@@ -191,13 +237,31 @@ func (c *ConnectScreen) onConnectionActivated() {
 	}
 
 	conn := c.connections[index]
+	c.activeConnection.Set(conn)
 	c.activeForm.inputs["Name"].SetText(conn.Name)
 	c.activeForm.inputs["Host"].SetText(conn.Host)
 	c.activeForm.inputs["Port"].SetText(fmt.Sprintf("%d", conn.Port))
 	c.activeForm.inputs["User"].SetText(conn.Username)
 	c.activeForm.inputs["Password"].SetText(conn.Password)
 	c.activeForm.inputs["Database"].SetText(conn.Database)
+	c.btnConnect.Emit("activate")
 }
 
-func (c *ConnectScreen) UpdateForm(conn config.Connection) {
+func (c *ConnectScreen) OnConnect(f interface{}) {
+	c.btnConnect.Connect("clicked", f)
+}
+
+func (c *ConnectScreen) OnSave(f interface{}) {
+	c.btnSave.Connect("clicked", f)
+}
+
+func (c *ConnectScreen) OnTest(f interface{}) {
+	c.btnTest.Connect("clicked", f)
+}
+
+func (c *ConnectScreen) ActiveConnection() *config.Connection {
+	return c.activeConnection.Get().(*config.Connection)
+}
+
+func (c *ConnectScreen) Dispose() {
 }

@@ -10,7 +10,7 @@
       <placeholder/>
     </child>
     <child>
-      <object class="GtkBox" id="MainWindowBox">
+      <object class="GtkBox">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="hexpand">True</property>
@@ -175,10 +175,17 @@
           </packing>
         </child>
         <child>
-          <placeholder/>
+          <object class="GtkBox" id="MainWindowBox">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="hexpand">True</property>
+            <property name="vexpand">True</property>
+            <property name="orientation">vertical</property>
+            <property name="baseline_position">bottom</property>
+          </object>
         </child>
         <child>
-          <object class="GtkStatusbar">
+          <object class="GtkStatusbar" id="MainStatusBar">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="margin_left">10</property>

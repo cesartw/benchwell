@@ -9,15 +9,15 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
-type UIResult struct {
+type Result struct {
 	*gtk.TreeView
 	cols  []driver.ColDef
 	data  [][]interface{}
 	store *gtk.ListStore
 }
 
-func NewUIResult(cols []driver.ColDef, data [][]interface{}) (u *UIResult, err error) {
-	u = &UIResult{}
+func NewResult(cols []driver.ColDef, data [][]interface{}) (u *Result, err error) {
+	u = &Result{}
 
 	u.TreeView, err = gtk.TreeViewNew()
 	if err != nil {
@@ -31,7 +31,7 @@ func NewUIResult(cols []driver.ColDef, data [][]interface{}) (u *UIResult, err e
 	return u, nil
 }
 
-func (u *UIResult) UpdateData(cols []driver.ColDef, data [][]interface{}) error {
+func (u *Result) UpdateData(cols []driver.ColDef, data [][]interface{}) error {
 	for i := range u.cols {
 		u.TreeView.RemoveColumn(u.TreeView.GetColumn(i))
 	}
@@ -76,7 +76,7 @@ func (u *UIResult) UpdateData(cols []driver.ColDef, data [][]interface{}) error 
 	return nil
 }
 
-func (u *UIResult) AddRow(row []interface{}) {
+func (u *Result) AddRow(row []interface{}) {
 	// Get an iterator for a new row at the end of the list store
 	iter := u.store.Append()
 
@@ -103,7 +103,7 @@ func (u *UIResult) AddRow(row []interface{}) {
 	}
 }
 
-func (u *UIResult) createColumn(title string, id int) *gtk.TreeViewColumn {
+func (u *Result) createColumn(title string, id int) *gtk.TreeViewColumn {
 	cellRenderer, err := gtk.CellRendererTextNew()
 	if err != nil {
 		log.Fatal("Unable to create text cell renderer:", err)
@@ -122,7 +122,7 @@ func (u *UIResult) createColumn(title string, id int) *gtk.TreeViewColumn {
 	return column
 }
 
-func (u *UIResult) edited(cell *gtk.CellRendererText, path string, newText string, userData interface{}) {
+func (u *Result) edited(cell *gtk.CellRendererText, path string, newText string, userData interface{}) {
 	columnIndex := userData.(int)
 
 	tpath, err := gtk.TreePathNewFromString(path)

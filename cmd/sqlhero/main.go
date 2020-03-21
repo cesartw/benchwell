@@ -1,15 +1,15 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"os"
 
 	"bitbucket.org/goreorto/sqlhero/config"
+	"bitbucket.org/goreorto/sqlhero/gtk"
 	"bitbucket.org/goreorto/sqlhero/logger"
 	"bitbucket.org/goreorto/sqlhero/sqlengine"
-	"github.com/gotk3/gotk3/glib"
-	"github.com/gotk3/gotk3/gtk"
 )
 
 const appID = "com.iodone.sqlhero"
@@ -28,74 +28,88 @@ func main() {
 	defer eng.Dispose()
 
 	// Create a new application.
-	application, err := gtk.ApplicationNew(appID, glib.APPLICATION_FLAGS_NONE)
+	app, err := gtk.New(appID)
 	errorCheck(err)
 
 	// Connect function to application startup event, this is not required.
-	application.Connect("startup", func() {
+	app.Connect("startup", func() {
 		log.Println("application startup")
 	})
 
 	// Connect function to application activate event
-	application.Connect("activate", func() {
-		log.Println("application activate")
-		win := &Window{}
-		win.init()
-
-		connect := &ConnectScreen{}
-		err := connect.init()
+	app.Connect("activate", func() {
+		connect, err := app.NewConnectScreen()
 		errorCheck(err)
-		win.Add(connect)
+
+		app.Add(connect)
 
 		connect.SetConnections(conf.Connection)
 
-		win.Show()
-		application.AddWindow(win.Window)
+		connect.OnConnect(func() {
+			conn := connect.ActiveConnection()
+			ctx, err := eng.Connect(sqlengine.Context(context.TODO()), conn.GetDSN())
+			errorCheck(err)
+
+			dbNames, err := eng.Databases(ctx)
+			errorCheck(err)
+
+			connectionScr, err := app.NewConnectionScreen(ctx)
+			errorCheck(err)
+
+			connectionScr.OnDatabaseSelected(func() {
+				dbName := connectionScr.ActiveDatabase()
+				ctx, err = eng.UseDatabase(ctx, dbName)
+
+				tables, err := eng.Tables(ctx)
+				errorCheck(err)
+
+				connectionScr.SetTables(tables)
+			})
+
+			connectionScr.OnTableSelected(func() {
+				tableName, ok := connectionScr.ActiveTable()
+				if ok {
+					def, data, err := eng.FetchTable(ctx, tableName, 0, 40)
+					errorCheck(err)
+
+					connectionScr.SetTableData(def, data)
+				}
+			})
+
+			app.Remove(connect)
+			app.Add(connectionScr)
+
+			connectionScr.SetDatabases(dbNames)
+
+			app.PushStatus("Connected to `%s`", conn.Host)
+		})
+
+		connect.OnTest(func() {
+			conn := connect.ActiveConnection()
+			ctx, err := eng.Connect(sqlengine.Context(context.TODO()), conn.GetDSN())
+			if err != nil {
+				errorCheck(err)
+			}
+			app.PushStatus("Connection to `%s` was successful", conn.Host)
+			eng.Disconnect(ctx)
+		})
+
+		connect.OnSave(func() {
+			//conn := connect.ActiveConnection()
+			app.PushStatus("Saved")
+		})
+
+		app.Show()
+		app.PushStatus("Ready")
 	})
 
 	// Connect function to application shutdown event, this is not required.
-	application.Connect("shutdown", func() {
+	app.Connect("shutdown", func() {
 		log.Println("application shutdown")
 	})
 
 	// Launch the application
-	os.Exit(application.Run(os.Args))
-}
-
-type Window struct {
-	*gtk.Window
-	builder *gtk.Builder
-	box     *gtk.Box
-}
-
-func (w *Window) init() {
-	var err error
-	w.builder, err = gtk.BuilderNewFromFile("ui/main.glade")
-	errorCheck(err)
-
-	signals := map[string]interface{}{
-		"on_main_window_destroy": w.onMainWindowDestroy,
-	}
-
-	w.builder.ConnectSignals(signals)
-	obj, err := w.builder.GetObject("MainWindow")
-	errorCheck(err)
-
-	w.Window = obj.(*gtk.Window)
-
-	obj, err = w.builder.GetObject("MainWindowBox")
-	errorCheck(err)
-
-	w.box = obj.(*gtk.Box)
-}
-
-func (w *Window) Add(wd gtk.IWidget) {
-	w.box.Add(wd)
-	//w.box.ReorderChild(wd, 1)
-}
-
-func (w Window) onMainWindowDestroy() {
-	log.Println("onMainWindowDestroy")
+	os.Exit(app.Run(os.Args))
 }
 
 func errorCheck(e error) {
