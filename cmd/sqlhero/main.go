@@ -31,7 +31,7 @@ func main() {
 	app, err := gtk.New(appID)
 	errorCheck(err)
 
-	ctl, err := ctrl.New(ctrl.Options{
+	ctl, err := ctrl.MainCtrl{}.Init(ctrl.Options{
 		Engine:  eng,
 		Config:  conf,
 		Factory: app,

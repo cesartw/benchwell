@@ -5,6 +5,7 @@ import (
 
 	"bitbucket.org/goreorto/sqlhero/config"
 	"bitbucket.org/goreorto/sqlhero/gtk/controls"
+	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
 )
 
@@ -51,10 +52,12 @@ func (c *ConnectScreen) init() error {
 	frame2.SetShadowType(gtk.SHADOW_IN)
 	frame2.SetSizeRequest(50, -1)
 
-	c.connectionList, err = controls.NewList(nil)
+	c.connectionList, err = controls.NewList(controls.ListOptions{SelectOnRightClick: true})
 	if err != nil {
 		return err
 	}
+
+	c.connectionList.OnButtonPress(c.onConnectListButtonPress)
 
 	c.connectionList.Connect("row-activated", c.onConnectionActivated)
 	c.connectionList.Connect("row-selected", c.onConnectionSelected)
@@ -106,63 +109,66 @@ func (c *ConnectScreen) init() error {
 	return nil
 }
 
-type form struct {
-	inputs map[string]*gtk.Entry
-	labels map[string]*gtk.Label
-}
+func (c *ConnectScreen) onConnectListButtonPress(_ *gtk.ListBox, e *gdk.Event) {
+	keyEvent := gdk.EventButtonNewFromEvent(e)
 
-func (f *form) new(fields []string) (*form, error) {
-	f.inputs = map[string]*gtk.Entry{}
-	f.labels = map[string]*gtk.Label{}
+	if keyEvent.Button() != gdk.BUTTON_SECONDARY {
+		return
+	}
 
-	for _, field := range fields {
-		l, err := gtk.LabelNew(field)
-		if err != nil {
-			return nil, err
+	m, err := gtk.MenuNew()
+	if err != nil {
+		return
+	}
+
+	mi, err := gtk.MenuItemNewWithLabel("New")
+	if err != nil {
+		return
+	}
+	mi.Connect("activate", func() {
+		c.activeForm.inputs["Name"].SetText("")
+		c.activeForm.inputs["Host"].SetText("")
+		c.activeForm.inputs["Port"].SetText("")
+		c.activeForm.inputs["User"].SetText("")
+		c.activeForm.inputs["Password"].SetText("")
+		c.activeForm.inputs["Database"].SetText("")
+
+		c.activeForm.inputs["Name"].GrabFocus()
+	})
+	m.Add(mi)
+
+	mi, err = gtk.MenuItemNewWithLabel("Connect")
+	if err != nil {
+		return
+	}
+
+	mi.Connect("activate", func() {
+		index, ok := c.connectionList.SelectedItemIndex()
+		if !ok {
+			return
 		}
-		l.SetHAlign(gtk.ALIGN_START)
 
-		e, err := gtk.EntryNew()
-		if err != nil {
-			return nil, err
-		}
+		c.connect(c.connections[index])
+	})
+	m.Add(mi)
 
-		f.inputs[field] = e
-		f.labels[field] = l
-	}
-
-	return f, nil
-}
-
-func (c *ConnectScreen) forms() (*gtk.Box, error) {
-	box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
+	mi, err = gtk.MenuItemNewWithLabel("Test")
 	if err != nil {
-		return nil, err
+		return
 	}
+	mi.Connect("activate", func() {
+		c.btnTest.Emit("clicked")
+	})
+	m.Add(mi)
 
-	nb, err := gtk.NotebookNew()
+	mi, err = gtk.MenuItemNewWithLabel("Delete")
 	if err != nil {
-		return nil, err
+		return
 	}
-	box.Add(nb)
+	m.Add(mi)
 
-	box.SetSizeRequest(300, 200)
-	box.SetVAlign(gtk.ALIGN_CENTER)
-	box.SetHAlign(gtk.ALIGN_CENTER)
-	nb.SetShowBorder(true)
-	nb.SetCanFocus(true)
-
-	forms := []*form{}
-	content, label, frm, err := c.nbPage("Standard", []string{"Name", "Host", "Port", "User", "Password", "Database"})
-	if err != nil {
-		return nil, err
-	}
-	c.activeForm = frm
-
-	forms = append(forms, frm)
-	nb.AppendPage(content, label)
-
-	return box, nil
+	m.ShowAll()
+	m.PopupAtPointer(e)
 }
 
 func (c *ConnectScreen) nbPage(title string, fields []string) (gtk.IWidget, gtk.IWidget, *form, error) {
@@ -236,7 +242,10 @@ func (c *ConnectScreen) onConnectionActivated() {
 		return
 	}
 
-	conn := c.connections[index]
+	c.connect(c.connections[index])
+}
+
+func (c *ConnectScreen) connect(conn *config.Connection) {
 	c.activeConnection.Set(conn)
 	c.activeForm.inputs["Name"].SetText(conn.Name)
 	c.activeForm.inputs["Host"].SetText(conn.Host)
@@ -264,4 +273,63 @@ func (c *ConnectScreen) ActiveConnection() *config.Connection {
 }
 
 func (c *ConnectScreen) Dispose() {
+}
+
+func (c *ConnectScreen) forms() (*gtk.Box, error) {
+	box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
+	if err != nil {
+		return nil, err
+	}
+
+	nb, err := gtk.NotebookNew()
+	if err != nil {
+		return nil, err
+	}
+	box.Add(nb)
+
+	box.SetSizeRequest(300, 200)
+	box.SetVAlign(gtk.ALIGN_CENTER)
+	box.SetHAlign(gtk.ALIGN_CENTER)
+	nb.SetShowBorder(true)
+	nb.SetCanFocus(true)
+
+	forms := []*form{}
+	content, label, frm, err := c.nbPage("Standard", []string{"Name", "Host", "Port", "User", "Password", "Database"})
+	if err != nil {
+		return nil, err
+	}
+	c.activeForm = frm
+
+	forms = append(forms, frm)
+	nb.AppendPage(content, label)
+
+	return box, nil
+}
+
+type form struct {
+	inputs map[string]*gtk.Entry
+	labels map[string]*gtk.Label
+}
+
+func (f *form) new(fields []string) (*form, error) {
+	f.inputs = map[string]*gtk.Entry{}
+	f.labels = map[string]*gtk.Label{}
+
+	for _, field := range fields {
+		l, err := gtk.LabelNew(field)
+		if err != nil {
+			return nil, err
+		}
+		l.SetHAlign(gtk.ALIGN_START)
+
+		e, err := gtk.EntryNew()
+		if err != nil {
+			return nil, err
+		}
+
+		f.inputs[field] = e
+		f.labels[field] = l
+	}
+
+	return f, nil
 }

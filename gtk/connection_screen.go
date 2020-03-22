@@ -4,19 +4,17 @@ import (
 	"log"
 
 	"bitbucket.org/goreorto/sqlhero/gtk/controls"
-	"bitbucket.org/goreorto/sqlhero/sqlengine"
 	"bitbucket.org/goreorto/sqlhero/sqlengine/driver"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 )
 
-func (f *Factory) NewConnectionScreen(ctx sqlengine.Context) (*ConnectionScreen, error) {
-	cs := &ConnectionScreen{ctx: ctx}
+func (f *Factory) NewConnectionScreen() (*ConnectionScreen, error) {
+	cs := &ConnectionScreen{}
 	return cs, cs.init()
 }
 
 type ConnectionScreen struct {
-	ctx sqlengine.Context
 	*gtk.Paned
 	tableList *controls.List
 	result    *controls.Result
@@ -67,7 +65,7 @@ func (c *ConnectionScreen) init() error {
 	}
 	c.dbCombo.SetEntryTextColumn(0)
 
-	c.tableList, err = controls.NewList(nil)
+	c.tableList, err = controls.NewList(controls.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -108,7 +106,7 @@ func (c *ConnectionScreen) init() error {
 	return nil
 }
 
-func (c *ConnectionScreen) AddTab(title string, content gtk.IWidget) error {
+func (c *ConnectionScreen) AddTab(title string, content gtk.IWidget, switchNow bool) error {
 	header, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
 	if err != nil {
 		return err
@@ -147,6 +145,10 @@ func (c *ConnectionScreen) AddTab(title string, content gtk.IWidget) error {
 		}
 		c.tabber.RemovePage(index)
 	})
+
+	if switchNow {
+		c.tabber.SetCurrentPage(c.tabber.GetNPages() - 1)
+	}
 
 	return nil
 }

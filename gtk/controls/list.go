@@ -1,21 +1,27 @@
 package controls
 
 import (
+	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
 )
+
+type ListOptions struct {
+	Names              []string
+	SelectOnRightClick bool
+}
 
 type List struct {
 	activeItem        MVar
 	activeItemIndex   MVar
 	selectedItem      MVar
 	selectedItemIndex MVar
-	names             []string
 	*gtk.ListBox
+	options ListOptions
 }
 
-func NewList(names []string) (*List, error) {
+func NewList(opts ListOptions) (*List, error) {
 	list := &List{
-		names: names,
+		options: opts,
 	}
 
 	var err error
@@ -27,17 +33,35 @@ func NewList(names []string) (*List, error) {
 	list.SetProperty("activate-on-single-click", false)
 	list.Connect("row-activated", list.onRowActivated)
 	list.Connect("row-selected", list.onRowSelected)
+	if list.options.SelectOnRightClick {
+		list.Connect("button-press-event", list.onRightClick)
+	}
 
-	list.UpdateItems(names)
+	list.UpdateItems(list.options.Names)
 
 	return list, nil
+}
+func (u *List) onRightClick(_ *gtk.ListBox, e *gdk.Event) {
+	keyEvent := gdk.EventButtonNewFromEvent(e)
+
+	if keyEvent.Button() != gdk.BUTTON_SECONDARY {
+		return
+	}
+
+	row := u.GetRowAtY(int(keyEvent.Y()))
+	u.GrabFocus()
+	u.SelectRow(row)
+}
+
+func (u *List) OnButtonPress(f interface{}) {
+	u.ListBox.Connect("button-press-event", f)
 }
 
 func (u *List) UpdateItems(names []string) error {
 	u.ListBox.GetChildren().Foreach(func(item interface{}) {
 		u.ListBox.Remove(item.(gtk.IWidget))
 	})
-	u.names = names
+	u.options.Names = names
 
 	for _, name := range names {
 		label, err := gtk.LabelNew(name)
@@ -61,13 +85,13 @@ func (u *List) UpdateItems(names []string) error {
 }
 
 func (u *List) onRowActivated(_ *gtk.ListBox, row *gtk.ListBoxRow) {
-	u.activeItem.Set(u.names[row.GetIndex()])
+	u.activeItem.Set(u.options.Names[row.GetIndex()])
 	u.activeItemIndex.Set(row.GetIndex())
 }
 
 func (u *List) onRowSelected(_ *gtk.ListBox, row *gtk.ListBoxRow) {
 	if row != nil {
-		u.selectedItem.Set(u.names[row.GetIndex()])
+		u.selectedItem.Set(u.options.Names[row.GetIndex()])
 		u.selectedItemIndex.Set(row.GetIndex())
 	}
 }
