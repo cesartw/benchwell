@@ -2,51 +2,55 @@ package gtk
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/gotk3/gotk3/gtk"
 )
 
 type Window struct {
-	*gtk.Window
-	builder     *gtk.Builder
+	*gtk.ApplicationWindow
+	//builder     *gtk.Builder
 	box         *gtk.Box
 	statusBar   *gtk.Statusbar
 	statusBarID uint
 }
 
-func (w *Window) init() (err error) {
-	w.builder, err = gtk.BuilderNewFromFile("main.glade")
+func (w *Window) init(app *gtk.Application) (err error) {
+	//w.builder, err = gtk.BuilderNewFromFile("main.glade")
+	//if err != nil {
+	//return err
+	//}
+
+	w.ApplicationWindow, err = gtk.ApplicationWindowNew(app)
+	w.SetTitle("SQLHero")
+	w.SetShowMenubar(true)
+
+	//w.builder.ConnectSignals(signals)
+	//obj, err := w.builder.GetObject("MainWindow")
+	//if err != nil {
+	//return err
+	//}
+
+	//w.Window = obj.(*gtk.Window)
+
+	//obj, err = w.builder.GetObject("MainWindowBox")
+	//if err != nil {
+	//return err
+	//}
+
+	w.box, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if err != nil {
 		return err
 	}
 
-	signals := map[string]interface{}{
-		"on_main_window_destroy": w.onMainWindowDestroy,
-	}
-
-	w.builder.ConnectSignals(signals)
-	obj, err := w.builder.GetObject("MainWindow")
+	w.statusBar, err = gtk.StatusbarNew()
 	if err != nil {
 		return err
 	}
+	w.box.PackEnd(w.statusBar, false, false, 0)
 
-	w.Window = obj.(*gtk.Window)
-
-	obj, err = w.builder.GetObject("MainWindowBox")
-	if err != nil {
-		return err
-	}
-
-	w.box = obj.(*gtk.Box)
-
-	obj, err = w.builder.GetObject("MainStatusBar")
-	if err != nil {
-		return err
-	}
-
-	w.statusBar = obj.(*gtk.Statusbar)
 	w.statusBarID = w.statusBar.GetContextId("main")
+
+	w.ApplicationWindow.Add(w.box)
 
 	return nil
 }
@@ -57,10 +61,6 @@ func (w *Window) Add(wd gtk.IWidget) {
 
 func (w *Window) Remove(wd gtk.IWidget) {
 	w.box.Remove(wd)
-}
-
-func (w Window) onMainWindowDestroy() {
-	log.Println("onMainWindowDestroy")
 }
 
 func (w Window) PushStatus(format string, args ...interface{}) {

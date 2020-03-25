@@ -4,7 +4,6 @@ import (
 	"log"
 
 	"bitbucket.org/goreorto/sqlhero/gtk/controls"
-	"bitbucket.org/goreorto/sqlhero/sqlengine/driver"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 )
@@ -17,7 +16,6 @@ func (f *Factory) NewConnectionScreen() (*ConnectionScreen, error) {
 type ConnectionScreen struct {
 	*gtk.Paned
 	tableList *controls.List
-	result    *controls.Result
 	dbCombo   *gtk.ComboBox
 	tabber    *gtk.Notebook
 
@@ -90,6 +88,8 @@ func (c *ConnectionScreen) init() error {
 	}
 	c.tabber.SetVExpand(true)
 	c.tabber.SetHExpand(true)
+	// TODO: move to config
+	//c.tabber.SetProperty("tab-pos", gtk.POS_BOTTOM)
 
 	mainSection.Add(c.tabber)
 	mainSection.SetVExpand(true)
@@ -163,10 +163,6 @@ func (c *ConnectionScreen) SetDatabases(dbs []string) {
 
 func (c *ConnectionScreen) SetTables(tables []string) {
 	c.tableList.UpdateItems(tables)
-}
-
-func (c *ConnectionScreen) SetTableData(cols []driver.ColDef, data [][]interface{}) error {
-	return c.result.UpdateData(cols, data)
 }
 
 func (c *ConnectionScreen) onDatabaseSelected() {

@@ -30,7 +30,10 @@ func (c ConnectCtrl) init(p *MainCtrl) (*ConnectCtrl, error) {
 }
 
 func (c *ConnectCtrl) onConnect() {
-	conn := c.scr.ActiveConnection()
+	conn, ok := c.scr.ActiveConnection()
+	if !ok {
+		return
+	}
 	ctx, err := c.engine.Connect(sqlengine.Context(context.TODO()), conn.GetDSN())
 	if err != nil {
 		c.log.Error(err)
@@ -42,10 +45,15 @@ func (c *ConnectCtrl) onConnect() {
 }
 
 func (c *ConnectCtrl) onTest() {
-	conn := c.scr.ActiveConnection()
+	conn, ok := c.scr.ActiveConnection()
+	if !ok {
+		return
+	}
+
 	ctx, err := c.engine.Connect(sqlengine.Context(context.TODO()), conn.GetDSN())
 	if err != nil {
 		c.log.Error(err)
+		c.factory.PushStatus("Fail connection `%s`(%s): %s", conn.Name, conn.Host, err.Error())
 		return
 	}
 

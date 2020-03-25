@@ -22,7 +22,7 @@ func (c TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableName
 	c.parent = parent
 	c.tableName = tableName
 
-	c.resultView, err = gtk.NewResultView()
+	c.resultView, err = gtk.NewResultView(nil, nil)
 	if err != nil {
 		return nil, err
 	}

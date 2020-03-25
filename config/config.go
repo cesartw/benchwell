@@ -41,6 +41,52 @@ type Connection struct {
 	Options  string
 }
 
+// GetDSN ...
+func (c Connection) GetDSN() string {
+	b := bytes.NewBuffer([]byte{})
+	b.WriteString("mysql://")
+
+	if c.Username != "" {
+		b.WriteString(c.Username)
+	}
+
+	if c.Password != "" && c.Username != "" {
+		b.WriteString(":" + c.Password)
+	}
+
+	if c.Username != "" {
+		b.WriteString("@")
+	}
+
+	b.WriteString("tcp(" + c.Host)
+	if c.Port != 0 {
+		b.WriteString(fmt.Sprintf(":%d", c.Port))
+	}
+	b.WriteString(")")
+
+	if c.Database != "" {
+		b.WriteString("/" + c.Database)
+	}
+
+	if c.Options != "" {
+		b.WriteString("?")
+		b.WriteString(c.Options)
+	}
+
+	return b.String()
+}
+
+func (c Connection) Valid() bool {
+	if c.Host == "" {
+		return false
+	}
+	if c.Username == "" {
+		return false
+	}
+
+	return true
+}
+
 // New read $HOME/.config/sqlhero/config.toml
 func New(phrase string) (*Config, error) {
 	conf := &Config{}
@@ -87,41 +133,6 @@ func (c *Config) Save() error {
 	}
 
 	return c.decrypt()
-}
-
-// GetDSN ...
-func (c Connection) GetDSN() string {
-	b := bytes.NewBuffer([]byte{})
-	b.WriteString("mysql://")
-
-	if c.Username != "" {
-		b.WriteString(c.Username)
-	}
-
-	if c.Password != "" && c.Username != "" {
-		b.WriteString(":" + c.Password)
-	}
-
-	if c.Username != "" {
-		b.WriteString("@")
-	}
-
-	b.WriteString("tcp(" + c.Host)
-	if c.Port != 0 {
-		b.WriteString(fmt.Sprintf(":%d", c.Port))
-	}
-	b.WriteString(")")
-
-	if c.Database != "" {
-		b.WriteString("/" + c.Database)
-	}
-
-	if c.Options != "" {
-		b.WriteString("?")
-		b.WriteString(c.Options)
-	}
-
-	return b.String()
 }
 
 func (c *Config) encrypt() error {

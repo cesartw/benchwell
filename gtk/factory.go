@@ -21,6 +21,10 @@ func New(appid string) (*Factory, error) {
 		return nil, err
 	}
 
+	f.Connect("startup", func() {
+		f.SetAppMenu(&f.menu().MenuModel)
+	})
+
 	f.Connect("activate", func() {
 		f.mainWindow, err = f.newMainScreen()
 		if err != nil {
@@ -28,9 +32,26 @@ func New(appid string) (*Factory, error) {
 		}
 
 		f.AddWindow(f.mainWindow)
+		f.mainWindow.ShowAll()
 	})
 
 	return f, nil
+}
+
+// Application
+//  -> Preferences
+//     -> Tabs
+func (f *Factory) menu() *glib.Menu {
+	open := glib.MenuItemNewWithLabel("Open")
+	save := glib.MenuItemNewWithLabel("Save")
+	prefs := glib.MenuItemNewWithLabel("Preferences")
+
+	main := glib.MenuNew()
+	main.AppendItem(open)
+	main.AppendItem(save)
+	main.AppendItem(prefs)
+
+	return main
 }
 
 func (f *Factory) NewConnectScreen() (*ConnectScreen, error) {
@@ -39,7 +60,7 @@ func (f *Factory) NewConnectScreen() (*ConnectScreen, error) {
 
 func (f *Factory) newMainScreen() (*Window, error) {
 	w := &Window{}
-	return w, w.init()
+	return w, w.init(f.Application)
 }
 
 func (f *Factory) Add(w gtk.IWidget) {

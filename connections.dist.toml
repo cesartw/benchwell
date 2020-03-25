@@ -29,3 +29,9 @@ database = ""
 
 [debug]
 level=5
+
+[editor]
+word-wrapping = "word" | "char" | "none"
+
+[gui]
+tab-position: "top" | "bottom" | "left" | "right"
