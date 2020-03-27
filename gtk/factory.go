@@ -10,6 +10,14 @@ import (
 type Factory struct {
 	*gtk.Application
 	mainWindow *Window
+	Menu       struct {
+		Application struct {
+			New         *glib.SimpleAction
+			Open        *glib.SimpleAction
+			Save        *glib.SimpleAction
+			Preferences *glib.SimpleAction
+		}
+	}
 }
 
 func New(appid string) (*Factory, error) {
@@ -22,7 +30,25 @@ func New(appid string) (*Factory, error) {
 	}
 
 	f.Connect("startup", func() {
-		f.SetAppMenu(&f.menu().MenuModel)
+		//if f.PrefersAppMenu() {
+		//}
+		f.Menu.Application.New = glib.SimpleActionNew("new_conn", nil)
+		f.Menu.Application.Open = glib.SimpleActionNew("open", nil)
+		f.Menu.Application.Save = glib.SimpleActionNew("save", nil)
+		f.Menu.Application.Preferences = glib.SimpleActionNew("prefernces", nil)
+
+		menu := glib.MenuNew()
+		menu.Append("New Connection", "app.new_conn")
+		menu.Append("Open", "app.open")
+		menu.Append("Save", "app.save")
+		menu.Append("Preferences", "app.preferences")
+
+		f.AddAction(f.Menu.Application.New)
+		f.AddAction(f.Menu.Application.Open)
+		f.AddAction(f.Menu.Application.Save)
+		f.AddAction(f.Menu.Application.Preferences)
+
+		f.SetAppMenu(&menu.MenuModel)
 	})
 
 	f.Connect("activate", func() {
@@ -38,22 +64,6 @@ func New(appid string) (*Factory, error) {
 	return f, nil
 }
 
-// Application
-//  -> Preferences
-//     -> Tabs
-func (f *Factory) menu() *glib.Menu {
-	open := glib.MenuItemNewWithLabel("Open")
-	save := glib.MenuItemNewWithLabel("Save")
-	prefs := glib.MenuItemNewWithLabel("Preferences")
-
-	main := glib.MenuNew()
-	main.AppendItem(open)
-	main.AppendItem(save)
-	main.AppendItem(prefs)
-
-	return main
-}
-
 func (f *Factory) NewConnectScreen() (*ConnectScreen, error) {
 	return newConnectScreen()
 }
@@ -63,8 +73,20 @@ func (f *Factory) newMainScreen() (*Window, error) {
 	return w, w.init(f.Application)
 }
 
-func (f *Factory) Add(w gtk.IWidget) {
-	f.mainWindow.Add(w)
+func (f *Factory) AddTab(label *gtk.Label, w gtk.IWidget) {
+	f.mainWindow.AddTab(label, w)
+}
+
+func (f *Factory) OnPageRemoved(fn interface{}) {
+	f.mainWindow.OnPageRemoved(fn)
+}
+
+func (f *Factory) OnTabClick(fn interface{}) {
+	f.mainWindow.OnTabClick(fn)
+}
+
+func (f *Factory) PageCount() int {
+	return f.mainWindow.PageCount()
 }
 
 func (f *Factory) Remove(w gtk.IWidget) {

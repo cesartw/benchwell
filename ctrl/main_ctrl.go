@@ -3,11 +3,13 @@ package ctrl
 import (
 	"errors"
 
+	"github.com/gotk3/gotk3/gdk"
+	ggtk "github.com/gotk3/gotk3/gtk"
+	"github.com/sirupsen/logrus"
+
 	"bitbucket.org/goreorto/sqlhero/config"
 	"bitbucket.org/goreorto/sqlhero/gtk"
 	"bitbucket.org/goreorto/sqlhero/sqlengine"
-	ggtk "github.com/gotk3/gotk3/gtk"
-	"github.com/sirupsen/logrus"
 )
 
 type Options struct {
@@ -61,36 +63,48 @@ func (c MainCtrl) Init(opts Options) (*MainCtrl, error) {
 }
 
 func (c *MainCtrl) OnActivate() {
-	c.launchConnect()
-	c.factory.PushStatus("Ready")
-}
-
-func (c *MainCtrl) launchConnect() {
-	ctl, err := ConnectCtrl{}.init(c)
+	err := c.AddTab()
 	if err != nil {
-		c.log.Error(err)
-		return
+		c.factory.PushStatus(err.Error())
+	} else {
+		c.factory.PushStatus("Ready")
 	}
 
-	if c.currentCtrl != nil {
-		c.factory.Remove(c.currentCtrl.Screen().(ggtk.IWidget))
-	}
-	c.factory.Add(ctl.Screen().(ggtk.IWidget))
+	c.factory.Menu.Application.New.Connect("activate", func() {
+		err := c.AddTab()
+		if err != nil {
+			c.factory.PushStatus(err.Error())
+		}
+	})
 
-	c.currentCtrl = ctl
+	c.factory.OnTabClick(c.onNotebookDoubleClick)
 
 	c.factory.Show()
 }
 
-func (c *MainCtrl) launchConnection(ctx sqlengine.Context, conn *config.Connection) {
-	ctl, err := ConnectionCtrl{}.init(ctx, c, conn)
-	if err != nil {
-		c.log.Error(err)
+func (c *MainCtrl) onNotebookDoubleClick(_ *ggtk.ListBox, e *gdk.Event) {
+	keyEvent := gdk.EventButtonNewFromEvent(e)
+
+	if keyEvent.Button() != gdk.BUTTON_PRIMARY {
+		return
+	}
+	if keyEvent.Type() != gdk.EVENT_2BUTTON_PRESS {
 		return
 	}
 
-	c.factory.Remove(c.currentCtrl.Screen().(ggtk.IWidget))
-	c.factory.Add(ctl.Screen().(ggtk.IWidget))
+	if err := c.AddTab(); err != nil {
+		c.log.Error(err)
+	}
+}
 
-	c.currentCtrl = ctl
+func (c *MainCtrl) AddTab() error {
+	tab, err := TabCtrl{}.init(c)
+	if err != nil {
+		return err
+	}
+
+	tab.tab.Show()
+	c.factory.AddTab(tab.tabLabel, tab.tab)
+
+	return nil
 }

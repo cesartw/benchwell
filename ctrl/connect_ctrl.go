@@ -8,12 +8,12 @@ import (
 )
 
 type ConnectCtrl struct {
-	*MainCtrl
+	*TabCtrl
 	scr *gtk.ConnectScreen
 }
 
-func (c ConnectCtrl) init(p *MainCtrl) (*ConnectCtrl, error) {
-	c.MainCtrl = p
+func (c ConnectCtrl) init(p *TabCtrl) (*ConnectCtrl, error) {
+	c.TabCtrl = p
 
 	var err error
 	c.scr, err = c.factory.NewConnectScreen()
@@ -37,6 +37,7 @@ func (c *ConnectCtrl) onConnect() {
 	ctx, err := c.engine.Connect(sqlengine.Context(context.TODO()), conn.GetDSN())
 	if err != nil {
 		c.log.Error(err)
+		c.factory.PushStatus("Failed connect to `%s`(%s): %s", conn.Name, conn.Host, err.Error())
 		return
 	}
 	c.factory.PushStatus("Connected to `%s`(%s)", conn.Name, conn.Host)

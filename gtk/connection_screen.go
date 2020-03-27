@@ -90,6 +90,8 @@ func (c *ConnectionScreen) init() error {
 	c.tabber.SetHExpand(true)
 	// TODO: move to config
 	//c.tabber.SetProperty("tab-pos", gtk.POS_BOTTOM)
+	c.tabber.SetProperty("scrollable", true)
+	c.tabber.SetProperty("enable-popup", true)
 
 	mainSection.Add(c.tabber)
 	mainSection.SetVExpand(true)
@@ -128,8 +130,6 @@ func (c *ConnectionScreen) AddTab(title string, content gtk.IWidget, switchNow b
 	}
 	btn.SetImage(image)
 	btn.SetRelief(gtk.RELIEF_NONE)
-	c.tabber.SetProperty("scrollable", true)
-	c.tabber.SetProperty("enable-popup", true)
 
 	header.PackStart(label, true, true, 0)
 	header.PackEnd(btn, false, false, 0)
