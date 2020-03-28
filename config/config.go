@@ -13,29 +13,44 @@ import (
 	"os"
 
 	"github.com/BurntSushi/toml"
+	"github.com/sirupsen/logrus"
 )
+
+var Env = &Config{}
+
+func init() {
+	Env.Log = logrus.New()
+}
 
 var hasher = md5.New()
 var configPath = os.Getenv("HOME") + "/.config/sqlhero/config.toml"
 
 // Config ...
 type Config struct {
-	Connection []*Connection
-	Debug      struct {
-		Level int
+	Version string
+
+	Connections []*Connection
+
+	GUI struct {
+		TabPosition    string `mapstructure:"tab_position"`
+		SubTabPosition string `mapstructure:"sub_tab_position"`
+		Editor         struct {
+			WordWrap string `mapstructure:"word_wrap"`
+		}
 	}
 
+	Log    *logrus.Logger
 	phrase string
 }
 
 // Connection ...
 type Connection struct {
-	Adapter  string // "mysql"
-	Type     string // "ssh"
-	Name     string // "localhost"
-	Host     string // "locahost"
+	Adapter  string
+	Type     string
+	Name     string
+	Host     string
 	Port     int
-	Username string
+	User     string
 	Password string
 	Database string
 	Options  string
@@ -46,15 +61,15 @@ func (c Connection) GetDSN() string {
 	b := bytes.NewBuffer([]byte{})
 	b.WriteString("mysql://")
 
-	if c.Username != "" {
-		b.WriteString(c.Username)
+	if c.User != "" {
+		b.WriteString(c.User)
 	}
 
-	if c.Password != "" && c.Username != "" {
+	if c.Password != "" && c.User != "" {
 		b.WriteString(":" + c.Password)
 	}
 
-	if c.Username != "" {
+	if c.User != "" {
 		b.WriteString("@")
 	}
 
@@ -80,37 +95,11 @@ func (c Connection) Valid() bool {
 	if c.Host == "" {
 		return false
 	}
-	if c.Username == "" {
+	if c.User == "" {
 		return false
 	}
 
 	return true
-}
-
-// New read $HOME/.config/sqlhero/config.toml
-func New(phrase string) (*Config, error) {
-	conf := &Config{}
-	conf.phrase = phrase
-
-	if err := conf.load(); err != nil {
-		return nil, err
-	}
-
-	err := conf.decrypt()
-	if err != nil {
-		return nil, err
-	}
-
-	return conf, nil
-}
-
-// Load reads $HOME/.config/sqlhero/config.toml
-func (c *Config) load() error {
-	if _, err := toml.DecodeFile(configPath, c); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // Save current configuration
@@ -140,7 +129,7 @@ func (c *Config) encrypt() error {
 		return nil
 	}
 
-	for _, conn := range c.Connection {
+	for _, conn := range c.Connections {
 		if conn.Password == "" {
 			continue
 		}
@@ -160,7 +149,7 @@ func (c *Config) decrypt() error {
 		return nil
 	}
 
-	for _, conn := range c.Connection {
+	for _, conn := range c.Connections {
 		if conn.Password == "" {
 			continue
 		}

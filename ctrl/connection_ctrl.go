@@ -58,7 +58,7 @@ func (c *ConnectionCtrl) onDatabaseSelected() {
 
 	tables, err := c.engine.Tables(c.ctx)
 	if err != nil {
-		c.log.Error(err)
+		config.Env.Log.Error(err)
 		return
 	}
 
@@ -68,12 +68,12 @@ func (c *ConnectionCtrl) onDatabaseSelected() {
 func (c *ConnectionCtrl) onTableSelected() {
 	tableName, ok := c.scr.ActiveTable()
 	if !ok {
-		c.log.Info("no table selected. odd!")
+		config.Env.Log.Debug("no table selected. odd!")
 		return
 	}
 	tab, err := TableCtrl{}.init(c.ctx, c, tableName)
 	if err != nil {
-		c.log.Error(err)
+		config.Env.Log.Error(err)
 		return
 	}
 

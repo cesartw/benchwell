@@ -434,7 +434,7 @@ func (f *stdform) SetConnection(conn config.Connection) {
 	f.entryName.SetText(conn.Name)
 	f.entryHost.SetText(conn.Host)
 	f.entryPort.SetText(fmt.Sprintf("%d", conn.Port))
-	f.entryUser.SetText(conn.Username)
+	f.entryUser.SetText(conn.User)
 	f.entryPassword.SetText(conn.Password)
 	f.entryDatabase.SetText(conn.Database)
 }
@@ -450,7 +450,7 @@ func (f *stdform) GetConnection() config.Connection {
 	} else {
 		c.Port, _ = strconv.Atoi(portS)
 	}
-	c.Username, _ = f.entryUser.GetText()
+	c.User, _ = f.entryUser.GetText()
 	c.Password, _ = f.entryPassword.GetText()
 	c.Database, _ = f.entryDatabase.GetText()
 

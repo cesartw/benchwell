@@ -3,6 +3,7 @@ package ctrl
 import (
 	"context"
 
+	"bitbucket.org/goreorto/sqlhero/config"
 	"bitbucket.org/goreorto/sqlhero/gtk"
 	"bitbucket.org/goreorto/sqlhero/sqlengine"
 )
@@ -21,28 +22,11 @@ func (c ConnectCtrl) init(p *TabCtrl) (*ConnectCtrl, error) {
 		return nil, err
 	}
 
-	c.scr.SetConnections(c.config.Connection)
-	c.scr.OnConnect(c.onConnect)
+	c.scr.SetConnections(c.config.Connections)
 	c.scr.OnTest(c.onTest)
 	c.scr.OnSave(c.onSave)
 
 	return &c, nil
-}
-
-func (c *ConnectCtrl) onConnect() {
-	conn, ok := c.scr.ActiveConnection()
-	if !ok {
-		return
-	}
-	ctx, err := c.engine.Connect(sqlengine.Context(context.TODO()), conn.GetDSN())
-	if err != nil {
-		c.log.Error(err)
-		c.factory.PushStatus("Failed connect to `%s`(%s): %s", conn.Name, conn.Host, err.Error())
-		return
-	}
-	c.factory.PushStatus("Connected to `%s`(%s)", conn.Name, conn.Host)
-
-	c.launchConnection(ctx, conn)
 }
 
 func (c *ConnectCtrl) onTest() {
@@ -53,7 +37,7 @@ func (c *ConnectCtrl) onTest() {
 
 	ctx, err := c.engine.Connect(sqlengine.Context(context.TODO()), conn.GetDSN())
 	if err != nil {
-		c.log.Error(err)
+		config.Env.Log.Error(err)
 		c.factory.PushStatus("Fail connection `%s`(%s): %s", conn.Name, conn.Host, err.Error())
 		return
 	}

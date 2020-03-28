@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"bitbucket.org/goreorto/sqlhero/config"
-	"bitbucket.org/goreorto/sqlhero/logger"
 	"bitbucket.org/goreorto/sqlhero/sqlengine/driver"
 )
 
@@ -20,17 +19,15 @@ var (
 // Engine orchestrate multiple Connection
 type Engine struct {
 	config *config.Config
-	log    logger.Logger
 
 	connMU      sync.Mutex
 	connections []driver.Connection
 }
 
 // New return a new Engine
-func New(conf *config.Config, log logger.Logger) *Engine {
+func New(conf *config.Config) *Engine {
 	return &Engine{
 		config:      conf,
-		log:         log.SetComponent("ENGINE"),
 		connections: make([]driver.Connection, 0),
 	}
 }

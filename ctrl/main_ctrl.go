@@ -37,7 +37,6 @@ func (o Options) Valid() error {
 
 type MainCtrl struct {
 	config  *config.Config
-	log     *logrus.Logger
 	factory *gtk.Factory
 	engine  *sqlengine.Engine
 
@@ -53,11 +52,6 @@ func (c MainCtrl) Init(opts Options) (*MainCtrl, error) {
 	c.engine = opts.Engine
 	c.factory = opts.Factory
 	c.config = opts.Config
-	c.log = opts.Log
-
-	if c.log == nil {
-		c.log = logrus.New()
-	}
 
 	return &c, nil
 }
@@ -77,7 +71,8 @@ func (c *MainCtrl) OnActivate() {
 		}
 	})
 
-	c.factory.OnTabClick(c.onNotebookDoubleClick)
+	// TODO: every double click is triggering this handler
+	//c.factory.OnTabClick(c.onNotebookDoubleClick)
 
 	c.factory.Show()
 }
@@ -93,7 +88,7 @@ func (c *MainCtrl) onNotebookDoubleClick(_ *ggtk.ListBox, e *gdk.Event) {
 	}
 
 	if err := c.AddTab(); err != nil {
-		c.log.Error(err)
+		config.Env.Log.Error(err)
 	}
 }
 

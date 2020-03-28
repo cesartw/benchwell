@@ -1,6 +1,7 @@
 package ctrl
 
 import (
+	"bitbucket.org/goreorto/sqlhero/config"
 	"bitbucket.org/goreorto/sqlhero/gtk"
 	"bitbucket.org/goreorto/sqlhero/sqlengine"
 )
@@ -34,13 +35,13 @@ func (c TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableName
 func (tc *TableCtrl) OnConnect() {
 	def, data, err := tc.parent.engine.FetchTable(tc.ctx, tc.tableName, 0, 40)
 	if err != nil {
-		tc.parent.log.Error(err)
+		config.Env.Log.Error(err)
 		return
 	}
 
 	err = tc.resultView.UpdateData(def, data)
 	if err != nil {
-		tc.parent.log.Error(err)
+		config.Env.Log.Error(err)
 	}
 }
 
