@@ -2,9 +2,18 @@ package driver
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 	"sync"
+)
+
+type TYPE uint
+
+const (
+	TYPE_BOOLEAN TYPE = iota
+	TYPE_STRING
+	TYPE_FLOAT
+	TYPE_INT
+	TYPE_DATE
 )
 
 var (
@@ -63,8 +72,12 @@ type Connection interface {
 // ColDef describe a column
 type ColDef struct {
 	Name   string
-	Type   reflect.Type
 	PK, FK bool
+	Type   TYPE
+}
+
+func (c *ColDef) String() string {
+	return c.Name
 }
 
 // Database ...
@@ -75,7 +88,7 @@ type Database interface {
 	DeleteRecord(tableName string, defs []ColDef, values []*string) error
 	UpdateRecord(tableName string, cols []ColDef, values, oldValues []*string) (string, error)
 	InsertRecord(tableName string, cols []ColDef, values []*string) ([]*string, error)
-	// Query(string, interface{}) ([]string,[]string,error)
+	Query(string) ([]string, [][]interface{}, error)
 	// Execute(string, interface{}) (in,error)
 	Name() string
 }

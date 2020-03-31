@@ -10,6 +10,7 @@ import (
 	"github.com/alecthomas/chroma"
 	"github.com/alecthomas/chroma/formatters"
 	"github.com/alecthomas/chroma/quick"
+	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
 
 	"bitbucket.org/goreorto/sqlhero/config"
@@ -26,6 +27,8 @@ type ResultView struct {
 
 	result   *controls.Result
 	resultSW *gtk.ScrolledWindow
+
+	submitCallbacks []func(string)
 }
 
 func NewResultView(cols []driver.ColDef, data [][]interface{}) (rv *ResultView, err error) {
@@ -41,7 +44,9 @@ func NewResultView(cols []driver.ColDef, data [][]interface{}) (rv *ResultView, 
 		return nil, err
 	}
 
-	rv.textView.Connect("key-release-event", func() {
+	rv.textView.Connect("key-release-event", func(_ *gtk.TextView, e *gdk.Event) {
+		keyEvent := gdk.EventKeyNewFromEvent(e)
+
 		buff, err := rv.textView.GetBuffer()
 		if err != nil {
 			config.Env.Log.Error(err)
@@ -51,6 +56,13 @@ func NewResultView(cols []driver.ColDef, data [][]interface{}) (rv *ResultView, 
 		txt, err := buff.GetText(buff.GetStartIter(), buff.GetEndIter(), false)
 		if err != nil {
 			config.Env.Log.Error(err)
+			return
+		}
+
+		if keyEvent.KeyVal() == 65293 && keyEvent.State()&gdk.GDK_CONTROL_MASK > 0 {
+			for _, fn := range rv.submitCallbacks {
+				fn(txt)
+			}
 			return
 		}
 
@@ -105,8 +117,20 @@ func (v *ResultView) UpdateData(cols []driver.ColDef, data [][]interface{}) erro
 	return v.result.UpdateData(cols, data)
 }
 
-func ChromaHighlight(inputString string) (out string, err error) {
+func (v *ResultView) UpdateRawData(cols []string, data [][]interface{}) error {
+	return v.result.UpdateRawData(cols, data)
+}
 
+func (v *ResultView) OnEdited(fn func([]driver.ColDef, []interface{}, []interface{}, string, int, int)) *ResultView {
+	v.result.OnEdited(fn)
+	return v
+}
+
+func (v *ResultView) OnSubmit(fn func(value string)) {
+	v.submitCallbacks = append(v.submitCallbacks, fn)
+}
+
+func ChromaHighlight(inputString string) (out string, err error) {
 	buff := new(bytes.Buffer)
 	writer := bufio.NewWriter(buff)
 
@@ -120,6 +144,7 @@ func ChromaHighlight(inputString string) (out string, err error) {
 	writer.Flush()
 	return string(buff.Bytes()), err
 }
+
 func pangoFormatter(w io.Writer, style *chroma.Style, it chroma.Iterator) error {
 	var r, g, b uint8
 	var closer, out string

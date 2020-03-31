@@ -1,6 +1,9 @@
 package controls
 
 import (
+	"regexp"
+
+	"bitbucket.org/goreorto/sqlhero/config"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
 )
@@ -8,6 +11,7 @@ import (
 type ListOptions struct {
 	Names              []string
 	SelectOnRightClick bool
+	FilterRegex        *regexp.Regexp
 }
 
 type List struct {
@@ -39,8 +43,22 @@ func NewList(opts ListOptions) (*List, error) {
 
 	list.UpdateItems(list.options.Names)
 
+	list.SetFilterFunc(func(row *gtk.ListBoxRow, userData ...interface{}) bool {
+		if list.options.FilterRegex == nil {
+			return true
+		}
+		if row.GetIndex() >= len(list.options.Names) {
+			config.Env.Log.Debug("mmh, list is larger than the model(fake model)")
+			return true
+		}
+
+		name := list.options.Names[row.GetIndex()]
+		return list.options.FilterRegex.Match([]byte(name))
+	})
+
 	return list, nil
 }
+
 func (u *List) onRightClick(_ *gtk.ListBox, e *gdk.Event) {
 	keyEvent := gdk.EventButtonNewFromEvent(e)
 
@@ -133,4 +151,9 @@ func (u *List) SelectedItemIndex() (int, bool) {
 	i, ok := u.selectedItemIndex.Get().(int)
 
 	return i, ok
+}
+
+func (u *List) SetFilterRegex(rg *regexp.Regexp) {
+	u.options.FilterRegex = rg
+	u.InvalidateFilter()
 }

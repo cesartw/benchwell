@@ -199,6 +199,15 @@ func (e *Engine) Disconnect(ctx Context) error {
 	return conn.Disconnect()
 }
 
+func (e *Engine) Query(ctx Context, query string) ([]string, [][]interface{}, error) {
+	db := e.database(ctx)
+	if db == nil {
+		return nil, nil, ErrNoDatabase
+	}
+
+	return db.Query(query)
+}
+
 // Dispose ...
 func (e *Engine) Dispose() {
 	for _, c := range e.connections {

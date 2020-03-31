@@ -1,8 +1,10 @@
 package gtk
 
 import (
-	"log"
+	"fmt"
+	"regexp"
 
+	"bitbucket.org/goreorto/sqlhero/config"
 	"bitbucket.org/goreorto/sqlhero/gtk/controls"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
@@ -15,9 +17,10 @@ func (f *Factory) NewConnectionScreen() (*ConnectionScreen, error) {
 
 type ConnectionScreen struct {
 	*gtk.Paned
-	tableList *controls.List
-	dbCombo   *gtk.ComboBox
-	tabber    *gtk.Notebook
+	dbCombo     *gtk.ComboBox
+	tableFilter *gtk.SearchEntry
+	tableList   *controls.List
+	tabber      *gtk.Notebook
 
 	databaseNames []string
 	dbStore       *gtk.ListStore
@@ -52,6 +55,17 @@ func (c *ConnectionScreen) init() error {
 
 	c.Paned.Pack1(sideBar, false, true)
 
+	c.tableFilter, err = gtk.SearchEntryNew()
+	if err != nil {
+		return err
+	}
+
+	c.tableFilter.Connect("search-changed", c.onSearch)
+
+	// TODO: figure out how to focus on accelerator
+	//k, mod := gtk.AcceleratorParse("<Control>f")
+	//c.tableFilter.AddAccelerator("activate", nil, k, mod, gtk.ACCEL_VISIBLE)
+
 	tableListSW, err := gtk.ScrolledWindowNew(nil, nil)
 	if err != nil {
 		return err
@@ -73,6 +87,7 @@ func (c *ConnectionScreen) init() error {
 	tableListSW.Add(c.tableList)
 
 	sideBar.PackStart(c.dbCombo, false, true, 0)
+	sideBar.PackStart(c.tableFilter, false, true, 4)
 	sideBar.PackStart(tableListSW, true, true, 0)
 
 	// main section
@@ -165,28 +180,6 @@ func (c *ConnectionScreen) SetTables(tables []string) {
 	c.tableList.UpdateItems(tables)
 }
 
-func (c *ConnectionScreen) onDatabaseSelected() {
-	iter, err := c.dbCombo.GetActiveIter()
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-
-	v, err := c.dbStore.GetValue(iter, 0)
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-
-	dbName, err := v.GetString()
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-
-	c.activeDatabase.Set(dbName)
-}
-
 func (c *ConnectionScreen) OnDatabaseSelected(f interface{}) {
 	c.dbCombo.Connect("changed", f)
 }
@@ -217,4 +210,44 @@ func (c *ConnectionScreen) ActiveTable() (string, bool) {
 }
 
 func (c *ConnectionScreen) Dispose() {
+}
+
+func (c *ConnectionScreen) onSearch(e *gtk.SearchEntry) {
+	buff, err := e.GetBuffer()
+	if err != nil {
+		return
+	}
+
+	txt, err := buff.GetText()
+	if err != nil {
+		return
+	}
+
+	rg, err := regexp.Compile(txt)
+	if err != nil {
+		rg = regexp.MustCompile(fmt.Sprintf(".*%s.*", regexp.QuoteMeta(txt)))
+	}
+	c.tableList.SetFilterRegex(rg)
+}
+
+func (c *ConnectionScreen) onDatabaseSelected() {
+	iter, err := c.dbCombo.GetActiveIter()
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+
+	v, err := c.dbStore.GetValue(iter, 0)
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+
+	dbName, err := v.GetString()
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+
+	c.activeDatabase.Set(dbName)
 }

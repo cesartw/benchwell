@@ -136,6 +136,7 @@ func (d *mysqlDb) TableDefinition(tableName string) ([]driver.ColDef, error) {
 
 		defs = append(defs, driver.ColDef{
 			Name: name.String,
+			Type: d.stringToTYPE(ftype.String),
 			PK:   key.String == "PRI",
 		})
 	}
@@ -145,6 +146,79 @@ func (d *mysqlDb) TableDefinition(tableName string) ([]driver.ColDef, error) {
 	}
 
 	return defs, nil
+}
+
+func (d *mysqlDb) Query(query string) (columnNames []string, data [][]interface{}, err error) {
+	data = make([][]interface{}, 0)
+
+	var sqlRows *sql.Rows
+	sqlRows, err = d.db.Query(query)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	defer sqlRows.Close()
+
+	columnNames, err = sqlRows.Columns()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for sqlRows.Next() {
+		row := make([]interface{}, len(columnNames))
+
+		for ci := range columnNames {
+			row[ci] = &row[ci]
+		}
+
+		if err := sqlRows.Scan(row...); err != nil {
+			return nil, nil, err
+		}
+
+		data = append(data, row)
+	}
+	if err := sqlRows.Err(); err != nil {
+		return nil, nil, err
+	}
+
+	return columnNames, data, err
+}
+
+func (d *mysqlDb) stringToTYPE(s string) driver.TYPE {
+	switch {
+	case strings.HasPrefix(s, "enum"):
+		fallthrough
+	case strings.HasPrefix(s, "text"):
+		fallthrough
+	case strings.HasPrefix(s, "var"):
+		return driver.TYPE_STRING
+	case strings.HasPrefix(s, "int"):
+		fallthrough
+	case strings.HasPrefix(s, "smallint"):
+		fallthrough
+	case strings.HasPrefix(s, "bigint"):
+		fallthrough
+	case strings.HasPrefix(s, "mediumint"):
+		return driver.TYPE_INT
+	case strings.HasPrefix(s, "tinyint(1)"):
+		return driver.TYPE_BOOLEAN
+	case strings.HasPrefix(s, "double precision"):
+		fallthrough
+	case strings.HasPrefix(s, "double"):
+		fallthrough
+	case strings.HasPrefix(s, "float"):
+		fallthrough
+	case strings.HasPrefix(s, "decimal"):
+		return driver.TYPE_FLOAT
+	case strings.HasPrefix(s, "time"):
+		fallthrough
+	case strings.HasPrefix(s, "datetime"):
+		fallthrough
+	case strings.HasPrefix(s, "date"):
+		return driver.TYPE_DATE
+	}
+
+	return driver.TYPE_STRING
 }
 
 func (d *mysqlDb) FetchTable(

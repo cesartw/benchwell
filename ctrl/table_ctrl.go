@@ -1,9 +1,12 @@
 package ctrl
 
 import (
+	"fmt"
+
 	"bitbucket.org/goreorto/sqlhero/config"
 	"bitbucket.org/goreorto/sqlhero/gtk"
 	"bitbucket.org/goreorto/sqlhero/sqlengine"
+	"bitbucket.org/goreorto/sqlhero/sqlengine/driver"
 )
 
 // tableCtrl manages table result screen
@@ -28,6 +31,28 @@ func (c TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableName
 		return nil, err
 	}
 	c.resultView.ShowAll()
+	c.resultView.OnEdited(func(
+		cols []driver.ColDef,
+		oldRow []interface{},
+		newRow []interface{},
+		newValue string,
+		row int,
+		col int,
+	) {
+		fmt.Println(cols)
+		fmt.Println(oldRow)
+		fmt.Println(newRow)
+		fmt.Println(newValue)
+		fmt.Println(row)
+		fmt.Println(col)
+	}).OnSubmit(func(value string) {
+		columns, data, err := c.parent.engine.Query(c.ctx, value)
+		if err != nil {
+			config.Env.Log.Error(err)
+		}
+
+		c.resultView.UpdateRawData(columns, data)
+	})
 
 	return &c, nil
 }
