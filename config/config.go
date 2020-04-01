@@ -7,13 +7,14 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 
-	"github.com/BurntSushi/toml"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 var Env = &Config{}
@@ -27,7 +28,7 @@ var configPath = os.Getenv("HOME") + "/.config/sqlhero/config.toml"
 
 // Config ...
 type Config struct {
-	Version string
+	Version string `json:"-"`
 
 	Connections []*Connection
 
@@ -39,8 +40,8 @@ type Config struct {
 		}
 	}
 
-	Log    *logrus.Logger
-	phrase string
+	Log    *logrus.Logger `json:"-"`
+	phrase string         `json:"-"`
 }
 
 // Connection ...
@@ -79,9 +80,7 @@ func (c Connection) GetDSN() string {
 	}
 	b.WriteString(")")
 
-	if c.Database != "" {
-		b.WriteString("/" + c.Database)
-	}
+	b.WriteString("/" + c.Database)
 
 	if c.Options != "" {
 		b.WriteString("?")
@@ -104,24 +103,34 @@ func (c Connection) Valid() bool {
 
 // Save current configuration
 func (c *Config) Save() error {
-	err := c.encrypt()
+
+	d, err := json.Marshal(c)
 	if err != nil {
+		c.Log.Error(err)
 		return err
 	}
 
-	f, err := os.Create(configPath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
+	viper.MergeConfig(bytes.NewReader(d))
+	return viper.WriteConfig()
 
-	dec := toml.NewEncoder(f)
-	err = dec.Encode(c)
-	if err != nil {
-		return err
-	}
+	//err := c.encrypt()
+	//if err != nil {
+	//return err
+	//}
 
-	return c.decrypt()
+	//f, err := os.Create(configPath)
+	//if err != nil {
+	//return err
+	//}
+	//defer f.Close()
+
+	//dec := toml.NewEncoder(f)
+	//err = dec.Encode(c)
+	//if err != nil {
+	//return err
+	//}
+
+	//return c.decrypt()
 }
 
 func (c *Config) encrypt() error {

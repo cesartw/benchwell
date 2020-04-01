@@ -6,6 +6,7 @@ import (
 	"bitbucket.org/goreorto/sqlhero/config"
 	"bitbucket.org/goreorto/sqlhero/gtk"
 	"bitbucket.org/goreorto/sqlhero/sqlengine"
+	ggtk "github.com/gotk3/gotk3/gtk"
 )
 
 type ConnectCtrl struct {
@@ -22,7 +23,14 @@ func (c ConnectCtrl) init(p *TabCtrl) (*ConnectCtrl, error) {
 		return nil, err
 	}
 
-	c.scr.SetConnections(c.config.Connections)
+	c.scr.SetConnections(config.Env.Connections)
+
+	c.scr.OnConnectionSelected(func(list *ggtk.ListBox) {
+		row := list.GetSelectedRow()
+
+		c.scr.SetFormConnection(config.Env.Connections[row.GetIndex()])
+	})
+
 	c.scr.OnTest(c.onTest)
 	c.scr.OnSave(c.onSave)
 
@@ -30,9 +38,12 @@ func (c ConnectCtrl) init(p *TabCtrl) (*ConnectCtrl, error) {
 }
 
 func (c *ConnectCtrl) onTest() {
-	conn, ok := c.scr.ActiveConnection()
-	if !ok {
-		return
+	var conn *config.Connection
+	index := c.scr.ActiveConnectionIndex()
+	if index > 0 {
+		conn = config.Env.Connections[index]
+	} else {
+		conn = c.scr.GetFormConnection()
 	}
 
 	ctx, err := c.engine.Connect(sqlengine.Context(context.TODO()), conn.GetDSN())
@@ -47,6 +58,13 @@ func (c *ConnectCtrl) onTest() {
 }
 
 func (c *ConnectCtrl) onSave() {
+	index := c.scr.ActiveConnectionIndex()
+	if index == -1 {
+		config.Env.Connections = append(config.Env.Connections, c.scr.GetFormConnection())
+	}
+
+	config.Env.Save()
+
 	c.factory.PushStatus("Saved")
 }
 

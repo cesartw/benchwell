@@ -58,7 +58,11 @@ func (c *TabCtrl) launchConnection(ctx sqlengine.Context, conn *config.Connectio
 		return
 	}
 
-	c.tabLabel.SetText(conn.Name)
+	if conn.Name != "" {
+		c.tabLabel.SetText(conn.Name)
+	} else {
+		c.tabLabel.SetText(conn.Host)
+	}
 
 	if c.connectScr != nil {
 		c.tab.Remove(c.connectScr)
@@ -69,10 +73,14 @@ func (c *TabCtrl) launchConnection(ctx sqlengine.Context, conn *config.Connectio
 }
 
 func (c *TabCtrl) onConnect() {
-	conn, ok := c.connectScr.ActiveConnection()
-	if !ok {
-		return
+	var conn *config.Connection
+	index := c.connectScr.ActiveConnectionIndex()
+	if index == -1 {
+		conn = c.connectScr.GetFormConnection()
+	} else {
+		conn = config.Env.Connections[index]
 	}
+
 	ctx, err := c.engine.Connect(sqlengine.Context(context.TODO()), conn.GetDSN())
 	if err != nil {
 		config.Env.Log.Error(err)

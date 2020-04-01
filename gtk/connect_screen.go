@@ -18,13 +18,12 @@ func newConnectScreen() (*ConnectScreen, error) {
 type ConnectScreen struct {
 	*gtk.Paned
 	connectionList *controls.List
-	connections    []*config.Connection
 	activeForm     *stdform
 
-	activeConnection controls.MVar
-	btnSave          *gtk.Button
-	btnConnect       *gtk.Button
-	btnTest          *gtk.Button
+	activeConnectionIndex controls.MVar
+	btnSave               *gtk.Button
+	btnConnect            *gtk.Button
+	btnTest               *gtk.Button
 }
 
 func (c *ConnectScreen) init() error {
@@ -59,9 +58,6 @@ func (c *ConnectScreen) init() error {
 	}
 
 	c.connectionList.OnButtonPress(c.onConnectListButtonPress)
-
-	c.connectionList.Connect("row-activated", c.onConnectionActivated)
-	c.connectionList.Connect("row-selected", c.onConnectionSelected)
 
 	c.connectionList.SetHExpand(true)
 	c.connectionList.SetVExpand(true)
@@ -147,8 +143,9 @@ func (c *ConnectScreen) onConnectListButtonPress(_ *gtk.ListBox, e *gdk.Event) {
 			return
 		}
 
-		c.connect(c.connections[index])
+		c.onConnect(index)
 	})
+
 	m.Add(mi)
 
 	mi, err = gtk.MenuItemNewWithLabel("Test")
@@ -188,25 +185,17 @@ func (c *ConnectScreen) nbPage(title string) (gtk.IWidget, *stdform, error) {
 }
 
 func (c *ConnectScreen) SetConnections(connections []*config.Connection) {
-	c.connections = connections
+	//c.connections = connections
 	names := make([]string, len(connections))
-	for i, con := range c.connections {
+	for i, con := range connections {
 		names[i] = con.Name
 	}
 
 	c.connectionList.UpdateItems(names)
 }
 
-func (c *ConnectScreen) onConnectionSelected() {
-	index, ok := c.connectionList.SelectedItemIndex()
-	if !ok {
-		return
-	}
-
-	conn := c.connections[index]
-	c.activeConnection.Set(conn)
-
-	c.activeForm.SetConnection(*conn)
+func (c *ConnectScreen) SetFormConnection(conn *config.Connection) {
+	c.activeForm.SetConnection(conn)
 	if conn.Valid() {
 		c.btnConnect.SetSensitive(true)
 		c.btnTest.SetSensitive(true)
@@ -214,18 +203,15 @@ func (c *ConnectScreen) onConnectionSelected() {
 	}
 }
 
-func (c *ConnectScreen) onConnectionActivated() {
-	index, ok := c.connectionList.ActiveItemIndex()
-	if !ok {
-		return
-	}
-
-	c.connect(c.connections[index])
+func (c *ConnectScreen) OnConnectionSelected(fn interface{}) {
+	c.connectionList.Connect("row-selected", fn)
 }
 
-func (c *ConnectScreen) connect(conn *config.Connection) {
-	c.activeConnection.Set(conn)
-	c.activeForm.SetConnection(*conn)
+func (c *ConnectScreen) OnConnectionActivated(fn interface{}) {
+	c.connectionList.Connect("row-activated", fn)
+}
+
+func (c *ConnectScreen) onConnect(index int) {
 	c.btnConnect.Emit("activate")
 }
 
@@ -241,11 +227,11 @@ func (c *ConnectScreen) OnTest(f interface{}) {
 	c.btnTest.Connect("clicked", f)
 }
 
-func (c *ConnectScreen) ActiveConnection() (*config.Connection, bool) {
-	if c.activeConnection.Get() == nil {
-		return nil, false
+func (c *ConnectScreen) ActiveConnectionIndex() int {
+	if c.activeConnectionIndex.Get() == nil {
+		return -1
 	}
-	return c.activeConnection.Get().(*config.Connection), true
+	return c.activeConnectionIndex.Get().(int)
 }
 
 func (c *ConnectScreen) Dispose() {
@@ -275,12 +261,20 @@ func (c *ConnectScreen) forms() (*gtk.Box, error) {
 		return nil, err
 	}
 	c.activeForm = frm
-	c.activeForm.onChange(func() bool {
+	c.activeForm.onChange(func(_ *gtk.Entry, e *gdk.Event) bool {
 		conn := c.activeForm.GetConnection()
+
 		if conn.Valid() {
 			c.btnConnect.SetSensitive(true)
 			c.btnTest.SetSensitive(true)
 			c.btnSave.SetSensitive(true)
+
+			keyEvent := gdk.EventKeyNewFromEvent(e)
+			if keyEvent.KeyVal() == 65293 && keyEvent.State()&gdk.GDK_CONTROL_MASK > 0 {
+				c.btnConnect.Emit("activate")
+				return false
+			}
+
 			return false
 		}
 
@@ -294,6 +288,10 @@ func (c *ConnectScreen) forms() (*gtk.Box, error) {
 	nb.AppendPage(frm, label)
 
 	return box, nil
+}
+
+func (c *ConnectScreen) GetFormConnection() *config.Connection {
+	return c.activeForm.GetConnection()
 }
 
 type stdform struct {
@@ -389,6 +387,8 @@ func (f stdform) init() (*stdform, error) {
 	if err != nil {
 		return nil, err
 	}
+	f.entryPassword.SetProperty("input-purpose", gtk.INPUT_PURPOSE_PASSWORD)
+	f.entryPassword.SetProperty("visibility", false)
 
 	f.labelDatabase, err = gtk.LabelNew("Database")
 	if err != nil {
@@ -430,7 +430,7 @@ func (f *stdform) GrabFocus() {
 	f.entryName.GrabFocus()
 }
 
-func (f *stdform) SetConnection(conn config.Connection) {
+func (f *stdform) SetConnection(conn *config.Connection) {
 	f.entryName.SetText(conn.Name)
 	f.entryHost.SetText(conn.Host)
 	f.entryPort.SetText(fmt.Sprintf("%d", conn.Port))
@@ -439,22 +439,21 @@ func (f *stdform) SetConnection(conn config.Connection) {
 	f.entryDatabase.SetText(conn.Database)
 }
 
-func (f *stdform) GetConnection() config.Connection {
-	c := config.Connection{}
-
-	c.Name, _ = f.entryName.GetText()
-	c.Host, _ = f.entryHost.GetText()
+func (f *stdform) GetConnection() *config.Connection {
+	conn := &config.Connection{}
+	conn.Name, _ = f.entryName.GetText()
+	conn.Host, _ = f.entryHost.GetText()
 	portS, _ := f.entryPort.GetText()
 	if portS == "" {
-		c.Port = 3306
+		conn.Port = 3306
 	} else {
-		c.Port, _ = strconv.Atoi(portS)
+		conn.Port, _ = strconv.Atoi(portS)
 	}
-	c.User, _ = f.entryUser.GetText()
-	c.Password, _ = f.entryPassword.GetText()
-	c.Database, _ = f.entryDatabase.GetText()
+	conn.User, _ = f.entryUser.GetText()
+	conn.Password, _ = f.entryPassword.GetText()
+	conn.Database, _ = f.entryDatabase.GetText()
 
-	return c
+	return conn
 }
 
 func (f *stdform) onChange(fn interface{}) {
