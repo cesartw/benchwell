@@ -65,22 +65,19 @@ func (u *Result) UpdateData(cols []driver.ColDef, data [][]interface{}) error {
 		columns[i] = glib.TYPE_STRING
 	}
 
-	for _, row := range data {
-		for i, col := range row {
-			if col == nil {
-				continue
-			}
-
-			switch reflect.TypeOf(col).Kind() {
-			case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int8:
-				columns[i] = glib.TYPE_INT64
-			case reflect.Bool:
-				columns[i] = glib.TYPE_BOOLEAN
-			default:
-				columns[i] = glib.TYPE_STRING
-			}
+	for i, col := range cols {
+		switch col.Type {
+		case driver.TYPE_INT:
+			columns[i] = glib.TYPE_INT64
+		case driver.TYPE_BOOLEAN:
+			columns[i] = glib.TYPE_BOOLEAN
+		case driver.TYPE_STRING:
+			columns[i] = glib.TYPE_STRING
+		case driver.TYPE_DATE:
+			columns[i] = glib.TYPE_STRING
+		default:
+			columns[i] = glib.TYPE_VARIANT
 		}
-		break
 	}
 
 	var err error
@@ -96,37 +93,6 @@ func (u *Result) UpdateData(cols []driver.ColDef, data [][]interface{}) error {
 
 	u.mode = MODE_DEF
 	return nil
-}
-
-type stringer string
-
-func (s stringer) String() string {
-	return string(s)
-}
-
-func stringSliceToStringerSlice(sc []string) (r []fmt.Stringer) {
-	for _, str := range sc {
-		r = append(r, stringer(str))
-	}
-
-	return r
-}
-
-func colDefSliceToStringerSlice(cols []driver.ColDef) (r []fmt.Stringer) {
-	for _, col := range cols {
-		r = append(r, col)
-	}
-
-	return r
-}
-
-func stringerSliceToColDefSlice(sc []fmt.Stringer) (r []driver.ColDef) {
-	for _, str := range sc {
-		col := str.(driver.ColDef)
-		r = append(r, col)
-	}
-
-	return r
 }
 
 func (u *Result) UpdateRawData(cols []string, data [][]interface{}) error {
@@ -258,7 +224,7 @@ func (u *Result) onEdited(cell *gtk.CellRendererText, path string, newValue stri
 	dataLen := u.store.GetNColumns()
 	newRow := make([]interface{}, dataLen)
 	for i := 0; i < dataLen; i++ {
-		val, err := u.store.GetValue(iter, column)
+		val, err := u.store.GetValue(iter, i)
 		if err != nil {
 			return
 		}
@@ -285,4 +251,34 @@ func (u *Result) onEdited(cell *gtk.CellRendererText, path string, newValue stri
 
 func (u *Result) OnEdited(fn func([]driver.ColDef, []interface{}, []interface{}, string, int, int)) {
 	u.updateCallbacks = append(u.updateCallbacks, fn)
+}
+
+type stringer string
+
+func (s stringer) String() string {
+	return string(s)
+}
+
+func stringSliceToStringerSlice(sc []string) (r []fmt.Stringer) {
+	for _, str := range sc {
+		r = append(r, stringer(str))
+	}
+
+	return r
+}
+
+func colDefSliceToStringerSlice(cols []driver.ColDef) (r []fmt.Stringer) {
+	for _, col := range cols {
+		r = append(r, col)
+	}
+
+	return r
+}
+
+func stringerSliceToColDefSlice(cols []fmt.Stringer) (r []driver.ColDef) {
+	for _, col := range cols {
+		r = append(r, col.(driver.ColDef))
+	}
+
+	return r
 }

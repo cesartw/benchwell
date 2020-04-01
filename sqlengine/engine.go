@@ -154,7 +154,7 @@ func (e *Engine) UpdateRecord(
 	ctx Context,
 	tableName string,
 	defs []driver.ColDef,
-	values, oldValues []*string,
+	values, oldValues []interface{},
 ) (string, error) {
 	conn := e.connection(ctx)
 	if conn == nil {

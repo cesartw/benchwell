@@ -1,8 +1,6 @@
 package ctrl
 
 import (
-	"fmt"
-
 	"bitbucket.org/goreorto/sqlhero/config"
 	"bitbucket.org/goreorto/sqlhero/gtk"
 	"bitbucket.org/goreorto/sqlhero/sqlengine"
@@ -39,12 +37,12 @@ func (c TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableName
 		row int,
 		col int,
 	) {
-		fmt.Println(cols)
-		fmt.Println(oldRow)
-		fmt.Println(newRow)
-		fmt.Println(newValue)
-		fmt.Println(row)
-		fmt.Println(col)
+		_, err := c.parent.engine.UpdateRecord(ctx, c.tableName, cols, newRow, oldRow)
+		if err != nil {
+			c.parent.factory.PushStatus(err.Error())
+		} else {
+			c.parent.factory.PushStatus("Saved")
+		}
 	}).OnSubmit(func(value string) {
 		columns, data, err := c.parent.engine.Query(c.ctx, value)
 		if err != nil {

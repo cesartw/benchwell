@@ -99,7 +99,7 @@ func initConfig() {
 	}
 
 	if viper.GetString("logfile") != "" {
-		f, err := os.OpenFile(viper.GetString("logfile"), os.O_CREATE|os.O_RDWR, os.ModeAppend|os.ModePerm)
+		f, err := os.OpenFile(viper.GetString("logfile"), os.O_CREATE|os.O_RDWR|os.O_APPEND, os.ModeAppend|os.ModePerm)
 		if err != nil {
 			panic(err)
 		}

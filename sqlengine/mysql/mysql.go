@@ -4,11 +4,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 
 	// mysql implementation
 	_ "github.com/go-sql-driver/mysql"
 
+	"bitbucket.org/goreorto/sqlhero/config"
 	"bitbucket.org/goreorto/sqlhero/sqlengine/driver"
 )
 
@@ -299,7 +301,7 @@ func (d *mysqlDb) DeleteRecord(tableName string, defs []driver.ColDef, values []
 func (d *mysqlDb) UpdateRecord(
 	tableName string,
 	cols []driver.ColDef,
-	values, oldValues []*string,
+	values, oldValues []interface{},
 ) (string, error) {
 	if len(cols) != len(values) || len(values) != len(oldValues) {
 		return "", errors.New("columns and values count doesn't match")
@@ -318,12 +320,13 @@ func (d *mysqlDb) UpdateRecord(
 
 	sets := []string{}
 	args := []interface{}{}
-	var ID string
+	var ID interface{}
 
 	for i := range values {
 		if cols[i].PK {
-			ID = *oldValues[i]
-			if oldValues[i] == values[i] {
+			config.Env.Log.Debug(cols[i].Name, oldValues[i])
+			ID = oldValues[i]
+			if reflect.DeepEqual(oldValues[i], values[i]) {
 				continue
 			}
 		}
