@@ -58,6 +58,9 @@ func (c *ConnectScreen) init() error {
 	}
 
 	c.connectionList.OnButtonPress(c.onConnectListButtonPress)
+	c.connectionList.Connect("row-activated", func() {
+		c.btnConnect.Emit("activate")
+	})
 
 	c.connectionList.SetHExpand(true)
 	c.connectionList.SetVExpand(true)

@@ -40,8 +40,10 @@ type Config struct {
 		}
 	}
 
-	Log    *logrus.Logger `json:"-"`
-	phrase string         `json:"-"`
+	Log *logrus.Logger `json:"-"`
+
+	phrase  string `json:"-"`
+	logFile string `json:"-"`
 }
 
 // Connection ...

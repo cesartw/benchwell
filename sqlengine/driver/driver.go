@@ -76,7 +76,7 @@ type ColDef struct {
 	Type   TYPE
 }
 
-func (c *ColDef) String() string {
+func (c ColDef) String() string {
 	return c.Name
 }
 

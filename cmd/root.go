@@ -74,7 +74,9 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "",
 		fmt.Sprintf("config file (default is %s/config.json)", xdgHome+"/sqlhero/config.json"))
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "verbose output")
+	rootCmd.PersistentFlags().StringP("logfile", "f", "log.txt", "log out file")
 	viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
+	viper.BindPFlag("logfile", rootCmd.PersistentFlags().Lookup("logfile"))
 }
 
 func initConfig() {
@@ -94,6 +96,15 @@ func initConfig() {
 
 	if viper.GetBool("verbose") {
 		config.Env.Log.SetLevel(logrus.DebugLevel)
+	}
+
+	if viper.GetString("logfile") != "" {
+		f, err := os.OpenFile(viper.GetString("logfile"), os.O_CREATE|os.O_RDWR, os.ModeAppend|os.ModePerm)
+		if err != nil {
+			panic(err)
+		}
+		config.Env.Log.SetOutput(f)
+
 	}
 
 	viper.Unmarshal(config.Env)

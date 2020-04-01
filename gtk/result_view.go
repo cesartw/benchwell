@@ -130,12 +130,14 @@ func (v *ResultView) OnSubmit(fn func(value string)) {
 	v.submitCallbacks = append(v.submitCallbacks, fn)
 }
 
+func init() {
+	// Registrering pango formatter
+	formatters.Register("pango", chroma.FormatterFunc(pangoFormatter))
+}
+
 func ChromaHighlight(inputString string) (out string, err error) {
 	buff := new(bytes.Buffer)
 	writer := bufio.NewWriter(buff)
-
-	// Registrering pango formatter
-	formatters.Register("pango", chroma.FormatterFunc(pangoFormatter))
 
 	// Doing the job (io.Writer, SourceText, language(go), Lexer(pango), style(pygments))
 	if err = quick.Highlight(writer, inputString, "sql", "pango", "pygments"); err != nil {

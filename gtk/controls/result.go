@@ -100,22 +100,21 @@ func (u *Result) UpdateData(cols []driver.ColDef, data [][]interface{}) error {
 
 type stringer string
 
-func (s *stringer) String() string {
-	return string(*s)
+func (s stringer) String() string {
+	return string(s)
 }
 
 func stringSliceToStringerSlice(sc []string) (r []fmt.Stringer) {
 	for _, str := range sc {
-		st := stringer(str)
-		r = append(r, &st)
+		r = append(r, stringer(str))
 	}
 
 	return r
 }
 
-func colDefSliceToStringerSlice(sc []driver.ColDef) (r []fmt.Stringer) {
-	for _, str := range sc {
-		r = append(r, &str)
+func colDefSliceToStringerSlice(cols []driver.ColDef) (r []fmt.Stringer) {
+	for _, col := range cols {
+		r = append(r, col)
 	}
 
 	return r
@@ -123,8 +122,8 @@ func colDefSliceToStringerSlice(sc []driver.ColDef) (r []fmt.Stringer) {
 
 func stringerSliceToColDefSlice(sc []fmt.Stringer) (r []driver.ColDef) {
 	for _, str := range sc {
-		col := str.(*driver.ColDef)
-		r = append(r, *col)
+		col := str.(driver.ColDef)
+		r = append(r, col)
 	}
 
 	return r
