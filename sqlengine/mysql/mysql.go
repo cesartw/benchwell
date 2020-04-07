@@ -1,14 +1,17 @@
-package driver
+package mysql
 
 import (
 	"database/sql"
 	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 
 	// mysql implementation
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/teamwork/log"
 
 	"bitbucket.org/goreorto/sqlhero/config"
 	"bitbucket.org/goreorto/sqlhero/sqlengine/driver"
@@ -136,10 +139,15 @@ func (d *mysqlDb) TableDefinition(tableName string) ([]driver.ColDef, error) {
 			return nil, err
 		}
 
+		t, precision, vv, unsigned := d.parseType(ftype.String)
 		defs = append(defs, driver.ColDef{
-			Name: name.String,
-			Type: d.stringToTYPE(ftype.String),
-			PK:   key.String == "PRI",
+			Name:      name.String,
+			Type:      t,
+			PK:        key.String == "PRI",
+			Nullable:  nullable.String == "YES",
+			Unsigned:  unsigned,
+			Values:    vv,
+			Precision: precision,
 		})
 	}
 
@@ -186,41 +194,58 @@ func (d *mysqlDb) Query(query string) (columnNames []string, data [][]interface{
 	return columnNames, data, err
 }
 
-func (d *mysqlDb) stringToTYPE(s string) driver.TYPE {
-	switch {
-	case strings.HasPrefix(s, "enum"):
-		fallthrough
-	case strings.HasPrefix(s, "text"):
-		fallthrough
-	case strings.HasPrefix(s, "var"):
-		return driver.TYPE_STRING
-	case strings.HasPrefix(s, "int"):
-		fallthrough
-	case strings.HasPrefix(s, "smallint"):
-		fallthrough
-	case strings.HasPrefix(s, "bigint"):
-		fallthrough
-	case strings.HasPrefix(s, "mediumint"):
-		return driver.TYPE_INT
-	case strings.HasPrefix(s, "tinyint(1)"):
-		return driver.TYPE_BOOLEAN
-	case strings.HasPrefix(s, "double precision"):
-		fallthrough
-	case strings.HasPrefix(s, "double"):
-		fallthrough
-	case strings.HasPrefix(s, "float"):
-		fallthrough
-	case strings.HasPrefix(s, "decimal"):
-		return driver.TYPE_FLOAT
-	case strings.HasPrefix(s, "time"):
-		fallthrough
-	case strings.HasPrefix(s, "datetime"):
-		fallthrough
-	case strings.HasPrefix(s, "date"):
-		return driver.TYPE_DATE
+func (d *mysqlDb) ParseValue(def driver.ColDef, value string) interface{} {
+	if value == driver.NULL_PATTERN {
+		return nil
 	}
 
-	return driver.TYPE_STRING
+	switch def.Type {
+	case driver.TYPE_BOOLEAN:
+		return strings.EqualFold(value, "true") || value == "1"
+	case driver.TYPE_FLOAT:
+		v, _ := strconv.ParseFloat(value, 64)
+		return v
+	case driver.TYPE_INT:
+		v, _ := strconv.ParseInt(value, 10, 64)
+		return v
+	}
+
+	return value
+}
+
+var typerg = regexp.MustCompile(`([a-z ]+)(\((.+)\))?\s?(unsigned)?`)
+
+func (d *mysqlDb) parseType(mysqlStringType string) (driver.TYPE, int, []string, bool) {
+	matches := typerg.FindStringSubmatch(mysqlStringType)
+	t := matches[1] // type
+	s := matches[3] // size/precision
+	u := matches[4] // unsigned
+
+	switch t {
+	case "enum":
+		return driver.TYPE_LIST, 0, strings.Split(s, ","), false
+	case "text":
+		return driver.TYPE_STRING, 0, nil, false
+	case "varchar":
+		si, _ := strconv.Atoi(s)
+		return driver.TYPE_STRING, si, nil, false
+	case "int", "smallint", "mediumint", "bigint":
+		si, _ := strconv.Atoi(s)
+		return driver.TYPE_INT, si, nil, u == "unsigned"
+	case "tinyint":
+		if s == "1" {
+			return driver.TYPE_BOOLEAN, 0, nil, false
+		}
+
+		si, _ := strconv.Atoi(s)
+		return driver.TYPE_INT, si, nil, u == "unsigned"
+	case "double precision", "double", "float", "decimal":
+		return driver.TYPE_FLOAT, 0, nil, u == "unsigned"
+	case "time", "datetime":
+		return driver.TYPE_DATE, 0, nil, false
+	}
+
+	return driver.TYPE_STRING, 0, nil, true
 }
 
 func (d *mysqlDb) FetchTable(
@@ -356,6 +381,48 @@ WHERE %s = ?`
 	return fmt.Sprintf("%d", id), nil
 }
 
+func (d *mysqlDb) UpdateField(
+	tableName string,
+	cols []driver.ColDef,
+	values []interface{},
+) (string, error) {
+	if len(cols) != len(values) {
+		return "", errors.New("columns and values count doesn't match")
+	}
+
+	if len(cols) == 1 {
+		return "", errors.New("keys or changes are not present")
+	}
+
+	lastIndex := len(cols) - 1
+	args := []interface{}{values[lastIndex]}
+
+	wheres := []string{}
+
+	for i := 0; i <= len(cols)-2; i++ {
+		wheres = append(wheres, fmt.Sprintf("`%s` = ?", cols[i].Name))
+		args = append(args, values[i])
+	}
+
+	query := fmt.Sprintf("UPDATE `%s` SET `%s` = ? WHERE %s",
+		tableName,
+		cols[lastIndex].Name,
+		strings.Join(wheres, " AND "))
+
+	config.Env.Log.WithFields(log.Fields{"query": query, "args": args}).Debug("UpdateField")
+	result, err := d.db.Exec(query, args...)
+	if err != nil {
+		return "", err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%d", id), nil
+}
+
 func (d *mysqlDb) InsertRecord(
 	tableName string,
 	cols []driver.ColDef,
@@ -381,6 +448,7 @@ VALUES (%s)`
 
 	query = fmt.Sprintf(query, tableName, strings.Join(collist, ","), strings.Join(qm, ","))
 
+	config.Env.Log.WithFields(log.Fields{"query": query, "args": args}).Debug("InsertRecord")
 	result, err := d.db.Exec(query, args...)
 	if err != nil {
 		return nil, err

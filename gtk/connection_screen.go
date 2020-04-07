@@ -5,7 +5,6 @@ import (
 	"regexp"
 
 	"bitbucket.org/goreorto/sqlhero/config"
-	"bitbucket.org/goreorto/sqlhero/gtk/controls"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 )
@@ -19,13 +18,13 @@ type ConnectionScreen struct {
 	*gtk.Paned
 	dbCombo     *gtk.ComboBox
 	tableFilter *gtk.SearchEntry
-	tableList   *controls.List
+	tableList   *List
 	tabber      *gtk.Notebook
 
 	databaseNames []string
 	dbStore       *gtk.ListStore
 
-	activeDatabase controls.MVar
+	activeDatabase MVar
 }
 
 func (c *ConnectionScreen) init() error {
@@ -77,7 +76,7 @@ func (c *ConnectionScreen) init() error {
 	}
 	c.dbCombo.SetEntryTextColumn(0)
 
-	c.tableList, err = controls.NewList(controls.ListOptions{})
+	c.tableList, err = NewList(ListOptions{})
 	if err != nil {
 		return err
 	}

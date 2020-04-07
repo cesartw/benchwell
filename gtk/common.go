@@ -1,4 +1,4 @@
-package controls
+package gtk
 
 import "sync"
 

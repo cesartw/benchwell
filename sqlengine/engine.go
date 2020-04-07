@@ -149,6 +149,45 @@ func (e *Engine) DeleteRecord(ctx Context, tableName string, defs []driver.ColDe
 	return db.DeleteRecord(tableName, defs, values)
 }
 
+// UpdateField ...
+func (e *Engine) UpdateField(
+	ctx Context,
+	tableName string,
+	defs []driver.ColDef,
+	values []interface{},
+) (string, error) {
+	conn := e.connection(ctx)
+	if conn == nil {
+		return "", ErrNoConnection
+	}
+
+	db := e.database(ctx)
+	if db == nil {
+		return "", ErrNoDatabase
+	}
+
+	return db.UpdateField(tableName, defs, values)
+}
+
+// UpdateField ...
+func (e *Engine) ParseValue(
+	ctx Context,
+	def driver.ColDef,
+	v string,
+) (interface{}, error) {
+	conn := e.connection(ctx)
+	if conn == nil {
+		return "", ErrNoConnection
+	}
+
+	db := e.database(ctx)
+	if db == nil {
+		return "", ErrNoConnection
+	}
+
+	return db.ParseValue(def, v), nil
+}
+
 // UpdateRecord ...
 func (e *Engine) UpdateRecord(
 	ctx Context,

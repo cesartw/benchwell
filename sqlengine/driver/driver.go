@@ -6,6 +6,8 @@ import (
 	"sync"
 )
 
+const NULL_PATTERN = "<NULL>"
+
 type TYPE uint
 
 const (
@@ -14,6 +16,7 @@ const (
 	TYPE_FLOAT
 	TYPE_INT
 	TYPE_DATE
+	TYPE_LIST
 )
 
 var (
@@ -71,9 +74,12 @@ type Connection interface {
 
 // ColDef describe a column
 type ColDef struct {
-	Name   string
-	PK, FK bool
-	Type   TYPE
+	Name               string
+	PK, FK             bool
+	Precision          int
+	Unsigned, Nullable bool
+	Type               TYPE
+	Values             []string
 }
 
 func (c ColDef) String() string {
@@ -87,8 +93,13 @@ type Database interface {
 	FetchTable(tableName string, page, pageSize int64) ([]ColDef, [][]interface{}, error)
 	DeleteRecord(tableName string, defs []ColDef, values []*string) error
 	UpdateRecord(tableName string, cols []ColDef, values, oldValues []interface{}) (string, error)
+	// UpdateField updates a single field. cols[-1] is the changed values, cols[:-1] are primary keys
+	UpdateField(tableName string, cols []ColDef, values []interface{}) (string, error)
 	InsertRecord(tableName string, cols []ColDef, values []*string) ([]*string, error)
+	ParseValue(def ColDef, value string) interface{}
 	Query(string) ([]string, [][]interface{}, error)
 	// Execute(string, interface{}) (in,error)
 	Name() string
+	// DDL
+	// GetCreateTable(string) string
 }

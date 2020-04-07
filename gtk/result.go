@@ -1,4 +1,4 @@
-package controls
+package gtk
 
 import (
 	"fmt"
@@ -19,18 +19,20 @@ const (
 	MODE_DEF
 )
 
+type parser func(driver.ColDef, string) (interface{}, error)
 type Result struct {
 	*gtk.TreeView
 	cols            []fmt.Stringer
 	data            [][]interface{}
 	store           *gtk.ListStore
-	updateCallbacks []func([]driver.ColDef, []interface{}, []interface{}, string, int, int)
+	updateCallbacks []func([]driver.ColDef, []interface{})
 
-	mode MODE
+	mode   MODE
+	parser parser
 }
 
-func NewResult(cols []driver.ColDef, data [][]interface{}) (u *Result, err error) {
-	u = &Result{}
+func NewResult(cols []driver.ColDef, data [][]interface{}, parser parser) (u *Result, err error) {
+	u = &Result{parser: parser}
 
 	u.TreeView, err = gtk.TreeViewNew()
 	if err != nil {
@@ -51,6 +53,7 @@ func (u *Result) UpdateData(cols []driver.ColDef, data [][]interface{}) error {
 	for i := range u.cols {
 		u.TreeView.RemoveColumn(u.TreeView.GetColumn(i))
 	}
+
 	u.cols = colDefSliceToStringerSlice(cols)
 	u.data = data
 
@@ -62,23 +65,24 @@ func (u *Result) UpdateData(cols []driver.ColDef, data [][]interface{}) error {
 		}
 
 		u.TreeView.InsertColumn(gtkc, i)
+		// default type
 		columns[i] = glib.TYPE_STRING
 	}
 
-	for i, col := range cols {
-		switch col.Type {
-		case driver.TYPE_INT:
-			columns[i] = glib.TYPE_INT64
-		case driver.TYPE_BOOLEAN:
-			columns[i] = glib.TYPE_BOOLEAN
-		case driver.TYPE_STRING:
-			columns[i] = glib.TYPE_STRING
-		case driver.TYPE_DATE:
-			columns[i] = glib.TYPE_STRING
-		default:
-			columns[i] = glib.TYPE_VARIANT
-		}
-	}
+	//for i, col := range cols {
+	//switch col.Type {
+	//case driver.TYPE_INT:
+	//columns[i] = glib.TYPE_INT64
+	//case driver.TYPE_BOOLEAN:
+	//columns[i] = glib.TYPE_BOOLEAN
+	//case driver.TYPE_STRING:
+	//columns[i] = glib.TYPE_STRING
+	//case driver.TYPE_DATE:
+	//columns[i] = glib.TYPE_STRING
+	//default:
+	//columns[i] = glib.TYPE_STRING
+	//}
+	//}
 
 	var err error
 	u.store, err = gtk.ListStoreNew(columns...)
@@ -158,8 +162,16 @@ func (u *Result) AddRow(row []interface{}) {
 	columns := make([]int, len(row))
 	for i, d := range row {
 		columns[i] = i
+		if s, ok := d.(int64); ok {
+			row[i] = s
+		}
+
 		if s, ok := d.([]uint8); ok {
 			row[i] = string(s)
+		}
+
+		if d == nil {
+			row[i] = "<NULL>"
 		}
 	}
 
@@ -174,26 +186,12 @@ func (u *Result) AddRow(row []interface{}) {
 	}
 }
 
-func (u *Result) createColumn(title string, id int) (*gtk.TreeViewColumn, error) {
-	cellRenderer, err := gtk.CellRendererTextNew()
-	if err != nil {
-		return nil, err
-	}
-	cellRenderer.SetProperty("editable", true)
-	cellRenderer.Connect("edited", u.onEdited, id)
-
-	// i think "text" refers to a property of the column.
-	// `"text", id` means that the text source for the column should come from
-	// the listore column with id = `id`
-	column, err := gtk.TreeViewColumnNewWithAttribute(title, cellRenderer, "text", id)
-	if err != nil {
-		return nil, err
-	}
-
-	return column, nil
+func (u *Result) OnEdited(fn func([]driver.ColDef, []interface{})) {
+	u.updateCallbacks = append(u.updateCallbacks, fn)
 }
 
 func (u *Result) onEdited(cell *gtk.CellRendererText, path string, newValue string, userData interface{}) {
+	config.Env.Log.Debug("cell edited")
 	if u.mode == MODE_RAW {
 		return
 	}
@@ -219,38 +217,50 @@ func (u *Result) onEdited(cell *gtk.CellRendererText, path string, newValue stri
 		return
 	}
 
-	oldRow := u.data[row]
-
-	dataLen := u.store.GetNColumns()
-	newRow := make([]interface{}, dataLen)
-	for i := 0; i < dataLen; i++ {
-		val, err := u.store.GetValue(iter, i)
-		if err != nil {
-			return
+	pkCols := []driver.ColDef{}
+	values := []interface{}{}
+	for i, col := range u.cols {
+		def := col.(driver.ColDef)
+		if !def.PK {
+			continue
 		}
 
-		gVal, err := val.GoValue()
-		if err != nil {
-			return
-		}
-
-		switch reflect.TypeOf(gVal).Kind() {
-		case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int8:
-			newRow[i] = gVal.(int64)
-		case reflect.Bool:
-			newRow[i] = gVal.(bool)
-		default:
-			newRow[i] = gVal.(string)
-		}
+		pkCols = append(pkCols, def)
+		values = append(values, u.data[row][i])
 	}
 
+	affectedCol := u.cols[column].(driver.ColDef)
+	pkCols = append(pkCols, affectedCol)
+	parsedValue, err := u.parser(affectedCol, newValue)
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+
+	values = append(values, parsedValue)
+
 	for _, fn := range u.updateCallbacks {
-		fn(stringerSliceToColDefSlice(u.cols), oldRow, newRow, newValue, row, column)
+		fn(pkCols, values)
 	}
 }
 
-func (u *Result) OnEdited(fn func([]driver.ColDef, []interface{}, []interface{}, string, int, int)) {
-	u.updateCallbacks = append(u.updateCallbacks, fn)
+func (u *Result) createColumn(title string, id int) (*gtk.TreeViewColumn, error) {
+	cellRenderer, err := gtk.CellRendererTextNew()
+	if err != nil {
+		return nil, err
+	}
+	cellRenderer.SetProperty("editable", true)
+	cellRenderer.Connect("edited", u.onEdited, id)
+
+	// i think "text" refers to a property of the column.
+	// `"text", id` means that the text source for the column should come from
+	// the listore column with id = `id`
+	column, err := gtk.TreeViewColumnNewWithAttribute(title, cellRenderer, "text", id)
+	if err != nil {
+		return nil, err
+	}
+
+	return column, nil
 }
 
 type stringer string

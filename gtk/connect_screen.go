@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"bitbucket.org/goreorto/sqlhero/config"
-	"bitbucket.org/goreorto/sqlhero/gtk/controls"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
 )
@@ -17,10 +16,10 @@ func newConnectScreen() (*ConnectScreen, error) {
 
 type ConnectScreen struct {
 	*gtk.Paned
-	connectionList *controls.List
+	connectionList *List
 	activeForm     *stdform
 
-	activeConnectionIndex controls.MVar
+	activeConnectionIndex MVar
 	btnSave               *gtk.Button
 	btnConnect            *gtk.Button
 	btnTest               *gtk.Button
@@ -52,7 +51,7 @@ func (c *ConnectScreen) init() error {
 	frame2.SetShadowType(gtk.SHADOW_IN)
 	frame2.SetSizeRequest(50, -1)
 
-	c.connectionList, err = controls.NewList(controls.ListOptions{SelectOnRightClick: true})
+	c.connectionList, err = NewList(ListOptions{SelectOnRightClick: true})
 	if err != nil {
 		return err
 	}

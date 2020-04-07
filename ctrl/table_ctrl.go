@@ -24,20 +24,19 @@ func (c TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableName
 	c.parent = parent
 	c.tableName = tableName
 
-	c.resultView, err = gtk.NewResultView(nil, nil)
+	c.resultView, err = gtk.NewResultView(nil, nil,
+		func(cols driver.ColDef, values string) (interface{}, error) {
+			return c.parent.engine.ParseValue(c.ctx, cols, values)
+		})
 	if err != nil {
 		return nil, err
 	}
 	c.resultView.ShowAll()
 	c.resultView.OnEdited(func(
 		cols []driver.ColDef,
-		oldRow []interface{},
-		newRow []interface{},
-		newValue string,
-		row int,
-		col int,
+		values []interface{},
 	) {
-		_, err := c.parent.engine.UpdateRecord(ctx, c.tableName, cols, newRow, oldRow)
+		_, err := c.parent.engine.UpdateField(ctx, c.tableName, cols, values)
 		if err != nil {
 			c.parent.factory.PushStatus(err.Error())
 		} else {

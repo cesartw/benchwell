@@ -14,7 +14,6 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 
 	"bitbucket.org/goreorto/sqlhero/config"
-	"bitbucket.org/goreorto/sqlhero/gtk/controls"
 	"bitbucket.org/goreorto/sqlhero/sqlengine/driver"
 )
 
@@ -25,13 +24,17 @@ type ResultView struct {
 	textView   *gtk.TextView
 	textViewSW *gtk.ScrolledWindow
 
-	result   *controls.Result
+	result   *Result
 	resultSW *gtk.ScrolledWindow
 
 	submitCallbacks []func(string)
 }
 
-func NewResultView(cols []driver.ColDef, data [][]interface{}) (rv *ResultView, err error) {
+func NewResultView(
+	cols []driver.ColDef,
+	data [][]interface{},
+	parser parser,
+) (rv *ResultView, err error) {
 	rv = &ResultView{}
 
 	rv.Paned, err = gtk.PanedNew(gtk.ORIENTATION_VERTICAL)
@@ -86,7 +89,7 @@ func NewResultView(cols []driver.ColDef, data [][]interface{}) (rv *ResultView, 
 	}
 	rv.textViewSW.SetSizeRequest(-1, 200)
 
-	rv.result, err = controls.NewResult(cols, data)
+	rv.result, err = NewResult(cols, data, parser)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +124,7 @@ func (v *ResultView) UpdateRawData(cols []string, data [][]interface{}) error {
 	return v.result.UpdateRawData(cols, data)
 }
 
-func (v *ResultView) OnEdited(fn func([]driver.ColDef, []interface{}, []interface{}, string, int, int)) *ResultView {
+func (v *ResultView) OnEdited(fn func([]driver.ColDef, []interface{})) *ResultView {
 	v.result.OnEdited(fn)
 	return v
 }
