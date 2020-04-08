@@ -33,9 +33,9 @@ var rootCmd = &cobra.Command{
 		}
 
 		ctl, err := ctrl.MainCtrl{}.Init(ctrl.Options{
-			Engine:  eng,
-			Config:  config.Env,
-			Factory: app,
+			Engine: eng,
+			Config: config.Env,
+			App:    app,
 		})
 		if err != nil {
 			return err

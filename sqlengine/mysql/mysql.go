@@ -11,7 +11,7 @@ import (
 
 	// mysql implementation
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/teamwork/log"
+	"github.com/sirupsen/logrus"
 
 	"bitbucket.org/goreorto/sqlhero/config"
 	"bitbucket.org/goreorto/sqlhero/sqlengine/driver"
@@ -409,7 +409,7 @@ func (d *mysqlDb) UpdateField(
 		cols[lastIndex].Name,
 		strings.Join(wheres, " AND "))
 
-	config.Env.Log.WithFields(log.Fields{"query": query, "args": args}).Debug("UpdateField")
+	config.Env.Log.WithFields(logrus.Fields{"query": query, "args": args}).Debug("UpdateField")
 	result, err := d.db.Exec(query, args...)
 	if err != nil {
 		return "", err
@@ -448,7 +448,7 @@ VALUES (%s)`
 
 	query = fmt.Sprintf(query, tableName, strings.Join(collist, ","), strings.Join(qm, ","))
 
-	config.Env.Log.WithFields(log.Fields{"query": query, "args": args}).Debug("InsertRecord")
+	config.Env.Log.WithFields(logrus.Fields{"query": query, "args": args}).Debug("InsertRecord")
 	result, err := d.db.Exec(query, args...)
 	if err != nil {
 		return nil, err

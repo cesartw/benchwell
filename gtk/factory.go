@@ -7,7 +7,7 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
-type Factory struct {
+type App struct {
 	*gtk.Application
 	mainWindow *Window
 	Menu       struct {
@@ -20,9 +20,9 @@ type Factory struct {
 	}
 }
 
-func New(appid string) (*Factory, error) {
+func New(appid string) (*App, error) {
 	var err error
-	f := &Factory{}
+	f := &App{}
 
 	f.Application, err = gtk.ApplicationNew(appid, glib.APPLICATION_FLAGS_NONE)
 	if err != nil {
@@ -64,39 +64,39 @@ func New(appid string) (*Factory, error) {
 	return f, nil
 }
 
-func (f *Factory) NewConnectScreen() (*ConnectScreen, error) {
+func (f *App) NewConnectScreen() (*ConnectScreen, error) {
 	return newConnectScreen()
 }
 
-func (f *Factory) newMainScreen() (*Window, error) {
+func (f *App) newMainScreen() (*Window, error) {
 	w := &Window{}
 	return w, w.init(f.Application)
 }
 
-func (f *Factory) AddTab(label *gtk.Label, w gtk.IWidget) {
+func (f *App) AddTab(label *gtk.Label, w gtk.IWidget) {
 	f.mainWindow.AddTab(label, w)
 }
 
-func (f *Factory) OnPageRemoved(fn interface{}) {
+func (f *App) OnPageRemoved(fn interface{}) {
 	f.mainWindow.OnPageRemoved(fn)
 }
 
-func (f *Factory) OnTabClick(fn interface{}) {
+func (f *App) OnTabClick(fn interface{}) {
 	f.mainWindow.OnTabClick(fn)
 }
 
-func (f *Factory) PageCount() int {
+func (f *App) PageCount() int {
 	return f.mainWindow.PageCount()
 }
 
-func (f *Factory) Remove(w gtk.IWidget) {
+func (f *App) Remove(w gtk.IWidget) {
 	f.mainWindow.Remove(w)
 }
 
-func (f *Factory) Show() {
+func (f *App) Show() {
 	f.mainWindow.Show()
 }
 
-func (f *Factory) PushStatus(status string, args ...interface{}) {
+func (f *App) PushStatus(status string, args ...interface{}) {
 	f.mainWindow.PushStatus(status, args...)
 }

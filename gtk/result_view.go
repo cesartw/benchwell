@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"strconv"
 
 	"github.com/alecthomas/chroma"
 	"github.com/alecthomas/chroma/formatters"
@@ -21,13 +22,16 @@ import (
 type ResultView struct {
 	*gtk.Paned
 
-	textView   *gtk.TextView
-	textViewSW *gtk.ScrolledWindow
+	textView *gtk.TextView
 
-	result   *Result
-	resultSW *gtk.ScrolledWindow
+	result  *Result
+	btnPrev *gtk.Button
+	btnNext *gtk.Button
+	btnRsh  *gtk.Button
+	perPage *gtk.Entry
 
 	submitCallbacks []func(string)
+	currentPage     int64
 }
 
 func NewResultView(
@@ -47,47 +51,75 @@ func NewResultView(
 		return nil, err
 	}
 
-	rv.textView.Connect("key-release-event", func(_ *gtk.TextView, e *gdk.Event) {
-		keyEvent := gdk.EventKeyNewFromEvent(e)
+	rv.textView.Connect("key-release-event", rv.onTextViewKeyPress)
 
-		buff, err := rv.textView.GetBuffer()
-		if err != nil {
-			config.Env.Log.Error(err)
-			return
-		}
+	var resultSW, textViewSW *gtk.ScrolledWindow
 
-		txt, err := buff.GetText(buff.GetStartIter(), buff.GetEndIter(), false)
-		if err != nil {
-			config.Env.Log.Error(err)
-			return
-		}
+	resultSW, err = gtk.ScrolledWindowNew(nil, nil)
+	if err != nil {
+		return nil, err
+	}
 
-		if keyEvent.KeyVal() == 65293 && keyEvent.State()&gdk.GDK_CONTROL_MASK > 0 {
-			for _, fn := range rv.submitCallbacks {
-				fn(txt)
-			}
-			return
-		}
+	btnbox, err := gtk.ButtonBoxNew(gtk.ORIENTATION_HORIZONTAL)
+	if err != nil {
+		return nil, err
+	}
+	btnbox.SetLayout(gtk.BUTTONBOX_CENTER)
+	btnbox.SetProperty("spacing", 5)
 
-		txt, err = ChromaHighlight(txt)
-		if err != nil {
-			config.Env.Log.Error(err)
-			return
+	resultBox, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	rv.perPage, err = gtk.EntryNew()
+	if err != nil {
+		return nil, err
+	}
+	rv.perPage.SetText(fmt.Sprintf("%d", config.Env.GUI.PageSize))
+	rv.perPage.SetProperty("input_purpose", gtk.INPUT_PURPOSE_NUMBER)
+
+	rv.btnPrev, err = gtk.ButtonNewFromIconName("gtk-go-back", gtk.ICON_SIZE_BUTTON)
+	if err != nil {
+		return nil, err
+	}
+
+	rv.btnPrev.Connect("clicked", func() {
+		rv.currentPage--
+		if rv.currentPage < 0 {
+			rv.currentPage = 0
 		}
-		buff.Delete(buff.GetStartIter(), buff.GetEndIter())
-		buff.InsertMarkup(buff.GetStartIter(), txt)
 	})
 
-	rv.resultSW, err = gtk.ScrolledWindowNew(nil, nil)
+	rv.btnNext, err = gtk.ButtonNewFromIconName("gtk-go-forward", gtk.ICON_SIZE_BUTTON)
 	if err != nil {
 		return nil, err
 	}
+	rv.btnNext.Connect("clicked", func() {
+		rv.currentPage++
+	})
 
-	rv.textViewSW, err = gtk.ScrolledWindowNew(nil, nil)
+	rv.btnRsh, err = gtk.ButtonNewFromIconName("gtk-refresh", gtk.ICON_SIZE_BUTTON)
 	if err != nil {
 		return nil, err
 	}
-	rv.textViewSW.SetSizeRequest(-1, 200)
+	//rv.btnPrev.SetProperty("use_stock", true)
+	//rv.btnPrev.SetProperty("label", "gtk-refresh")
+	//rv.btnPrev.SetProperty("always_show_image", true)
+
+	btnbox.Add(rv.btnPrev)
+	btnbox.Add(rv.perPage)
+	btnbox.Add(rv.btnNext)
+	btnbox.Add(rv.btnRsh)
+
+	resultBox.PackStart(resultSW, true, true, 0)
+	resultBox.PackEnd(btnbox, false, false, 0)
+
+	textViewSW, err = gtk.ScrolledWindowNew(nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	textViewSW.SetSizeRequest(-1, 200)
 
 	rv.result, err = NewResult(cols, data, parser)
 	if err != nil {
@@ -107,13 +139,31 @@ func NewResultView(
 		"word_char": gtk.WRAP_WORD_CHAR,
 	}[config.Env.GUI.Editor.WordWrap])
 
-	rv.resultSW.Add(rv.result)
-	rv.textViewSW.Add(rv.textView)
+	resultSW.Add(rv.result)
+	textViewSW.Add(rv.textView)
 
-	rv.Paned.Pack1(rv.textViewSW, false, false)
-	rv.Paned.Pack2(rv.resultSW, true, false)
+	rv.Paned.Pack1(textViewSW, false, false)
+	rv.Paned.Pack2(resultBox, true, false)
 
 	return rv, nil
+}
+
+func (v *ResultView) CurrentPage() int64 {
+	return v.currentPage
+}
+
+func (v *ResultView) PageSize() int64 {
+	s, err := v.perPage.GetText()
+	if err != nil {
+		return int64(config.Env.GUI.PageSize)
+	}
+
+	size, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return int64(config.Env.GUI.PageSize)
+	}
+
+	return size
 }
 
 func (v *ResultView) UpdateData(cols []driver.ColDef, data [][]interface{}) error {
@@ -129,8 +179,55 @@ func (v *ResultView) OnEdited(fn func([]driver.ColDef, []interface{})) *ResultVi
 	return v
 }
 
-func (v *ResultView) OnSubmit(fn func(value string)) {
+func (v *ResultView) OnSubmit(fn func(value string)) *ResultView {
 	v.submitCallbacks = append(v.submitCallbacks, fn)
+	return v
+}
+
+func (v *ResultView) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) {
+	keyEvent := gdk.EventKeyNewFromEvent(e)
+
+	buff, err := v.textView.GetBuffer()
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+
+	txt, err := buff.GetText(buff.GetStartIter(), buff.GetEndIter(), false)
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+
+	if keyEvent.KeyVal() == 65293 && keyEvent.State()&gdk.GDK_CONTROL_MASK > 0 {
+		for _, fn := range v.submitCallbacks {
+			fn(txt)
+		}
+		return
+	}
+
+	txt, err = ChromaHighlight(txt)
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+	buff.Delete(buff.GetStartIter(), buff.GetEndIter())
+	buff.InsertMarkup(buff.GetStartIter(), txt)
+}
+
+func (v *ResultView) OnRefresh(fn interface{}) *ResultView {
+	v.btnRsh.Connect("clicked", fn)
+	return v
+}
+
+func (v *ResultView) OnBack(fn interface{}) *ResultView {
+	v.btnPrev.Connect("clicked", fn)
+	return v
+}
+
+func (v *ResultView) OnForward(fn interface{}) *ResultView {
+	v.btnNext.Connect("clicked", fn)
+	return v
 }
 
 func init() {

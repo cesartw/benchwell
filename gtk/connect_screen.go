@@ -367,6 +367,7 @@ func (f stdform) init() (*stdform, error) {
 	if err != nil {
 		return nil, err
 	}
+	f.entryPort.SetProperty("input_purpose", gtk.INPUT_PURPOSE_NUMBER)
 
 	f.labelUser, err = gtk.LabelNew("User")
 	if err != nil {

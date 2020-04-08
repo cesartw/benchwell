@@ -9,7 +9,7 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
-func (f *Factory) NewConnectionScreen() (*ConnectionScreen, error) {
+func (f *App) NewConnectionScreen() (*ConnectionScreen, error) {
 	cs := &ConnectionScreen{}
 	return cs, cs.init()
 }

@@ -49,13 +49,20 @@ func (c TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableName
 		}
 
 		c.resultView.UpdateRawData(columns, data)
+	}).OnRefresh(func() {
+		c.OnConnect()
+	}).OnBack(func() {
+		c.OnConnect()
+	}).OnForward(func() {
+		c.OnConnect()
 	})
 
 	return &c, nil
 }
 
 func (tc *TableCtrl) OnConnect() {
-	def, data, err := tc.parent.engine.FetchTable(tc.ctx, tc.tableName, 0, 40)
+	def, data, err := tc.parent.engine.FetchTable(tc.ctx, tc.tableName,
+		tc.resultView.CurrentPage(), tc.resultView.PageSize())
 	if err != nil {
 		config.Env.Log.Error(err)
 		return

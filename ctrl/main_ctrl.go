@@ -13,10 +13,10 @@ import (
 )
 
 type Options struct {
-	Config  *config.Config
-	Log     *logrus.Logger
-	Factory *gtk.Factory
-	Engine  *sqlengine.Engine
+	Config *config.Config
+	Log    *logrus.Logger
+	App    *gtk.App
+	Engine *sqlengine.Engine
 }
 
 func (o Options) Valid() error {
@@ -24,8 +24,8 @@ func (o Options) Valid() error {
 		return errors.New("Config is required")
 	}
 
-	if o.Factory == nil {
-		return errors.New("Factory is required")
+	if o.App == nil {
+		return errors.New("App is required")
 	}
 
 	if o.Engine == nil {
@@ -37,7 +37,7 @@ func (o Options) Valid() error {
 
 type MainCtrl struct {
 	config  *config.Config
-	factory *gtk.Factory
+	factory *gtk.App
 	engine  *sqlengine.Engine
 
 	currentCtrl interface {
@@ -50,7 +50,7 @@ func (c MainCtrl) Init(opts Options) (*MainCtrl, error) {
 		return nil, err
 	}
 	c.engine = opts.Engine
-	c.factory = opts.Factory
+	c.factory = opts.App
 	c.config = opts.Config
 
 	return &c, nil
