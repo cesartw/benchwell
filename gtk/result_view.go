@@ -192,11 +192,21 @@ func (v *ResultView) PageSize() int64 {
 }
 
 func (v *ResultView) UpdateData(cols []driver.ColDef, data [][]interface{}) error {
+	v.pagerEnable(true)
 	return v.result.UpdateData(cols, data)
 }
 
 func (v *ResultView) UpdateRawData(cols []string, data [][]interface{}) error {
+	v.pagerEnable(false)
 	return v.result.UpdateRawData(cols, data)
+}
+
+func (v *ResultView) pagerEnable(b bool) {
+	v.btnPrev.SetSensitive(b)
+	v.btnNext.SetSensitive(b)
+	v.btnRsh.SetSensitive(b)
+	v.perPage.SetSensitive(b)
+	v.offset.SetSensitive(b)
 }
 
 func (v *ResultView) OnEdited(fn func([]driver.ColDef, []interface{})) *ResultView {
