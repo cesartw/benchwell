@@ -62,7 +62,7 @@ func (c TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableName
 
 func (tc *TableCtrl) OnConnect() {
 	def, data, err := tc.parent.engine.FetchTable(tc.ctx, tc.tableName,
-		tc.resultView.CurrentPage(), tc.resultView.PageSize())
+		tc.resultView.Offset(), tc.resultView.PageSize())
 	if err != nil {
 		config.Env.Log.Error(err)
 		return

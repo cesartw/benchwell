@@ -29,9 +29,9 @@ type ResultView struct {
 	btnNext *gtk.Button
 	btnRsh  *gtk.Button
 	perPage *gtk.Entry
+	offset  *gtk.Entry
 
 	submitCallbacks []func(string)
-	currentPage     int64
 }
 
 func NewResultView(
@@ -72,6 +72,11 @@ func NewResultView(
 		return nil, err
 	}
 
+	perPageLabel, err := gtk.LabelNew("Size")
+	if err != nil {
+		return nil, err
+	}
+
 	rv.perPage, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
@@ -79,16 +84,21 @@ func NewResultView(
 	rv.perPage.SetText(fmt.Sprintf("%d", config.Env.GUI.PageSize))
 	rv.perPage.SetProperty("input_purpose", gtk.INPUT_PURPOSE_NUMBER)
 
+	rv.offset, err = gtk.EntryNew()
+	if err != nil {
+		return nil, err
+	}
+	rv.offset.SetText("0")
+	rv.offset.SetProperty("input_purpose", gtk.INPUT_PURPOSE_NUMBER)
+
 	rv.btnPrev, err = gtk.ButtonNewFromIconName("gtk-go-back", gtk.ICON_SIZE_BUTTON)
 	if err != nil {
 		return nil, err
 	}
 
 	rv.btnPrev.Connect("clicked", func() {
-		rv.currentPage--
-		if rv.currentPage < 0 {
-			rv.currentPage = 0
-		}
+		p := rv.Offset() - rv.PageSize()
+		rv.offset.SetText(fmt.Sprintf("%d", p))
 	})
 
 	rv.btnNext, err = gtk.ButtonNewFromIconName("gtk-go-forward", gtk.ICON_SIZE_BUTTON)
@@ -96,19 +106,32 @@ func NewResultView(
 		return nil, err
 	}
 	rv.btnNext.Connect("clicked", func() {
-		rv.currentPage++
+		p := rv.Offset() + rv.PageSize()
+		rv.offset.SetText(fmt.Sprintf("%d", p))
 	})
 
 	rv.btnRsh, err = gtk.ButtonNewFromIconName("gtk-refresh", gtk.ICON_SIZE_BUTTON)
 	if err != nil {
 		return nil, err
 	}
-	//rv.btnPrev.SetProperty("use_stock", true)
-	//rv.btnPrev.SetProperty("label", "gtk-refresh")
-	//rv.btnPrev.SetProperty("always_show_image", true)
+
+	offsetLabel, err := gtk.LabelNew("Offset")
+	if err != nil {
+		return nil, err
+	}
+
+	rv.offset, err = gtk.EntryNew()
+	if err != nil {
+		return nil, err
+	}
+	rv.offset.SetText("0")
+	rv.offset.SetProperty("input_purpose", gtk.INPUT_PURPOSE_NUMBER)
 
 	btnbox.Add(rv.btnPrev)
+	btnbox.Add(perPageLabel)
 	btnbox.Add(rv.perPage)
+	btnbox.Add(offsetLabel)
+	btnbox.Add(rv.offset)
 	btnbox.Add(rv.btnNext)
 	btnbox.Add(rv.btnRsh)
 
@@ -148,8 +171,10 @@ func NewResultView(
 	return rv, nil
 }
 
-func (v *ResultView) CurrentPage() int64 {
-	return v.currentPage
+func (v *ResultView) Offset() int64 {
+	s, _ := v.offset.GetText()
+	p, _ := strconv.ParseInt(s, 10, 64)
+	return p
 }
 
 func (v *ResultView) PageSize() int64 {
