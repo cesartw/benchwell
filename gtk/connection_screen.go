@@ -58,8 +58,8 @@ func (c *ConnectionScreen) init() error {
 	if err != nil {
 		return err
 	}
-
 	c.tableFilter.Connect("search-changed", c.onSearch)
+	c.tableFilter.SetPlaceholderText("Filter table: .*")
 
 	// TODO: figure out how to focus on accelerator
 	//k, mod := gtk.AcceleratorParse("<Control>f")

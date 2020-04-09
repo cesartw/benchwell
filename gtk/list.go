@@ -108,7 +108,7 @@ func (u *List) onRowActivated(_ *gtk.ListBox, row *gtk.ListBoxRow) {
 }
 
 func (u *List) onRowSelected(_ *gtk.ListBox, row *gtk.ListBoxRow) {
-	if row != nil {
+	if row != nil && row.GetIndex() >= 0 {
 		u.selectedItem.Set(u.options.Names[row.GetIndex()])
 		u.selectedItemIndex.Set(row.GetIndex())
 	}

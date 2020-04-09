@@ -14,7 +14,7 @@ type TableCtrl struct {
 	tableName string
 
 	// ui
-	resultView *gtk.ResultView
+	grid *gtk.ResultGrid
 }
 
 func (c TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableName string) (*TableCtrl, error) {
@@ -24,15 +24,15 @@ func (c TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableName
 	c.parent = parent
 	c.tableName = tableName
 
-	c.resultView, err = gtk.NewResultView(nil, nil,
+	c.grid, err = gtk.NewResultGrid(nil, nil,
 		func(cols driver.ColDef, values string) (interface{}, error) {
 			return c.parent.engine.ParseValue(c.ctx, cols, values)
 		})
 	if err != nil {
 		return nil, err
 	}
-	c.resultView.ShowAll()
-	c.resultView.OnEdited(func(
+	c.grid.ShowAll()
+	c.grid.OnEdited(func(
 		cols []driver.ColDef,
 		values []interface{},
 	) {
@@ -48,7 +48,7 @@ func (c TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableName
 			config.Env.Log.Error(err)
 		}
 
-		c.resultView.UpdateRawData(columns, data)
+		c.grid.UpdateRawData(columns, data)
 	}).OnRefresh(func() {
 		c.OnConnect()
 	}).OnBack(func() {
@@ -62,18 +62,18 @@ func (c TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableName
 
 func (tc *TableCtrl) OnConnect() {
 	def, data, err := tc.parent.engine.FetchTable(tc.ctx, tc.tableName,
-		tc.resultView.Offset(), tc.resultView.PageSize())
+		tc.grid.Offset(), tc.grid.PageSize())
 	if err != nil {
 		config.Env.Log.Error(err)
 		return
 	}
 
-	err = tc.resultView.UpdateData(def, data)
+	err = tc.grid.UpdateData(def, data)
 	if err != nil {
 		config.Env.Log.Error(err)
 	}
 }
 
 func (tc *TableCtrl) Screen() interface{} {
-	return tc.resultView
+	return tc.grid
 }

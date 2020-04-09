@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"regexp"
 	"strconv"
 
 	"github.com/alecthomas/chroma"
@@ -18,8 +19,8 @@ import (
 	"bitbucket.org/goreorto/sqlhero/sqlengine/driver"
 )
 
-// ResultView is a table result tab content
-type ResultView struct {
+// ResultGrid is a table result tab content
+type ResultGrid struct {
 	*gtk.Paned
 
 	textView *gtk.TextView
@@ -31,15 +32,17 @@ type ResultView struct {
 	perPage *gtk.Entry
 	offset  *gtk.Entry
 
+	colFilter *gtk.SearchEntry
+
 	submitCallbacks []func(string)
 }
 
-func NewResultView(
+func NewResultGrid(
 	cols []driver.ColDef,
 	data [][]interface{},
 	parser parser,
-) (rv *ResultView, err error) {
-	rv = &ResultView{}
+) (rv *ResultGrid, err error) {
+	rv = &ResultGrid{}
 
 	rv.Paned, err = gtk.PanedNew(gtk.ORIENTATION_VERTICAL)
 	if err != nil {
@@ -98,6 +101,9 @@ func NewResultView(
 
 	rv.btnPrev.Connect("clicked", func() {
 		p := rv.Offset() - rv.PageSize()
+		if p < 0 {
+			p = 0
+		}
 		rv.offset.SetText(fmt.Sprintf("%d", p))
 	})
 
@@ -127,6 +133,13 @@ func NewResultView(
 	rv.offset.SetText("0")
 	rv.offset.SetProperty("input_purpose", gtk.INPUT_PURPOSE_NUMBER)
 
+	rv.colFilter, err = gtk.SearchEntryNew()
+	if err != nil {
+		return nil, err
+	}
+	rv.colFilter.SetPlaceholderText("Column filter: .*")
+	rv.colFilter.Connect("search-changed", rv.onColFilterSearchChanged)
+
 	btnbox.Add(rv.btnPrev)
 	btnbox.Add(perPageLabel)
 	btnbox.Add(rv.perPage)
@@ -134,6 +147,8 @@ func NewResultView(
 	btnbox.Add(rv.offset)
 	btnbox.Add(rv.btnNext)
 	btnbox.Add(rv.btnRsh)
+
+	btnbox.PackEnd(rv.colFilter, false, false, 0)
 
 	resultBox.PackStart(resultSW, true, true, 0)
 	resultBox.PackEnd(btnbox, false, false, 0)
@@ -171,13 +186,13 @@ func NewResultView(
 	return rv, nil
 }
 
-func (v *ResultView) Offset() int64 {
+func (v *ResultGrid) Offset() int64 {
 	s, _ := v.offset.GetText()
 	p, _ := strconv.ParseInt(s, 10, 64)
 	return p
 }
 
-func (v *ResultView) PageSize() int64 {
+func (v *ResultGrid) PageSize() int64 {
 	s, err := v.perPage.GetText()
 	if err != nil {
 		return int64(config.Env.GUI.PageSize)
@@ -191,17 +206,17 @@ func (v *ResultView) PageSize() int64 {
 	return size
 }
 
-func (v *ResultView) UpdateData(cols []driver.ColDef, data [][]interface{}) error {
+func (v *ResultGrid) UpdateData(cols []driver.ColDef, data [][]interface{}) error {
 	v.pagerEnable(true)
 	return v.result.UpdateData(cols, data)
 }
 
-func (v *ResultView) UpdateRawData(cols []string, data [][]interface{}) error {
+func (v *ResultGrid) UpdateRawData(cols []string, data [][]interface{}) error {
 	v.pagerEnable(false)
 	return v.result.UpdateRawData(cols, data)
 }
 
-func (v *ResultView) pagerEnable(b bool) {
+func (v *ResultGrid) pagerEnable(b bool) {
 	v.btnPrev.SetSensitive(b)
 	v.btnNext.SetSensitive(b)
 	v.btnRsh.SetSensitive(b)
@@ -209,17 +224,17 @@ func (v *ResultView) pagerEnable(b bool) {
 	v.offset.SetSensitive(b)
 }
 
-func (v *ResultView) OnEdited(fn func([]driver.ColDef, []interface{})) *ResultView {
+func (v *ResultGrid) OnEdited(fn func([]driver.ColDef, []interface{})) *ResultGrid {
 	v.result.OnEdited(fn)
 	return v
 }
 
-func (v *ResultView) OnSubmit(fn func(value string)) *ResultView {
+func (v *ResultGrid) OnSubmit(fn func(value string)) *ResultGrid {
 	v.submitCallbacks = append(v.submitCallbacks, fn)
 	return v
 }
 
-func (v *ResultView) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) {
+func (v *ResultGrid) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) {
 	keyEvent := gdk.EventKeyNewFromEvent(e)
 
 	buff, err := v.textView.GetBuffer()
@@ -250,17 +265,35 @@ func (v *ResultView) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) {
 	buff.InsertMarkup(buff.GetStartIter(), txt)
 }
 
-func (v *ResultView) OnRefresh(fn interface{}) *ResultView {
+func (v *ResultGrid) onColFilterSearchChanged() {
+	txt, err := v.colFilter.GetText()
+	if err != nil {
+		config.Env.Log.Error(err, "colFilter.GetText")
+		return
+	}
+
+	rg, err := regexp.Compile(txt)
+	if err != nil {
+		rg = regexp.MustCompile(fmt.Sprintf(".*%s.*", regexp.QuoteMeta(txt)))
+	}
+
+	v.result.GetColumns().Foreach(func(i interface{}) {
+		c := i.(*gtk.TreeViewColumn)
+		c.SetVisible(rg.MatchString(c.GetTitle()))
+	})
+}
+
+func (v *ResultGrid) OnRefresh(fn interface{}) *ResultGrid {
 	v.btnRsh.Connect("clicked", fn)
 	return v
 }
 
-func (v *ResultView) OnBack(fn interface{}) *ResultView {
+func (v *ResultGrid) OnBack(fn interface{}) *ResultGrid {
 	v.btnPrev.Connect("clicked", fn)
 	return v
 }
 
-func (v *ResultView) OnForward(fn interface{}) *ResultView {
+func (v *ResultGrid) OnForward(fn interface{}) *ResultGrid {
 	v.btnNext.Connect("clicked", fn)
 	return v
 }

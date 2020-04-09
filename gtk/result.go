@@ -41,6 +41,7 @@ func NewResult(cols []driver.ColDef, data [][]interface{}, parser parser) (u *Re
 
 	u.TreeView.SetProperty("rubber-banding", true)
 	u.TreeView.SetProperty("enable-grid-lines", gtk.TREE_VIEW_GRID_LINES_HORIZONTAL)
+	u.TreeView.SetEnableSearch(true)
 
 	if len(cols) > 0 {
 		u.UpdateData(cols, data)
@@ -59,30 +60,15 @@ func (u *Result) UpdateData(cols []driver.ColDef, data [][]interface{}) error {
 
 	columns := make([]glib.Type, len(u.cols))
 	for i, col := range u.cols {
-		gtkc, err := u.createColumn(col.String(), i)
+		c, err := u.createColumn(col.String(), i)
 		if err != nil {
 			return err
 		}
 
-		u.TreeView.InsertColumn(gtkc, i)
+		u.TreeView.InsertColumn(c, i)
 		// default type
 		columns[i] = glib.TYPE_STRING
 	}
-
-	//for i, col := range cols {
-	//switch col.Type {
-	//case driver.TYPE_INT:
-	//columns[i] = glib.TYPE_INT64
-	//case driver.TYPE_BOOLEAN:
-	//columns[i] = glib.TYPE_BOOLEAN
-	//case driver.TYPE_STRING:
-	//columns[i] = glib.TYPE_STRING
-	//case driver.TYPE_DATE:
-	//columns[i] = glib.TYPE_STRING
-	//default:
-	//columns[i] = glib.TYPE_STRING
-	//}
-	//}
 
 	var err error
 	u.store, err = gtk.ListStoreNew(columns...)
@@ -250,6 +236,7 @@ func (u *Result) createColumn(title string, id int) (*gtk.TreeViewColumn, error)
 		return nil, err
 	}
 	cellRenderer.SetProperty("editable", true)
+	cellRenderer.SetProperty("height", 20)
 	cellRenderer.Connect("edited", u.onEdited, id)
 
 	// i think "text" refers to a property of the column.
@@ -259,6 +246,9 @@ func (u *Result) createColumn(title string, id int) (*gtk.TreeViewColumn, error)
 	if err != nil {
 		return nil, err
 	}
+	column.SetResizable(true)
+	// TODO: this limits resizing
+	column.SetMaxWidth(300)
 
 	return column, nil
 }
