@@ -27,7 +27,7 @@ func (c ConnectionCtrl) init(ctx sqlengine.Context, p *TabCtrl, conn *config.Con
 		return nil, err
 	}
 
-	c.scr, err = c.factory.NewConnectionScreen()
+	c.scr, err = c.app.NewConnectionScreen()
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (c *ConnectionCtrl) onDatabaseSelected() {
 	var err error
 	dbName, ok := c.scr.ActiveDatabase()
 	if !ok {
-		c.factory.PushStatus("Database `%s` not found", c.conn.Database)
+		c.window.PushStatus("Database `%s` not found", c.conn.Database)
 		return
 	}
 	c.ctx, err = c.engine.UseDatabase(c.ctx, dbName)

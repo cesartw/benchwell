@@ -32,7 +32,7 @@ var rootCmd = &cobra.Command{
 			return err
 		}
 
-		ctl, err := ctrl.MainCtrl{}.Init(ctrl.Options{
+		ctl, err := ctrl.AppCtrl{}.Init(ctrl.Options{
 			Engine: eng,
 			Config: config.Env,
 			App:    app,

@@ -1,8 +1,11 @@
 package gtk
 
 import (
+	"errors"
 	"fmt"
 
+	"bitbucket.org/goreorto/sqlaid/config"
+	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 )
 
@@ -12,27 +15,32 @@ type Window struct {
 	box         *gtk.Box // holds nb and statusbar
 	statusBar   *gtk.Statusbar
 	statusBarID uint
+
+	Menu struct {
+		NewTab *glib.SimpleAction
+	}
 }
 
-func (w *Window) init(app *gtk.Application) (err error) {
+func (w Window) Init(app *gtk.Application) (*Window, error) {
+	var err error
 	w.ApplicationWindow, err = gtk.ApplicationWindowNew(app)
 	w.SetTitle("SQLaid")
 
 	w.nb, err = gtk.NotebookNew()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	w.box, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	w.box.SetVExpand(true)
 	w.box.SetHExpand(true)
 
 	w.statusBar, err = gtk.StatusbarNew()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	w.box.PackStart(w.nb, true, true, 0)
@@ -42,7 +50,15 @@ func (w *Window) init(app *gtk.Application) (err error) {
 
 	w.ApplicationWindow.Add(w.box)
 
-	return nil
+	header, err := w.headerMenu()
+	if err != nil {
+		return nil, err
+	}
+
+	w.SetTitlebar(header)
+	w.ShowAll()
+
+	return &w, nil
 }
 
 func (w *Window) OnTabClick(f interface{}) {
@@ -100,4 +116,41 @@ func (w *Window) OnPageRemoved(f interface{}) {
 
 func (w *Window) PageCount() int {
 	return w.nb.GetNPages()
+}
+
+func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
+	header, err := gtk.HeaderBarNew()
+	if err != nil {
+		return nil, err
+	}
+	header.SetShowCloseButton(true)
+	header.SetTitle("SQLAID")
+	header.SetSubtitle(config.Env.Version)
+
+	// Create a new menu button
+	mbtn, err := gtk.MenuButtonNew()
+	if err != nil {
+		return nil, err
+	}
+
+	// Set up the menu model for the button
+	menu := glib.MenuNew()
+	if menu == nil {
+		return nil, errors.New("nil menu")
+	}
+
+	w.Menu.NewTab = glib.SimpleActionNew("new", nil)
+	w.AddAction(w.Menu.NewTab)
+
+	menu.Append("Open window", "app.new")
+	menu.Append("Open Tab", "win.new")
+	menu.Append("Preferences", "app.preferences")
+
+	mbtn.SetMenuModel(&menu.MenuModel)
+
+	// add the menu button to the header
+	header.PackStart(mbtn)
+
+	// Assemble the window
+	return header, nil
 }

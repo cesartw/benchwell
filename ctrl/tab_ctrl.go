@@ -10,16 +10,16 @@ import (
 )
 
 type TabCtrl struct {
-	*MainCtrl
+	*WindowCtrl
 	tab           *gtk.Tab
 	tabLabel      *ggtk.Label
 	connectScr    *gtk.ConnectScreen
 	connectionScr *gtk.ConnectionScreen
 }
 
-func (c TabCtrl) init(p *MainCtrl) (*TabCtrl, error) {
+func (c TabCtrl) Init(p *WindowCtrl) (*TabCtrl, error) {
 	var err error
-	c.MainCtrl = p
+	c.WindowCtrl = p
 
 	c.tab, err = gtk.NewTab()
 	if err != nil {
@@ -34,6 +34,9 @@ func (c TabCtrl) init(p *MainCtrl) (*TabCtrl, error) {
 	c.launchConnect()
 
 	return &c, nil
+}
+func (c *TabCtrl) Show() {
+	c.tab.Show()
 }
 
 func (c *TabCtrl) launchConnect() {
@@ -84,10 +87,10 @@ func (c *TabCtrl) onConnect() {
 	ctx, err := c.engine.Connect(sqlengine.Context(context.TODO()), conn.GetDSN())
 	if err != nil {
 		config.Env.Log.Error(err)
-		c.factory.PushStatus("Failed connect to `%s`(%s): %s", conn.Name, conn.Host, err.Error())
+		c.window.PushStatus("Failed connect to `%s`(%s): %s", conn.Name, conn.Host, err.Error())
 		return
 	}
-	c.factory.PushStatus("Connected to `%s`(%s)", conn.Name, conn.Host)
+	c.window.PushStatus("Connected to `%s`(%s)", conn.Name, conn.Host)
 
 	c.launchConnection(ctx, conn)
 }

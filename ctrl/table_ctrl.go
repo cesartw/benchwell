@@ -9,7 +9,7 @@ import (
 
 // tableCtrl manages table result screen
 type TableCtrl struct {
-	parent    *ConnectionCtrl
+	*ConnectionCtrl
 	ctx       sqlengine.Context
 	tableName string
 
@@ -21,12 +21,12 @@ func (c TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableName
 	var err error
 
 	c.ctx = ctx
-	c.parent = parent
+	c.ConnectionCtrl = parent
 	c.tableName = tableName
 
 	c.grid, err = gtk.NewResultGrid(nil, nil,
 		func(cols driver.ColDef, values string) (interface{}, error) {
-			return c.parent.engine.ParseValue(c.ctx, cols, values)
+			return c.engine.ParseValue(c.ctx, cols, values)
 		})
 	if err != nil {
 		return nil, err
@@ -36,14 +36,14 @@ func (c TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableName
 		cols []driver.ColDef,
 		values []interface{},
 	) {
-		_, err := c.parent.engine.UpdateField(ctx, c.tableName, cols, values)
+		_, err := c.engine.UpdateField(ctx, c.tableName, cols, values)
 		if err != nil {
-			c.parent.factory.PushStatus(err.Error())
+			c.window.PushStatus(err.Error())
 		} else {
-			c.parent.factory.PushStatus("Saved")
+			c.window.PushStatus("Saved")
 		}
 	}).OnSubmit(func(value string) {
-		columns, data, err := c.parent.engine.Query(c.ctx, value)
+		columns, data, err := c.engine.Query(c.ctx, value)
 		if err != nil {
 			config.Env.Log.Error(err)
 		}
@@ -61,7 +61,7 @@ func (c TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableName
 }
 
 func (tc *TableCtrl) OnConnect() {
-	def, data, err := tc.parent.engine.FetchTable(tc.ctx, tc.tableName,
+	def, data, err := tc.engine.FetchTable(tc.ctx, tc.tableName,
 		tc.grid.Offset(), tc.grid.PageSize())
 	if err != nil {
 		config.Env.Log.Error(err)
