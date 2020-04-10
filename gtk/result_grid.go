@@ -236,6 +236,12 @@ func (v *ResultGrid) OnSubmit(fn func(value string)) *ResultGrid {
 
 func (v *ResultGrid) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) {
 	keyEvent := gdk.EventKeyNewFromEvent(e)
+	if keyEvent.KeyVal() >= gdk.KEY_Home && keyEvent.KeyVal() <= gdk.KEY_End {
+		return
+	}
+	if keyEvent.KeyVal() == gdk.KEY_Shift_R || keyEvent.KeyVal() == gdk.KEY_Shift_L {
+		return
+	}
 
 	buff, err := v.textView.GetBuffer()
 	if err != nil {
@@ -249,12 +255,15 @@ func (v *ResultGrid) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) {
 		return
 	}
 
-	if keyEvent.KeyVal() == 65293 && keyEvent.State()&gdk.GDK_CONTROL_MASK > 0 {
+	if keyEvent.KeyVal() == gdk.KEY_Return && keyEvent.State()&gdk.GDK_CONTROL_MASK > 0 {
 		for _, fn := range v.submitCallbacks {
 			fn(txt)
 		}
 		return
 	}
+
+	iter := buff.GetIterAtMark(buff.GetInsert())
+	offset := iter.GetOffset()
 
 	txt, err = ChromaHighlight(txt)
 	if err != nil {
@@ -263,6 +272,8 @@ func (v *ResultGrid) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) {
 	}
 	buff.Delete(buff.GetStartIter(), buff.GetEndIter())
 	buff.InsertMarkup(buff.GetStartIter(), txt)
+
+	buff.PlaceCursor(buff.GetIterAtOffset(offset))
 }
 
 func (v *ResultGrid) onColFilterSearchChanged() {

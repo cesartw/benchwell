@@ -35,6 +35,7 @@ func New(appid string) (*App, error) {
 
 	f.Application.SetAccelsForAction("app.new", []string{"<control>N"})
 	f.Application.SetAccelsForAction("win.new", []string{"<control>T"})
+	f.Application.SetAccelsForAction("win.close", []string{"<control>W"})
 
 	return f, nil
 }

@@ -8,6 +8,7 @@ import (
 
 	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
+	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 )
@@ -42,12 +43,21 @@ func NewResult(cols []driver.ColDef, data [][]interface{}, parser parser) (u *Re
 	u.TreeView.SetProperty("rubber-banding", true)
 	u.TreeView.SetProperty("enable-grid-lines", gtk.TREE_VIEW_GRID_LINES_HORIZONTAL)
 	u.TreeView.SetEnableSearch(true)
+	u.TreeView.Connect("key-press-event", u.onTreeViewKeyPress)
 
 	if len(cols) > 0 {
 		u.UpdateData(cols, data)
 	}
 
 	return u, nil
+}
+
+func (u *Result) onTreeViewKeyPress(_ *gtk.TreeView, e *gdk.Event) {
+	keyEvent := gdk.EventKeyNewFromEvent(e)
+	if keyEvent.KeyVal() == gdk.KEY_F2 {
+		path, col := u.TreeView.GetCursor()
+		u.TreeView.SetCursor(path, col, true)
+	}
 }
 
 func (u *Result) UpdateData(cols []driver.ColDef, data [][]interface{}) error {

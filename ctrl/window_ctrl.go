@@ -29,6 +29,9 @@ func (c WindowCtrl) Init(parent *AppCtrl) (*WindowCtrl, error) {
 		}
 		c.window.PushStatus("Ready")
 	})
+	c.window.Menu.CloseTab.Connect("activate", func() {
+		c.window.RemoveCurrentPage()
+	})
 
 	return &c, c.AddTab()
 }
@@ -44,9 +47,6 @@ func (c *WindowCtrl) OnActivate() {
 	} else {
 		c.window.PushStatus("Ready")
 	}
-
-	// TODO: every double click is triggering this handler
-	//c.factory.OnTabClick(c.onNotebookDoubleClick)
 
 	c.window.Show()
 }
