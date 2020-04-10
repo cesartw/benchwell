@@ -33,5 +33,8 @@ func New(appid string) (*App, error) {
 		f.AddAction(f.Menu.Application.Preferences)
 	})
 
+	f.Application.SetAccelsForAction("app.new", []string{"<control>N"})
+	f.Application.SetAccelsForAction("win.new", []string{"<control>T"})
+
 	return f, nil
 }
