@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bitbucket.org/goreorto/sqlhero/cmd"
+	"bitbucket.org/goreorto/sqlaid/cmd"
 )
 
 func main() {

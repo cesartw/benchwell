@@ -2,7 +2,7 @@
 package test
 
 import (
-	"bitbucket.org/goreorto/sqlhero/sqlengine/driver"
+	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
 )
 
 type testDriver struct{}

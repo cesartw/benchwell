@@ -16,7 +16,7 @@ type Window struct {
 
 func (w *Window) init(app *gtk.Application) (err error) {
 	w.ApplicationWindow, err = gtk.ApplicationWindowNew(app)
-	w.SetTitle("SQLHero")
+	w.SetTitle("SQLaid")
 
 	w.nb, err = gtk.NotebookNew()
 	if err != nil {

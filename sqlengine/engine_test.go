@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"testing"
 
-	"bitbucket.org/goreorto/sqlhero/config"
-	"bitbucket.org/goreorto/sqlhero/sqlengine/driver"
-	"bitbucket.org/goreorto/sqlhero/sqlengine/sqlenginetest"
+	"bitbucket.org/goreorto/sqlaid/config"
+	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
+	"bitbucket.org/goreorto/sqlaid/sqlengine/sqlenginetest"
 	"github.com/golang/mock/gomock"
 )
 

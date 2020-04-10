@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"strconv"
 
-	"bitbucket.org/goreorto/sqlhero/config"
-	"bitbucket.org/goreorto/sqlhero/sqlengine/driver"
+	"bitbucket.org/goreorto/sqlaid/config"
+	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 )

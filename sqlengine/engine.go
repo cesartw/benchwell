@@ -5,8 +5,8 @@ import (
 	"errors"
 	"sync"
 
-	"bitbucket.org/goreorto/sqlhero/config"
-	"bitbucket.org/goreorto/sqlhero/sqlengine/driver"
+	"bitbucket.org/goreorto/sqlaid/config"
+	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
 )
 
 // Errors

@@ -3,9 +3,9 @@ package ctrl
 import (
 	"context"
 
-	"bitbucket.org/goreorto/sqlhero/config"
-	"bitbucket.org/goreorto/sqlhero/gtk"
-	"bitbucket.org/goreorto/sqlhero/sqlengine"
+	"bitbucket.org/goreorto/sqlaid/config"
+	"bitbucket.org/goreorto/sqlaid/gtk"
+	"bitbucket.org/goreorto/sqlaid/sqlengine"
 	ggtk "github.com/gotk3/gotk3/gtk"
 )
 

@@ -5,9 +5,10 @@
 package sqlenginetest
 
 import (
-	driver "bitbucket.org/goreorto/sqlhero/sqlengine/driver"
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	driver "bitbucket.org/goreorto/sqlaid/sqlengine/driver"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockDriver is a mock of Driver interface

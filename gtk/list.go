@@ -3,7 +3,7 @@ package gtk
 import (
 	"regexp"
 
-	"bitbucket.org/goreorto/sqlhero/config"
+	"bitbucket.org/goreorto/sqlaid/config"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
 )

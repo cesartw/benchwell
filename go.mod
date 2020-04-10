@@ -1,4 +1,4 @@
-module bitbucket.org/goreorto/sqlhero
+module bitbucket.org/goreorto/sqlaid
 
 go 1.12
 

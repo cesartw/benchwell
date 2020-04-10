@@ -1,10 +1,10 @@
 package ctrl
 
 import (
-	"bitbucket.org/goreorto/sqlhero/config"
-	"bitbucket.org/goreorto/sqlhero/gtk"
-	"bitbucket.org/goreorto/sqlhero/sqlengine"
-	"bitbucket.org/goreorto/sqlhero/sqlengine/driver"
+	"bitbucket.org/goreorto/sqlaid/config"
+	"bitbucket.org/goreorto/sqlaid/gtk"
+	"bitbucket.org/goreorto/sqlaid/sqlengine"
+	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
 )
 
 // tableCtrl manages table result screen
