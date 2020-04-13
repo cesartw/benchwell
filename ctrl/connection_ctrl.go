@@ -44,6 +44,14 @@ func (c ConnectionCtrl) init(ctx sqlengine.Context, p *TabCtrl, conn *config.Con
 		c.onDatabaseSelected()
 	}
 
+	tab, err := TableCtrl{}.init(c.ctx, &c, "")
+	if err != nil {
+		return nil, err
+	}
+
+	c.tabs = append(c.tabs, tab)
+	c.scr.AddTab("New", tab.Screen().(ggtk.IWidget), true)
+
 	return &c, nil
 }
 

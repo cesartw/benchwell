@@ -135,7 +135,7 @@ func (e *Engine) FetchTable(
 }
 
 // DeleteRecord ...
-func (e *Engine) DeleteRecord(ctx Context, tableName string, defs []driver.ColDef, values []*string) error {
+func (e *Engine) DeleteRecord(ctx Context, tableName string, defs []driver.ColDef, values []interface{}) error {
 	conn := e.connection(ctx)
 	if conn == nil {
 		return ErrNoConnection
@@ -147,6 +147,27 @@ func (e *Engine) DeleteRecord(ctx Context, tableName string, defs []driver.ColDe
 	}
 
 	return db.DeleteRecord(tableName, defs, values)
+}
+
+// UpdateFields ...
+func (e *Engine) UpdateFields(
+	ctx Context,
+	tableName string,
+	defs []driver.ColDef,
+	values []interface{},
+	keycount int,
+) (string, error) {
+	conn := e.connection(ctx)
+	if conn == nil {
+		return "", ErrNoConnection
+	}
+
+	db := e.database(ctx)
+	if db == nil {
+		return "", ErrNoDatabase
+	}
+
+	return db.UpdateFields(tableName, defs, values, keycount)
 }
 
 // UpdateField ...
@@ -169,7 +190,7 @@ func (e *Engine) UpdateField(
 	return db.UpdateField(tableName, defs, values)
 }
 
-// UpdateField ...
+// ParseValue ...
 func (e *Engine) ParseValue(
 	ctx Context,
 	def driver.ColDef,
@@ -213,8 +234,8 @@ func (e *Engine) InsertRecord(
 	ctx Context,
 	tableName string,
 	defs []driver.ColDef,
-	values []*string,
-) ([]*string, error) {
+	values []interface{},
+) ([]interface{}, error) {
 	conn := e.connection(ctx)
 	if conn == nil {
 		return nil, ErrNoConnection

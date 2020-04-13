@@ -196,6 +196,11 @@ func (d *mysqlDb) Query(query string) (columnNames []string, data [][]interface{
 
 func (d *mysqlDb) ParseValue(def driver.ColDef, value string) interface{} {
 	if value == driver.NULL_PATTERN {
+		if def.Nullable {
+			return nil
+		}
+	}
+	if def.PK && value == driver.NULL_PATTERN {
 		return nil
 	}
 
@@ -297,28 +302,24 @@ LIMIT ?, ?
 	return colDef, rows, err
 }
 
-func (d *mysqlDb) DeleteRecord(tableName string, defs []driver.ColDef, values []*string) error {
-	var ID string
-	var priCol driver.ColDef
+func (d *mysqlDb) DeleteRecord(tableName string, cols []driver.ColDef, args []interface{}) error {
 
-	for i := range values {
-		if defs[i].PK {
-			ID = *values[i]
-			priCol = defs[i]
-			break
-		}
+	if len(cols) == 0 {
+		return errors.New("cols is empty")
 	}
 
-	if ID == "" {
-		return errors.New("table doesn't have a primary key")
+	wheres := []string{}
+	for i := range cols {
+		wheres = append(wheres, fmt.Sprintf("%s = ?", cols[i].Name))
 	}
 
 	query := fmt.Sprintf(`
 	DELETE FROM %s
-	WHERE %s = ?
-	`, tableName, priCol.Name)
+	WHERE %s
+	`, tableName, strings.Join(wheres, " AND "))
 
-	_, err := d.db.Exec(query, ID)
+	config.Env.Log.WithFields(logrus.Fields{"query": query, "args": args}).Debug("DeleteRecord")
+	_, err := d.db.Exec(query, args...)
 
 	return err
 }
@@ -368,6 +369,7 @@ WHERE %s = ?`
 	query = fmt.Sprintf(query, tableName, strings.Join(sets, ", "), pk.Name)
 	args = append(args, ID)
 
+	config.Env.Log.WithFields(logrus.Fields{"query": query, "args": args}).Debug("InsertRecord")
 	result, err := d.db.Exec(query, args...)
 	if err != nil {
 		return "", err
@@ -423,11 +425,58 @@ func (d *mysqlDb) UpdateField(
 	return fmt.Sprintf("%d", id), nil
 }
 
+func (d *mysqlDb) UpdateFields(
+	tableName string,
+	cols []driver.ColDef,
+	values []interface{},
+	keycount int,
+) (string, error) {
+	if len(cols) != len(values) {
+		return "", errors.New("columns and values count doesn't match")
+	}
+
+	if len(cols) >= keycount {
+		return "", errors.New("keys or changes are not present")
+	}
+
+	wheres := []string{}
+	sets := []string{}
+
+	for i := range values {
+		if cols[i].PK && i <= keycount {
+			wheres = append(wheres, fmt.Sprintf("`%s` = ?", cols[i].Name))
+		} else {
+			sets = append(sets, fmt.Sprintf("`%s` = ?", cols[i].Name))
+		}
+	}
+
+	if len(sets) == 0 {
+	}
+
+	query := fmt.Sprintf("UPDATE `%s` SET %s WHERE %s",
+		tableName,
+		sets,
+		strings.Join(wheres, " AND "))
+
+	config.Env.Log.WithFields(logrus.Fields{"query": query, "args": values}).Debug("UpdateFields")
+	result, err := d.db.Exec(query, values...)
+	if err != nil {
+		return "", err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%d", id), nil
+}
+
 func (d *mysqlDb) InsertRecord(
 	tableName string,
 	cols []driver.ColDef,
-	values []*string,
-) ([]*string, error) {
+	values []interface{},
+) ([]interface{}, error) {
 	if len(cols) != len(values) {
 		return nil, errors.New("columns and values count doesn't match")
 	}
@@ -467,7 +516,7 @@ func (d *mysqlDb) fetchRecord(
 	cols []driver.ColDef,
 	id int64,
 ) (
-	[]*string,
+	[]interface{},
 	error,
 ) {
 	var pk *driver.ColDef
@@ -501,17 +550,16 @@ WHERE %s = ?`
 		return nil, err
 	}
 
-	rows := make([][]*string, 0)
+	rows := make([][]interface{}, 0)
 
 	for sqlRows.Next() {
-		row := make([]*string, len(columns))
-		irow := make([]interface{}, len(columns))
+		row := make([]interface{}, len(columns))
 
-		for ci := range columns {
-			irow[ci] = &row[ci]
+		for ci := range row {
+			row[ci] = &row[ci]
 		}
 
-		if err := sqlRows.Scan(irow...); err != nil {
+		if err := sqlRows.Scan(row...); err != nil {
 			return nil, err
 		}
 

@@ -208,9 +208,6 @@ func (c *ConnectionScreen) ActiveTable() (string, bool) {
 	return c.tableList.SelectedItem()
 }
 
-func (c *ConnectionScreen) Dispose() {
-}
-
 func (c *ConnectionScreen) onSearch(e *gtk.SearchEntry) {
 	buff, err := e.GetBuffer()
 	if err != nil {

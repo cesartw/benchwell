@@ -14,7 +14,7 @@ require (
 	github.com/Azure/go-autorest/logger v0.1.0 // indirect
 	github.com/Azure/go-autorest/tracing v0.5.0 // indirect
 	github.com/Bowery/prompt v0.0.0-20190916142128-fa8279994f75 // indirect
-	github.com/BurntSushi/toml v0.3.1
+	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/DataDog/datadog-go v3.5.0+incompatible // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/vcs v1.13.1 // indirect
@@ -29,7 +29,7 @@ require (
 	github.com/dchest/safefile v0.0.0-20151022103144-855e8d98f185 // indirect
 	github.com/dghubble/go-twitter v0.0.0-20190719072343-39e5462e111f // indirect
 	github.com/dghubble/oauth1 v0.6.0 // indirect
-	github.com/dlclark/regexp2 v1.1.6
+	github.com/dlclark/regexp2 v1.1.6 // indirect
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/fatih/gomodifytags v1.4.0 // indirect
 	github.com/garyburd/redigo v1.6.0 // indirect
@@ -97,7 +97,7 @@ require (
 	github.com/teamwork/httperr v1.0.0 // indirect
 	github.com/teamwork/inboxupdater v0.0.0-20191125123757-da2a42b89a98 // indirect
 	github.com/teamwork/launchpad v1.1.0 // indirect
-	github.com/teamwork/log v1.0.3-0.20200318121520-88f7cd159e08
+	github.com/teamwork/log v1.0.3-0.20200318121520-88f7cd159e08 // indirect
 	github.com/teamwork/migrate v0.0.0-20191127145230-93cc06c5a82b // indirect
 	github.com/teamwork/projectsapigo v0.0.0-20200407141239-bd7cc84828dd // indirect
 	github.com/teamwork/strut v0.0.0-20200407101414-e9c4283e6b18 // indirect
@@ -109,10 +109,10 @@ require (
 	github.com/wercker/stern v0.0.0-20190705090245-4fa46dd6987f // indirect
 	go.opencensus.io v0.22.3 // indirect
 	golang.org/x/mod v0.2.0 // indirect
-	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e
+	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e // indirect
 	golang.org/x/net/http2/h2demo v0.0.0-20200324143707-d3edc9973b7e // indirect
-	golang.org/x/sys v0.0.0-20200406155108-e3b113bbe6a4
-	golang.org/x/text v0.3.2
+	golang.org/x/sys v0.0.0-20200406155108-e3b113bbe6a4 // indirect
+	golang.org/x/text v0.3.2 // indirect
 	google.golang.org/api v0.21.0 // indirect
 	gopkg.in/DATA-DOG/go-sqlmock.v1 v1.3.0 // indirect
 	gopkg.in/DataDog/dd-trace-go.v1 v1.23.0 // indirect
