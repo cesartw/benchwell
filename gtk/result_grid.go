@@ -1,17 +1,10 @@
 package gtk
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
-	"html"
-	"io"
 	"regexp"
 	"strconv"
 
-	"github.com/alecthomas/chroma"
-	"github.com/alecthomas/chroma/formatters"
-	"github.com/alecthomas/chroma/quick"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
 
@@ -39,6 +32,9 @@ type ResultGrid struct {
 	colFilter *gtk.SearchEntry
 
 	submitCallbacks []func(string)
+
+	//query type
+	isDML, isDDL bool
 }
 
 func NewResultGrid(
@@ -58,7 +54,8 @@ func NewResultGrid(
 		return nil, err
 	}
 
-	v.textView.Connect("key-release-event", v.onTextViewKeyPress)
+	v.textView.Connect("key-release-event", v.onTextViewKeyRelease)
+	v.textView.Connect("key-press-event", v.onTextViewKeyPress)
 
 	var resultSW, textViewSW *gtk.ScrolledWindow
 
@@ -146,6 +143,8 @@ func NewResultGrid(
 	v.Paned.Pack1(textViewSW, false, false)
 	v.Paned.Pack2(resultBox, true, false)
 
+	v.disableAll()
+
 	return v, nil
 }
 
@@ -171,6 +170,8 @@ func (v *ResultGrid) PageSize() int64 {
 
 func (v *ResultGrid) UpdateData(cols []driver.ColDef, data [][]interface{}) error {
 	v.pagerEnable(true)
+	v.btnAddRow.SetSensitive(true)
+
 	return v.result.UpdateData(cols, data)
 }
 
@@ -359,13 +360,24 @@ func (v *ResultGrid) pagerEnable(b bool) {
 	v.btnRsh.SetSensitive(b)
 	v.perPage.SetSensitive(b)
 	v.offset.SetSensitive(b)
+	v.perPage.SetSensitive(b)
+	v.offset.SetSensitive(b)
+}
+
+func (v *ResultGrid) disableAll() {
+	v.btnPrev.SetSensitive(false)
+	v.btnNext.SetSensitive(false)
+	v.btnRsh.SetSensitive(false)
+	v.btnAddRow.SetSensitive(false)
+	v.btnDeleteRow.SetSensitive(false)
+	v.btnCreateRow.SetSensitive(false)
 }
 
 func (v *ResultGrid) newRecordEnable(b bool) {
 	v.btnCreateRow.SetSensitive(b)
 }
 
-func (v *ResultGrid) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) {
+func (v *ResultGrid) onTextViewKeyRelease(_ *gtk.TextView, e *gdk.Event) {
 	keyEvent := gdk.EventKeyNewFromEvent(e)
 	if keyEvent.KeyVal() >= gdk.KEY_Home && keyEvent.KeyVal() <= gdk.KEY_End {
 		return
@@ -386,13 +398,6 @@ func (v *ResultGrid) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) {
 		return
 	}
 
-	if keyEvent.KeyVal() == gdk.KEY_Return && keyEvent.State()&gdk.GDK_CONTROL_MASK > 0 {
-		for _, fn := range v.submitCallbacks {
-			fn(txt)
-		}
-		return
-	}
-
 	iter := buff.GetIterAtMark(buff.GetInsert())
 	offset := iter.GetOffset()
 
@@ -405,6 +410,28 @@ func (v *ResultGrid) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) {
 	buff.InsertMarkup(buff.GetStartIter(), txt)
 
 	buff.PlaceCursor(buff.GetIterAtOffset(offset))
+}
+
+func (v *ResultGrid) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) bool {
+	keyEvent := gdk.EventKeyNewFromEvent(e)
+
+	if keyEvent.KeyVal() == gdk.KEY_Return && keyEvent.State()&gdk.GDK_CONTROL_MASK > 0 {
+		buff, err := v.textView.GetBuffer()
+		if err != nil {
+			config.Env.Log.Error(err)
+			return true
+		}
+		txt, err := buff.GetText(buff.GetStartIter(), buff.GetEndIter(), false)
+		if err != nil {
+			config.Env.Log.Error(err)
+		}
+		for _, fn := range v.submitCallbacks {
+			fn(txt)
+		}
+		return true
+	}
+
+	return false
 }
 
 func (v *ResultGrid) onColFilterSearchChanged() {
@@ -447,69 +474,4 @@ func (v *ResultGrid) onRowActivated(_ *gtk.TreeView, path *gtk.TreePath, col *gt
 	}
 
 	v.newRecordEnable(status == STATUS_NEW)
-}
-
-func init() {
-	// Registrering pango formatter
-	formatters.Register("pango", chroma.FormatterFunc(pangoFormatter))
-}
-
-func ChromaHighlight(inputString string) (out string, err error) {
-	buff := new(bytes.Buffer)
-	writer := bufio.NewWriter(buff)
-
-	// Doing the job (io.Writer, SourceText, language(go), Lexer(pango), style(pygments))
-	if err = quick.Highlight(writer, inputString, "sql", "pango", "pygments"); err != nil {
-		return
-	}
-	writer.Flush()
-	return string(buff.Bytes()), err
-}
-
-func pangoFormatter(w io.Writer, style *chroma.Style, it chroma.Iterator) error {
-	var r, g, b uint8
-	var closer, out string
-
-	var getColour = func(color chroma.Colour) string {
-		r, g, b = color.Red(), color.Green(), color.Blue()
-		return fmt.Sprintf("#%02X%02X%02X", r, g, b)
-	}
-
-	for tkn := it(); tkn != chroma.EOF; tkn = it() {
-
-		entry := style.Get(tkn.Type)
-		if !entry.IsZero() {
-			if entry.Bold == chroma.Yes {
-				out = `<b>`
-				closer = `</b>`
-			}
-			if entry.Underline == chroma.Yes {
-				out += `<u>`
-				closer = `</u>` + closer
-			}
-			if entry.Italic == chroma.Yes {
-				out += `<i>`
-				closer = `</i>` + closer
-			}
-			if entry.Colour.IsSet() {
-				out += `<span foreground="` + getColour(entry.Colour) + `">`
-				closer = `</span>` + closer
-			}
-			if entry.Background.IsSet() {
-				out += `<span background="` + getColour(entry.Background) + `">`
-				closer = `</span>` + closer
-			}
-			if entry.Border.IsSet() {
-				out += `<span background="` + getColour(entry.Border) + `">`
-				closer = `</span>` + closer
-			}
-			fmt.Fprint(w, out)
-		}
-		fmt.Fprint(w, html.EscapeString(tkn.Value))
-		if !entry.IsZero() {
-			fmt.Fprint(w, closer)
-		}
-		closer, out = "", ""
-	}
-	return nil
 }

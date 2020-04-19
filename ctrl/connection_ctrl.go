@@ -51,6 +51,7 @@ func (c ConnectionCtrl) init(ctx sqlengine.Context, p *TabCtrl, conn *config.Con
 
 	c.tabs = append(c.tabs, tab)
 	c.scr.AddTab("New", tab.Screen().(ggtk.IWidget), true)
+	c.scr.OnSchemaMenu(c.onSchemaMenu)
 
 	return &c, nil
 }
@@ -92,4 +93,18 @@ func (c *ConnectionCtrl) onTableSelected() {
 
 func (c *ConnectionCtrl) Screen() interface{} {
 	return c.scr
+}
+
+func (c *ConnectionCtrl) onSchemaMenu() {
+	tableName, ok := c.scr.SelectedTable()
+	if !ok {
+		return
+	}
+
+	schema, err := c.engine.GetCreateTable(c.ctx, tableName)
+	if err != nil {
+		config.Env.Log.Error(err, "getting table schema")
+	}
+
+	c.scr.ShowTableSchemaModal(tableName, schema)
 }

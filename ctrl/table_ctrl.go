@@ -61,9 +61,35 @@ func (tc TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableNam
 		columns, data, err := tc.engine.Query(tc.ctx, value)
 		if err != nil {
 			config.Env.Log.Error(err)
+			tc.window.PushStatus("Error: %s", err.Error())
+			return
+		}
+		tc.grid.UpdateRawData(columns, data)
+		tc.window.PushStatus("%d rows loaded", len(data))
+
+		/*dml, ddl := tc.parseQuery(value)
+
+		for _, query := range dml {
+			columns, data, err := tc.engine.Query(tc.ctx, query)
+			if err != nil {
+				config.Env.Log.Error(err)
+				tc.window.PushStatus("Error: %s", err.Error())
+				return
+			}
+			tc.grid.UpdateRawData(columns, data)
+			tc.window.PushStatus("%d rows loaded", len(data))
 		}
 
-		tc.grid.UpdateRawData(columns, data)
+		for _, query := range ddl {
+			id, affected, err := tc.engine.Execute(tc.ctx, query)
+			if err != nil {
+				config.Env.Log.Error(err)
+				tc.window.PushStatus("Error: %s", err.Error())
+				return
+			}
+			tc.window.PushStatus("Last inserted id: %s Affected rows: %d", id, affected)
+		}
+		*/
 	}).OnRefresh(func() {
 		tc.OnConnect()
 	}).OnBack(func() {
@@ -129,6 +155,31 @@ func (tc *TableCtrl) OnConnect() {
 		config.Env.Log.Error(err)
 	}
 }
+
+/*
+func (tc *TableCtrl) parseQuery(src string) (dml []string, ddl []string) {
+	p := parser.New()
+
+	stmtNodes, _, err := p.Parse(src, "", "")
+	if err != nil {
+		config.Env.Log.Error(err)
+	}
+
+	for _, node := range stmtNodes {
+		_, isSelect := node.(*ast.SelectStmt)
+		_, isShow := node.(*ast.ShowStmt)
+		_, isExplain := node.(*ast.ExplainStmt)
+
+		if isShow || isSelect || isExplain {
+			dml = append(dml, node.Text())
+		} else {
+			ddl = append(ddl, node.Text())
+		}
+	}
+
+	return
+}
+*/
 
 func (tc *TableCtrl) Screen() interface{} {
 	return tc.grid

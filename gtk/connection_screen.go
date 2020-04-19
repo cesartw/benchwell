@@ -5,6 +5,7 @@ import (
 	"regexp"
 
 	"bitbucket.org/goreorto/sqlaid/config"
+	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 )
@@ -25,6 +26,12 @@ type ConnectionScreen struct {
 	dbStore       *gtk.ListStore
 
 	activeDatabase MVar
+
+	tableMenu    *gtk.Menu
+	editMenu     *gtk.MenuItem
+	schemaMenu   *gtk.MenuItem
+	truncateMenu *gtk.MenuItem
+	deleteMenu   *gtk.MenuItem
 }
 
 func (c *ConnectionScreen) init() error {
@@ -50,8 +57,6 @@ func (c *ConnectionScreen) init() error {
 		return err
 	}
 
-	sideBar.SetSizeRequest(300, -1)
-
 	c.Paned.Pack1(sideBar, false, true)
 
 	c.tableFilter, err = gtk.SearchEntryNew()
@@ -76,13 +81,14 @@ func (c *ConnectionScreen) init() error {
 	}
 	c.dbCombo.SetEntryTextColumn(0)
 
-	c.tableList, err = NewList(ListOptions{})
+	c.tableList, err = NewList(ListOptions{SelectOnRightClick: true})
 	if err != nil {
 		return err
 	}
-
 	c.tableList.SetHExpand(true)
 	c.tableList.SetVExpand(true)
+	c.tableList.OnButtonPress(c.onTableListButtonPress)
+
 	tableListSW.Add(c.tableList)
 
 	sideBar.PackStart(c.dbCombo, false, true, 0)
@@ -112,6 +118,11 @@ func (c *ConnectionScreen) init() error {
 	mainSection.SetHExpand(true)
 
 	c.Paned.Pack2(mainSection, true, false)
+
+	err = c.initTableMenu()
+	if err != nil {
+		return err
+	}
 
 	// signals
 
@@ -208,22 +219,75 @@ func (c *ConnectionScreen) ActiveTable() (string, bool) {
 	return c.tableList.SelectedItem()
 }
 
-func (c *ConnectionScreen) onSearch(e *gtk.SearchEntry) {
-	buff, err := e.GetBuffer()
+func (c *ConnectionScreen) ShowTableSchemaModal(tableName, schema string) {
+	modal, err := gtk.DialogNewWithButtons(fmt.Sprintf("Table %s", tableName), nil,
+		gtk.DIALOG_DESTROY_WITH_PARENT|gtk.DIALOG_MODAL,
+		[]interface{}{"Ok", gtk.RESPONSE_ACCEPT},
+	)
 	if err != nil {
 		return
 	}
 
-	txt, err := buff.GetText()
+	modal.SetDefaultSize(400, 400)
+	content, err := modal.GetContentArea()
 	if err != nil {
 		return
 	}
 
-	rg, err := regexp.Compile(txt)
+	textView, err := gtk.TextViewNew()
 	if err != nil {
-		rg = regexp.MustCompile(fmt.Sprintf(".*%s.*", regexp.QuoteMeta(txt)))
+		return
 	}
-	c.tableList.SetFilterRegex(rg)
+	textView.SetVExpand(true)
+	textView.SetHExpand(true)
+
+	schema, err = ChromaHighlight(schema)
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+	buff, err := textView.GetBuffer()
+	if err != nil {
+		return
+	}
+
+	buff.InsertMarkup(buff.GetStartIter(), schema)
+
+	textView.Show()
+	content.Add(textView)
+
+	modal.Run()
+}
+
+func (c *ConnectionScreen) SelectedTable() (string, bool) {
+	return c.tableList.SelectedItem()
+}
+
+func (c *ConnectionScreen) OnEditMenu(fn interface{}) {
+	c.editMenu.Connect("activate", fn)
+}
+
+func (c *ConnectionScreen) OnSchemaMenu(fn interface{}) {
+	c.schemaMenu.Connect("activate", fn)
+}
+
+func (c *ConnectionScreen) OnTruncateMenu(fn interface{}) {
+	c.truncateMenu.Connect("activate", fn)
+}
+
+func (c *ConnectionScreen) OnDeleteMenu(fn interface{}) {
+	c.deleteMenu.Connect("activate", fn)
+}
+
+func (c *ConnectionScreen) onTableListButtonPress(_ *gtk.ListBox, e *gdk.Event) {
+	keyEvent := gdk.EventButtonNewFromEvent(e)
+
+	if keyEvent.Button() != gdk.BUTTON_SECONDARY {
+		return
+	}
+
+	c.tableMenu.ShowAll()
+	c.tableMenu.PopupAtPointer(e)
 }
 
 func (c *ConnectionScreen) onDatabaseSelected() {
@@ -246,4 +310,56 @@ func (c *ConnectionScreen) onDatabaseSelected() {
 	}
 
 	c.activeDatabase.Set(dbName)
+}
+func (c *ConnectionScreen) initTableMenu() error {
+	var err error
+	c.tableMenu, err = gtk.MenuNew()
+	if err != nil {
+		return err
+	}
+
+	c.editMenu, err = menuItemWithImage("Edit", "gtk-edit")
+	if err != nil {
+		return err
+	}
+
+	c.schemaMenu, err = menuItemWithImage("Schema", "gtk-info")
+	if err != nil {
+		return err
+	}
+
+	c.truncateMenu, err = menuItemWithImage("Truncate", "gtk-clear")
+	if err != nil {
+		return err
+	}
+
+	c.deleteMenu, err = menuItemWithImage("Delete", "gtk-delete")
+	if err != nil {
+		return err
+	}
+
+	c.tableMenu.Add(c.editMenu)
+	c.tableMenu.Add(c.schemaMenu)
+	c.tableMenu.Add(c.truncateMenu)
+	c.tableMenu.Add(c.deleteMenu)
+
+	return nil
+}
+
+func (c *ConnectionScreen) onSearch(e *gtk.SearchEntry) {
+	buff, err := e.GetBuffer()
+	if err != nil {
+		return
+	}
+
+	txt, err := buff.GetText()
+	if err != nil {
+		return
+	}
+
+	rg, err := regexp.Compile(txt)
+	if err != nil {
+		rg = regexp.MustCompile(fmt.Sprintf(".*%s.*", regexp.QuoteMeta(txt)))
+	}
+	c.tableList.SetFilterRegex(rg)
 }

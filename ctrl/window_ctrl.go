@@ -40,6 +40,10 @@ func (c *WindowCtrl) Show() {
 	c.window.Show()
 }
 
+func (c *WindowCtrl) Hide() {
+	c.window.Hide()
+}
+
 func (c *WindowCtrl) OnActivate() {
 	err := c.AddTab()
 	if err != nil {

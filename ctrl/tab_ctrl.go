@@ -2,6 +2,7 @@ package ctrl
 
 import (
 	"context"
+	"time"
 
 	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/gtk"
@@ -84,7 +85,10 @@ func (c *TabCtrl) onConnect() {
 		conn = config.Env.Connections[index]
 	}
 
-	ctx, err := c.engine.Connect(sqlengine.Context(context.TODO()), conn.GetDSN())
+	ctx, done := context.WithTimeout(context.TODO(), time.Second*5)
+	defer done()
+
+	ctx, err := c.engine.Connect(sqlengine.Context(ctx), conn.GetDSN())
 	if err != nil {
 		config.Env.Log.Error(err)
 		c.window.PushStatus("Failed connect to `%s`(%s): %s", conn.Name, conn.Host, err.Error())

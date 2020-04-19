@@ -86,3 +86,14 @@ func (c *AppCtrl) CreateWindow() error {
 
 	return nil
 }
+
+func (c *AppCtrl) ShowAll() {
+	for _, w := range c.windows {
+		w.Show()
+	}
+}
+func (c *AppCtrl) HideAll() {
+	for _, w := range c.windows {
+		w.Hide()
+	}
+}

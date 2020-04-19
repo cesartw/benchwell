@@ -58,6 +58,7 @@ func (w Window) Init(app *gtk.Application) (*Window, error) {
 
 	w.SetTitlebar(header)
 	w.ShowAll()
+	w.HideOnDelete()
 
 	return &w, nil
 }

@@ -1,6 +1,7 @@
 package driver
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -42,7 +43,7 @@ func RegisterDriver(name string, d Driver) {
 
 // Connect returns a Connection
 // TODO: dsn parsing too optimistic
-func Connect(dsn string) (Connection, error) {
+func Connect(ctx context.Context, dsn string) (Connection, error) {
 	colonS := strings.Split(dsn, ":")
 
 	driverMU.Lock()
@@ -54,21 +55,21 @@ func Connect(dsn string) (Connection, error) {
 	}
 
 	// kind hacky
-	return d.Connect(strings.TrimPrefix(dsn, colonS[0]+"://"))
+	return d.Connect(ctx, strings.TrimPrefix(dsn, colonS[0]+"://"))
 }
 
 // Driver is a database implementation for SQLHero
 type Driver interface {
-	Connect(string) (Connection, error)
+	Connect(context.Context, string) (Connection, error)
 	// Sanitize(string) string
 }
 
 // Connection ...
 type Connection interface {
-	UseDatabase(string) error
-	Databases() ([]Database, error)
-	Disconnect() error
-	Reconnect() error
+	UseDatabase(context.Context, string) error
+	Databases(context.Context) ([]Database, error)
+	Disconnect(context.Context) error
+	Reconnect(context.Context) error
 	LastError() error
 }
 
@@ -88,19 +89,18 @@ func (c ColDef) String() string {
 
 // Database ...
 type Database interface {
-	Tables() ([]string, error)
-	TableDefinition(tableName string) ([]ColDef, error)
-	FetchTable(tableName string, page, pageSize int64) ([]ColDef, [][]interface{}, error)
-	DeleteRecord(tableName string, defs []ColDef, values []interface{}) error
-	UpdateRecord(tableName string, cols []ColDef, values, oldValues []interface{}) (string, error)
-	// UpdateField updates a single field. cols[-1] is the changed values, cols[:-1] are primary keys
-	UpdateField(tableName string, cols []ColDef, values []interface{}) (string, error)
-	UpdateFields(tableName string, cols []ColDef, values []interface{}, keycount int) (string, error)
-	InsertRecord(tableName string, cols []ColDef, values []interface{}) ([]interface{}, error)
+	Tables(context.Context) ([]string, error)
+	TableDefinition(ctx context.Context, tableName string) ([]ColDef, error)
+	FetchTable(ctx context.Context, tableName string, page, pageSize int64) ([]ColDef, [][]interface{}, error)
+	DeleteRecord(ctx context.Context, tableName string, defs []ColDef, values []interface{}) error
+	UpdateRecord(ctx context.Context, tableName string, cols []ColDef, values, oldValues []interface{}) (string, error)
+	UpdateField(ctx context.Context, tableName string, cols []ColDef, values []interface{}) (string, error)
+	UpdateFields(ctx context.Context, tableName string, cols []ColDef, values []interface{}, keycount int) (string, error)
+	InsertRecord(ctx context.Context, tableName string, cols []ColDef, values []interface{}) ([]interface{}, error)
 	ParseValue(def ColDef, value string) interface{}
-	Query(string) ([]string, [][]interface{}, error)
-	// Execute(string, interface{}) (in,error)
+	Query(context.Context, string) ([]string, [][]interface{}, error)
+	Execute(context.Context, string) (string, int64, error)
 	Name() string
 	// DDL
-	// GetCreateTable(string) string
+	GetCreateTable(context.Context, string) (string, error)
 }
