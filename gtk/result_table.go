@@ -5,6 +5,7 @@ import (
 	"log"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
@@ -68,8 +69,9 @@ func NewResult(cols []driver.ColDef, data [][]interface{}, parser parser) (u *Re
 }
 
 func (u *Result) UpdateData(cols []driver.ColDef, data [][]interface{}) error {
-	for i := range u.cols {
-		u.TreeView.RemoveColumn(u.TreeView.GetColumn(i))
+	// columns shift to the left
+	for _ = range u.cols {
+		u.TreeView.RemoveColumn(u.TreeView.GetColumn(0))
 	}
 
 	u.cols = colDefSliceToStringerSlice(cols)
@@ -515,7 +517,8 @@ func (u *Result) createColumn(title string, id int) (*gtk.TreeViewColumn, error)
 	// i think "text" refers to a property of the column.
 	// `"text", id` means that the text source for the column should come from
 	// the listore column with id = `id`
-	column, err := gtk.TreeViewColumnNewWithAttribute(title, cellRenderer, "text", id)
+	// NOTE: single _ is not display, maybe it's an issue with my system
+	column, err := gtk.TreeViewColumnNewWithAttribute(strings.Replace(title, "_", "__", -1), cellRenderer, "text", id)
 	if err != nil {
 		return nil, err
 	}

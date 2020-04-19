@@ -37,7 +37,7 @@ func (e *Engine) Connect(ctx Context, dsn string) (Context, error) {
 	e.connMU.Lock()
 	defer e.connMU.Unlock()
 
-	conn, err := driver.Connect(dsn)
+	conn, err := driver.Connect(ctx, dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (e *Engine) Databases(ctx Context) ([]string, error) {
 		return nil, errors.New("no connection available")
 	}
 
-	dbs, err := conn.Databases()
+	dbs, err := conn.Databases(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (e *Engine) UseDatabase(ctx Context, dbName string) (Context, error) {
 		return ctx, ErrNoConnection
 	}
 
-	dbs, err := conn.Databases()
+	dbs, err := conn.Databases(ctx)
 	if err != nil {
 		return ctx, err
 	}
@@ -92,7 +92,7 @@ func (e *Engine) UseDatabase(ctx Context, dbName string) (Context, error) {
 		return ctx, ErrDatabaseNotFound
 	}
 
-	err = conn.UseDatabase(db.Name())
+	err = conn.UseDatabase(ctx, db.Name())
 	if err != nil {
 		return ctx, err
 	}
@@ -112,7 +112,7 @@ func (e *Engine) Tables(ctx Context) ([]string, error) {
 		return nil, ErrNoDatabase
 	}
 
-	return db.Tables()
+	return db.Tables(ctx)
 }
 
 // FetchTable returns table column definition and table data
@@ -131,7 +131,7 @@ func (e *Engine) FetchTable(
 		return nil, nil, ErrNoDatabase
 	}
 
-	return db.FetchTable(tableName, page, pageSize)
+	return db.FetchTable(ctx, tableName, page, pageSize)
 }
 
 // DeleteRecord ...
@@ -146,7 +146,7 @@ func (e *Engine) DeleteRecord(ctx Context, tableName string, defs []driver.ColDe
 		return ErrNoDatabase
 	}
 
-	return db.DeleteRecord(tableName, defs, values)
+	return db.DeleteRecord(ctx, tableName, defs, values)
 }
 
 // UpdateFields ...
@@ -167,7 +167,7 @@ func (e *Engine) UpdateFields(
 		return "", ErrNoDatabase
 	}
 
-	return db.UpdateFields(tableName, defs, values, keycount)
+	return db.UpdateFields(ctx, tableName, defs, values, keycount)
 }
 
 // UpdateField ...
@@ -187,7 +187,7 @@ func (e *Engine) UpdateField(
 		return "", ErrNoDatabase
 	}
 
-	return db.UpdateField(tableName, defs, values)
+	return db.UpdateField(ctx, tableName, defs, values)
 }
 
 // ParseValue ...
@@ -226,7 +226,7 @@ func (e *Engine) UpdateRecord(
 		return "", ErrNoDatabase
 	}
 
-	return db.UpdateRecord(tableName, defs, values, oldValues)
+	return db.UpdateRecord(ctx, tableName, defs, values, oldValues)
 }
 
 // InsertRecord ...
@@ -246,7 +246,7 @@ func (e *Engine) InsertRecord(
 		return nil, ErrNoDatabase
 	}
 
-	return db.InsertRecord(tableName, defs, values)
+	return db.InsertRecord(ctx, tableName, defs, values)
 }
 
 // Disconnect ...
@@ -256,7 +256,7 @@ func (e *Engine) Disconnect(ctx Context) error {
 		return ErrNoConnection
 	}
 
-	return conn.Disconnect()
+	return conn.Disconnect(ctx)
 }
 
 func (e *Engine) Query(ctx Context, query string) ([]string, [][]interface{}, error) {
@@ -265,13 +265,31 @@ func (e *Engine) Query(ctx Context, query string) ([]string, [][]interface{}, er
 		return nil, nil, ErrNoDatabase
 	}
 
-	return db.Query(query)
+	return db.Query(ctx, query)
+}
+
+func (e *Engine) Execute(ctx Context, query string) (string, int64, error) {
+	db := e.database(ctx)
+	if db == nil {
+		return "", 0, ErrNoDatabase
+	}
+
+	return db.Execute(ctx, query)
+}
+
+func (e *Engine) GetCreateTable(ctx Context, tableName string) (string, error) {
+	db := e.database(ctx)
+	if db == nil {
+		return "", ErrNoDatabase
+	}
+
+	return db.GetCreateTable(ctx, tableName)
 }
 
 // Dispose ...
 func (e *Engine) Dispose() {
 	for _, c := range e.connections {
-		c.Disconnect()
+		c.Disconnect(context.Background())
 	}
 }
 

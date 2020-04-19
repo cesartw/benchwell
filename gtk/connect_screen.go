@@ -124,7 +124,7 @@ func (c *ConnectScreen) onConnectListButtonPress(_ *gtk.ListBox, e *gdk.Event) {
 		return
 	}
 
-	mi, err := gtk.MenuItemNewWithLabel("New")
+	mi, err := menuItemWithImage("New", "gtk-new")
 	if err != nil {
 		return
 	}
@@ -134,11 +134,10 @@ func (c *ConnectScreen) onConnectListButtonPress(_ *gtk.ListBox, e *gdk.Event) {
 	})
 	m.Add(mi)
 
-	mi, err = gtk.MenuItemNewWithLabel("Connect")
+	mi, err = menuItemWithImage("Connect", "gtk-connect")
 	if err != nil {
 		return
 	}
-
 	mi.Connect("activate", func() {
 		index, ok := c.connectionList.SelectedItemIndex()
 		if !ok {
@@ -147,10 +146,9 @@ func (c *ConnectScreen) onConnectListButtonPress(_ *gtk.ListBox, e *gdk.Event) {
 
 		c.onConnect(index)
 	})
-
 	m.Add(mi)
 
-	mi, err = gtk.MenuItemNewWithLabel("Test")
+	mi, err = menuItemWithImage("Test", "gtk-play")
 	if err != nil {
 		return
 	}
@@ -159,7 +157,7 @@ func (c *ConnectScreen) onConnectListButtonPress(_ *gtk.ListBox, e *gdk.Event) {
 	})
 	m.Add(mi)
 
-	mi, err = gtk.MenuItemNewWithLabel("Delete")
+	mi, err = menuItemWithImage("Delete", "gtk-delete")
 	if err != nil {
 		return
 	}

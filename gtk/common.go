@@ -1,6 +1,23 @@
 package gtk
 
-import "sync"
+import (
+	"bufio"
+	"bytes"
+	"fmt"
+	"html"
+	"io"
+	"sync"
+
+	"github.com/alecthomas/chroma"
+	"github.com/alecthomas/chroma/formatters"
+	"github.com/alecthomas/chroma/quick"
+	"github.com/gotk3/gotk3/gtk"
+)
+
+func init() {
+	// Registrering pango formatter
+	formatters.Register("pango", chroma.FormatterFunc(pangoFormatter))
+}
 
 type MVar struct {
 	value interface{}
@@ -19,4 +36,94 @@ func (mv *MVar) Get() interface{} {
 	defer mv.RUnlock()
 
 	return mv.value
+}
+
+func menuItemWithImage(txt string, stockImage string) (*gtk.MenuItem, error) {
+	item, err := gtk.MenuItemNew()
+	if err != nil {
+		return nil, err
+	}
+
+	box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	icon, err := gtk.ImageNewFromIconName(stockImage, gtk.ICON_SIZE_MENU)
+	if err != nil {
+		return nil, err
+	}
+
+	label, err := gtk.LabelNew(txt)
+	if err != nil {
+		return nil, err
+	}
+	label.SetUseUnderline(true)
+	label.SetXAlign(0.0)
+
+	box.PackStart(icon, false, false, 0)
+	box.PackEnd(label, true, true, 5)
+	item.Add(box)
+
+	return item, nil
+}
+
+func ChromaHighlight(inputString string) (out string, err error) {
+	buff := new(bytes.Buffer)
+	writer := bufio.NewWriter(buff)
+
+	// Doing the job (io.Writer, SourceText, language(go), Lexer(pango), style(pygments))
+	if err = quick.Highlight(writer, inputString, "sql", "pango", "pygments"); err != nil {
+		return
+	}
+	writer.Flush()
+	return string(buff.Bytes()), err
+}
+
+func pangoFormatter(w io.Writer, style *chroma.Style, it chroma.Iterator) error {
+	var r, g, b uint8
+	var closer, out string
+
+	var getColour = func(color chroma.Colour) string {
+		r, g, b = color.Red(), color.Green(), color.Blue()
+		return fmt.Sprintf("#%02X%02X%02X", r, g, b)
+	}
+
+	for tkn := it(); tkn != chroma.EOF; tkn = it() {
+
+		entry := style.Get(tkn.Type)
+		if !entry.IsZero() {
+			if entry.Bold == chroma.Yes {
+				out = `<b>`
+				closer = `</b>`
+			}
+			if entry.Underline == chroma.Yes {
+				out += `<u>`
+				closer = `</u>` + closer
+			}
+			if entry.Italic == chroma.Yes {
+				out += `<i>`
+				closer = `</i>` + closer
+			}
+			if entry.Colour.IsSet() {
+				out += `<span foreground="` + getColour(entry.Colour) + `">`
+				closer = `</span>` + closer
+			}
+			if entry.Background.IsSet() {
+				out += `<span background="` + getColour(entry.Background) + `">`
+				closer = `</span>` + closer
+			}
+			if entry.Border.IsSet() {
+				out += `<span background="` + getColour(entry.Border) + `">`
+				closer = `</span>` + closer
+			}
+			fmt.Fprint(w, out)
+		}
+		fmt.Fprint(w, html.EscapeString(tkn.Value))
+		if !entry.IsZero() {
+			fmt.Fprint(w, closer)
+		}
+		closer, out = "", ""
+	}
+	return nil
 }

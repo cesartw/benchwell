@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	// mysql implementation
 	_ "github.com/go-sql-driver/mysql"
@@ -34,21 +36,45 @@ func init() {
 	driver.RegisterDriver("mysql", &mysqlDriver{})
 }
 
-func (d *mysqlDriver) Connect(dsn string) (driver.Connection, error) {
-	db, err := sql.Open("mysql", dsn)
-	if err != nil {
-		return nil, err
+func (d *mysqlDriver) Connect(ctx context.Context, dsn string) (driver.Connection, error) {
+	t, ok := ctx.Deadline()
+	if !ok {
+		t = time.Now().Add(time.Minute * 100000000)
 	}
 
-	err = db.Ping()
-	if err != nil {
-		return nil, err
-	}
+	var db *sql.DB
 
-	return &mysqlConn{dsn: dsn, db: db}, nil
+	c := make(chan error, 1)
+	go func() {
+		var err error
+		db, err = sql.Open("mysql", dsn)
+		if err != nil {
+			c <- err
+			return
+		}
+
+		err = db.Ping()
+		if err != nil {
+			c <- err
+			return
+		}
+		c <- nil
+	}()
+
+	select {
+	case <-time.After(time.Until(t)):
+		return nil, errors.New("context timeout")
+	case <-ctx.Done():
+		return nil, errors.New("context done")
+	case err := <-c:
+		if err != nil {
+			return nil, err
+		}
+		return &mysqlConn{dsn: dsn, db: db}, nil
+	}
 }
 
-func (c *mysqlConn) Reconnect() error {
+func (c *mysqlConn) Reconnect(ctx context.Context) error {
 	c.db.Close()
 
 	db, err := sql.Open("mysql", c.dsn)
@@ -61,7 +87,7 @@ func (c *mysqlConn) Reconnect() error {
 	return nil
 }
 
-func (c *mysqlConn) UseDatabase(db string) error {
+func (c *mysqlConn) UseDatabase(ctx context.Context, db string) error {
 	if db == "" {
 		return errors.New("database name empty")
 	}
@@ -71,7 +97,7 @@ func (c *mysqlConn) UseDatabase(db string) error {
 }
 
 // Disconnect ...
-func (c *mysqlConn) Disconnect() error {
+func (c *mysqlConn) Disconnect(ctx context.Context) error {
 	return c.db.Close()
 }
 
@@ -81,7 +107,7 @@ func (c *mysqlConn) LastError() error {
 }
 
 // Databases ...
-func (c *mysqlConn) Databases() ([]driver.Database, error) {
+func (c *mysqlConn) Databases(ctx context.Context) ([]driver.Database, error) {
 	rows, err := c.db.Query(`SHOW databases`)
 	if err != nil {
 		return nil, err
@@ -105,7 +131,7 @@ func (d *mysqlDb) Name() string {
 	return d.name
 }
 
-func (d *mysqlDb) Tables() ([]string, error) {
+func (d *mysqlDb) Tables(ctx context.Context) ([]string, error) {
 	rows, err := d.db.Query("SHOW TABLES")
 	if err != nil {
 		return nil, err
@@ -124,7 +150,7 @@ func (d *mysqlDb) Tables() ([]string, error) {
 	return tables, nil
 }
 
-func (d *mysqlDb) TableDefinition(tableName string) ([]driver.ColDef, error) {
+func (d *mysqlDb) TableDefinition(ctx context.Context, tableName string) ([]driver.ColDef, error) {
 	sqlRows, err := d.db.Query("DESCRIBE " + tableName)
 	if err != nil {
 		return nil, err
@@ -158,7 +184,7 @@ func (d *mysqlDb) TableDefinition(tableName string) ([]driver.ColDef, error) {
 	return defs, nil
 }
 
-func (d *mysqlDb) Query(query string) (columnNames []string, data [][]interface{}, err error) {
+func (d *mysqlDb) Query(ctx context.Context, query string) (columnNames []string, data [][]interface{}, err error) {
 	data = make([][]interface{}, 0)
 
 	var sqlRows *sql.Rows
@@ -192,6 +218,26 @@ func (d *mysqlDb) Query(query string) (columnNames []string, data [][]interface{
 	}
 
 	return columnNames, data, err
+}
+
+func (d *mysqlDb) Execute(ctx context.Context, query string) (string, int64, error) {
+	config.Env.Log.WithFields(logrus.Fields{"query": query}).Debug("Execute")
+	result, err := d.db.Exec(query)
+	if err != nil {
+		return "", 0, err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return "", 0, err
+	}
+
+	count, err := result.RowsAffected()
+	if err != nil {
+		return "", 0, err
+	}
+
+	return fmt.Sprintf("%d", id), count, nil
 }
 
 func (d *mysqlDb) ParseValue(def driver.ColDef, value string) interface{} {
@@ -254,7 +300,7 @@ func (d *mysqlDb) parseType(mysqlStringType string) (driver.TYPE, int, []string,
 }
 
 func (d *mysqlDb) FetchTable(
-	tableName string, limit, offset int64,
+	ctx context.Context, tableName string, limit, offset int64,
 ) (
 	colDef []driver.ColDef, rows [][]interface{}, err error,
 ) {
@@ -294,7 +340,7 @@ LIMIT ?, ?
 		return nil, nil, err
 	}
 
-	colDef, err = d.TableDefinition(tableName)
+	colDef, err = d.TableDefinition(ctx, tableName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -302,8 +348,7 @@ LIMIT ?, ?
 	return colDef, rows, err
 }
 
-func (d *mysqlDb) DeleteRecord(tableName string, cols []driver.ColDef, args []interface{}) error {
-
+func (d *mysqlDb) DeleteRecord(ctx context.Context, tableName string, cols []driver.ColDef, args []interface{}) error {
 	if len(cols) == 0 {
 		return errors.New("cols is empty")
 	}
@@ -325,6 +370,7 @@ func (d *mysqlDb) DeleteRecord(tableName string, cols []driver.ColDef, args []in
 }
 
 func (d *mysqlDb) UpdateRecord(
+	ctx context.Context,
 	tableName string,
 	cols []driver.ColDef,
 	values, oldValues []interface{},
@@ -384,6 +430,7 @@ WHERE %s = ?`
 }
 
 func (d *mysqlDb) UpdateField(
+	ctx context.Context,
 	tableName string,
 	cols []driver.ColDef,
 	values []interface{},
@@ -426,6 +473,7 @@ func (d *mysqlDb) UpdateField(
 }
 
 func (d *mysqlDb) UpdateFields(
+	ctx context.Context,
 	tableName string,
 	cols []driver.ColDef,
 	values []interface{},
@@ -473,6 +521,7 @@ func (d *mysqlDb) UpdateFields(
 }
 
 func (d *mysqlDb) InsertRecord(
+	ctx context.Context,
 	tableName string,
 	cols []driver.ColDef,
 	values []interface{},
@@ -509,6 +558,50 @@ VALUES (%s)`
 	}
 
 	return d.fetchRecord(tableName, cols, id)
+}
+
+func (d *mysqlDb) GetCreateTable(
+	ctx context.Context, tableName string,
+) (
+	string, error,
+) {
+	var (
+		sqlRows *sql.Rows
+		err     error
+	)
+	// NOTE: ? doesn't work here
+	sqlRows, err = d.db.Query(fmt.Sprintf("SHOW CREATE TABLE `%s`", tableName))
+	if err != nil {
+		return "", err
+	}
+
+	defer sqlRows.Close()
+
+	columns, err := sqlRows.Columns()
+	if err != nil {
+		return "", err
+	}
+
+	rows := make([][]interface{}, 0)
+
+	for sqlRows.Next() {
+		row := make([]interface{}, len(columns))
+
+		for ci := range columns {
+			row[ci] = &row[ci]
+		}
+
+		if err := sqlRows.Scan(row...); err != nil {
+			return "", err
+		}
+
+		rows = append(rows, row)
+	}
+	if err := sqlRows.Err(); err != nil {
+		return "", err
+	}
+
+	return string(rows[0][1].([]uint8)), err
 }
 
 func (d *mysqlDb) fetchRecord(
