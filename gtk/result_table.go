@@ -40,6 +40,16 @@ type Result struct {
 
 	mode   MODE
 	parser parser
+
+	ddMenu struct {
+		*gtk.Menu
+		clone    *gtk.MenuItem
+		cpInsert *gtk.MenuItem
+		cp       *gtk.MenuItem
+	}
+
+	pathAtCursor *gtk.TreePath
+	colAtCursor  *gtk.TreeViewColumn
 }
 
 func NewResult(cols []driver.ColDef, data [][]interface{}, parser parser) (u *Result, err error) {
@@ -60,10 +70,36 @@ func NewResult(cols []driver.ColDef, data [][]interface{}, parser parser) (u *Re
 	u.TreeView.SetProperty("activate-on-single-click", true)
 	u.TreeView.SetEnableSearch(true)
 	u.TreeView.Connect("key-press-event", u.onTreeViewKeyPress)
+	u.TreeView.Connect("button-press-event", u.onTreeViewButtonPress)
 
 	if len(cols) > 0 {
 		u.UpdateData(cols, data)
 	}
+
+	u.ddMenu.Menu, err = gtk.MenuNew()
+	if err != nil {
+		return nil, err
+	}
+
+	u.ddMenu.clone, err = menuItemWithImage("Clone", "gtk-convert")
+	if err != nil {
+		return nil, err
+	}
+	u.ddMenu.clone.Connect("activate", u.onCloneRow)
+	u.ddMenu.Add(u.ddMenu.clone)
+
+	u.ddMenu.cpInsert, err = menuItemWithImage("Copy Insert", "gtk-page-setup")
+	if err != nil {
+		return nil, err
+	}
+	u.ddMenu.Add(u.ddMenu.cpInsert)
+
+	u.ddMenu.cp, err = menuItemWithImage("Copy", "gtk-copy")
+	if err != nil {
+		return
+	}
+	u.ddMenu.cp.Connect("activate", u.onCopy)
+	u.ddMenu.Add(u.ddMenu.cp)
 
 	return u, nil
 }
@@ -529,12 +565,102 @@ func (u *Result) createColumn(title string, id int) (*gtk.TreeViewColumn, error)
 	return column, nil
 }
 
+func (u *Result) onTreeViewButtonPress(_ *gtk.TreeView, e *gdk.Event) {
+	keyEvent := gdk.EventButtonNewFromEvent(e)
+
+	if keyEvent.Button() != gdk.BUTTON_SECONDARY {
+		return
+	}
+
+	path, col, _, _, ok := u.TreeView.GetPathAtPos(int(keyEvent.X()), int(keyEvent.Y()))
+	if !ok {
+		return
+	}
+
+	u.pathAtCursor = path
+	u.colAtCursor = col
+
+	u.ddMenu.ShowAll()
+	u.ddMenu.PopupAtPointer(e)
+}
+
 func (u *Result) onTreeViewKeyPress(_ *gtk.TreeView, e *gdk.Event) {
 	keyEvent := gdk.EventKeyNewFromEvent(e)
 	if keyEvent.KeyVal() == gdk.KEY_F2 {
 		path, col := u.TreeView.GetCursor()
 		u.TreeView.SetCursor(path, col, true)
 	}
+}
+
+func (u *Result) onCloneRow() {
+	cols, data, err := u.GetRow()
+	if err != nil {
+		config.Env.Log.Error("getting current row", err)
+		return
+	}
+
+	err = u.AddEmptyRow()
+	if err != nil {
+		config.Env.Log.Error("adding empty row", err)
+		return
+	}
+
+	iter, err := u.GetCurrentIter()
+	if err != nil {
+		config.Env.Log.Errorf("getting new row iter: %s", err)
+		return
+
+	}
+	if iter == nil {
+		config.Env.Log.Debug("no row selected")
+		return
+	}
+
+	for i := range data {
+		if cols[i].PK {
+			continue
+		}
+
+		err = u.store.SetValue(iter, i, data[i])
+		if err != nil {
+			config.Env.Log.Errorf("setting value: %s", err)
+			return
+		}
+	}
+}
+
+func (u *Result) onCopy() {
+	iter, err := u.store.GetIter(u.pathAtCursor)
+	if err != nil {
+		config.Env.Log.Errorf("getting iter at cursor: %s", err)
+		return
+	}
+
+	var (
+		colIndex int
+		at       int
+	)
+
+	u.TreeView.GetColumns().FreeFull(func(c interface{}) {
+		if c.(*gtk.TreeViewColumn).GetTitle() == u.colAtCursor.GetTitle() {
+			at = colIndex
+		}
+		colIndex++
+	})
+
+	v, err := u.store.GetValue(iter, at)
+	if err != nil {
+		config.Env.Log.Errorf("getting store value: %s", err)
+		return
+	}
+
+	value, err := v.GoValue()
+	if err != nil {
+		config.Env.Log.Errorf("converting store value at %d to string: %s", at, err)
+		return
+	}
+
+	config.Env.Log.Debugf("value at %d is `%s`", at, value)
 }
 
 type stringer string
