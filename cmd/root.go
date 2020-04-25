@@ -54,7 +54,6 @@ var rootCmd = &cobra.Command{
 			config.Env.Log.Debug("application shutdown")
 		})
 
-		// tray
 		systray.RunWithAppWindow(
 			"SQLaid",
 			400, 400,
@@ -86,6 +85,7 @@ var rootCmd = &cobra.Command{
 			func() { //quit
 			},
 		)
+		//app.Run(nil)
 
 		return nil
 	},

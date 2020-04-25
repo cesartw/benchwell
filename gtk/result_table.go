@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"bitbucket.org/goreorto/sqlaid/clipboard"
 	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
 	"github.com/gotk3/gotk3/gdk"
@@ -50,6 +51,8 @@ type Result struct {
 
 	pathAtCursor *gtk.TreePath
 	colAtCursor  *gtk.TreeViewColumn
+
+	onCopyInsertFn func([]driver.ColDef, []interface{})
 }
 
 func NewResult(cols []driver.ColDef, data [][]interface{}, parser parser) (u *Result, err error) {
@@ -92,6 +95,7 @@ func NewResult(cols []driver.ColDef, data [][]interface{}, parser parser) (u *Re
 	if err != nil {
 		return nil, err
 	}
+	u.ddMenu.cpInsert.Connect("activate", u.onCopyInsert)
 	u.ddMenu.Add(u.ddMenu.cpInsert)
 
 	u.ddMenu.cp, err = menuItemWithImage("Copy", "gtk-copy")
@@ -383,78 +387,6 @@ func (u *Result) RemoveSelected() error {
 	return nil
 }
 
-func (u *Result) onEdited(cell *gtk.CellRendererText, path string, newValue string, userData interface{}) {
-	config.Env.Log.Debug("cell edited")
-	if u.mode == MODE_RAW {
-		return
-	}
-
-	column := userData.(int)
-	row, _ := strconv.Atoi(path)
-
-	tpath, err := gtk.TreePathNewFromString(path)
-	if err != nil {
-		config.Env.Log.Error(err)
-		return
-	}
-
-	iter, err := u.store.GetIter(tpath)
-	if err != nil {
-		config.Env.Log.Error(err)
-		return
-	}
-
-	err = u.store.SetValue(iter, column, newValue)
-	if err != nil {
-		config.Env.Log.Error(err)
-		return
-	}
-
-	// is a new record
-	lastColValue, err := u.store.GetValue(iter, len(u.cols))
-	if err != nil {
-		config.Env.Log.Error(err)
-		return
-	}
-	status, err := lastColValue.GoValue()
-	if err != nil {
-		config.Env.Log.Error(err)
-		return
-	}
-	if status.(int) == STATUS_NEW {
-		return
-	}
-	/////////////
-
-	pkCols := []driver.ColDef{}
-	values := []interface{}{}
-	for i, col := range u.cols {
-		def := col.(driver.ColDef)
-		if !def.PK {
-			continue
-		}
-
-		pkCols = append(pkCols, def)
-		values = append(values, u.data[row][i])
-	}
-
-	affectedCol := u.cols[column].(driver.ColDef)
-	pkCols = append(pkCols, affectedCol)
-	parsedValue, err := u.parser(affectedCol, newValue)
-	if err != nil {
-		config.Env.Log.Error(err)
-		return
-	}
-
-	values = append(values, parsedValue)
-
-	err = u.updateCallback(pkCols, values)
-	if err != nil {
-		config.Env.Log.Error(err)
-		return
-	}
-}
-
 func (u *Result) GetRowID() ([]driver.ColDef, []interface{}, error) {
 	iter, err := u.GetCurrentIter()
 	if err != nil {
@@ -539,6 +471,95 @@ func (u *Result) UpdateRow(values []interface{}) error {
 	return u.store.Set(iter,
 		columns,
 		values)
+}
+
+func (u *Result) OnCopyInsert(f func([]driver.ColDef, []interface{})) {
+	u.onCopyInsertFn = f
+}
+
+func (u *Result) onCopyInsert() {
+	if u.mode == MODE_RAW {
+		return
+	}
+
+	cols, values, err := u.GetRow()
+	if err != nil {
+		return
+	}
+
+	u.onCopyInsertFn(cols, values)
+}
+
+func (u *Result) onEdited(cell *gtk.CellRendererText, path string, newValue string, userData interface{}) {
+	config.Env.Log.Debug("cell edited")
+	if u.mode == MODE_RAW {
+		return
+	}
+
+	column := userData.(int)
+	row, _ := strconv.Atoi(path)
+
+	tpath, err := gtk.TreePathNewFromString(path)
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+
+	iter, err := u.store.GetIter(tpath)
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+
+	err = u.store.SetValue(iter, column, newValue)
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+
+	// is a new record
+	lastColValue, err := u.store.GetValue(iter, len(u.cols))
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+	status, err := lastColValue.GoValue()
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+	if status.(int) == STATUS_NEW {
+		return
+	}
+	/////////////
+
+	pkCols := []driver.ColDef{}
+	values := []interface{}{}
+	for i, col := range u.cols {
+		def := col.(driver.ColDef)
+		if !def.PK {
+			continue
+		}
+
+		pkCols = append(pkCols, def)
+		values = append(values, u.data[row][i])
+	}
+
+	affectedCol := u.cols[column].(driver.ColDef)
+	pkCols = append(pkCols, affectedCol)
+	parsedValue, err := u.parser(affectedCol, newValue)
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+
+	values = append(values, parsedValue)
+
+	err = u.updateCallback(pkCols, values)
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
 }
 
 func (u *Result) createColumn(title string, id int) (*gtk.TreeViewColumn, error) {
@@ -661,6 +682,7 @@ func (u *Result) onCopy() {
 	}
 
 	config.Env.Log.Debugf("value at %d is `%s`", at, value)
+	clipboard.Copy(value.(string))
 }
 
 type stringer string

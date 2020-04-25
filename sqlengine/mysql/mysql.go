@@ -604,6 +604,49 @@ func (d *mysqlDb) GetCreateTable(
 	return string(rows[0][1].([]uint8)), err
 }
 
+func (d *mysqlDb) GetInsertStatement(
+	ctx context.Context,
+	tableName string,
+	cols []driver.ColDef,
+	v []interface{},
+) (string, error) {
+	if len(cols) == 0 {
+		return "", errors.New("empty")
+	}
+
+	b := &strings.Builder{}
+	b.WriteString(fmt.Sprintf("INSERT INTO `%s` ", tableName))
+	colnames := []string{}
+	values := []string{}
+	for i, col := range cols {
+		pv := d.ParseValue(col, v[i].(string))
+
+		colnames = append(colnames, "`"+col.Name+"`")
+
+		switch t := pv.(type) {
+		case bool:
+			if t {
+				values = append(values, "1")
+			} else {
+				values = append(values, "0")
+			}
+		case float64:
+			values = append(values, fmt.Sprintf("%s", v[i].(string)))
+		case int64:
+			values = append(values, fmt.Sprintf("%s", v[i].(string)))
+		case nil:
+			values = append(values, "NULL")
+		default:
+			values = append(values, fmt.Sprintf("'%s'", v[i].(string)))
+		}
+	}
+
+	b.WriteString("(" + strings.Join(colnames, ", ") + ") VALUES ")
+	b.WriteString("(" + strings.Join(values, ", ") + ");")
+
+	return b.String(), nil
+}
+
 func (d *mysqlDb) fetchRecord(
 	tableName string,
 	cols []driver.ColDef,

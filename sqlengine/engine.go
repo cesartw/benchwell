@@ -286,6 +286,19 @@ func (e *Engine) GetCreateTable(ctx Context, tableName string) (string, error) {
 	return db.GetCreateTable(ctx, tableName)
 }
 
+func (e *Engine) GetInsertStatement(
+	ctx Context,
+	tableName string,
+	cols []driver.ColDef,
+	values []interface{},
+) (string, error) {
+	db := e.database(ctx)
+	if db == nil {
+		return "", ErrNoDatabase
+	}
+	return db.GetInsertStatement(ctx, tableName, cols, values)
+}
+
 // Dispose ...
 func (e *Engine) Dispose() {
 	for _, c := range e.connections {

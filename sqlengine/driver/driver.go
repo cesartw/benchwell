@@ -103,4 +103,5 @@ type Database interface {
 	Name() string
 	// DDL
 	GetCreateTable(context.Context, string) (string, error)
+	GetInsertStatement(context.Context, string, []ColDef, []interface{}) (string, error)
 }

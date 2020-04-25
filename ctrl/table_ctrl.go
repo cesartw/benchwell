@@ -1,6 +1,7 @@
 package ctrl
 
 import (
+	"bitbucket.org/goreorto/sqlaid/clipboard"
 	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/gtk"
 	"bitbucket.org/goreorto/sqlaid/sqlengine"
@@ -137,6 +138,14 @@ func (tc TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableNam
 		if err != nil {
 			return
 		}
+	}).OnCopyInsert(func(cols []driver.ColDef, values []interface{}) {
+		sql, err := tc.engine.GetInsertStatement(tc.ctx, tc.tableName, cols, values)
+		if err != nil {
+			tc.window.PushStatus(err.Error())
+		}
+
+		clipboard.Copy(sql)
+		config.Env.Log.Debugf("insert copied: %s", sql)
 	})
 
 	return &tc, nil

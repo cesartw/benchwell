@@ -220,6 +220,11 @@ func (v *ResultGrid) OnDelete(fn interface{}) *ResultGrid {
 	return v
 }
 
+func (v *ResultGrid) OnCopyInsert(fn func([]driver.ColDef, []interface{})) *ResultGrid {
+	v.result.OnCopyInsert(fn)
+	return v
+}
+
 func (v *ResultGrid) SelectedIsNewRecord() (bool, error) {
 	return v.result.SelectedIsNewRecord()
 }
