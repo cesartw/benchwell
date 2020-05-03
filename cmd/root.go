@@ -8,7 +8,6 @@ import (
 	"bitbucket.org/goreorto/sqlaid/ctrl"
 	"bitbucket.org/goreorto/sqlaid/gtk"
 	"bitbucket.org/goreorto/sqlaid/sqlengine"
-	"github.com/getlantern/systray"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -54,38 +53,39 @@ var rootCmd = &cobra.Command{
 			config.Env.Log.Debug("application shutdown")
 		})
 
-		systray.RunWithAppWindow(
-			"SQLaid",
-			400, 400,
-			func() { // ready
-				systray.SetIcon(TrayIcon)
-				systray.SetTitle("SQLaid")
-				systray.SetTooltip("Ultimate database GUI")
+		/*
+			systray.RunWithAppWindow(
+				"SQLaid",
+				400, 400,
+				func() { // ready
+					systray.SetIcon(TrayIcon)
+					systray.SetTitle("SQLaid")
+					systray.SetTooltip("Ultimate database GUI")
 
-				mQuit := systray.AddMenuItem("Quit", "I'm out")
-				mShow := systray.AddMenuItem("Show All", "Display windows")
-				go func() {
-					<-mQuit.ClickedCh
-					fmt.Println("Requesting quit")
-					systray.Quit()
-					fmt.Println("Finished quitting")
-				}()
-				go func() {
-					for {
-						<-mShow.ClickedCh
-						ctl.ShowAll()
-					}
-				}()
+					mQuit := systray.AddMenuItem("Quit", "I'm out")
+					mShow := systray.AddMenuItem("Show All", "Display windows")
+					go func() {
+						<-mQuit.ClickedCh
+						fmt.Println("Requesting quit")
+						systray.Quit()
+						fmt.Println("Finished quitting")
+					}()
+					go func() {
+						for {
+							<-mShow.ClickedCh
+							ctl.ShowAll()
+						}
+					}()
 
-				// Launch the application
-				go func() {
-					app.Run(nil)
-				}()
-			},
-			func() { //quit
-			},
-		)
-		//app.Run(nil)
+					// Launch the application
+					go func() {
+						app.Run(nil)
+					}()
+				},
+				func() { //quit
+				},
+			)*/
+		app.Run(nil)
 
 		return nil
 	},

@@ -71,12 +71,15 @@ func NewResult(cols []driver.ColDef, data [][]interface{}, parser parser) (u *Re
 	u.TreeView.SetProperty("rubber-banding", true)
 	u.TreeView.SetProperty("enable-grid-lines", gtk.TREE_VIEW_GRID_LINES_HORIZONTAL)
 	u.TreeView.SetProperty("activate-on-single-click", true)
+
 	u.TreeView.SetEnableSearch(true)
+
 	u.TreeView.Connect("key-press-event", u.onTreeViewKeyPress)
 	u.TreeView.Connect("button-press-event", u.onTreeViewButtonPress)
 
 	if len(cols) > 0 {
-		u.UpdateData(cols, data)
+		u.UpdateColumns(cols)
+		u.UpdateData(data)
 	}
 
 	u.ddMenu.Menu, err = gtk.MenuNew()
@@ -108,14 +111,14 @@ func NewResult(cols []driver.ColDef, data [][]interface{}, parser parser) (u *Re
 	return u, nil
 }
 
-func (u *Result) UpdateData(cols []driver.ColDef, data [][]interface{}) error {
+func (u *Result) UpdateColumns(cols []driver.ColDef) error {
 	// columns shift to the left
 	for _ = range u.cols {
 		u.TreeView.RemoveColumn(u.TreeView.GetColumn(0))
 	}
 
 	u.cols = colDefSliceToStringerSlice(cols)
-	u.data = data
+	u.data = nil
 
 	columns := make([]glib.Type, len(u.cols)+1) // +1 internal status col
 	for i, col := range u.cols {
@@ -138,6 +141,13 @@ func (u *Result) UpdateData(cols []driver.ColDef, data [][]interface{}) error {
 	}
 	u.TreeView.SetModel(u.store)
 
+	return nil
+}
+
+func (u *Result) UpdateData(data [][]interface{}) error {
+	u.data = data
+	u.store.Clear()
+
 	for _, row := range data {
 		u.AddRow(row)
 	}
@@ -147,8 +157,9 @@ func (u *Result) UpdateData(cols []driver.ColDef, data [][]interface{}) error {
 }
 
 func (u *Result) UpdateRawData(cols []string, data [][]interface{}) error {
-	for i := range u.cols {
-		u.TreeView.RemoveColumn(u.TreeView.GetColumn(i))
+	// columns shift to the left
+	for _ = range u.cols {
+		u.TreeView.RemoveColumn(u.TreeView.GetColumn(0))
 	}
 
 	u.cols = stringSliceToStringerSlice(cols)
@@ -477,6 +488,29 @@ func (u *Result) OnCopyInsert(f func([]driver.ColDef, []interface{})) {
 	u.onCopyInsertFn = f
 }
 
+func (u *Result) SortOptions() []driver.SortOption {
+	if u.mode == MODE_RAW {
+		return nil
+	}
+
+	opts := []driver.SortOption{}
+
+	for i, col := range u.cols {
+		treeCol := u.GetColumn(i)
+		if !treeCol.GetSortIndicator() {
+			continue
+		}
+
+		if treeCol.GetSortOrder() == gtk.SORT_ASCENDING {
+			opts = append(opts, driver.SortOption{Column: col.(driver.ColDef), Direction: driver.SortDirectionAsc})
+		} else {
+			opts = append(opts, driver.SortOption{Column: col.(driver.ColDef), Direction: driver.SortDirectionDesc})
+		}
+	}
+
+	return opts
+}
+
 func (u *Result) onCopyInsert() {
 	if u.mode == MODE_RAW {
 		return
@@ -582,6 +616,21 @@ func (u *Result) createColumn(title string, id int) (*gtk.TreeViewColumn, error)
 	column.SetResizable(true)
 	// TODO: this limits resizing
 	column.SetMaxWidth(300)
+
+	column.SetClickable(true)
+	column.Connect("clicked", func() {
+		if !column.GetSortIndicator() {
+			column.SetSortIndicator(true)
+			column.SetSortOrder(gtk.SORT_ASCENDING)
+			return
+		}
+
+		if column.GetSortOrder() == gtk.SORT_ASCENDING {
+			column.SetSortOrder(gtk.SORT_DESCENDING)
+		} else {
+			column.SetSortIndicator(false)
+		}
+	})
 
 	return column, nil
 }

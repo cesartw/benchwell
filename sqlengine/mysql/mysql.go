@@ -299,17 +299,43 @@ func (d *mysqlDb) parseType(mysqlStringType string) (driver.TYPE, int, []string,
 	return driver.TYPE_STRING, 0, nil, true
 }
 
+type FetchTableOptions []driver.SortOption
+
+func (o FetchTableOptions) SQL(tableName string) string {
+	if len(o) == 0 {
+		return ""
+	}
+
+	orderby := []string{}
+	for _, sort := range o {
+		s := fmt.Sprintf("`%s`.`%s` ", tableName, sort.Column.Name)
+		if sort.Direction == driver.SortDirectionAsc {
+			s += "DESC"
+		} else {
+			s += "ASC"
+		}
+
+		orderby = append(orderby, s)
+	}
+
+	return "ORDER BY " + strings.Join(orderby, ", ")
+}
+
 func (d *mysqlDb) FetchTable(
-	ctx context.Context, tableName string, limit, offset int64,
+	ctx context.Context, tableName string, opts driver.FetchTableOptions,
 ) (
 	colDef []driver.ColDef, rows [][]interface{}, err error,
 ) {
 	var sqlRows *sql.Rows
-	sqlRows, err = d.db.Query(fmt.Sprintf(`
-SELECT *
-FROM %s
-LIMIT ?, ?
-	`, tableName), limit, offset)
+
+	query := fmt.Sprintf(`SELECT * FROM %s %s LIMIT ?, ?`,
+		tableName, FetchTableOptions(opts.Sort).SQL(tableName))
+
+	config.Env.Log.
+		WithFields(logrus.Fields{"query": query, "args": []interface{}{opts.Offset, opts.Limit}}).
+		Debug("FetchTable")
+
+	sqlRows, err = d.db.Query(query, opts.Offset, opts.Limit)
 	if err != nil {
 		return nil, nil, err
 	}

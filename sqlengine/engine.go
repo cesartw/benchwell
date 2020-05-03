@@ -117,7 +117,7 @@ func (e *Engine) Tables(ctx Context) ([]string, error) {
 
 // FetchTable returns table column definition and table data
 func (e *Engine) FetchTable(
-	ctx Context, tableName string, page, pageSize int64,
+	ctx Context, tableName string, opts driver.FetchTableOptions,
 ) (
 	[]driver.ColDef, [][]interface{}, error,
 ) {
@@ -131,7 +131,7 @@ func (e *Engine) FetchTable(
 		return nil, nil, ErrNoDatabase
 	}
 
-	return db.FetchTable(ctx, tableName, page, pageSize)
+	return db.FetchTable(ctx, tableName, opts)
 }
 
 // DeleteRecord ...

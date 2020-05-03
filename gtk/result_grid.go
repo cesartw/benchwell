@@ -3,7 +3,7 @@ package gtk
 import (
 	"fmt"
 	"regexp"
-	"strconv"
+	"strings"
 
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
@@ -17,13 +17,16 @@ type ResultGrid struct {
 	*gtk.Paned
 
 	textView *gtk.TextView
+	prevText string
+	offset   int64
 
 	result  *Result
 	btnPrev *gtk.Button
 	btnNext *gtk.Button
 	btnRsh  *gtk.Button
 	perPage *gtk.Entry
-	offset  *gtk.Entry
+	//offset    *gtk.Entry
+	pagerMenu *gtk.MenuButton
 
 	btnAddRow    *gtk.Button
 	btnDeleteRow *gtk.Button
@@ -54,8 +57,8 @@ func NewResultGrid(
 		return nil, err
 	}
 
-	v.textView.Connect("key-release-event", v.onTextViewKeyRelease)
-	v.textView.Connect("key-press-event", v.onTextViewKeyPress)
+	v.textView.Connect("key-release-event", v.onTextViewKeyRelease) // highlighting
+	v.textView.Connect("key-press-event", v.onTextViewKeyPress)     // ctrl+enter exec query
 
 	var resultSW, textViewSW *gtk.ScrolledWindow
 
@@ -64,14 +67,7 @@ func NewResultGrid(
 		return nil, err
 	}
 
-	// buttonbox for add/remove rows
-	resultBtnBox, err := v.resultButtonBox()
-	if err != nil {
-		return nil, err
-	}
-
-	// buttonbox for pagination control
-	pagerBtnBox, err := v.paginationButtonBox()
+	actionbar, err := v.actionbar()
 	if err != nil {
 		return nil, err
 	}
@@ -80,27 +76,23 @@ func NewResultGrid(
 		v.result.AddEmptyRow()
 	})
 
-	v.btnDeleteRow.Connect("clicked", func() {
-	})
-
 	v.btnNext.Connect("clicked", func() {
-		p := v.Offset() + v.PageSize()
-		v.offset.SetText(fmt.Sprintf("%d", p))
+		v.offset = v.offset + v.PageSize()
 	})
 	v.btnPrev.Connect("clicked", func() {
-		p := v.Offset() - v.PageSize()
-		if p < 0 {
-			p = 0
+		v.offset = v.offset - v.PageSize()
+		if v.offset < 0 {
+			v.offset = 0
 		}
-		v.offset.SetText(fmt.Sprintf("%d", p))
 	})
+
 	v.colFilter.Connect("search-changed", v.onColFilterSearchChanged)
 
-	btnGridBox, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
+	btnGridBox, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if err != nil {
 		return nil, err
 	}
-	btnGridBox.PackStart(resultBtnBox, false, false, 0)
+	btnGridBox.PackStart(actionbar, false, false, 0)
 	btnGridBox.PackEnd(resultSW, true, true, 0)
 
 	resultBox, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
@@ -109,7 +101,6 @@ func NewResultGrid(
 	}
 
 	resultBox.PackStart(btnGridBox, true, true, 0)
-	resultBox.PackEnd(pagerBtnBox, false, false, 0)
 
 	textViewSW, err = gtk.ScrolledWindowNew(nil, nil)
 	if err != nil {
@@ -148,31 +139,33 @@ func NewResultGrid(
 	return v, nil
 }
 
-func (v *ResultGrid) Offset() int64 {
-	s, _ := v.offset.GetText()
-	p, _ := strconv.ParseInt(s, 10, 64)
-	return p
-}
-
 func (v *ResultGrid) PageSize() int64 {
-	s, err := v.perPage.GetText()
-	if err != nil {
-		return int64(config.Env.GUI.PageSize)
-	}
+	return 100
+	//s, err := v.perPage.GetText()
+	//if err != nil {
+	//return int64(config.Env.GUI.PageSize)
+	//}
 
-	size, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		return int64(config.Env.GUI.PageSize)
-	}
+	//size, err := strconv.ParseInt(s, 10, 64)
+	//if err != nil {
+	//return int64(config.Env.GUI.PageSize)
+	//}
 
-	return size
+	//return size
+}
+func (v *ResultGrid) Offset() int64 {
+	return v.offset
 }
 
-func (v *ResultGrid) UpdateData(cols []driver.ColDef, data [][]interface{}) error {
+func (v *ResultGrid) UpdateColumns(cols []driver.ColDef) error {
+	return v.result.UpdateColumns(cols)
+}
+
+func (v *ResultGrid) UpdateData(data [][]interface{}) error {
 	v.pagerEnable(true)
 	v.btnAddRow.SetSensitive(true)
 
-	return v.result.UpdateData(cols, data)
+	return v.result.UpdateData(data)
 }
 
 func (v *ResultGrid) UpdateRawData(cols []string, data [][]interface{}) error {
@@ -256,117 +249,90 @@ func (u *ResultGrid) UpdateRow(values []interface{}) error {
 	return err
 }
 
-func (v *ResultGrid) paginationButtonBox() (*gtk.ButtonBox, error) {
-	pagerBtnBox, err := gtk.ButtonBoxNew(gtk.ORIENTATION_HORIZONTAL)
-	if err != nil {
-		return nil, err
-	}
-	pagerBtnBox.SetLayout(gtk.BUTTONBOX_CENTER)
-	pagerBtnBox.SetProperty("spacing", 5)
-
-	perPageLabel, err := gtk.LabelNew("Size")
-	if err != nil {
-		return nil, err
-	}
-
-	v.perPage, err = gtk.EntryNew()
-	if err != nil {
-		return nil, err
-	}
-	v.perPage.SetText(fmt.Sprintf("%d", config.Env.GUI.PageSize))
-	v.perPage.SetProperty("input_purpose", gtk.INPUT_PURPOSE_NUMBER)
-
-	v.offset, err = gtk.EntryNew()
-	if err != nil {
-		return nil, err
-	}
-	v.offset.SetText("0")
-	v.offset.SetProperty("input_purpose", gtk.INPUT_PURPOSE_NUMBER)
-
-	v.btnPrev, err = gtk.ButtonNewFromIconName("gtk-go-back", gtk.ICON_SIZE_BUTTON)
-	if err != nil {
-		return nil, err
-	}
-
-	v.btnNext, err = gtk.ButtonNewFromIconName("gtk-go-forward", gtk.ICON_SIZE_BUTTON)
-	if err != nil {
-		return nil, err
-	}
-
-	v.btnRsh, err = gtk.ButtonNewFromIconName("gtk-refresh", gtk.ICON_SIZE_BUTTON)
-	if err != nil {
-		return nil, err
-	}
-
-	offsetLabel, err := gtk.LabelNew("Offset")
-	if err != nil {
-		return nil, err
-	}
-
-	v.offset, err = gtk.EntryNew()
-	if err != nil {
-		return nil, err
-	}
-	v.offset.SetText("0")
-	v.offset.SetProperty("input_purpose", gtk.INPUT_PURPOSE_NUMBER)
-
-	v.colFilter, err = gtk.SearchEntryNew()
-	if err != nil {
-		return nil, err
-	}
-	v.colFilter.SetPlaceholderText("Column filter: .*")
-
-	pagerBtnBox.Add(v.btnPrev)
-	pagerBtnBox.Add(perPageLabel)
-	pagerBtnBox.Add(v.perPage)
-	pagerBtnBox.Add(offsetLabel)
-	pagerBtnBox.Add(v.offset)
-	pagerBtnBox.Add(v.btnNext)
-	pagerBtnBox.Add(v.btnRsh)
-
-	pagerBtnBox.PackEnd(v.colFilter, false, false, 0)
-
-	return pagerBtnBox, nil
+func (u *ResultGrid) SortOptions() []driver.SortOption {
+	return u.result.SortOptions()
 }
 
-func (v *ResultGrid) resultButtonBox() (*gtk.ButtonBox, error) {
-	btnbox, err := gtk.ButtonBoxNew(gtk.ORIENTATION_VERTICAL)
-	if err != nil {
-		return nil, err
-	}
-	btnbox.SetLayout(gtk.BUTTONBOX_START)
-	btnbox.SetProperty("spacing", 5)
-
-	v.btnAddRow, err = gtk.ButtonNewFromIconName("gtk-add", gtk.ICON_SIZE_BUTTON)
-	if err != nil {
-		return nil, err
-	}
-	v.btnDeleteRow, err = gtk.ButtonNewFromIconName("gtk-delete", gtk.ICON_SIZE_BUTTON)
+func (v *ResultGrid) actionbar() (*gtk.ActionBar, error) {
+	actionbar, err := gtk.ActionBarNew()
 	if err != nil {
 		return nil, err
 	}
 
-	v.btnCreateRow, err = gtk.ButtonNewFromIconName("gtk-apply", gtk.ICON_SIZE_BUTTON)
-	if err != nil {
-		return nil, err
+	// new-add-delete
+	{
+		v.btnAddRow, err = gtk.ButtonNewFromIconName("gtk-add", gtk.ICON_SIZE_BUTTON)
+		if err != nil {
+			return nil, err
+		}
+		v.btnDeleteRow, err = gtk.ButtonNewFromIconName("gtk-delete", gtk.ICON_SIZE_BUTTON)
+		if err != nil {
+			return nil, err
+		}
+
+		v.btnCreateRow, err = gtk.ButtonNewFromIconName("gtk-apply", gtk.ICON_SIZE_BUTTON)
+		if err != nil {
+			return nil, err
+		}
+		v.newRecordEnable(false)
+
+		actionbar.Add(v.btnAddRow)
+		actionbar.Add(v.btnDeleteRow)
+		actionbar.Add(v.btnCreateRow)
 	}
-	v.newRecordEnable(false)
 
-	btnbox.Add(v.btnAddRow)
-	btnbox.Add(v.btnDeleteRow)
-	btnbox.Add(v.btnCreateRow)
+	// column filter
+	{
+		v.colFilter, err = gtk.SearchEntryNew()
+		if err != nil {
+			return nil, err
+		}
+		v.colFilter.SetPlaceholderText("Column filter: .*")
+		actionbar.PackEnd(v.colFilter)
+	}
 
-	return btnbox, nil
+	// menu
+	//{
+	//v.pagerMenu, err = gtk.MenuButtonNew()
+	//if err != nil {
+	//return nil, err
+	//}
+	//actionbar.PackEnd(v.pagerMenu)
+	//}
+
+	// pagination
+	{
+		v.btnPrev, err = gtk.ButtonNewFromIconName("gtk-go-back", gtk.ICON_SIZE_BUTTON)
+		if err != nil {
+			return nil, err
+		}
+
+		v.btnNext, err = gtk.ButtonNewFromIconName("gtk-go-forward", gtk.ICON_SIZE_BUTTON)
+		if err != nil {
+			return nil, err
+		}
+
+		v.btnRsh, err = gtk.ButtonNewFromIconName("gtk-refresh", gtk.ICON_SIZE_BUTTON)
+		if err != nil {
+			return nil, err
+		}
+
+		actionbar.PackEnd(v.btnRsh)
+		actionbar.PackEnd(v.btnNext)
+		actionbar.PackEnd(v.btnPrev)
+	}
+
+	return actionbar, nil
 }
 
 func (v *ResultGrid) pagerEnable(b bool) {
 	v.btnPrev.SetSensitive(b)
 	v.btnNext.SetSensitive(b)
 	v.btnRsh.SetSensitive(b)
-	v.perPage.SetSensitive(b)
-	v.offset.SetSensitive(b)
-	v.perPage.SetSensitive(b)
-	v.offset.SetSensitive(b)
+	//v.perPage.SetSensitive(b)
+	//v.offset.SetSensitive(b)
+	//v.perPage.SetSensitive(b)
+	//v.offset.SetSensitive(b)
 }
 
 func (v *ResultGrid) disableAll() {
@@ -383,14 +349,6 @@ func (v *ResultGrid) newRecordEnable(b bool) {
 }
 
 func (v *ResultGrid) onTextViewKeyRelease(_ *gtk.TextView, e *gdk.Event) {
-	keyEvent := gdk.EventKeyNewFromEvent(e)
-	if keyEvent.KeyVal() >= gdk.KEY_Home && keyEvent.KeyVal() <= gdk.KEY_End {
-		return
-	}
-	if keyEvent.KeyVal() == gdk.KEY_Shift_R || keyEvent.KeyVal() == gdk.KEY_Shift_L {
-		return
-	}
-
 	buff, err := v.textView.GetBuffer()
 	if err != nil {
 		config.Env.Log.Error(err)
@@ -402,6 +360,12 @@ func (v *ResultGrid) onTextViewKeyRelease(_ *gtk.TextView, e *gdk.Event) {
 		config.Env.Log.Error(err)
 		return
 	}
+
+	// hacky. easiest way to selection reset and bad behavior on non-printable key strokes
+	if txt == v.prevText {
+		return
+	}
+	v.prevText = txt
 
 	iter := buff.GetIterAtMark(buff.GetInsert())
 	offset := iter.GetOffset()
@@ -453,9 +417,11 @@ func (v *ResultGrid) onColFilterSearchChanged() {
 
 	v.result.GetColumns().Foreach(func(i interface{}) {
 		c := i.(*gtk.TreeViewColumn)
-		c.SetVisible(rg.MatchString(c.GetTitle()))
+
+		c.SetVisible(rg.MatchString(strings.Replace(c.GetTitle(), "__", "_", -1)))
 	})
 }
+
 func (v *ResultGrid) onRowActivated(_ *gtk.TreeView, path *gtk.TreePath, col *gtk.TreeViewColumn) {
 	if v.result.mode == MODE_RAW {
 		return
@@ -479,4 +445,5 @@ func (v *ResultGrid) onRowActivated(_ *gtk.TreeView, path *gtk.TreePath, col *gt
 	}
 
 	v.newRecordEnable(status == STATUS_NEW)
+	v.btnDeleteRow.SetSensitive(true)
 }

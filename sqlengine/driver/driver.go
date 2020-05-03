@@ -87,11 +87,27 @@ func (c ColDef) String() string {
 	return c.Name
 }
 
+type SortDirection int
+
+const (
+	SortDirectionAsc SortDirection = iota
+	SortDirectionDesc
+)
+
+type SortOption struct {
+	Column    ColDef
+	Direction SortDirection
+}
+type FetchTableOptions struct {
+	Offset, Limit int64
+	Sort          []SortOption
+}
+
 // Database ...
 type Database interface {
 	Tables(context.Context) ([]string, error)
 	TableDefinition(ctx context.Context, tableName string) ([]ColDef, error)
-	FetchTable(ctx context.Context, tableName string, page, pageSize int64) ([]ColDef, [][]interface{}, error)
+	FetchTable(ctx context.Context, tableName string, opts FetchTableOptions) ([]ColDef, [][]interface{}, error)
 	DeleteRecord(ctx context.Context, tableName string, defs []ColDef, values []interface{}) error
 	UpdateRecord(ctx context.Context, tableName string, cols []ColDef, values, oldValues []interface{}) (string, error)
 	UpdateField(ctx context.Context, tableName string, cols []ColDef, values []interface{}) (string, error)

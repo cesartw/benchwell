@@ -92,11 +92,11 @@ func (tc TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableNam
 		}
 		*/
 	}).OnRefresh(func() {
-		tc.OnConnect()
+		tc.OnRefresh()
 	}).OnBack(func() {
-		tc.OnConnect()
+		tc.OnRefresh()
 	}).OnForward(func() {
-		tc.OnConnect()
+		tc.OnRefresh()
 	}).OnDelete(func() {
 		newRecord, err := tc.grid.SelectedIsNewRecord()
 		if err != nil {
@@ -152,14 +152,48 @@ func (tc TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableNam
 }
 
 func (tc *TableCtrl) OnConnect() {
-	def, data, err := tc.engine.FetchTable(tc.ctx, tc.tableName,
-		tc.grid.Offset(), tc.grid.PageSize())
+	def, data, err := tc.engine.FetchTable(
+		tc.ctx, tc.tableName,
+		driver.FetchTableOptions{
+			Offset: tc.grid.Offset(),
+			Limit:  tc.grid.PageSize(),
+			Sort:   tc.grid.SortOptions(),
+		},
+	)
+
 	if err != nil {
 		config.Env.Log.Error(err)
 		return
 	}
 
-	err = tc.grid.UpdateData(def, data)
+	err = tc.grid.UpdateColumns(def)
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+
+	err = tc.grid.UpdateData(data)
+	if err != nil {
+		config.Env.Log.Error(err)
+	}
+}
+
+func (tc *TableCtrl) OnRefresh() {
+	_, data, err := tc.engine.FetchTable(
+		tc.ctx, tc.tableName,
+		driver.FetchTableOptions{
+			Offset: tc.grid.Offset(),
+			Limit:  tc.grid.PageSize(),
+			Sort:   tc.grid.SortOptions(),
+		},
+	)
+
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+
+	err = tc.grid.UpdateData(data)
 	if err != nil {
 		config.Env.Log.Error(err)
 	}
