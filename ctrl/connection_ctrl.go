@@ -17,7 +17,7 @@ type ConnectionCtrl struct {
 	tabs []*TableCtrl
 }
 
-func (c ConnectionCtrl) init(ctx sqlengine.Context, p *TabCtrl, conn *config.Connection) (*ConnectionCtrl, error) {
+func (c ConnectionCtrl) Init(ctx sqlengine.Context, p *TabCtrl, conn *config.Connection) (*ConnectionCtrl, error) {
 	c.TabCtrl = p
 	c.ctx = ctx
 	c.conn = conn
@@ -44,16 +44,27 @@ func (c ConnectionCtrl) init(ctx sqlengine.Context, p *TabCtrl, conn *config.Con
 		c.onDatabaseSelected()
 	}
 
-	tab, err := TableCtrl{}.init(c.ctx, &c, "")
+	err = c.AddTab()
 	if err != nil {
 		return nil, err
 	}
 
-	c.tabs = append(c.tabs, tab)
-	c.scr.AddTab("New", tab.Screen().(ggtk.IWidget), true)
 	c.scr.OnSchemaMenu(c.onSchemaMenu)
 
 	return &c, nil
+}
+
+func (c *ConnectionCtrl) Close() bool {
+	return c.scr.Close()
+}
+
+func (c *ConnectionCtrl) AddTab() error {
+	tab, err := TableCtrl{}.init(c.ctx, c, "")
+	if err != nil {
+		return err
+	}
+
+	return c.scr.AddTab("New", tab.Screen().(ggtk.IWidget), true)
 }
 
 func (c *ConnectionCtrl) onDatabaseSelected() {
@@ -86,7 +97,6 @@ func (c *ConnectionCtrl) onTableSelected() {
 		return
 	}
 
-	c.tabs = append(c.tabs, tab)
 	c.scr.AddTab(tableName, tab.Screen().(ggtk.IWidget), true)
 	tab.OnConnect()
 }

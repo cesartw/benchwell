@@ -11,16 +11,19 @@ import (
 type WindowCtrl struct {
 	*AppCtrl
 	window *gtk.Window
+	tabs   []*TabCtrl
 }
 
 func (c WindowCtrl) Init(parent *AppCtrl) (*WindowCtrl, error) {
 	var err error
-	c.AppCtrl = parent
-	c.window, err = gtk.Window{}.Init(parent.app.Application)
+	ctrl := &c
+	ctrl.AppCtrl = parent
+	ctrl.window, err = gtk.Window{}.Init(parent.app.Application)
 	if err != nil {
 		return nil, err
 	}
 
+	// add main tab
 	c.window.Menu.NewTab.Connect("activate", func() {
 		err := c.AddTab()
 		if err != nil {
@@ -29,11 +32,29 @@ func (c WindowCtrl) Init(parent *AppCtrl) (*WindowCtrl, error) {
 		}
 		c.window.PushStatus("Ready")
 	})
-	c.window.Menu.CloseTab.Connect("activate", func() {
-		c.window.RemoveCurrentPage()
+
+	// action menu for sub tabs
+	ctrl.window.Menu.NewSubTab.Connect("activate", func() {
+		err := ctrl.currentTab().AddTab()
+		if err != nil {
+			config.Env.Log.Error(err)
+			return
+		}
+		ctrl.window.PushStatus("Ready")
 	})
 
-	return &c, c.AddTab()
+	ctrl.window.Menu.CloseTab.Connect("activate", func() {
+		if ctrl.currentTab().Close() {
+			return
+		}
+
+		i := ctrl.window.CurrentPage()
+
+		ctrl.tabs = append(ctrl.tabs[i:], ctrl.tabs[:i+1]...)
+		ctrl.window.RemoveCurrentPage()
+	})
+
+	return ctrl, ctrl.AddTab()
 }
 
 func (c *WindowCtrl) Show() {
@@ -55,6 +76,23 @@ func (c *WindowCtrl) OnActivate() {
 	c.window.Show()
 }
 
+func (c *WindowCtrl) AddTab() error {
+	tab, err := TabCtrl{}.Init(c)
+	if err != nil {
+		return err
+	}
+
+	tab.tab.Show()
+	c.window.AddTab(tab.tabLabel, tab.tab)
+	c.tabs = append(c.tabs, tab)
+
+	return nil
+}
+
+func (c *WindowCtrl) currentTab() *TabCtrl {
+	return c.tabs[c.window.CurrentPage()]
+}
+
 func (c *WindowCtrl) onNotebookDoubleClick(_ *ggtk.ListBox, e *gdk.Event) {
 	keyEvent := gdk.EventButtonNewFromEvent(e)
 
@@ -68,16 +106,4 @@ func (c *WindowCtrl) onNotebookDoubleClick(_ *ggtk.ListBox, e *gdk.Event) {
 	if err := c.AddTab(); err != nil {
 		config.Env.Log.Error(err)
 	}
-}
-
-func (c *WindowCtrl) AddTab() error {
-	tab, err := TabCtrl{}.Init(c)
-	if err != nil {
-		return err
-	}
-
-	tab.tab.Show()
-	c.window.AddTab(tab.tabLabel, tab.tab)
-
-	return nil
 }

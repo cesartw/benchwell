@@ -14,7 +14,7 @@ type ConnectCtrl struct {
 	scr *gtk.ConnectScreen
 }
 
-func (c ConnectCtrl) init(p *TabCtrl) (*ConnectCtrl, error) {
+func (c ConnectCtrl) Init(p *TabCtrl) (*ConnectCtrl, error) {
 	c.TabCtrl = p
 
 	var err error
@@ -70,4 +70,12 @@ func (c *ConnectCtrl) onSave() {
 
 func (c *ConnectCtrl) Screen() interface{} {
 	return c.scr
+}
+
+func (c *ConnectCtrl) Close() bool {
+	return false
+}
+
+func (c *ConnectCtrl) AddTab() error {
+	return nil
 }

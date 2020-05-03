@@ -12,10 +12,15 @@ import (
 
 type TabCtrl struct {
 	*WindowCtrl
-	tab           *gtk.Tab
-	tabLabel      *ggtk.Label
-	connectScr    *gtk.ConnectScreen
-	connectionScr *gtk.ConnectionScreen
+	tab            *gtk.Tab
+	tabLabel       *ggtk.Label
+	connectCtrl    *ConnectCtrl
+	connectionCtrl *ConnectionCtrl
+
+	currentCtrl interface {
+		Close() bool
+		AddTab() error
+	}
 }
 
 func (c TabCtrl) Init(p *WindowCtrl) (*TabCtrl, error) {
@@ -36,27 +41,41 @@ func (c TabCtrl) Init(p *WindowCtrl) (*TabCtrl, error) {
 
 	return &c, nil
 }
+
+func (c *TabCtrl) AddTab() error {
+	return c.currentCtrl.AddTab()
+}
+
 func (c *TabCtrl) Show() {
 	c.tab.Show()
 }
 
+// Close delegates the close tab action ot connect or connection screen
+func (c *TabCtrl) Close() bool {
+	// TODO: figure out which screen is open
+	return c.currentCtrl.Close()
+}
+
 func (c *TabCtrl) launchConnect() {
-	ctl, err := ConnectCtrl{}.init(c)
+	var err error
+	c.connectCtrl, err = ConnectCtrl{}.Init(c)
 	if err != nil {
 		config.Env.Log.Error(err)
 		return
 	}
-	if c.connectionScr != nil {
-		c.tab.Remove(c.connectionScr)
+	if c.connectionCtrl != nil {
+		c.tab.Remove(c.connectionCtrl.scr)
 	}
 
-	c.connectScr = ctl.scr
-	c.connectScr.OnConnect(c.onConnect)
-	c.tab.PackStart(c.connectScr, true, true, 0)
+	c.currentCtrl = c.connectCtrl
+
+	c.connectCtrl.scr.OnConnect(c.onConnect)
+	c.tab.PackStart(c.connectCtrl.scr, true, true, 0)
 }
 
 func (c *TabCtrl) launchConnection(ctx sqlengine.Context, conn *config.Connection) {
-	ctl, err := ConnectionCtrl{}.init(ctx, c, conn)
+	var err error
+	c.connectionCtrl, err = ConnectionCtrl{}.Init(ctx, c, conn)
 	if err != nil {
 		config.Env.Log.Error(err)
 		return
@@ -68,19 +87,20 @@ func (c *TabCtrl) launchConnection(ctx sqlengine.Context, conn *config.Connectio
 		c.tabLabel.SetText(conn.Host)
 	}
 
-	if c.connectScr != nil {
-		c.tab.Remove(c.connectScr)
+	if c.connectCtrl != nil {
+		c.tab.Remove(c.connectCtrl.scr)
 	}
 
-	c.connectionScr = ctl.scr
-	c.tab.PackStart(c.connectionScr, true, true, 0)
+	c.currentCtrl = c.connectionCtrl
+
+	c.tab.PackStart(c.connectionCtrl.scr, true, true, 0)
 }
 
 func (c *TabCtrl) onConnect() {
 	var conn *config.Connection
-	index := c.connectScr.ActiveConnectionIndex()
+	index := c.connectCtrl.scr.ActiveConnectionIndex()
 	if index == -1 {
-		conn = c.connectScr.GetFormConnection()
+		conn = c.connectCtrl.scr.GetFormConnection()
 	} else {
 		conn = config.Env.Connections[index]
 	}

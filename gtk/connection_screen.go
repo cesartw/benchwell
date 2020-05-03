@@ -178,6 +178,15 @@ func (c *ConnectionScreen) AddTab(title string, content gtk.IWidget, switchNow b
 	return nil
 }
 
+func (c *ConnectionScreen) Close() bool {
+	if c.tabber.GetCurrentPage() == -1 {
+		return false
+	}
+
+	c.tabber.RemovePage(c.tabber.GetCurrentPage())
+	return true
+}
+
 func (c *ConnectionScreen) SetDatabases(dbs []string) {
 	c.databaseNames = dbs
 

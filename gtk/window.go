@@ -17,8 +17,9 @@ type Window struct {
 	statusBarID uint
 
 	Menu struct {
-		NewTab   *glib.SimpleAction
-		CloseTab *glib.SimpleAction
+		NewTab    *glib.SimpleAction
+		NewSubTab *glib.SimpleAction
+		CloseTab  *glib.SimpleAction
 	}
 }
 
@@ -101,7 +102,11 @@ func (w *Window) AddTab(label *gtk.Label, wd gtk.IWidget) error {
 }
 
 func (w *Window) RemoveCurrentPage() {
-	w.nb.RemovePage(w.nb.GetCurrentPage())
+	w.nb.RemovePage(w.CurrentPage())
+}
+
+func (w *Window) CurrentPage() int {
+	return w.nb.GetCurrentPage()
 }
 
 func (w *Window) Remove(wd gtk.IWidget) {
@@ -142,12 +147,14 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 	}
 
 	w.Menu.NewTab = glib.SimpleActionNew("new", nil)
+	w.Menu.NewSubTab = glib.SimpleActionNew("tabnew", nil)
 	w.Menu.CloseTab = glib.SimpleActionNew("close", nil)
 	w.AddAction(w.Menu.NewTab)
+	w.AddAction(w.Menu.NewSubTab)
 	w.AddAction(w.Menu.CloseTab)
 
 	menu.Append("Open window", "app.new")
-	menu.Append("Open Tab", "win.new")
+	menu.Append("Open Tab", "win.tabnew")
 	menu.Append("Close Tab", "win.close")
 	menu.Append("Preferences", "app.preferences")
 

@@ -33,8 +33,12 @@ func New(appid string) (*App, error) {
 		f.AddAction(f.Menu.Application.Preferences)
 	})
 
-	f.Application.SetAccelsForAction("app.new", []string{"<control>N"})
-	f.Application.SetAccelsForAction("win.new", []string{"<control>T"})
+	//f.Application.SetAccelsForAction("app.new", []string{"<control>N"})
+	// main tab
+	f.Application.SetAccelsForAction("win.new", []string{"<control>N"})
+	// sub tab
+	f.Application.SetAccelsForAction("win.tabnew", []string{"<control>T"})
+	// close sub tab, and main tab when there's no sub tabs left
 	f.Application.SetAccelsForAction("win.close", []string{"<control>W"})
 
 	return f, nil

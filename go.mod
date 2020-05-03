@@ -10,7 +10,7 @@ require (
 	github.com/danjacques/gofslock v0.0.0-20191023191349-0a45f885bc37 // indirect
 	github.com/dgraph-io/ristretto v0.0.1 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
-	github.com/getlantern/systray v0.0.0-20200324212034-d3ab4fd25d99
+	github.com/getlantern/systray v0.0.0-20200324212034-d3ab4fd25d99 // indirect
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6 // indirect
 	github.com/golang/mock v1.4.3
