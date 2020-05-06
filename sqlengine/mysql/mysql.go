@@ -185,8 +185,6 @@ func (d *mysqlDb) TableDefinition(ctx context.Context, tableName string) ([]driv
 }
 
 func (d *mysqlDb) Query(ctx context.Context, query string) (columnNames []string, data [][]interface{}, err error) {
-	data = make([][]interface{}, 0)
-
 	var sqlRows *sql.Rows
 	sqlRows, err = d.db.Query(query)
 	if err != nil {
@@ -200,6 +198,26 @@ func (d *mysqlDb) Query(ctx context.Context, query string) (columnNames []string
 		return nil, nil, err
 	}
 
+	// insert or update
+	if len(columnNames) == 0 {
+		sqlRows.Close()
+		sqlRows, err = d.db.Query("SELECT ROW_COUNT() AS affected_rows, LAST_INSERT_ID() AS last_inserted_id")
+		if err != nil {
+			return nil, nil, err
+		}
+		defer sqlRows.Close()
+	}
+
+	return d.loadData(sqlRows)
+}
+
+func (c *mysqlDb) loadData(sqlRows *sql.Rows) ([]string, [][]interface{}, error) {
+	columnNames, err := sqlRows.Columns()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	data := make([][]interface{}, 0)
 	for sqlRows.Next() {
 		row := make([]interface{}, len(columnNames))
 
@@ -213,11 +231,12 @@ func (d *mysqlDb) Query(ctx context.Context, query string) (columnNames []string
 
 		data = append(data, row)
 	}
+
 	if err := sqlRows.Err(); err != nil {
 		return nil, nil, err
 	}
 
-	return columnNames, data, err
+	return columnNames, data, nil
 }
 
 func (d *mysqlDb) Execute(ctx context.Context, query string) (string, int64, error) {
