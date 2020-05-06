@@ -49,6 +49,11 @@ func (k *kc) Get(path string) (string, error) {
 		return "", err
 	}
 
+	err = srv.Unlock([]dbus.ObjectPath{secretservice.DefaultCollection})
+	if err != nil {
+		return "", err
+	}
+
 	session, err := srv.OpenSession(secretservice.AuthenticationDHAES)
 	if err != nil {
 		return "", err
