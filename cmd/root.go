@@ -15,8 +15,6 @@ import (
 
 var version = "nightly"
 
-const appID = "com.sqlaid"
-
 var rootCmd = &cobra.Command{
 	Use:   "sqlaid",
 	Short: "SQLaid: Database",
@@ -26,7 +24,7 @@ var rootCmd = &cobra.Command{
 		defer eng.Dispose()
 
 		// Create a new application.
-		app, err := gtk.New(appID)
+		app, err := gtk.New(config.AppID)
 		if err != nil {
 			return err
 		}
@@ -100,7 +98,7 @@ func init() {
 	xdgHome, _ = os.UserConfigDir()
 
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "",
-		fmt.Sprintf("config file (default is %s/config.json)", xdgHome+"/sqlhero/config.json"))
+		fmt.Sprintf("config file (default is %s/config.json)", xdgHome+"/sqlaid/config.json"))
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "verbose output")
 	rootCmd.PersistentFlags().StringP("logfile", "f", "log.txt", "log out file")
 	viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
@@ -110,7 +108,7 @@ func init() {
 func initConfig() {
 	if cfgFile == "" {
 		xdgHome, _ := os.UserConfigDir()
-		cfgFile = xdgHome + "/sqlhero/config.json"
+		cfgFile = xdgHome + "/sqlaid/config.json"
 	}
 
 	viper.SetConfigFile(cfgFile)

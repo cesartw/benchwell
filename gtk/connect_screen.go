@@ -16,13 +16,15 @@ func NewConnectScreen() (*ConnectScreen, error) {
 
 type ConnectScreen struct {
 	*gtk.Paned
-	connectionList *List
+	ConnectionList *List
 	activeForm     *stdform
 
-	activeConnectionIndex MVar
-	btnSave               *gtk.Button
-	btnConnect            *gtk.Button
-	btnTest               *gtk.Button
+	btnSave    *gtk.Button
+	btnConnect *gtk.Button
+	btnTest    *gtk.Button
+
+	contextMenu                             *gtk.Menu
+	menuNew, menuTest, menuConnect, menuDel *gtk.MenuItem
 }
 
 func (c *ConnectScreen) init() error {
@@ -51,19 +53,19 @@ func (c *ConnectScreen) init() error {
 	frame2.SetShadowType(gtk.SHADOW_IN)
 	frame2.SetSizeRequest(50, -1)
 
-	c.connectionList, err = NewList(ListOptions{SelectOnRightClick: true})
+	c.ConnectionList, err = NewList(ListOptions{SelectOnRightClick: true})
 	if err != nil {
 		return err
 	}
 
-	c.connectionList.OnButtonPress(c.onConnectListButtonPress)
-	c.connectionList.Connect("row-activated", func() {
+	c.ConnectionList.OnButtonPress(c.onConnectListButtonPress)
+	c.ConnectionList.Connect("row-activated", func() {
 		c.btnConnect.Emit("activate")
 	})
 
-	c.connectionList.SetHExpand(true)
-	c.connectionList.SetVExpand(true)
-	frame1.Add(c.connectionList)
+	c.ConnectionList.SetHExpand(true)
+	c.ConnectionList.SetVExpand(true)
+	frame1.Add(c.ConnectionList)
 
 	forms, err := c.forms()
 	if err != nil {
@@ -107,6 +109,11 @@ func (c *ConnectScreen) init() error {
 	c.Paned.Pack1(frame1, false, true)
 	c.Paned.Pack2(frame2, false, false)
 
+	err = c.initMenu()
+	if err != nil {
+		return err
+	}
+
 	c.Paned.ShowAll()
 
 	return nil
@@ -119,52 +126,48 @@ func (c *ConnectScreen) onConnectListButtonPress(_ *gtk.ListBox, e *gdk.Event) {
 		return
 	}
 
-	m, err := gtk.MenuNew()
+	c.contextMenu.ShowAll()
+	c.contextMenu.PopupAtPointer(e)
+}
+
+func (c *ConnectScreen) initMenu() error {
+	var err error
+	c.contextMenu, err = gtk.MenuNew()
 	if err != nil {
-		return
+		return err
 	}
 
-	mi, err := menuItemWithImage("New", "gtk-new")
+	c.menuNew, err = menuItemWithImage("New", "gtk-new")
 	if err != nil {
-		return
+		return err
 	}
-	mi.Connect("activate", func() {
-		c.activeForm.Clear()
-		c.activeForm.GrabFocus()
+	c.contextMenu.Add(c.menuNew)
+
+	c.menuConnect, err = menuItemWithImage("Connect", "gtk-connect")
+	if err != nil {
+		return err
+	}
+	c.menuConnect.Connect("activate", func() {
+		c.onConnect()
 	})
-	m.Add(mi)
+	c.contextMenu.Add(c.menuConnect)
 
-	mi, err = menuItemWithImage("Connect", "gtk-connect")
+	c.menuTest, err = menuItemWithImage("Test", "gtk-play")
 	if err != nil {
-		return
+		return err
 	}
-	mi.Connect("activate", func() {
-		index, ok := c.connectionList.SelectedItemIndex()
-		if !ok {
-			return
-		}
-
-		c.onConnect(index)
-	})
-	m.Add(mi)
-
-	mi, err = menuItemWithImage("Test", "gtk-play")
-	if err != nil {
-		return
-	}
-	mi.Connect("activate", func() {
+	c.menuTest.Connect("activate", func() {
 		c.btnTest.Emit("clicked")
 	})
-	m.Add(mi)
+	c.contextMenu.Add(c.menuTest)
 
-	mi, err = menuItemWithImage("Delete", "gtk-delete")
+	c.menuDel, err = menuItemWithImage("Delete", "gtk-delete")
 	if err != nil {
-		return
+		return err
 	}
-	m.Add(mi)
+	c.contextMenu.Add(c.menuDel)
 
-	m.ShowAll()
-	m.PopupAtPointer(e)
+	return nil
 }
 
 func (c *ConnectScreen) nbPage(title string) (gtk.IWidget, *stdform, error) {
@@ -191,7 +194,15 @@ func (c *ConnectScreen) SetConnections(connections []*config.Connection) {
 		names[i] = con.Name
 	}
 
-	c.connectionList.UpdateItems(names)
+	c.ConnectionList.UpdateItems(names)
+}
+
+func (c *ConnectScreen) ClearForm() {
+	c.activeForm.Clear()
+}
+
+func (c *ConnectScreen) FocusForm() {
+	c.activeForm.GrabFocus()
 }
 
 func (c *ConnectScreen) SetFormConnection(conn *config.Connection) {
@@ -204,14 +215,14 @@ func (c *ConnectScreen) SetFormConnection(conn *config.Connection) {
 }
 
 func (c *ConnectScreen) OnConnectionSelected(fn interface{}) {
-	c.connectionList.Connect("row-selected", fn)
+	c.ConnectionList.Connect("row-selected", fn)
 }
 
 func (c *ConnectScreen) OnConnectionActivated(fn interface{}) {
-	c.connectionList.Connect("row-activated", fn)
+	c.ConnectionList.Connect("row-activated", fn)
 }
 
-func (c *ConnectScreen) onConnect(index int) {
+func (c *ConnectScreen) onConnect() {
 	c.btnConnect.Emit("activate")
 }
 
@@ -227,11 +238,16 @@ func (c *ConnectScreen) OnTest(f interface{}) {
 	c.btnTest.Connect("clicked", f)
 }
 
+func (c *ConnectScreen) OnNewConnection(f interface{}) {
+	c.menuNew.Connect("activate", f)
+}
+
+func (c *ConnectScreen) OnDeleteConnection(f interface{}) {
+	c.menuDel.Connect("activate", f)
+}
+
 func (c *ConnectScreen) ActiveConnectionIndex() int {
-	if c.activeConnectionIndex.Get() == nil {
-		return -1
-	}
-	return c.activeConnectionIndex.Get().(int)
+	return c.ConnectionList.GetSelectedRow().GetIndex()
 }
 
 func (c *ConnectScreen) Dispose() {

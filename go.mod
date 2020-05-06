@@ -1,6 +1,6 @@
 module bitbucket.org/goreorto/sqlaid
 
-go 1.12
+go 1.14
 
 require (
 	github.com/alecthomas/chroma v0.7.1
@@ -19,9 +19,11 @@ require (
 	github.com/google/pprof v0.0.0-20190930153522-6ce02741cba3 // indirect
 	github.com/google/uuid v1.1.1 // indirect
 	github.com/gotk3/gotk3 v0.4.1-0.20200303201101-011cec6a2372
-	github.com/ikaiguang/go-sqlparser v1.0.0
+	github.com/ikaiguang/go-sqlparser v1.0.0 // indirect
 	github.com/jeremywohl/flatten v0.0.0-20190921043622-d936035e55cf // indirect
 	github.com/juju/errors v0.0.0-20200330140219-3fe23663418f // indirect
+	github.com/keybase/go-keychain v0.0.0-20200502122510-cda31fe0c86d
+	github.com/keybase/go.dbus v0.0.0-20200324223359-a94be52c0b03
 	github.com/klauspost/cpuid v0.0.0-20170728055534-ae7887de9fa5 // indirect
 	github.com/knocknote/vitess-sqlparser v0.0.0-20200129061755-eb7ce11aa4dd // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
@@ -55,7 +57,6 @@ require (
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2 // indirect
 	go.uber.org/automaxprocs v1.2.0 // indirect
 	go.uber.org/zap v1.14.1 // indirect
-	golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e // indirect
 	golang.org/x/sys v0.0.0-20200413165638-669c56c373c4 // indirect

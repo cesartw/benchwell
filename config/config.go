@@ -2,20 +2,16 @@ package config
 
 import (
 	"bytes"
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/md5"
-	"crypto/rand"
-	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
+
+const AppID = "com.sqlaid"
 
 var Env = &Config{}
 
@@ -43,21 +39,21 @@ type Config struct {
 
 	Log *logrus.Logger `json:"-"`
 
-	phrase  string `json:"-"`
 	logFile string `json:"-"`
 }
 
 // Connection ...
 type Connection struct {
-	Adapter  string
-	Type     string
-	Name     string
-	Host     string
-	Port     int
-	User     string
-	Password string
-	Database string
-	Options  string
+	Adapter   string
+	Type      string
+	Name      string
+	Host      string
+	Port      int
+	User      string
+	Password  string
+	Database  string
+	Options   string
+	Encrypted bool
 }
 
 // GetDSN ...
@@ -106,6 +102,14 @@ func (c Connection) Valid() bool {
 
 // Save current configuration
 func (c *Config) Save() error {
+	var err error
+
+	for _, conn := range c.Connections {
+		err := conn.Encrypt()
+		if err != nil {
+			return err
+		}
+	}
 
 	d, err := json.Marshal(c)
 	if err != nil {
@@ -114,128 +118,52 @@ func (c *Config) Save() error {
 	}
 
 	viper.MergeConfig(bytes.NewReader(d))
+
+	for _, conn := range c.Connections {
+		err := conn.Decrypt()
+		if err != nil {
+			return err
+		}
+	}
+
 	return viper.WriteConfig()
-
-	//err := c.encrypt()
-	//if err != nil {
-	//return err
-	//}
-
-	//f, err := os.Create(configPath)
-	//if err != nil {
-	//return err
-	//}
-	//defer f.Close()
-
-	//dec := toml.NewEncoder(f)
-	//err = dec.Encode(c)
-	//if err != nil {
-	//return err
-	//}
-
-	//return c.decrypt()
 }
 
-func (c *Config) encrypt() error {
-	if c.phrase == "" {
+func (c *Connection) Encrypt() error {
+	if c.Encrypted {
 		return nil
 	}
 
-	for _, conn := range c.Connections {
-		if conn.Password == "" {
-			continue
-		}
-
-		var err error
-		conn.Password, err = encrypt(c.phrase, conn.Password)
-		if err != nil {
-			return err
-		}
+	keys := map[string]string{
+		"name":     c.Name,
+		"host":     c.Host,
+		"user":     c.User,
+		"database": c.Database,
+		"port":     fmt.Sprintf("%d", c.Port),
 	}
+
+	path, err := Keychain.Set(keys, c.Password)
+	if err != nil {
+		return err
+	}
+	c.Password = path
+	c.Encrypted = true
 
 	return nil
 }
 
-func (c *Config) decrypt() error {
-	if c.phrase == "" {
+func (c *Connection) Decrypt() error {
+	if !c.Encrypted {
 		return nil
 	}
 
-	for _, conn := range c.Connections {
-		if conn.Password == "" {
-			continue
-		}
-
-		result, err := decrypt(c.phrase, conn.Password)
-		if err != nil {
-			return err
-		}
-
-		conn.Password = result
+	pass, err := Keychain.Get(c.Password)
+	if err == nil {
+		c.Password = pass
+	} else {
+		Env.Log.Error(err)
 	}
+	c.Encrypted = false
 
 	return nil
-}
-
-func encrypt(phrase, text string) (string, error) {
-	textBytes := []byte(text)
-	block, err := aes.NewCipher(hash(phrase))
-	if err != nil {
-		return "", err
-	}
-
-	b := base64.StdEncoding.EncodeToString(textBytes)
-	ciphertext := make([]byte, aes.BlockSize+len(b))
-
-	iv := ciphertext[:aes.BlockSize]
-	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		return "", err
-	}
-
-	cfb := cipher.NewCFBEncrypter(block, iv)
-	cfb.XORKeyStream(ciphertext[aes.BlockSize:], []byte(b))
-
-	return base64.StdEncoding.EncodeToString(ciphertext), nil
-}
-
-func decrypt(phrase, text string) (string, error) {
-	if text == "" {
-		return "", nil
-	}
-
-	textBytes, err := base64.StdEncoding.DecodeString(text)
-	if err != nil {
-		return "", err
-	}
-
-	if len(textBytes) < aes.BlockSize {
-		return "", errors.New("ciphertext too short: " + text)
-	}
-
-	block, err := aes.NewCipher(hash(phrase))
-	if err != nil {
-		return "", err
-	}
-
-	iv := textBytes[:aes.BlockSize]
-	textBytes = textBytes[aes.BlockSize:]
-
-	cfb := cipher.NewCFBDecrypter(block, iv)
-	cfb.XORKeyStream(textBytes, textBytes)
-
-	data, err := base64.StdEncoding.DecodeString(string(textBytes))
-	if err != nil {
-		return "", err
-	}
-
-	return string(data), nil
-}
-
-func hash(phrase string) []byte {
-	defer func() {
-		hasher.Reset()
-	}()
-
-	hasher.Write([]byte(phrase))
-	return hasher.Sum(nil)
 }

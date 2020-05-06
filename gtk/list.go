@@ -15,12 +15,14 @@ type ListOptions struct {
 }
 
 type List struct {
+	*gtk.ListBox
+
+	options ListOptions
+
 	activeItem        MVar
 	activeItemIndex   MVar
 	selectedItem      MVar
 	selectedItemIndex MVar
-	*gtk.ListBox
-	options ListOptions
 }
 
 func NewList(opts ListOptions) (*List, error) {
@@ -82,24 +84,41 @@ func (u *List) UpdateItems(names []string) error {
 	u.options.Names = names
 
 	for _, name := range names {
-		label, err := gtk.LabelNew(name)
+		_, err := u.addItem(name, false)
 		if err != nil {
 			return err
 		}
-		label.SetHAlign(gtk.ALIGN_START)
-
-		row, err := gtk.ListBoxRowNew()
-		if err != nil {
-			return err
-		}
-
-		row.Add(label)
-		u.Add(row)
 	}
 
 	u.ShowAll()
 
 	return nil
+}
+
+func (u *List) AddItem(name string) (*gtk.ListBoxRow, error) {
+	return u.addItem(name, true)
+}
+
+func (u *List) addItem(name string, appendToStore bool) (*gtk.ListBoxRow, error) {
+	label, err := gtk.LabelNew(name)
+	if err != nil {
+		return nil, err
+	}
+	label.SetHAlign(gtk.ALIGN_START)
+
+	row, err := gtk.ListBoxRowNew()
+	if err != nil {
+		return nil, err
+	}
+
+	row.Add(label)
+	row.ShowAll()
+	u.Add(row)
+	if appendToStore {
+		u.options.Names = append(u.options.Names, name)
+	}
+
+	return row, nil
 }
 
 func (u *List) onRowActivated(_ *gtk.ListBox, row *gtk.ListBoxRow) {
