@@ -1,29 +1,49 @@
 package assets
 
-import "github.com/gotk3/gotk3/gdk"
+import (
+	"github.com/gotk3/gotk3/gdk"
+)
 
 var (
 	Table       *gdk.Pixbuf
 	TableCustom *gdk.Pixbuf
 )
 
+// icon size matching GTK's
+const (
+	SizeMenu         = 16
+	SizeButton       = 16
+	SizeSmallToolbar = 16
+	SizeLargeToolbar = 24
+)
+
 func Load() (err error) {
-	Table, err = gdk.PixbufNewFromFile("assets/table.png")
+	loader, err := gdk.PixbufLoaderNew()
 	if err != nil {
 		return err
 	}
 
-	Table, err = Table.ScaleSimple(15, 15, gdk.INTERP_NEAREST)
+	Table, err = loader.WriteAndReturnPixbuf(tableBytes)
 	if err != nil {
 		return err
 	}
 
-	TableCustom, err = gdk.PixbufNewFromFile("assets/table-custom.png")
+	Table, err = Table.ScaleSimple(SizeMenu, SizeMenu, gdk.INTERP_NEAREST)
 	if err != nil {
 		return err
 	}
 
-	TableCustom, err = TableCustom.ScaleSimple(15, 15, gdk.INTERP_NEAREST)
+	loader, err = gdk.PixbufLoaderNew()
+	if err != nil {
+		return err
+	}
+
+	TableCustom, err = loader.WriteAndReturnPixbuf(tableCustomBytes)
+	if err != nil {
+		return err
+	}
+
+	TableCustom, err = TableCustom.ScaleSimple(SizeMenu, SizeMenu, gdk.INTERP_NEAREST)
 	if err != nil {
 		return err
 	}

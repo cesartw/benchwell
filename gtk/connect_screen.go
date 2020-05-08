@@ -53,7 +53,7 @@ func (c *ConnectScreen) init() error {
 	frame2.SetShadowType(gtk.SHADOW_IN)
 	frame2.SetSizeRequest(50, -1)
 
-	c.ConnectionList, err = NewList(ListOptions{SelectOnRightClick: true})
+	c.ConnectionList, err = NewList(ListOptions{SelectOnRightClick: true, StockIcon: "gtk-connect"})
 	if err != nil {
 		return err
 	}
