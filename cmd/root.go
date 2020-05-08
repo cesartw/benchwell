@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"bitbucket.org/goreorto/sqlaid/assets"
 	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/ctrl"
 	"bitbucket.org/goreorto/sqlaid/gtk"
@@ -41,6 +42,10 @@ var rootCmd = &cobra.Command{
 		// Connect function to application startup event, this is not required.
 		app.Connect("startup", func() {
 			config.Env.Log.Debug("application startup")
+			err := assets.Load()
+			if err != nil {
+				panic(err)
+			}
 		})
 
 		// Connect function to application activate event

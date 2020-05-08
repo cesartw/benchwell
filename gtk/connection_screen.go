@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"bitbucket.org/goreorto/sqlaid/assets"
 	"bitbucket.org/goreorto/sqlaid/config"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
@@ -81,7 +82,7 @@ func (c *ConnectionScreen) init() error {
 	}
 	c.dbCombo.SetEntryTextColumn(0)
 
-	c.tableList, err = NewList(ListOptions{SelectOnRightClick: true})
+	c.tableList, err = NewList(ListOptions{SelectOnRightClick: true, Icon: assets.Table})
 	if err != nil {
 		return err
 	}

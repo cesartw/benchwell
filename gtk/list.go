@@ -12,6 +12,7 @@ type ListOptions struct {
 	Names              []string
 	SelectOnRightClick bool
 	FilterRegex        *regexp.Regexp
+	Icon               *gdk.Pixbuf
 }
 
 type List struct {
@@ -111,7 +112,24 @@ func (u *List) addItem(name string, appendToStore bool) (*gtk.ListBoxRow, error)
 		return nil, err
 	}
 
-	row.Add(label)
+	var widget gtk.IWidget = label
+
+	if u.options.Icon != nil {
+		image, err := gtk.ImageNewFromPixbuf(u.options.Icon)
+		if err != nil {
+			return nil, err
+		}
+
+		box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 3)
+		if err != nil {
+			return nil, err
+		}
+		box.Add(image)
+		box.Add(label)
+		widget = box
+	}
+
+	row.Add(widget)
 	row.ShowAll()
 	u.Add(row)
 	if appendToStore {
