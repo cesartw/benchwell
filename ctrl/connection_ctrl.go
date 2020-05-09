@@ -4,6 +4,7 @@ import (
 	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/gtk"
 	"bitbucket.org/goreorto/sqlaid/sqlengine"
+	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
 	ggtk "github.com/gotk3/gotk3/gtk"
 )
 
@@ -59,7 +60,7 @@ func (c *ConnectionCtrl) Close() bool {
 }
 
 func (c *ConnectionCtrl) AddTab() error {
-	tab, err := TableCtrl{}.init(c.ctx, c, "")
+	tab, err := TableCtrl{}.init(c.ctx, c, driver.TableDef{})
 	if err != nil {
 		return err
 	}
@@ -86,18 +87,18 @@ func (c *ConnectionCtrl) onDatabaseSelected() {
 }
 
 func (c *ConnectionCtrl) onTableSelected() {
-	tableName, ok := c.scr.ActiveTable()
+	tableDef, ok := c.scr.ActiveTable()
 	if !ok {
 		config.Env.Log.Debug("no table selected. odd!")
 		return
 	}
-	tab, err := TableCtrl{}.init(c.ctx, c, tableName)
+	tab, err := TableCtrl{}.init(c.ctx, c, tableDef)
 	if err != nil {
 		config.Env.Log.Error(err)
 		return
 	}
 
-	c.scr.AddTab(tableName, tab.Screen().(ggtk.IWidget), true)
+	c.scr.AddTab(tableDef.Name, tab.Screen().(ggtk.IWidget), true)
 	tab.OnConnect()
 }
 

@@ -101,7 +101,7 @@ func (e *Engine) UseDatabase(ctx Context, dbName string) (Context, error) {
 }
 
 // Tables ...
-func (e *Engine) Tables(ctx Context) ([]string, error) {
+func (e *Engine) Tables(ctx Context) ([]driver.TableDef, error) {
 	conn := e.connection(ctx)
 	if conn == nil {
 		return nil, ErrNoConnection

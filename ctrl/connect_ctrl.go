@@ -76,7 +76,10 @@ func (c *ConnectCtrl) onDeleteConnection() {
 		return
 	}
 
-	config.Env.Connections = append(config.Env.Connections[:index], config.Env.Connections[index+1:]...)
+	// deleting an saved connection
+	if index < len(config.Env.Connections) {
+		config.Env.Connections = append(config.Env.Connections[:index], config.Env.Connections[index+1:]...)
+	}
 
 	config.Env.Save()
 	c.scr.SetConnections(config.Env.Connections)
@@ -86,7 +89,7 @@ func (c *ConnectCtrl) onDeleteConnection() {
 }
 
 func (c *ConnectCtrl) onNewConnection() {
-	row, err := c.scr.ConnectionList.AddItem("New Connection")
+	row, err := c.scr.ConnectionList.AddItem(gtk.Stringer("New Connection"))
 	if err != nil {
 		config.Env.Log.Error(err)
 	}
@@ -103,6 +106,8 @@ func (c *ConnectCtrl) onConnectionSelected() {
 	}
 
 	if row.GetIndex() >= len(config.Env.Connections) {
+		c.scr.ClearForm()
+		c.scr.FocusForm()
 		return
 	}
 

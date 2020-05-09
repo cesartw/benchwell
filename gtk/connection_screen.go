@@ -6,6 +6,7 @@ import (
 
 	"bitbucket.org/goreorto/sqlaid/assets"
 	"bitbucket.org/goreorto/sqlaid/config"
+	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
@@ -82,7 +83,20 @@ func (c *ConnectionScreen) init() error {
 	}
 	c.dbCombo.SetEntryTextColumn(0)
 
-	c.tableList, err = NewList(ListOptions{SelectOnRightClick: true, Icon: assets.Table})
+	c.tableList, err = NewList(ListOptions{
+		SelectOnRightClick: true,
+		IconFunc: func(name fmt.Stringer) *gdk.Pixbuf {
+			def, ok := name.(driver.TableDef)
+			if ok {
+				if def.Type == driver.TableTypeRegular {
+					return assets.Table
+				} else {
+					return assets.TableCustom
+				}
+			}
+			return assets.Table
+		},
+	})
 	if err != nil {
 		return err
 	}
@@ -196,8 +210,8 @@ func (c *ConnectionScreen) SetDatabases(dbs []string) {
 	}
 }
 
-func (c *ConnectionScreen) SetTables(tables []string) {
-	c.tableList.UpdateItems(tables)
+func (c *ConnectionScreen) SetTables(tables driver.TableDefs) {
+	c.tableList.UpdateItems(tables.ToStringer())
 }
 
 func (c *ConnectionScreen) OnDatabaseSelected(f interface{}) {
@@ -225,8 +239,13 @@ func (c *ConnectionScreen) ActiveDatabase() (string, bool) {
 	return c.activeDatabase.Get().(string), true
 }
 
-func (c *ConnectionScreen) ActiveTable() (string, bool) {
-	return c.tableList.SelectedItem()
+func (c *ConnectionScreen) ActiveTable() (driver.TableDef, bool) {
+	i, ok := c.tableList.SelectedItem()
+	if !ok {
+		return driver.TableDef{}, false
+	}
+
+	return i.(driver.TableDef), true
 }
 
 func (c *ConnectionScreen) ShowTableSchemaModal(tableName, schema string) {
@@ -270,7 +289,11 @@ func (c *ConnectionScreen) ShowTableSchemaModal(tableName, schema string) {
 }
 
 func (c *ConnectionScreen) SelectedTable() (string, bool) {
-	return c.tableList.SelectedItem()
+	i, ok := c.tableList.SelectedItem()
+	if !ok {
+		return "", ok
+	}
+	return i.String(), true
 }
 
 func (c *ConnectionScreen) OnEditMenu(fn interface{}) {
@@ -351,7 +374,6 @@ func (c *ConnectionScreen) initTableMenu() error {
 	c.tableMenu.Add(c.editMenu)
 	c.tableMenu.Add(c.schemaMenu)
 	c.tableMenu.Add(c.truncateMenu)
-	c.tableMenu.Add(c.deleteMenu)
 
 	return nil
 }

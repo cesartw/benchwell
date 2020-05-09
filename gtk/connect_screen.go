@@ -194,11 +194,14 @@ func (c *ConnectScreen) SetConnections(connections []*config.Connection) {
 		names[i] = con.Name
 	}
 
-	c.ConnectionList.UpdateItems(names)
+	c.ConnectionList.UpdateItems(StringSliceToStringers(names))
 }
 
 func (c *ConnectScreen) ClearForm() {
 	c.activeForm.Clear()
+	c.btnConnect.SetSensitive(false)
+	c.btnTest.SetSensitive(false)
+	c.btnSave.SetSensitive(false)
 }
 
 func (c *ConnectScreen) FocusForm() {

@@ -733,33 +733,3 @@ func (u *Result) onCopy() {
 	config.Env.Log.Debugf("value at %d is `%s`", at, value)
 	clipboard.Copy(value.(string))
 }
-
-type stringer string
-
-func (s stringer) String() string {
-	return string(s)
-}
-
-func stringSliceToStringerSlice(sc []string) (r []fmt.Stringer) {
-	for _, str := range sc {
-		r = append(r, stringer(str))
-	}
-
-	return r
-}
-
-func colDefSliceToStringerSlice(cols []driver.ColDef) (r []fmt.Stringer) {
-	for _, col := range cols {
-		r = append(r, col)
-	}
-
-	return r
-}
-
-func stringerSliceToColDefSlice(cols []fmt.Stringer) (r []driver.ColDef) {
-	for _, col := range cols {
-		r = append(r, col.(driver.ColDef))
-	}
-
-	return r
-}

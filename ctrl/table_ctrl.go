@@ -11,19 +11,19 @@ import (
 // tableCtrl manages table result screen
 type TableCtrl struct {
 	*ConnectionCtrl
-	ctx       sqlengine.Context
-	tableName string
+	ctx      sqlengine.Context
+	tableDef driver.TableDef
 
 	// ui
 	grid *gtk.ResultGrid
 }
 
-func (tc TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableName string) (*TableCtrl, error) {
+func (tc TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableDef driver.TableDef) (*TableCtrl, error) {
 	var err error
 
 	tc.ctx = ctx
 	tc.ConnectionCtrl = parent
-	tc.tableName = tableName
+	tc.tableDef = tableDef
 
 	tc.grid, err = gtk.NewResultGrid(nil, nil,
 		func(col driver.ColDef, value string) (interface{}, error) {
@@ -37,7 +37,7 @@ func (tc TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableNam
 		cols []driver.ColDef,
 		values []interface{},
 	) error {
-		_, err := tc.engine.UpdateField(ctx, tc.tableName, cols, values)
+		_, err := tc.engine.UpdateField(ctx, tc.tableDef.Name, cols, values)
 		if err != nil {
 			tc.window.PushStatus(err.Error())
 			return err
@@ -49,7 +49,7 @@ func (tc TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableNam
 		cols []driver.ColDef,
 		values []interface{},
 	) ([]interface{}, error) {
-		data, err := tc.engine.InsertRecord(ctx, tc.tableName, cols, values)
+		data, err := tc.engine.InsertRecord(ctx, tc.tableDef.Name, cols, values)
 		if err != nil {
 			tc.window.PushStatus(err.Error())
 			return nil, err
@@ -112,7 +112,7 @@ func (tc TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableNam
 				return
 			}
 
-			tc.engine.DeleteRecord(tc.ctx, tc.tableName, cols, values)
+			tc.engine.DeleteRecord(tc.ctx, tc.tableDef.Name, cols, values)
 			tc.grid.RemoveSelected()
 		}
 	}).OnCreate(func() {
@@ -129,7 +129,7 @@ func (tc TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableNam
 			return
 		}
 
-		values, err = tc.engine.InsertRecord(tc.ctx, tc.tableName, cols, values)
+		values, err = tc.engine.InsertRecord(tc.ctx, tc.tableDef.Name, cols, values)
 		if err != nil {
 			return
 		}
@@ -139,7 +139,7 @@ func (tc TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableNam
 			return
 		}
 	}).OnCopyInsert(func(cols []driver.ColDef, values []interface{}) {
-		sql, err := tc.engine.GetInsertStatement(tc.ctx, tc.tableName, cols, values)
+		sql, err := tc.engine.GetInsertStatement(tc.ctx, tc.tableDef.Name, cols, values)
 		if err != nil {
 			tc.window.PushStatus(err.Error())
 		}
@@ -153,34 +153,41 @@ func (tc TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableNam
 
 func (tc *TableCtrl) OnConnect() {
 	def, data, err := tc.engine.FetchTable(
-		tc.ctx, tc.tableName,
+		tc.ctx, tc.tableDef.Name,
 		driver.FetchTableOptions{
 			Offset: tc.grid.Offset(),
 			Limit:  tc.grid.PageSize(),
 			Sort:   tc.grid.SortOptions(),
 		},
 	)
-
 	if err != nil {
 		config.Env.Log.Error(err)
 		return
 	}
 
-	err = tc.grid.UpdateColumns(def)
-	if err != nil {
-		config.Env.Log.Error(err)
-		return
-	}
+	if tc.tableDef.Type == driver.TableTypeRegular {
+		err = tc.grid.UpdateColumns(def)
+		if err != nil {
+			config.Env.Log.Error(err)
+			return
+		}
 
-	err = tc.grid.UpdateData(data)
-	if err != nil {
-		config.Env.Log.Error(err)
+		err = tc.grid.UpdateData(data)
+		if err != nil {
+			config.Env.Log.Error(err)
+		}
+	} else {
+		columns := []string{}
+		for _, d := range def {
+			columns = append(columns, d.Name)
+		}
+		tc.grid.UpdateRawData(columns, data)
 	}
 }
 
 func (tc *TableCtrl) OnRefresh() {
 	_, data, err := tc.engine.FetchTable(
-		tc.ctx, tc.tableName,
+		tc.ctx, tc.tableDef.Name,
 		driver.FetchTableOptions{
 			Offset: tc.grid.Offset(),
 			Limit:  tc.grid.PageSize(),

@@ -1,6 +1,7 @@
 package gtk
 
 import (
+	"fmt"
 	"regexp"
 
 	"bitbucket.org/goreorto/sqlaid/config"
@@ -9,10 +10,10 @@ import (
 )
 
 type ListOptions struct {
-	Names              []string
+	Names              []fmt.Stringer
 	SelectOnRightClick bool
 	FilterRegex        *regexp.Regexp
-	Icon               *gdk.Pixbuf
+	IconFunc           func(fmt.Stringer) *gdk.Pixbuf
 	StockIcon          string
 }
 
@@ -57,7 +58,7 @@ func NewList(opts ListOptions) (*List, error) {
 		}
 
 		name := list.options.Names[row.GetIndex()]
-		return list.options.FilterRegex.Match([]byte(name))
+		return list.options.FilterRegex.Match([]byte(name.String()))
 	})
 
 	return list, nil
@@ -79,7 +80,7 @@ func (u *List) OnButtonPress(f interface{}) {
 	u.ListBox.Connect("button-press-event", f)
 }
 
-func (u *List) UpdateItems(names []string) error {
+func (u *List) UpdateItems(names []fmt.Stringer) error {
 	u.ListBox.GetChildren().Foreach(func(item interface{}) {
 		u.ListBox.Remove(item.(gtk.IWidget))
 	})
@@ -97,12 +98,12 @@ func (u *List) UpdateItems(names []string) error {
 	return nil
 }
 
-func (u *List) AddItem(name string) (*gtk.ListBoxRow, error) {
+func (u *List) AddItem(name fmt.Stringer) (*gtk.ListBoxRow, error) {
 	return u.addItem(name, true)
 }
 
-func (u *List) addItem(name string, appendToStore bool) (*gtk.ListBoxRow, error) {
-	label, err := gtk.LabelNew(name)
+func (u *List) addItem(name fmt.Stringer, appendToStore bool) (*gtk.ListBoxRow, error) {
+	label, err := gtk.LabelNew(name.String())
 	if err != nil {
 		return nil, err
 	}
@@ -116,8 +117,8 @@ func (u *List) addItem(name string, appendToStore bool) (*gtk.ListBoxRow, error)
 	var widget gtk.IWidget = label
 
 	switch {
-	case u.options.Icon != nil:
-		image, err := gtk.ImageNewFromPixbuf(u.options.Icon)
+	case u.options.IconFunc != nil:
+		image, err := gtk.ImageNewFromPixbuf(u.options.IconFunc(name))
 		if err != nil {
 			return nil, err
 		}
@@ -187,13 +188,12 @@ func (u *List) ActiveItemIndex() (int, bool) {
 
 	return i, ok
 }
-func (u *List) SelectedItem() (string, bool) {
+func (u *List) SelectedItem() (fmt.Stringer, bool) {
 	v := u.selectedItem.Get()
 	if v == nil {
-		return "", false
+		return nil, false
 	}
-	table, ok := u.selectedItem.Get().(string)
-
+	table, ok := u.selectedItem.Get().(fmt.Stringer)
 	return table, ok
 }
 

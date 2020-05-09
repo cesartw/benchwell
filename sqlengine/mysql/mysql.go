@@ -131,20 +131,31 @@ func (d *mysqlDb) Name() string {
 	return d.name
 }
 
-func (d *mysqlDb) Tables(ctx context.Context) ([]string, error) {
-	rows, err := d.db.Query("SHOW TABLES")
+func (d *mysqlDb) Tables(ctx context.Context) ([]driver.TableDef, error) {
+	rows, err := d.db.Query("SHOW FULL TABLES")
 	if err != nil {
 		return nil, err
 	}
 
-	tables := []string{}
+	tables := []driver.TableDef{}
 	for rows.Next() {
-		var table string
-		if err := rows.Scan(&table); err != nil {
+		var name, tableT string
+		if err := rows.Scan(&name, &tableT); err != nil {
 			return nil, err
 		}
 
-		tables = append(tables, table)
+		def := driver.TableDef{}
+		def.Name = name
+		switch tableT {
+		case "BASE TABLE":
+			def.Type = driver.TableTypeRegular
+		case "VIEW":
+			def.Type = driver.TableTypeView
+		default:
+			def.Type = driver.TableTypeRegular
+		}
+
+		tables = append(tables, def)
 	}
 
 	return tables, nil
@@ -270,12 +281,12 @@ func (d *mysqlDb) ParseValue(def driver.ColDef, value string) interface{} {
 	}
 
 	switch def.Type {
-	case driver.TYPE_BOOLEAN:
+	case driver.ColTypeBoolean:
 		return strings.EqualFold(value, "true") || value == "1"
-	case driver.TYPE_FLOAT:
+	case driver.ColTypeFloat:
 		v, _ := strconv.ParseFloat(value, 64)
 		return v
-	case driver.TYPE_INT:
+	case driver.ColTypeInt:
 		v, _ := strconv.ParseInt(value, 10, 64)
 		return v
 	}
@@ -285,7 +296,7 @@ func (d *mysqlDb) ParseValue(def driver.ColDef, value string) interface{} {
 
 var typerg = regexp.MustCompile(`([a-z ]+)(\((.+)\))?\s?(unsigned)?`)
 
-func (d *mysqlDb) parseType(mysqlStringType string) (driver.TYPE, int, []string, bool) {
+func (d *mysqlDb) parseType(mysqlStringType string) (driver.ColType, int, []string, bool) {
 	matches := typerg.FindStringSubmatch(mysqlStringType)
 	t := matches[1] // type
 	s := matches[3] // size/precision
@@ -293,29 +304,29 @@ func (d *mysqlDb) parseType(mysqlStringType string) (driver.TYPE, int, []string,
 
 	switch t {
 	case "enum":
-		return driver.TYPE_LIST, 0, strings.Split(s, ","), false
+		return driver.ColTypeList, 0, strings.Split(s, ","), false
 	case "text":
-		return driver.TYPE_STRING, 0, nil, false
+		return driver.ColTypeString, 0, nil, false
 	case "varchar":
 		si, _ := strconv.Atoi(s)
-		return driver.TYPE_STRING, si, nil, false
+		return driver.ColTypeString, si, nil, false
 	case "int", "smallint", "mediumint", "bigint":
 		si, _ := strconv.Atoi(s)
-		return driver.TYPE_INT, si, nil, u == "unsigned"
+		return driver.ColTypeInt, si, nil, u == "unsigned"
 	case "tinyint":
 		if s == "1" {
-			return driver.TYPE_BOOLEAN, 0, nil, false
+			return driver.ColTypeBoolean, 0, nil, false
 		}
 
 		si, _ := strconv.Atoi(s)
-		return driver.TYPE_INT, si, nil, u == "unsigned"
+		return driver.ColTypeInt, si, nil, u == "unsigned"
 	case "double precision", "double", "float", "decimal":
-		return driver.TYPE_FLOAT, 0, nil, u == "unsigned"
+		return driver.ColTypeFloat, 0, nil, u == "unsigned"
 	case "time", "datetime":
-		return driver.TYPE_DATE, 0, nil, false
+		return driver.ColTypeDate, 0, nil, false
 	}
 
-	return driver.TYPE_STRING, 0, nil, true
+	return driver.ColTypeString, 0, nil, true
 }
 
 type FetchTableOptions []driver.SortOption

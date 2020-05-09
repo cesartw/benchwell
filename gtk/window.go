@@ -17,9 +17,10 @@ type Window struct {
 	statusBarID uint
 
 	Menu struct {
-		NewTab    *glib.SimpleAction
-		NewSubTab *glib.SimpleAction
-		CloseTab  *glib.SimpleAction
+		NewConnection *glib.SimpleAction
+		NewTab        *glib.SimpleAction
+		NewSubTab     *glib.SimpleAction
+		CloseTab      *glib.SimpleAction
 	}
 }
 
@@ -155,8 +156,9 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 	w.AddAction(w.Menu.CloseTab)
 
 	menu.Append("Open window", "app.new")
-	menu.Append("Open Tab", "win.tabnew")
-	menu.Append("Close Tab", "win.close")
+	menu.Append("+ Connection Tab", "win.new")
+	menu.Append("+ Table Tab", "win.tabnew")
+	menu.Append("- Table Tab", "win.close")
 	menu.Append("Preferences", "app.preferences")
 
 	mbtn.SetMenuModel(&menu.MenuModel)

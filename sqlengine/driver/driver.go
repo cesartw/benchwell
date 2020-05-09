@@ -9,15 +9,23 @@ import (
 
 const NULL_PATTERN = "<NULL>"
 
-type TYPE uint
+type ColType uint
+type TableType uint
 
+// Column types
 const (
-	TYPE_BOOLEAN TYPE = iota
-	TYPE_STRING
-	TYPE_FLOAT
-	TYPE_INT
-	TYPE_DATE
-	TYPE_LIST
+	ColTypeBoolean ColType = iota
+	ColTypeString
+	ColTypeFloat
+	ColTypeInt
+	ColTypeDate
+	ColTypeList
+)
+
+// Table types
+const (
+	TableTypeRegular TableType = iota
+	TableTypeView
 )
 
 var (
@@ -79,8 +87,35 @@ type ColDef struct {
 	PK, FK             bool
 	Precision          int
 	Unsigned, Nullable bool
-	Type               TYPE
+	Type               ColType
 	Values             []string
+}
+
+type TableDefs []TableDef
+type TableDef struct {
+	Name string
+	Type TableType
+}
+
+func (t TableDef) String() string {
+	return t.Name
+}
+
+func (t TableDefs) ToStringer() []fmt.Stringer {
+	s := make([]fmt.Stringer, len(t))
+	for i, def := range t {
+		s[i] = def
+	}
+	return s
+}
+
+func (t *TableDefs) FromStringer(s []fmt.Stringer) {
+	tt := make(TableDefs, len(s))
+	for i, stringer := range s {
+		tt[i], _ = stringer.(TableDef)
+	}
+
+	*t = tt
 }
 
 func (c ColDef) String() string {
@@ -105,7 +140,7 @@ type FetchTableOptions struct {
 
 // Database ...
 type Database interface {
-	Tables(context.Context) ([]string, error)
+	Tables(context.Context) ([]TableDef, error)
 	TableDefinition(ctx context.Context, tableName string) ([]ColDef, error)
 	FetchTable(ctx context.Context, tableName string, opts FetchTableOptions) ([]ColDef, [][]interface{}, error)
 	DeleteRecord(ctx context.Context, tableName string, defs []ColDef, values []interface{}) error
