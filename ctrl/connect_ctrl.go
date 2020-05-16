@@ -9,12 +9,12 @@ import (
 )
 
 type ConnectCtrl struct {
-	*TabCtrl
+	*ConnectionTabCtrl
 	scr *gtk.ConnectScreen
 }
 
-func (c ConnectCtrl) Init(p *TabCtrl) (*ConnectCtrl, error) {
-	c.TabCtrl = p
+func (c ConnectCtrl) Init(p *ConnectionTabCtrl) (*ConnectCtrl, error) {
+	c.ConnectionTabCtrl = p
 
 	var err error
 	c.scr, err = gtk.NewConnectScreen()
@@ -44,7 +44,7 @@ func (c *ConnectCtrl) onTest() {
 		conn = c.scr.GetFormConnection()
 	}
 
-	ctx, err := c.engine.Connect(sqlengine.Context(context.TODO()), conn.GetDSN())
+	ctx, err := c.engine.Connect(sqlengine.Context(context.TODO()), *conn)
 	if err != nil {
 		config.Env.Log.Error(err)
 		c.window.PushStatus("Fail connection `%s`(%s): %s", conn.Name, conn.Host, err.Error())

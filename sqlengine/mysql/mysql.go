@@ -19,10 +19,14 @@ import (
 	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
 )
 
-type mysqlDriver struct{}
+type mysqlDriver struct {
+	cfgCon config.Connection
+}
 
 type mysqlConn struct {
-	dsn       string
+	cfgCon    config.Connection
+	database  string
+	driver    *mysqlDriver
 	db        *sql.DB
 	lastError error
 }
@@ -36,10 +40,20 @@ func init() {
 	driver.RegisterDriver("mysql", &mysqlDriver{})
 }
 
-func (d *mysqlDriver) Connect(ctx context.Context, dsn string) (driver.Connection, error) {
+func (d *mysqlDriver) Connect(ctx context.Context, cfg config.Connection) (driver.Connection, error) {
+	d.cfgCon = cfg
+	return d.connect(ctx)
+}
+
+func (d *mysqlDriver) dsn() string {
+	colonS := strings.Split(d.cfgCon.GetDSN(), ":")
+	return strings.TrimPrefix(d.cfgCon.GetDSN(), colonS[0]+"://")
+}
+
+func (d *mysqlDriver) connect(ctx context.Context) (*mysqlConn, error) {
 	t, ok := ctx.Deadline()
 	if !ok {
-		t = time.Now().Add(time.Minute * 100000000)
+		t = time.Now().Add(time.Minute)
 	}
 
 	var db *sql.DB
@@ -47,7 +61,7 @@ func (d *mysqlDriver) Connect(ctx context.Context, dsn string) (driver.Connectio
 	c := make(chan error, 1)
 	go func() {
 		var err error
-		db, err = sql.Open("mysql", dsn)
+		db, err = sql.Open("mysql", d.dsn())
 		if err != nil {
 			c <- err
 			return
@@ -70,14 +84,29 @@ func (d *mysqlDriver) Connect(ctx context.Context, dsn string) (driver.Connectio
 		if err != nil {
 			return nil, err
 		}
-		return &mysqlConn{dsn: dsn, db: db}, nil
+		close(c)
+		return &mysqlConn{cfgCon: d.cfgCon, driver: d, db: db}, nil
 	}
+}
+
+func (d *mysqlDriver) useDatabase(ctx context.Context, dbName string) (*sql.DB, error) {
+	db, err := d.connect(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = db.db.ExecContext(ctx, fmt.Sprintf("USE %s", dbName))
+	if err != nil {
+		return nil, err
+	}
+
+	return db.db, nil
 }
 
 func (c *mysqlConn) Reconnect(ctx context.Context) error {
 	c.db.Close()
 
-	db, err := sql.Open("mysql", c.dsn)
+	db, err := sql.Open("mysql", c.driver.dsn())
 	if err != nil {
 		return err
 	}
@@ -87,13 +116,13 @@ func (c *mysqlConn) Reconnect(ctx context.Context) error {
 	return nil
 }
 
-func (c *mysqlConn) UseDatabase(ctx context.Context, db string) error {
-	if db == "" {
-		return errors.New("database name empty")
+func (c *mysqlConn) UseDatabase(ctx context.Context, db string) (driver.Database, error) {
+	sqldb, err := c.driver.useDatabase(ctx, db)
+	if err != nil {
+		return nil, err
 	}
 
-	_, err := c.db.Exec(fmt.Sprintf("USE %s", db))
-	return err
+	return &mysqlDb{db: sqldb, name: db}, nil
 }
 
 // Disconnect ...
@@ -107,13 +136,13 @@ func (c *mysqlConn) LastError() error {
 }
 
 // Databases ...
-func (c *mysqlConn) Databases(ctx context.Context) ([]driver.Database, error) {
+func (c *mysqlConn) Databases(ctx context.Context) ([]string, error) {
 	rows, err := c.db.Query(`SHOW databases`)
 	if err != nil {
 		return nil, err
 	}
 
-	dbs := make([]driver.Database, 0)
+	dbs := make([]string, 0)
 	for rows.Next() {
 		var n string
 		err := rows.Scan(&n)
@@ -121,7 +150,7 @@ func (c *mysqlConn) Databases(ctx context.Context) ([]driver.Database, error) {
 			return nil, err
 		}
 
-		dbs = append(dbs, driver.Database(&mysqlDb{c.db, n}))
+		dbs = append(dbs, n)
 	}
 
 	return dbs, nil

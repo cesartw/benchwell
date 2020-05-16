@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+
+	"bitbucket.org/goreorto/sqlaid/config"
 )
 
 const NULL_PATTERN = "<NULL>"
@@ -51,8 +53,8 @@ func RegisterDriver(name string, d Driver) {
 
 // Connect returns a Connection
 // TODO: dsn parsing too optimistic
-func Connect(ctx context.Context, dsn string) (Connection, error) {
-	colonS := strings.Split(dsn, ":")
+func Connect(ctx context.Context, cfg config.Connection) (Connection, error) {
+	colonS := strings.Split(cfg.GetDSN(), ":")
 
 	driverMU.Lock()
 	d, ok := drivers[colonS[0]]
@@ -63,22 +65,40 @@ func Connect(ctx context.Context, dsn string) (Connection, error) {
 	}
 
 	// kind hacky
-	return d.Connect(ctx, strings.TrimPrefix(dsn, colonS[0]+"://"))
+	return d.Connect(ctx, cfg)
 }
 
 // Driver is a database implementation for SQLHero
 type Driver interface {
-	Connect(context.Context, string) (Connection, error)
-	// Sanitize(string) string
+	Connect(context.Context, config.Connection) (Connection, error)
 }
 
 // Connection ...
 type Connection interface {
-	UseDatabase(context.Context, string) error
-	Databases(context.Context) ([]Database, error)
+	Databases(context.Context) ([]string, error)
+	UseDatabase(context.Context, string) (Database, error)
 	Disconnect(context.Context) error
 	Reconnect(context.Context) error
 	LastError() error
+}
+
+// Database ...
+type Database interface {
+	Tables(context.Context) ([]TableDef, error)
+	TableDefinition(ctx context.Context, tableName string) ([]ColDef, error)
+	FetchTable(ctx context.Context, tableName string, opts FetchTableOptions) ([]ColDef, [][]interface{}, error)
+	DeleteRecord(ctx context.Context, tableName string, defs []ColDef, values []interface{}) error
+	UpdateRecord(ctx context.Context, tableName string, cols []ColDef, values, oldValues []interface{}) (string, error)
+	UpdateField(ctx context.Context, tableName string, cols []ColDef, values []interface{}) (string, error)
+	UpdateFields(ctx context.Context, tableName string, cols []ColDef, values []interface{}, keycount int) (string, error)
+	InsertRecord(ctx context.Context, tableName string, cols []ColDef, values []interface{}) ([]interface{}, error)
+	ParseValue(def ColDef, value string) interface{}
+	Query(context.Context, string) ([]string, [][]interface{}, error)
+	Execute(context.Context, string) (string, int64, error)
+	Name() string
+	// DDL
+	GetCreateTable(context.Context, string) (string, error)
+	GetInsertStatement(context.Context, string, []ColDef, []interface{}) (string, error)
 }
 
 // ColDef describe a column
@@ -136,23 +156,4 @@ type SortOption struct {
 type FetchTableOptions struct {
 	Offset, Limit int64
 	Sort          []SortOption
-}
-
-// Database ...
-type Database interface {
-	Tables(context.Context) ([]TableDef, error)
-	TableDefinition(ctx context.Context, tableName string) ([]ColDef, error)
-	FetchTable(ctx context.Context, tableName string, opts FetchTableOptions) ([]ColDef, [][]interface{}, error)
-	DeleteRecord(ctx context.Context, tableName string, defs []ColDef, values []interface{}) error
-	UpdateRecord(ctx context.Context, tableName string, cols []ColDef, values, oldValues []interface{}) (string, error)
-	UpdateField(ctx context.Context, tableName string, cols []ColDef, values []interface{}) (string, error)
-	UpdateFields(ctx context.Context, tableName string, cols []ColDef, values []interface{}, keycount int) (string, error)
-	InsertRecord(ctx context.Context, tableName string, cols []ColDef, values []interface{}) ([]interface{}, error)
-	ParseValue(def ColDef, value string) interface{}
-	Query(context.Context, string) ([]string, [][]interface{}, error)
-	Execute(context.Context, string) (string, int64, error)
-	Name() string
-	// DDL
-	GetCreateTable(context.Context, string) (string, error)
-	GetInsertStatement(context.Context, string, []ColDef, []interface{}) (string, error)
 }

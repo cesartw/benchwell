@@ -11,7 +11,7 @@ import (
 type WindowCtrl struct {
 	*AppCtrl
 	window *gtk.Window
-	tabs   []*TabCtrl
+	tabs   []*ConnectionTabCtrl
 }
 
 func (c WindowCtrl) Init(parent *AppCtrl) (*WindowCtrl, error) {
@@ -77,7 +77,7 @@ func (c *WindowCtrl) OnActivate() {
 }
 
 func (c *WindowCtrl) AddTab() error {
-	tab, err := TabCtrl{}.Init(c)
+	tab, err := ConnectionTabCtrl{}.Init(c)
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func (c *WindowCtrl) AddTab() error {
 	return nil
 }
 
-func (c *WindowCtrl) currentTab() *TabCtrl {
+func (c *WindowCtrl) currentTab() *ConnectionTabCtrl {
 	return c.tabs[c.window.CurrentPage()]
 }
 

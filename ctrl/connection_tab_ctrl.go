@@ -10,7 +10,7 @@ import (
 	ggtk "github.com/gotk3/gotk3/gtk"
 )
 
-type TabCtrl struct {
+type ConnectionTabCtrl struct {
 	*WindowCtrl
 	tab            *gtk.Tab
 	tabLabel       *ggtk.Label
@@ -23,7 +23,7 @@ type TabCtrl struct {
 	}
 }
 
-func (c TabCtrl) Init(p *WindowCtrl) (*TabCtrl, error) {
+func (c ConnectionTabCtrl) Init(p *WindowCtrl) (*ConnectionTabCtrl, error) {
 	var err error
 	c.WindowCtrl = p
 
@@ -42,21 +42,21 @@ func (c TabCtrl) Init(p *WindowCtrl) (*TabCtrl, error) {
 	return &c, nil
 }
 
-func (c *TabCtrl) AddTab() error {
+func (c *ConnectionTabCtrl) AddTab() error {
 	return c.currentCtrl.AddTab()
 }
 
-func (c *TabCtrl) Show() {
+func (c *ConnectionTabCtrl) Show() {
 	c.tab.Show()
 }
 
 // Close delegates the close tab action ot connect or connection screen
-func (c *TabCtrl) Close() bool {
+func (c *ConnectionTabCtrl) Close() bool {
 	// TODO: figure out which screen is open
 	return c.currentCtrl.Close()
 }
 
-func (c *TabCtrl) launchConnect() {
+func (c *ConnectionTabCtrl) launchConnect() {
 	var err error
 	c.connectCtrl, err = ConnectCtrl{}.Init(c)
 	if err != nil {
@@ -73,7 +73,7 @@ func (c *TabCtrl) launchConnect() {
 	c.tab.PackStart(c.connectCtrl.scr, true, true, 0)
 }
 
-func (c *TabCtrl) launchConnection(ctx sqlengine.Context, conn *config.Connection) {
+func (c *ConnectionTabCtrl) launchConnection(ctx sqlengine.Context, conn *config.Connection) {
 	var err error
 	c.connectionCtrl, err = ConnectionCtrl{}.Init(ctx, c, conn)
 	if err != nil {
@@ -96,7 +96,7 @@ func (c *TabCtrl) launchConnection(ctx sqlengine.Context, conn *config.Connectio
 	c.tab.PackStart(c.connectionCtrl.scr, true, true, 0)
 }
 
-func (c *TabCtrl) onConnect() {
+func (c *ConnectionTabCtrl) onConnect() {
 	var conn *config.Connection
 	index := c.connectCtrl.scr.ActiveConnectionIndex()
 	if index == -1 {
@@ -108,7 +108,7 @@ func (c *TabCtrl) onConnect() {
 	ctx, done := context.WithTimeout(context.TODO(), time.Second*5)
 	defer done()
 
-	ctx, err := c.engine.Connect(sqlengine.Context(ctx), conn.GetDSN())
+	ctx, err := c.engine.Connect(sqlengine.Context(ctx), *conn)
 	if err != nil {
 		config.Env.Log.Error(err)
 		c.window.PushStatus("Failed connect to `%s`(%s): %s", conn.Name, conn.Host, err.Error())

@@ -3,7 +3,7 @@ package sqlengine
 import (
 	"context"
 	"errors"
-	"sync"
+	"time"
 
 	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
@@ -20,7 +20,6 @@ var (
 type Engine struct {
 	config *config.Config
 
-	connMU      sync.Mutex
 	connections []driver.Connection
 }
 
@@ -33,11 +32,11 @@ func New(conf *config.Config) *Engine {
 }
 
 // Connect to a database
-func (e *Engine) Connect(ctx Context, dsn string) (Context, error) {
-	e.connMU.Lock()
-	defer e.connMU.Unlock()
+func (e *Engine) Connect(ctx Context, cfg config.Connection) (Context, error) {
+	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
 
-	conn, err := driver.Connect(ctx, dsn)
+	conn, err := driver.Connect(tmctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -55,14 +54,12 @@ func (e *Engine) Databases(ctx Context) ([]string, error) {
 		return nil, errors.New("no connection available")
 	}
 
-	dbs, err := conn.Databases(ctx)
+	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	dbNames, err := conn.Databases(tmctx)
 	if err != nil {
 		return nil, err
-	}
-
-	dbNames := []string{}
-	for _, db := range dbs {
-		dbNames = append(dbNames, db.Name())
 	}
 
 	return dbNames, nil
@@ -75,29 +72,32 @@ func (e *Engine) UseDatabase(ctx Context, dbName string) (Context, error) {
 		return ctx, ErrNoConnection
 	}
 
-	dbs, err := conn.Databases(ctx)
+	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	dbs, err := conn.Databases(tmctx)
 	if err != nil {
 		return ctx, err
 	}
 
-	var db driver.Database
-	for _, d := range dbs {
-		if d.Name() == dbName {
-			db = d
+	var exists bool
+	for _, db := range dbs {
+		if db == dbName {
+			exists = true
 			break
 		}
 	}
 
-	if db == nil {
+	if !exists {
 		return ctx, ErrDatabaseNotFound
 	}
 
-	err = conn.UseDatabase(ctx, db.Name())
+	db, err := conn.UseDatabase(tmctx, dbName)
 	if err != nil {
 		return ctx, err
 	}
 
-	return context.WithValue(NewContext(ctx, conn), ckDatabase, db), nil
+	return context.WithValue(NewContext(nil, conn), ckDatabase, db), nil
 }
 
 // Tables ...
@@ -112,7 +112,10 @@ func (e *Engine) Tables(ctx Context) ([]driver.TableDef, error) {
 		return nil, ErrNoDatabase
 	}
 
-	return db.Tables(ctx)
+	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	return db.Tables(tmctx)
 }
 
 // FetchTable returns table column definition and table data
@@ -131,7 +134,10 @@ func (e *Engine) FetchTable(
 		return nil, nil, ErrNoDatabase
 	}
 
-	return db.FetchTable(ctx, tableName, opts)
+	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	return db.FetchTable(tmctx, tableName, opts)
 }
 
 // DeleteRecord ...
@@ -146,7 +152,10 @@ func (e *Engine) DeleteRecord(ctx Context, tableName string, defs []driver.ColDe
 		return ErrNoDatabase
 	}
 
-	return db.DeleteRecord(ctx, tableName, defs, values)
+	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	return db.DeleteRecord(tmctx, tableName, defs, values)
 }
 
 // UpdateFields ...
@@ -167,7 +176,10 @@ func (e *Engine) UpdateFields(
 		return "", ErrNoDatabase
 	}
 
-	return db.UpdateFields(ctx, tableName, defs, values, keycount)
+	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	return db.UpdateFields(tmctx, tableName, defs, values, keycount)
 }
 
 // UpdateField ...
@@ -187,7 +199,10 @@ func (e *Engine) UpdateField(
 		return "", ErrNoDatabase
 	}
 
-	return db.UpdateField(ctx, tableName, defs, values)
+	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	return db.UpdateField(tmctx, tableName, defs, values)
 }
 
 // ParseValue ...
@@ -226,7 +241,10 @@ func (e *Engine) UpdateRecord(
 		return "", ErrNoDatabase
 	}
 
-	return db.UpdateRecord(ctx, tableName, defs, values, oldValues)
+	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	return db.UpdateRecord(tmctx, tableName, defs, values, oldValues)
 }
 
 // InsertRecord ...
@@ -246,7 +264,10 @@ func (e *Engine) InsertRecord(
 		return nil, ErrNoDatabase
 	}
 
-	return db.InsertRecord(ctx, tableName, defs, values)
+	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	return db.InsertRecord(tmctx, tableName, defs, values)
 }
 
 // Disconnect ...
@@ -274,7 +295,10 @@ func (e *Engine) Execute(ctx Context, query string) (string, int64, error) {
 		return "", 0, ErrNoDatabase
 	}
 
-	return db.Execute(ctx, query)
+	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	return db.Execute(tmctx, query)
 }
 
 func (e *Engine) GetCreateTable(ctx Context, tableName string) (string, error) {
@@ -283,7 +307,10 @@ func (e *Engine) GetCreateTable(ctx Context, tableName string) (string, error) {
 		return "", ErrNoDatabase
 	}
 
-	return db.GetCreateTable(ctx, tableName)
+	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	return db.GetCreateTable(tmctx, tableName)
 }
 
 func (e *Engine) GetInsertStatement(
@@ -296,7 +323,11 @@ func (e *Engine) GetInsertStatement(
 	if db == nil {
 		return "", ErrNoDatabase
 	}
-	return db.GetInsertStatement(ctx, tableName, cols, values)
+
+	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	return db.GetInsertStatement(tmctx, tableName, cols, values)
 }
 
 // Dispose ...

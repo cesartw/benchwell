@@ -9,17 +9,19 @@ import (
 )
 
 type ConnectionCtrl struct {
-	*TabCtrl
+	*ConnectionTabCtrl
 
 	ctx  sqlengine.Context
 	scr  *gtk.ConnectionScreen
 	conn *config.Connection
-
-	tabs []*TableCtrl
 }
 
-func (c ConnectionCtrl) Init(ctx sqlengine.Context, p *TabCtrl, conn *config.Connection) (*ConnectionCtrl, error) {
-	c.TabCtrl = p
+func (c ConnectionCtrl) Init(
+	ctx sqlengine.Context,
+	p *ConnectionTabCtrl,
+	conn *config.Connection,
+) (*ConnectionCtrl, error) {
+	c.ConnectionTabCtrl = p
 	c.ctx = ctx
 	c.conn = conn
 
@@ -76,10 +78,14 @@ func (c *ConnectionCtrl) onDatabaseSelected() {
 		return
 	}
 	c.ctx, err = c.engine.UseDatabase(c.ctx, dbName)
+	if err != nil {
+		c.window.PushStatus("Error selecting database: `%s`", err.Error())
+		return
+	}
 
 	tables, err := c.engine.Tables(c.ctx)
 	if err != nil {
-		config.Env.Log.Error(err)
+		c.window.PushStatus("Error getting tables: `%s`", err.Error())
 		return
 	}
 
