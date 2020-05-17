@@ -70,7 +70,7 @@ func (w *Window) OnTabClick(f interface{}) {
 	w.nb.Connect("button-press-event", f)
 }
 
-func (w *Window) AddTab(label *gtk.Label, wd gtk.IWidget) error {
+func (w *Window) AddTab(label *gtk.Label, wd gtk.IWidget, removed func()) error {
 	header, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
 	if err != nil {
 		return err
@@ -98,6 +98,7 @@ func (w *Window) AddTab(label *gtk.Label, wd gtk.IWidget) error {
 
 	btn.Connect("clicked", func() {
 		w.RemoveCurrentPage()
+		removed()
 	})
 
 	return nil

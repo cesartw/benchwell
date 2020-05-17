@@ -83,7 +83,7 @@ func (c *WindowCtrl) AddTab() error {
 	}
 
 	tab.tab.Show()
-	c.window.AddTab(tab.tabLabel, tab.tab)
+	c.window.AddTab(tab.tabLabel, tab.tab, tab.Removed)
 	c.tabs = append(c.tabs, tab)
 
 	return nil

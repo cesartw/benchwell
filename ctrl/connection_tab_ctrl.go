@@ -50,6 +50,13 @@ func (c *ConnectionTabCtrl) Show() {
 	c.tab.Show()
 }
 
+func (c *ConnectionTabCtrl) Removed() {
+	if c.connectionCtrl != nil {
+		c.engine.Disconnect(c.connectionCtrl.ctx)
+		c.window.PushStatus("Disconnected")
+	}
+}
+
 // Close delegates the close tab action ot connect or connection screen
 func (c *ConnectionTabCtrl) Close() bool {
 	// TODO: figure out which screen is open
