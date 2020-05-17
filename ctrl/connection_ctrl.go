@@ -47,12 +47,8 @@ func (c ConnectionCtrl) Init(
 		c.onDatabaseSelected()
 	}
 
-	err = c.AddTab()
-	if err != nil {
-		return nil, err
-	}
-
 	c.scr.OnSchemaMenu(c.onSchemaMenu)
+	c.scr.OnNewTabMenu(c.onNewTabMenu)
 
 	return &c, nil
 }
@@ -104,7 +100,7 @@ func (c *ConnectionCtrl) onTableSelected() {
 		return
 	}
 
-	c.scr.AddTab(tableDef.Name, tab.Screen().(ggtk.IWidget), true)
+	c.scr.UpdateOrAddTab(tableDef.Name, tab.Screen().(ggtk.IWidget), true)
 	tab.OnConnect()
 }
 
@@ -124,4 +120,20 @@ func (c *ConnectionCtrl) onSchemaMenu() {
 	}
 
 	c.scr.ShowTableSchemaModal(tableName, schema)
+}
+
+func (c *ConnectionCtrl) onNewTabMenu() {
+	tableDef, ok := c.scr.ActiveTable()
+	if !ok {
+		config.Env.Log.Debug("no table selected. odd!")
+		return
+	}
+	tab, err := TableCtrl{}.init(c.ctx, c, tableDef)
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+
+	c.scr.AddTab(tableDef.Name, tab.Screen().(ggtk.IWidget), true)
+	tab.OnConnect()
 }

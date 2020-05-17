@@ -17,12 +17,19 @@ func (f *App) NewConnectionScreen() (*ConnectionScreen, error) {
 	return cs, cs.init()
 }
 
+type page struct {
+	label   *gtk.Label
+	btn     *gtk.Button
+	content *gtk.Box
+}
+
 type ConnectionScreen struct {
 	*gtk.Paned
 	dbCombo     *gtk.ComboBox
 	tableFilter *gtk.SearchEntry
 	tableList   *List
 	tabber      *gtk.Notebook
+	pages       []*page
 
 	databaseNames []string
 	dbStore       *gtk.ListStore
@@ -31,6 +38,7 @@ type ConnectionScreen struct {
 
 	tableMenu    *gtk.Menu
 	editMenu     *gtk.MenuItem
+	newTabMenu   *gtk.MenuItem
 	schemaMenu   *gtk.MenuItem
 	truncateMenu *gtk.MenuItem
 	deleteMenu   *gtk.MenuItem
@@ -149,12 +157,23 @@ func (c *ConnectionScreen) init() error {
 }
 
 func (c *ConnectionScreen) AddTab(title string, content gtk.IWidget, switchNow bool) error {
+	box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
+	if err != nil {
+		return err
+	}
+	box.PackStart(content, true, true, 0)
+	box.SetVExpand(true)
+	box.SetHExpand(true)
+	box.Show()
+
+	page := &page{content: box}
+
 	header, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
 	if err != nil {
 		return err
 	}
 
-	label, err := gtk.LabelNew(title)
+	page.label, err = gtk.LabelNew(title)
 	if err != nil {
 		return err
 	}
@@ -164,31 +183,49 @@ func (c *ConnectionScreen) AddTab(title string, content gtk.IWidget, switchNow b
 		return err
 	}
 
-	btn, err := gtk.ButtonNew()
+	page.btn, err = gtk.ButtonNew()
 	if err != nil {
 		return err
 	}
-	btn.SetImage(image)
-	btn.SetRelief(gtk.RELIEF_NONE)
 
-	header.PackStart(label, true, true, 0)
-	header.PackEnd(btn, false, false, 0)
+	page.btn.SetImage(image)
+	page.btn.SetRelief(gtk.RELIEF_NONE)
+
+	header.PackStart(page.label, true, true, 0)
+	header.PackEnd(page.btn, false, false, 0)
 	header.ShowAll()
 
-	c.tabber.AppendPage(content, header)
-	c.tabber.SetTabReorderable(content, true)
+	c.tabber.AppendPage(page.content, header)
+	c.tabber.SetTabReorderable(page.content, true)
 
-	btn.Connect("clicked", func() {
-		index := c.tabber.PageNum(content)
+	page.btn.Connect("clicked", func() {
+		index := c.tabber.PageNum(page.content)
 		if index == -1 {
 			return
 		}
 		c.tabber.RemovePage(index)
+		c.pages = append(c.pages[:index], c.pages[index+1:]...)
 	})
 
 	if switchNow {
 		c.tabber.SetCurrentPage(c.tabber.GetNPages() - 1)
 	}
+
+	c.pages = append(c.pages, page)
+
+	return nil
+}
+
+func (c *ConnectionScreen) UpdateOrAddTab(title string, content gtk.IWidget, switchNow bool) error {
+	if c.tabber.GetNPages() == 0 {
+		return c.AddTab(title, content, switchNow)
+	}
+	page := c.pages[c.tabber.GetCurrentPage()]
+	page.content.Container.GetChildren().FreeFull(func(item interface{}) {
+		c.pages[c.tabber.GetCurrentPage()].content.Remove(item.(gtk.IWidget))
+	})
+	page.content.PackStart(content, true, true, 0)
+	page.label.SetText(title)
 
 	return nil
 }
@@ -300,6 +337,10 @@ func (c *ConnectionScreen) OnEditMenu(fn interface{}) {
 	c.editMenu.Connect("activate", fn)
 }
 
+func (c *ConnectionScreen) OnNewTabMenu(fn interface{}) {
+	c.newTabMenu.Connect("activate", fn)
+}
+
 func (c *ConnectionScreen) OnSchemaMenu(fn interface{}) {
 	c.schemaMenu.Connect("activate", fn)
 }
@@ -356,6 +397,11 @@ func (c *ConnectionScreen) initTableMenu() error {
 		return err
 	}
 
+	c.newTabMenu, err = menuItemWithImage("New tab", "gtk-new")
+	if err != nil {
+		return err
+	}
+
 	c.schemaMenu, err = menuItemWithImage("Schema", "gtk-info")
 	if err != nil {
 		return err
@@ -371,6 +417,7 @@ func (c *ConnectionScreen) initTableMenu() error {
 		return err
 	}
 
+	c.tableMenu.Add(c.newTabMenu)
 	c.tableMenu.Add(c.editMenu)
 	c.tableMenu.Add(c.schemaMenu)
 	c.tableMenu.Add(c.truncateMenu)
