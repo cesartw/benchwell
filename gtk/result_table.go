@@ -579,6 +579,13 @@ func (u *Result) onEdited(cell *gtk.CellRendererText, path string, newValue stri
 		values = append(values, u.data[row][i])
 	}
 
+	// PK-LESS rows
+	if len(pkCols) == 0 {
+		for _, col := range u.cols {
+			pkCols = append(pkCols, col.(driver.ColDef))
+		}
+	}
+
 	affectedCol := u.cols[column].(driver.ColDef)
 	pkCols = append(pkCols, affectedCol)
 	parsedValue, err := u.parser(affectedCol, newValue)
