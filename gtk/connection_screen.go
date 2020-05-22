@@ -17,10 +17,67 @@ func (f *App) NewConnectionScreen() (*ConnectionScreen, error) {
 	return cs, cs.init()
 }
 
-type page struct {
+type ConnectionTab struct {
 	label   *gtk.Label
 	btn     *gtk.Button
 	content *gtk.Box
+	header  *gtk.Box
+}
+
+type ConnectionTabOpts struct {
+	Title    string
+	Content  gtk.IWidget
+	OnRemove func()
+}
+
+func NewConnectionTab(opts ConnectionTabOpts) (*ConnectionTab, error) {
+	var (
+		err error
+		c   = &ConnectionTab{}
+	)
+
+	c.content, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	c.content.PackStart(opts.Content, true, true, 0)
+	c.content.SetVExpand(true)
+	c.content.SetHExpand(true)
+	c.content.Show()
+
+	c.header, err = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	c.label, err = gtk.LabelNew(opts.Title)
+	if err != nil {
+		return nil, err
+	}
+
+	image, err := gtk.ImageNewFromIconName("window-close", gtk.ICON_SIZE_MENU)
+	if err != nil {
+		return nil, err
+	}
+
+	c.btn, err = gtk.ButtonNew()
+	if err != nil {
+		return nil, err
+	}
+
+	c.btn.SetImage(image)
+	c.btn.SetRelief(gtk.RELIEF_NONE)
+
+	c.header.PackStart(c.label, true, true, 0)
+	c.header.PackEnd(c.btn, false, false, 0)
+	c.header.ShowAll()
+
+	if opts.OnRemove != nil {
+		c.btn.Connect("clicked", opts.OnRemove)
+	}
+
+	return c, nil
 }
 
 type ConnectionScreen struct {
@@ -29,7 +86,6 @@ type ConnectionScreen struct {
 	tableFilter *gtk.SearchEntry
 	tableList   *List
 	tabber      *gtk.Notebook
-	pages       []*page
 
 	databaseNames []string
 	dbStore       *gtk.ListStore
@@ -156,76 +212,35 @@ func (c *ConnectionScreen) init() error {
 	return nil
 }
 
-func (c *ConnectionScreen) AddTab(title string, content gtk.IWidget, switchNow bool) error {
-	box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
-	if err != nil {
-		return err
-	}
-	box.PackStart(content, true, true, 0)
-	box.SetVExpand(true)
-	box.SetHExpand(true)
-	box.Show()
+func (c *ConnectionScreen) AddTab(tab *ConnectionTab, switchNow bool) error {
+	c.tabber.AppendPage(tab.content, tab.header)
+	c.tabber.SetTabReorderable(tab.content, true)
 
-	page := &page{content: box}
-
-	header, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
-	if err != nil {
-		return err
-	}
-
-	page.label, err = gtk.LabelNew(title)
-	if err != nil {
-		return err
-	}
-
-	image, err := gtk.ImageNewFromIconName("window-close", gtk.ICON_SIZE_MENU)
-	if err != nil {
-		return err
-	}
-
-	page.btn, err = gtk.ButtonNew()
-	if err != nil {
-		return err
-	}
-
-	page.btn.SetImage(image)
-	page.btn.SetRelief(gtk.RELIEF_NONE)
-
-	header.PackStart(page.label, true, true, 0)
-	header.PackEnd(page.btn, false, false, 0)
-	header.ShowAll()
-
-	c.tabber.AppendPage(page.content, header)
-	c.tabber.SetTabReorderable(page.content, true)
-
-	page.btn.Connect("clicked", func() {
-		index := c.tabber.PageNum(page.content)
+	tab.btn.Connect("clicked", func() {
+		index := c.tabber.PageNum(tab.content)
 		if index == -1 {
 			return
 		}
 		c.tabber.RemovePage(index)
-		c.pages = append(c.pages[:index], c.pages[index+1:]...)
 	})
 
 	if switchNow {
 		c.tabber.SetCurrentPage(c.tabber.GetNPages() - 1)
 	}
 
-	c.pages = append(c.pages, page)
-
 	return nil
 }
 
 func (c *ConnectionScreen) UpdateOrAddTab(title string, content gtk.IWidget, switchNow bool) error {
-	if c.tabber.GetNPages() == 0 {
-		return c.AddTab(title, content, switchNow)
-	}
-	page := c.pages[c.tabber.GetCurrentPage()]
-	page.content.Container.GetChildren().FreeFull(func(item interface{}) {
-		c.pages[c.tabber.GetCurrentPage()].content.Remove(item.(gtk.IWidget))
-	})
-	page.content.PackStart(content, true, true, 0)
-	page.label.SetText(title)
+	//if c.tabber.GetNPages() == 0 {
+	//return c.AddTab(title, content, switchNow)
+	//}
+	//page := c.pages[c.tabber.GetCurrentPage()]
+	//page.content.Container.GetChildren().FreeFull(func(item interface{}) {
+	//c.pages[c.tabber.GetCurrentPage()].content.Remove(item.(gtk.IWidget))
+	//})
+	//page.content.PackStart(content, true, true, 0)
+	//page.label.SetText(title)
 
 	return nil
 }

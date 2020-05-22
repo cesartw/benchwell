@@ -35,6 +35,10 @@ func (c ConnectCtrl) Init(p *ConnectionTabCtrl) (*ConnectCtrl, error) {
 	return &c, nil
 }
 
+func (c *ConnectCtrl) AddEmptyTab() error {
+	return nil
+}
+
 func (c *ConnectCtrl) onTest() {
 	var conn *config.Connection
 	index := c.scr.ActiveConnectionIndex()
@@ -126,8 +130,4 @@ func (c *ConnectCtrl) Screen() interface{} {
 
 func (c *ConnectCtrl) Close() bool {
 	return false
-}
-
-func (c *ConnectCtrl) AddTab() error {
-	return nil
 }

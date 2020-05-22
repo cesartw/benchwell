@@ -5,7 +5,6 @@ import (
 	"bitbucket.org/goreorto/sqlaid/gtk"
 	"bitbucket.org/goreorto/sqlaid/sqlengine"
 	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
-	ggtk "github.com/gotk3/gotk3/gtk"
 )
 
 type ConnectionCtrl struct {
@@ -14,6 +13,8 @@ type ConnectionCtrl struct {
 	ctx  sqlengine.Context
 	scr  *gtk.ConnectionScreen
 	conn *config.Connection
+
+	tabs []*TableCtrl
 }
 
 func (c ConnectionCtrl) Init(
@@ -57,13 +58,40 @@ func (c *ConnectionCtrl) Close() bool {
 	return c.scr.Close()
 }
 
-func (c *ConnectionCtrl) AddTab() error {
-	tab, err := TableCtrl{}.init(c.ctx, c, driver.TableDef{})
+func (c *ConnectionCtrl) AddEmptyTab() error {
+	return c.AddTab(driver.TableDef{})
+}
+
+func (c *ConnectionCtrl) AddTab(tableDef driver.TableDef) error {
+	tab, err := TableCtrl{}.init(c.ctx, TableCtrlOpts{
+		Parent:       c,
+		TableDef:     tableDef,
+		OnTabRemoved: c.onTabRemove,
+	})
 	if err != nil {
 		return err
 	}
 
-	return c.scr.AddTab("New", tab.Screen().(ggtk.IWidget), true)
+	c.tabs = append(c.tabs, tab)
+	return c.scr.AddTab(tab.connectionTab, true)
+}
+
+func (c *ConnectionCtrl) onTabRemove(ctrl *TableCtrl) {
+	for i, tabCtrl := range c.tabs {
+		if tabCtrl == ctrl {
+			c.tabs = append(c.tabs[:i], c.tabs[i+1:]...)
+			break
+		}
+	}
+}
+
+func (c *ConnectionCtrl) UpdateOrAddTab(tableDef driver.TableDef) error {
+	tab, err := TableCtrl{}.init(c.ctx, TableCtrlOpts{Parent: c, TableDef: tableDef})
+	if err != nil {
+		return err
+	}
+
+	return c.scr.AddTab(tab.connectionTab, true)
 }
 
 func (c *ConnectionCtrl) onDatabaseSelected() {
@@ -94,14 +122,8 @@ func (c *ConnectionCtrl) onTableSelected() {
 		config.Env.Log.Debug("no table selected. odd!")
 		return
 	}
-	tab, err := TableCtrl{}.init(c.ctx, c, tableDef)
-	if err != nil {
-		config.Env.Log.Error(err)
-		return
-	}
 
-	c.scr.UpdateOrAddTab(tableDef.Name, tab.Screen().(ggtk.IWidget), true)
-	tab.OnConnect()
+	c.AddTab(tableDef)
 }
 
 func (c *ConnectionCtrl) Screen() interface{} {
@@ -128,12 +150,6 @@ func (c *ConnectionCtrl) onNewTabMenu() {
 		config.Env.Log.Debug("no table selected. odd!")
 		return
 	}
-	tab, err := TableCtrl{}.init(c.ctx, c, tableDef)
-	if err != nil {
-		config.Env.Log.Error(err)
-		return
-	}
 
-	c.scr.AddTab(tableDef.Name, tab.Screen().(ggtk.IWidget), true)
-	tab.OnConnect()
+	c.AddTab(tableDef)
 }

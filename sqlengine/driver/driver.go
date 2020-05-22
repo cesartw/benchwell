@@ -121,6 +121,13 @@ func (t TableDef) String() string {
 	return t.Name
 }
 
+func (t TableDef) IsZero() bool {
+	if strings.TrimSpace(t.Name) == "" {
+		return true
+	}
+	return false
+}
+
 func (t TableDefs) ToStringer() []fmt.Stringer {
 	s := make([]fmt.Stringer, len(t))
 	for i, def := range t {

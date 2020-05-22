@@ -15,15 +15,25 @@ type TableCtrl struct {
 	tableDef driver.TableDef
 
 	// ui
-	grid *gtk.ResultGrid
+	connectionTab *gtk.ConnectionTab
+	grid          *gtk.ResultGrid
 }
 
-func (tc TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableDef driver.TableDef) (*TableCtrl, error) {
+type TableCtrlOpts struct {
+	Parent       *ConnectionCtrl
+	TableDef     driver.TableDef
+	OnTabRemoved func(*TableCtrl)
+}
+
+func (tc TableCtrl) init(
+	ctx sqlengine.Context,
+	opts TableCtrlOpts,
+) (*TableCtrl, error) {
 	var err error
 
 	tc.ctx = ctx
-	tc.ConnectionCtrl = parent
-	tc.tableDef = tableDef
+	tc.ConnectionCtrl = opts.Parent
+	tc.tableDef = opts.TableDef
 
 	tc.grid, err = gtk.NewResultGrid(nil, nil,
 		func(col driver.ColDef, value string) (interface{}, error) {
@@ -147,6 +157,21 @@ func (tc TableCtrl) init(ctx sqlengine.Context, parent *ConnectionCtrl, tableDef
 		clipboard.Copy(sql)
 		config.Env.Log.Debugf("insert copied: %s", sql)
 	})
+
+	tc.connectionTab, err = gtk.NewConnectionTab(gtk.ConnectionTabOpts{
+		Title:   opts.TableDef.Name,
+		Content: tc.grid,
+		OnRemove: func() {
+			opts.OnTabRemoved(&tc)
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if !tc.tableDef.IsZero() {
+		tc.OnConnect()
+	}
 
 	return &tc, nil
 }

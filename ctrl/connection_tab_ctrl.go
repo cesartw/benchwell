@@ -19,7 +19,7 @@ type ConnectionTabCtrl struct {
 
 	currentCtrl interface {
 		Close() bool
-		AddTab() error
+		AddEmptyTab() error
 	}
 }
 
@@ -43,7 +43,7 @@ func (c ConnectionTabCtrl) Init(p *WindowCtrl) (*ConnectionTabCtrl, error) {
 }
 
 func (c *ConnectionTabCtrl) AddTab() error {
-	return c.currentCtrl.AddTab()
+	return c.currentCtrl.AddEmptyTab()
 }
 
 func (c *ConnectionTabCtrl) Show() {
