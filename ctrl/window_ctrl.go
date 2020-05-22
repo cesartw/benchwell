@@ -93,6 +93,7 @@ func (c *WindowCtrl) currentTab() *ConnectionTabCtrl {
 	return c.tabs[c.window.CurrentPage()]
 }
 
+// TODO: not used
 func (c *WindowCtrl) onNotebookDoubleClick(_ *ggtk.ListBox, e *gdk.Event) {
 	keyEvent := gdk.EventButtonNewFromEvent(e)
 

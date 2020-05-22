@@ -80,6 +80,10 @@ func NewConnectionTab(opts ConnectionTabOpts) (*ConnectionTab, error) {
 	return c, nil
 }
 
+func (c *ConnectionTab) SetTitle(title string) {
+	c.label.SetText(title)
+}
+
 type ConnectionScreen struct {
 	*gtk.Paned
 	dbCombo     *gtk.ComboBox
@@ -212,6 +216,10 @@ func (c *ConnectionScreen) init() error {
 	return nil
 }
 
+func (c *ConnectionScreen) CurrentTabIndex() int {
+	return c.tabber.GetCurrentPage()
+}
+
 func (c *ConnectionScreen) AddTab(tab *ConnectionTab, switchNow bool) error {
 	c.tabber.AppendPage(tab.content, tab.header)
 	c.tabber.SetTabReorderable(tab.content, true)
@@ -227,20 +235,6 @@ func (c *ConnectionScreen) AddTab(tab *ConnectionTab, switchNow bool) error {
 	if switchNow {
 		c.tabber.SetCurrentPage(c.tabber.GetNPages() - 1)
 	}
-
-	return nil
-}
-
-func (c *ConnectionScreen) UpdateOrAddTab(title string, content gtk.IWidget, switchNow bool) error {
-	//if c.tabber.GetNPages() == 0 {
-	//return c.AddTab(title, content, switchNow)
-	//}
-	//page := c.pages[c.tabber.GetCurrentPage()]
-	//page.content.Container.GetChildren().FreeFull(func(item interface{}) {
-	//c.pages[c.tabber.GetCurrentPage()].content.Remove(item.(gtk.IWidget))
-	//})
-	//page.content.PackStart(content, true, true, 0)
-	//page.label.SetText(title)
 
 	return nil
 }

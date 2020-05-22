@@ -86,12 +86,12 @@ func (c *ConnectionCtrl) onTabRemove(ctrl *TableCtrl) {
 }
 
 func (c *ConnectionCtrl) UpdateOrAddTab(tableDef driver.TableDef) error {
-	tab, err := TableCtrl{}.init(c.ctx, TableCtrlOpts{Parent: c, TableDef: tableDef})
-	if err != nil {
-		return err
+	if len(c.tabs) > 0 {
+		c.tabs[c.scr.CurrentTabIndex()].SetTableDef(tableDef)
+		return nil
 	}
 
-	return c.scr.AddTab(tab.connectionTab, true)
+	return c.AddTab(tableDef)
 }
 
 func (c *ConnectionCtrl) onDatabaseSelected() {
@@ -123,7 +123,7 @@ func (c *ConnectionCtrl) onTableSelected() {
 		return
 	}
 
-	c.AddTab(tableDef)
+	c.UpdateOrAddTab(tableDef)
 }
 
 func (c *ConnectionCtrl) Screen() interface{} {

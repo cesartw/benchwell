@@ -231,6 +231,12 @@ func (tc *TableCtrl) OnRefresh() {
 	}
 }
 
+func (tc *TableCtrl) SetTableDef(tableDef driver.TableDef) {
+	tc.tableDef = tableDef
+	tc.connectionTab.SetTitle(tableDef.Name)
+	tc.OnConnect()
+}
+
 /*
 func (tc *TableCtrl) parseQuery(src string) (dml []string, ddl []string) {
 	p := parser.New()
@@ -255,7 +261,3 @@ func (tc *TableCtrl) parseQuery(src string) (dml []string, ddl []string) {
 	return
 }
 */
-
-func (tc *TableCtrl) Screen() interface{} {
-	return tc.grid
-}
