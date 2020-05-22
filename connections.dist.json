@@ -1,0 +1,30 @@
+{
+  "connections": [
+    {
+      "Adapter": "",
+      "Database": "demo",
+      "Encrypted": true,
+      "Host": "localhost",
+      "Name": "my connection",
+      "Options": "",
+      "Password": "/org/freedesktop/secrets/collection/Default_5fkeyring/16",
+      "Port": 3306,
+      "Type": "",
+      "User": "root"
+    }
+  ],
+  "gui": {
+    "editor": {
+      "word_wrap": "word",
+      "wordwrap": "word"
+    },
+    "page_size": 100,
+    "pagesize": 100,
+    "sub_tab_position": "top",
+    "subtabposition": "top",
+    "tab_position": "top",
+    "tabposition": "top"
+  },
+  "logfile": "log.txt",
+  "verbose": true
+}
