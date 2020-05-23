@@ -8,7 +8,7 @@ import (
 )
 
 type ConnectionCtrl struct {
-	*ConnectionTabCtrl
+	*WindowTabCtrl
 
 	ctx  sqlengine.Context
 	scr  *gtk.ConnectionScreen
@@ -19,10 +19,10 @@ type ConnectionCtrl struct {
 
 func (c ConnectionCtrl) Init(
 	ctx sqlengine.Context,
-	p *ConnectionTabCtrl,
+	p *WindowTabCtrl,
 	conn *config.Connection,
 ) (*ConnectionCtrl, error) {
-	c.ConnectionTabCtrl = p
+	c.WindowTabCtrl = p
 	c.ctx = ctx
 	c.conn = conn
 

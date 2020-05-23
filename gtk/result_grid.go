@@ -384,7 +384,7 @@ func (v *ResultGrid) onTextViewKeyRelease(_ *gtk.TextView, e *gdk.Event) {
 func (v *ResultGrid) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) bool {
 	keyEvent := gdk.EventKeyNewFromEvent(e)
 
-	if keyEvent.KeyVal() == gdk.KEY_Return && keyEvent.State()&gdk.GDK_CONTROL_MASK > 0 {
+	if keyEvent.KeyVal() == gdk.KEY_Return && keyEvent.State()&gdk.CONTROL_MASK > 0 {
 		buff, err := v.textView.GetBuffer()
 		if err != nil {
 			config.Env.Log.Error(err)

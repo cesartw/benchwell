@@ -28,6 +28,7 @@ func (w Window) Init(app *gtk.Application) (*Window, error) {
 	var err error
 	w.ApplicationWindow, err = gtk.ApplicationWindowNew(app)
 	w.SetTitle("SQLaid")
+	w.SetSizeRequest(1024, 768)
 
 	w.nb, err = gtk.NotebookNew()
 	if err != nil {

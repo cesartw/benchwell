@@ -22,6 +22,8 @@ type ConnectionTab struct {
 	btn     *gtk.Button
 	content *gtk.Box
 	header  *gtk.Box
+
+	index int
 }
 
 type ConnectionTabOpts struct {
@@ -90,6 +92,7 @@ type ConnectionScreen struct {
 	tableFilter *gtk.SearchEntry
 	tableList   *List
 	tabber      *gtk.Notebook
+	tabs        []*ConnectionTab
 
 	databaseNames []string
 	dbStore       *gtk.ListStore
@@ -102,6 +105,9 @@ type ConnectionScreen struct {
 	schemaMenu   *gtk.MenuItem
 	truncateMenu *gtk.MenuItem
 	deleteMenu   *gtk.MenuItem
+
+	// tab switching
+	tabIndex int
 }
 
 func (c *ConnectionScreen) init() error {
@@ -195,6 +201,16 @@ func (c *ConnectionScreen) init() error {
 	//c.tabber.SetProperty("tab-pos", gtk.POS_BOTTOM)
 	c.tabber.SetProperty("scrollable", true)
 	c.tabber.SetProperty("enable-popup", true)
+	c.tabber.Connect("switch-page", func(_ *gtk.Notebook, _ *gtk.Widget, i int) {
+		c.tabIndex = i
+	})
+
+	c.tabber.Connect("page-reordered", func(_ *gtk.Notebook, _ *gtk.Widget, i int) {
+		t := c.tabs[i]
+
+		c.tabs[i] = c.tabs[c.tabIndex]
+		c.tabs[c.tabIndex] = t
+	})
 
 	mainSection.Add(c.tabber)
 	mainSection.SetVExpand(true)
@@ -229,12 +245,18 @@ func (c *ConnectionScreen) AddTab(tab *ConnectionTab, switchNow bool) error {
 		if index == -1 {
 			return
 		}
+
 		c.tabber.RemovePage(index)
+		c.tabs = append(c.tabs[:index], c.tabs[index+1:]...)
 	})
 
 	if switchNow {
 		c.tabber.SetCurrentPage(c.tabber.GetNPages() - 1)
 	}
+
+	c.tabs = append(c.tabs, tab)
+
+	tab.index = c.tabber.PageNum(tab.content)
 
 	return nil
 }
@@ -244,7 +266,7 @@ func (c *ConnectionScreen) Close() bool {
 		return false
 	}
 
-	c.tabber.RemovePage(c.tabber.GetCurrentPage())
+	c.tabs[c.tabber.GetCurrentPage()].btn.Emit("clicked")
 	return true
 }
 

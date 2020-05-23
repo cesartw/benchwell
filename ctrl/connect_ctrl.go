@@ -9,12 +9,12 @@ import (
 )
 
 type ConnectCtrl struct {
-	*ConnectionTabCtrl
+	*WindowTabCtrl
 	scr *gtk.ConnectScreen
 }
 
-func (c ConnectCtrl) Init(p *ConnectionTabCtrl) (*ConnectCtrl, error) {
-	c.ConnectionTabCtrl = p
+func (c ConnectCtrl) Init(p *WindowTabCtrl) (*ConnectCtrl, error) {
+	c.WindowTabCtrl = p
 
 	var err error
 	c.scr, err = gtk.NewConnectScreen()

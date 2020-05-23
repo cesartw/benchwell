@@ -10,7 +10,7 @@ import (
 	ggtk "github.com/gotk3/gotk3/gtk"
 )
 
-type ConnectionTabCtrl struct {
+type WindowTabCtrl struct {
 	*WindowCtrl
 	tab            *gtk.Tab
 	tabLabel       *ggtk.Label
@@ -23,7 +23,7 @@ type ConnectionTabCtrl struct {
 	}
 }
 
-func (c ConnectionTabCtrl) Init(p *WindowCtrl) (*ConnectionTabCtrl, error) {
+func (c WindowTabCtrl) Init(p *WindowCtrl) (*WindowTabCtrl, error) {
 	var err error
 	c.WindowCtrl = p
 
@@ -42,15 +42,15 @@ func (c ConnectionTabCtrl) Init(p *WindowCtrl) (*ConnectionTabCtrl, error) {
 	return &c, nil
 }
 
-func (c *ConnectionTabCtrl) AddTab() error {
+func (c *WindowTabCtrl) AddTab() error {
 	return c.currentCtrl.AddEmptyTab()
 }
 
-func (c *ConnectionTabCtrl) Show() {
+func (c *WindowTabCtrl) Show() {
 	c.tab.Show()
 }
 
-func (c *ConnectionTabCtrl) Removed() {
+func (c *WindowTabCtrl) Removed() {
 	if c.connectionCtrl != nil {
 		c.engine.Disconnect(c.connectionCtrl.ctx)
 		c.window.PushStatus("Disconnected")
@@ -58,12 +58,12 @@ func (c *ConnectionTabCtrl) Removed() {
 }
 
 // Close delegates the close tab action ot connect or connection screen
-func (c *ConnectionTabCtrl) Close() bool {
+func (c *WindowTabCtrl) Close() bool {
 	// TODO: figure out which screen is open
 	return c.currentCtrl.Close()
 }
 
-func (c *ConnectionTabCtrl) launchConnect() {
+func (c *WindowTabCtrl) launchConnect() {
 	var err error
 	c.connectCtrl, err = ConnectCtrl{}.Init(c)
 	if err != nil {
@@ -80,7 +80,7 @@ func (c *ConnectionTabCtrl) launchConnect() {
 	c.tab.PackStart(c.connectCtrl.scr, true, true, 0)
 }
 
-func (c *ConnectionTabCtrl) launchConnection(ctx sqlengine.Context, conn *config.Connection) {
+func (c *WindowTabCtrl) launchConnection(ctx sqlengine.Context, conn *config.Connection) {
 	var err error
 	c.connectionCtrl, err = ConnectionCtrl{}.Init(ctx, c, conn)
 	if err != nil {
@@ -103,7 +103,7 @@ func (c *ConnectionTabCtrl) launchConnection(ctx sqlengine.Context, conn *config
 	c.tab.PackStart(c.connectionCtrl.scr, true, true, 0)
 }
 
-func (c *ConnectionTabCtrl) onConnect() {
+func (c *WindowTabCtrl) onConnect() {
 	var conn *config.Connection
 	index := c.connectCtrl.scr.ActiveConnectionIndex()
 	if index == -1 {

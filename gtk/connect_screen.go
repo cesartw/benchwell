@@ -289,7 +289,7 @@ func (c *ConnectScreen) forms() (*gtk.Box, error) {
 			c.btnSave.SetSensitive(true)
 
 			keyEvent := gdk.EventKeyNewFromEvent(e)
-			if keyEvent.KeyVal() == 65293 && keyEvent.State()&gdk.GDK_CONTROL_MASK > 0 {
+			if keyEvent.KeyVal() == 65293 && keyEvent.State()&gdk.CONTROL_MASK > 0 {
 				c.btnConnect.Emit("activate")
 				return false
 			}
