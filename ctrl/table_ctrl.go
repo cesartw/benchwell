@@ -115,6 +115,7 @@ func (tc TableCtrl) init(
 
 		if newRecord {
 			tc.grid.RemoveSelected()
+			tc.window.PushStatus("Record removed")
 		} else {
 			cols, values, err := tc.grid.GetRowID()
 			if err != nil {
@@ -124,7 +125,9 @@ func (tc TableCtrl) init(
 
 			tc.engine.DeleteRecord(tc.ctx, tc.tableDef.Name, cols, values)
 			tc.grid.RemoveSelected()
+			tc.window.PushStatus("Record deleted")
 		}
+
 	}).OnCreate(func() {
 		newRecord, err := tc.grid.SelectedIsNewRecord()
 		if err != nil {
@@ -141,13 +144,17 @@ func (tc TableCtrl) init(
 
 		values, err = tc.engine.InsertRecord(tc.ctx, tc.tableDef.Name, cols, values)
 		if err != nil {
+			tc.window.PushStatus(err.Error())
 			return
 		}
 
 		err = tc.grid.UpdateRow(values)
 		if err != nil {
+			tc.window.PushStatus(err.Error())
 			return
 		}
+
+		tc.window.PushStatus("Record saved")
 	}).OnCopyInsert(func(cols []driver.ColDef, values []interface{}) {
 		sql, err := tc.engine.GetInsertStatement(tc.ctx, tc.tableDef.Name, cols, values)
 		if err != nil {
@@ -229,6 +236,8 @@ func (tc *TableCtrl) OnRefresh() {
 	if err != nil {
 		config.Env.Log.Error(err)
 	}
+
+	tc.window.PushStatus("Table reloaded")
 }
 
 func (tc *TableCtrl) SetTableDef(tableDef driver.TableDef) {

@@ -3,6 +3,7 @@ package gtk
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"bitbucket.org/goreorto/sqlaid/config"
 	"github.com/gotk3/gotk3/glib"
@@ -118,7 +119,8 @@ func (w *Window) Remove(wd gtk.IWidget) {
 }
 
 func (w Window) PushStatus(format string, args ...interface{}) {
-	w.statusBar.Push(w.statusBarID, fmt.Sprintf(format, args...))
+	args = append(args, time.Now().Format("2006-01-02 15:04:05"))
+	w.statusBar.Push(w.statusBarID, fmt.Sprintf("[%s] "+format, args...))
 }
 
 func (w *Window) OnPageRemoved(f interface{}) {

@@ -620,7 +620,7 @@ func (d *mysqlDb) InsertRecord(
 	args := make([]interface{}, len(cols))
 	for i := range cols {
 		collist[i] = cols[i].Name
-		args[i] = values[i]
+		args[i] = d.ParseValue(cols[i], values[i].(string))
 		qm[i] = "?"
 	}
 
