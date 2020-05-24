@@ -119,7 +119,7 @@ func (w *Window) Remove(wd gtk.IWidget) {
 }
 
 func (w Window) PushStatus(format string, args ...interface{}) {
-	args = append(args, time.Now().Format("2006-01-02 15:04:05"))
+	args = append([]interface{}{time.Now().Format("2006-01-02 15:04:05")}, args...)
 	w.statusBar.Push(w.statusBarID, fmt.Sprintf("[%s] "+format, args...))
 }
 
@@ -158,12 +158,14 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 	w.AddAction(w.Menu.NewTab)
 	w.AddAction(w.Menu.NewSubTab)
 	w.AddAction(w.Menu.CloseTab)
+	w.AddAction(w.Menu.CloseTab)
 
 	menu.Append("Open window", "app.new")
 	menu.Append("+ Connection Tab", "win.new")
 	menu.Append("+ Table Tab", "win.tabnew")
 	menu.Append("- Table Tab", "win.close")
 	menu.Append("Preferences", "app.preferences")
+	menu.Append("Dark toggle", "app.darkmode")
 
 	mbtn.SetMenuModel(&menu.MenuModel)
 

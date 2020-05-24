@@ -72,6 +72,10 @@ func (c *ConnectionCtrl) AddTab(tableDef driver.TableDef) error {
 		return err
 	}
 
+	if tableDef.IsZero() {
+		tab.connectionTab.SetTitle("New")
+	}
+
 	c.tabs = append(c.tabs, tab)
 	return c.scr.AddTab(tab.connectionTab, true)
 }

@@ -15,8 +15,7 @@
   ],
   "gui": {
     "editor": {
-      "word_wrap": "word",
-      "wordwrap": "word"
+      "word_wrap": "word"
     },
     "page_size": 100,
     "pagesize": 100,

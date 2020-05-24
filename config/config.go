@@ -34,7 +34,8 @@ type Config struct {
 		Editor         struct {
 			WordWrap string `mapstructure:"word_wrap"`
 		}
-		PageSize int `mapstructure:"page_size"`
+		PageSize int  `mapstructure:"page_size"`
+		DarkMode bool `mapstructure:"page_size"`
 	}
 
 	Log *logrus.Logger `json:"-"`

@@ -55,18 +55,21 @@ func (c AppCtrl) Init(opts Options) (*AppCtrl, error) {
 func (c *AppCtrl) OnActivate() {
 	err := c.CreateWindow()
 	if err != nil {
-		config.Env.Log.Error(err)
-		return
+		panic(err)
 	}
 
 	c.app.Menu.Application.NewWindow.Connect("activate", func() {
 		err := c.CreateWindow()
 		if err != nil {
-			config.Env.Log.Error(err)
+			panic(err)
 		}
 	})
 	c.app.Menu.Application.Preferences.Connect("activate", func() {
 		config.Env.Log.Print("launch preferences modal")
+	})
+
+	c.app.Menu.Application.DarkMode.Connect("activate", func() {
+		c.app.ToggleMode()
 	})
 
 	// TODO: every double click is triggering this handler

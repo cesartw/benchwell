@@ -24,3 +24,5 @@ require (
 	golang.org/x/text v0.3.2 // indirect
 	gopkg.in/ini.v1 v1.52.0 // indirect
 )
+
+//replace github.com/gotk3/gotk3 v0.4.1-0.20200508185535-d1638cba009b => /home/goreorto/gopath/src/github.com/gotk3/gotk3
