@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 
+	"bitbucket.org/goreorto/sqlaid/assets"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -33,6 +34,80 @@ type Config struct {
 		SubTabPosition string `mapstructure:"sub_tab_position"`
 		Editor         struct {
 			WordWrap string `mapstructure:"word_wrap"`
+			Theme    struct {
+				Comment                  string `mapstructure:"comment"`
+				CommentHashbang          string `mapstructure:"commentHashbang"`
+				CommentMultiline         string `mapstructure:"commentMultiline"`
+				CommentPreproc           string `mapstructure:"commentPreproc"`
+				CommentSingle            string `mapstructure:"commentSingle"`
+				CommentSpecial           string `mapstructure:"commentSpecial"`
+				Generic                  string `mapstructure:"generic"`
+				GenericDeleted           string `mapstructure:"genericDeleted"`
+				GenericEmph              string `mapstructure:"genericEmph"`
+				GenericError             string `mapstructure:"genericError"`
+				GenericHeading           string `mapstructure:"genericHeading"`
+				GenericInserted          string `mapstructure:"genericInserted"`
+				GenericOutput            string `mapstructure:"genericOutput"`
+				GenericPrompt            string `mapstructure:"genericPrompt"`
+				GenericStrong            string `mapstructure:"genericStrong"`
+				GenericSubheading        string `mapstructure:"genericSubheading"`
+				GenericTraceback         string `mapstructure:"genericTraceback"`
+				GenericUnderline         string `mapstructure:"genericUnderline"`
+				Error                    string `mapstructure:"error"`
+				Keyword                  string `mapstructure:"keyword"`
+				KeywordConstant          string `mapstructure:"keywordConstant"`
+				KeywordDeclaration       string `mapstructure:"keywordDeclaration"`
+				KeywordNamespace         string `mapstructure:"keywordNamespace"`
+				KeywordPseudo            string `mapstructure:"keywordPseudo"`
+				KeywordReserved          string `mapstructure:"keywordReserved"`
+				KeywordType              string `mapstructure:"keywordType"`
+				Literal                  string `mapstructure:"literal"`
+				LiteralDate              string `mapstructure:"literalDate"`
+				Name                     string `mapstructure:"name"`
+				NameAttribute            string `mapstructure:"nameAttribute"`
+				NameBuiltin              string `mapstructure:"nameBuiltin"`
+				NameBuiltinPseudo        string `mapstructure:"nameBuiltinPseudo"`
+				NameClass                string `mapstructure:"nameClass"`
+				NameConstant             string `mapstructure:"nameConstant"`
+				NameDecorator            string `mapstructure:"nameDecorator"`
+				NameEntity               string `mapstructure:"nameEntity"`
+				NameException            string `mapstructure:"nameException"`
+				NameFunction             string `mapstructure:"nameFunction"`
+				NameLabel                string `mapstructure:"nameLabel"`
+				NameNamespace            string `mapstructure:"nameNamespace"`
+				NameOther                string `mapstructure:"nameOther"`
+				NameTag                  string `mapstructure:"nameTag"`
+				NameVariable             string `mapstructure:"nameVariable"`
+				NameVariableClass        string `mapstructure:"nameVariableClass"`
+				NameVariableGlobal       string `mapstructure:"nameVariableGlobal"`
+				NameVariableInstance     string `mapstructure:"nameVariableInstance"`
+				LiteralNumber            string `mapstructure:"literalNumber"`
+				LiteralNumberBin         string `mapstructure:"literalNumberBin"`
+				LiteralNumberFloat       string `mapstructure:"literalNumberFloat"`
+				LiteralNumberHex         string `mapstructure:"literalNumberHex"`
+				LiteralNumberInteger     string `mapstructure:"literalNumberInteger"`
+				LiteralNumberIntegerLong string `mapstructure:"literalNumberIntegerLong"`
+				LiteralNumberOct         string `mapstructure:"literalNumberOct"`
+				Operator                 string `mapstructure:"operator"`
+				OperatorWord             string `mapstructure:"operatorWord"`
+				Other                    string `mapstructure:"other"`
+				Punctuation              string `mapstructure:"punctuation"`
+				LiteralString            string `mapstructure:"literalString"`
+				LiteralStringBacktick    string `mapstructure:"literalStringBacktick"`
+				LiteralStringChar        string `mapstructure:"literalStringChar"`
+				LiteralStringDoc         string `mapstructure:"literalStringDoc"`
+				LiteralStringDouble      string `mapstructure:"literalStringDouble"`
+				LiteralStringEscape      string `mapstructure:"literalStringEscape"`
+				LiteralStringHeredoc     string `mapstructure:"literalStringHeredoc"`
+				LiteralStringInterpol    string `mapstructure:"literalStringInterpol"`
+				LiteralStringOther       string `mapstructure:"literalStringOther"`
+				LiteralStringRegex       string `mapstructure:"literalStringRegex"`
+				LiteralStringSingle      string `mapstructure:"literalStringSingle"`
+				LiteralStringSymbol      string `mapstructure:"literalStringSymbol"`
+				Text                     string `mapstructure:"text"`
+				TextWhitespace           string `mapstructure:"textWhitespace"`
+				Background               string `mapstructure:"background"`
+			} `mapstructure:"theme"`
 		}
 		PageSize int  `mapstructure:"page_size"`
 		DarkMode bool `mapstructure:"page_size"`
@@ -128,6 +203,15 @@ func (c *Config) Save() error {
 	}
 
 	return viper.WriteConfig()
+}
+
+func (c *Config) CSS() string {
+	return string(assets.BRAND) + `
+	* {
+		font-size: 20px;
+		font-family: JetBrainsMono Nerd Font;
+	}
+	`
 }
 
 func (c *Connection) Encrypt() error {

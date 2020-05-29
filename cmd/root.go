@@ -140,6 +140,8 @@ func initConfig() {
 
 	viper.Unmarshal(config.Env)
 	config.Env.Version = version
+
+	config.RegisterStyle()
 }
 
 func Execute() {

@@ -1,4 +1,6 @@
-/*************************** Check and Radio buttons * */
+package assets
+
+const THEME_DARK = `/*************************** Check and Radio buttons * */
 * { padding: 0; -GtkToolButton-icon-spacing: 4; -GtkTextView-error-underline-color: #cc0000; -GtkScrolledWindow-scrollbar-spacing: 0; -GtkToolItemGroup-expander-size: 11; -GtkWidget-text-handle-width: 20; -GtkWidget-text-handle-height: 24; -GtkDialog-button-spacing: 4; -GtkDialog-action-area-border: 0; outline-color: alpha(currentColor,0.3); outline-style: dashed; outline-offset: -3px; outline-width: 1px; -gtk-outline-radius: 3px; -gtk-secondary-caret-color: #8a0517; }
 
 /*************** Base States * */
@@ -2024,3 +2026,4 @@ read if you used those and something break with a version upgrade you're on your
 @define-color wm_button_active_color_b shade(#353535, 0.89);
 @define-color wm_button_active_color_c shade(#353535, 0.9);
 @define-color content_view_bg #2d2d2d;
+`

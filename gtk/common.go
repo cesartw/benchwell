@@ -73,7 +73,7 @@ func ChromaHighlight(inputString string) (out string, err error) {
 	writer := bufio.NewWriter(buff)
 
 	// Doing the job (io.Writer, SourceText, language(go), Lexer(pango), style(pygments))
-	if err = quick.Highlight(writer, inputString, "sql", "pango", "pygments"); err != nil {
+	if err = quick.Highlight(writer, inputString, "sql", "pango", "sqlaid-dark"); err != nil {
 		return
 	}
 	writer.Flush()

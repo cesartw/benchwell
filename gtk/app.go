@@ -1,6 +1,7 @@
 package gtk
 
 import (
+	"bitbucket.org/goreorto/sqlaid/assets"
 	"bitbucket.org/goreorto/sqlaid/config"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
@@ -40,6 +41,7 @@ func New(appid string) (*App, error) {
 		f.AddAction(f.Menu.Application.Preferences)
 		f.AddAction(f.Menu.Application.DarkMode)
 		f.SetTheme()
+		f.loadSettingsCSS()
 	})
 
 	//f.Application.SetAccelsForAction("app.new", []string{"<control>N"})
@@ -59,12 +61,11 @@ func (a *App) ToggleMode() {
 }
 
 func (a *App) SetTheme() {
-	stylePath := "Adwaita/gtk-contained"
-	if a.DarkMode {
-		stylePath = stylePath + "-dark"
+	stylePath := assets.THEME_DARK + assets.BRAND_DARK
+	if !a.DarkMode {
+		stylePath = assets.THEME_LIGHT
 	}
-
-	a.loadCSS(stylePath + ".css")
+	a.loadCSS(stylePath)
 }
 
 func (a *App) loadCSS(path string) {
@@ -73,10 +74,29 @@ func (a *App) loadCSS(path string) {
 		panic(err)
 	}
 
+	err = css.LoadFromData(path)
+	if err != nil {
+		panic(err)
+	}
+
+	screen, err := gdk.ScreenGetDefault()
+	if err != nil {
+		panic(err)
+	}
+
+	gtk.AddProviderForScreen(screen, css, gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+}
+
+func (a *App) loadSettingsCSS() {
+	css, err := gtk.CssProviderNew()
+	if err != nil {
+		panic(err)
+	}
+
 	// TODO: works, need to check vendoring
 	//css.LoadFromResource("/org/gtk/libgtk/theme/Adwaita/gtk-contained-dark.css")
 
-	err = css.LoadFromPath(path)
+	err = css.LoadFromData(config.Env.CSS())
 	if err != nil {
 		panic(err)
 	}

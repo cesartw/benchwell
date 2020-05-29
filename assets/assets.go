@@ -1,3 +1,7 @@
+//go:generate go run ../main.go assets -t const -n THEME_LIGHT Adwaita/gtk-contained.css:assets/theme_light.go
+//go:generate go run ../main.go assets -t const -n THEME_DARK Adwaita/gtk-contained-dark.css:assets/theme_dark.go
+//go:generate go run ../main.go assets -t const -n BRAND assets/brand-base.css:assets/brand.go
+//go:generate go run ../main.go assets -t const -n BRAND_DARK assets/brand-dark.css:assets/brand_dark.go
 package assets
 
 import (
