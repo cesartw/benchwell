@@ -10,9 +10,13 @@ import (
 type ConnectionCtrl struct {
 	*WindowTabCtrl
 
-	ctx  sqlengine.Context
-	scr  *gtk.ConnectionScreen
-	conn *config.Connection
+	// db-less connection
+	mainCtx sqlengine.Context
+
+	dbCtx  map[string]sqlengine.Context
+	scr    *gtk.ConnectionScreen
+	conn   *config.Connection
+	dbName string
 
 	tabs []*TableCtrl
 }
@@ -22,11 +26,12 @@ func (c ConnectionCtrl) Init(
 	p *WindowTabCtrl,
 	conn *config.Connection,
 ) (*ConnectionCtrl, error) {
+	c.dbCtx = map[string]sqlengine.Context{}
 	c.WindowTabCtrl = p
-	c.ctx = ctx
+	c.mainCtx = ctx
 	c.conn = conn
 
-	dbNames, err := c.engine.Databases(c.ctx)
+	dbNames, err := c.engine.Databases(c.mainCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +50,6 @@ func (c ConnectionCtrl) Init(
 
 	if c.conn.Database != "" {
 		c.scr.SetActiveDatabase(c.conn.Database)
-		c.onDatabaseSelected()
 	}
 
 	c.scr.OnSchemaMenu(c.onSchemaMenu)
@@ -63,7 +67,7 @@ func (c *ConnectionCtrl) AddEmptyTab() error {
 }
 
 func (c *ConnectionCtrl) AddTab(tableDef driver.TableDef) error {
-	tab, err := TableCtrl{}.init(c.ctx, TableCtrlOpts{
+	tab, err := TableCtrl{}.init(c.dbCtx[c.dbName], TableCtrlOpts{
 		Parent:       c,
 		TableDef:     tableDef,
 		OnTabRemoved: c.onTabRemove,
@@ -81,6 +85,8 @@ func (c *ConnectionCtrl) AddTab(tableDef driver.TableDef) error {
 }
 
 func (c *ConnectionCtrl) onTabRemove(ctrl *TableCtrl) {
+	defer c.disconnect()
+
 	for i, tabCtrl := range c.tabs {
 		if tabCtrl == ctrl {
 			c.tabs = append(c.tabs[:i], c.tabs[i+1:]...)
@@ -90,12 +96,12 @@ func (c *ConnectionCtrl) onTabRemove(ctrl *TableCtrl) {
 }
 
 func (c *ConnectionCtrl) UpdateOrAddTab(tableDef driver.TableDef) error {
-	if len(c.tabs) > 0 {
-		c.tabs[c.scr.CurrentTabIndex()].SetTableDef(tableDef)
-		return nil
+	if len(c.tabs) == 0 || c.tabs[c.scr.CurrentTabIndex()].ctx != c.dbCtx[c.dbName] {
+		return c.AddTab(tableDef)
 	}
 
-	return c.AddTab(tableDef)
+	c.tabs[c.scr.CurrentTabIndex()].SetTableDef(c.dbCtx[c.dbName], tableDef)
+	return nil
 }
 
 func (c *ConnectionCtrl) onDatabaseSelected() {
@@ -105,22 +111,28 @@ func (c *ConnectionCtrl) onDatabaseSelected() {
 		c.window.PushStatus("Database `%s` not found", c.conn.Database)
 		return
 	}
-	c.ctx, err = c.engine.UseDatabase(c.ctx, dbName)
-	if err != nil {
-		c.window.PushStatus("Error selecting database: `%s`", err.Error())
-		return
+
+	if c.dbCtx[dbName] == nil {
+		c.dbCtx[dbName], err = c.engine.UseDatabase(c.mainCtx, dbName)
+		if err != nil {
+			c.window.PushStatus("Error selecting database: `%s`", err.Error())
+			return
+		}
 	}
 
-	tables, err := c.engine.Tables(c.ctx)
+	tables, err := c.engine.Tables(c.dbCtx[dbName])
 	if err != nil {
 		c.window.PushStatus("Error getting tables: `%s`", err.Error())
 		return
 	}
 
 	c.scr.SetTables(tables)
+	c.dbName = dbName
 }
 
 func (c *ConnectionCtrl) onTableSelected() {
+	defer c.disconnect()
+
 	tableDef, ok := c.scr.ActiveTable()
 	if !ok {
 		config.Env.Log.Debug("no table selected. odd!")
@@ -140,7 +152,7 @@ func (c *ConnectionCtrl) onSchemaMenu() {
 		return
 	}
 
-	schema, err := c.engine.GetCreateTable(c.ctx, tableName)
+	schema, err := c.engine.GetCreateTable(c.dbCtx[c.dbName], tableName)
 	if err != nil {
 		config.Env.Log.Error(err, "getting table schema")
 	}
@@ -156,4 +168,27 @@ func (c *ConnectionCtrl) onNewTabMenu() {
 	}
 
 	c.AddTab(tableDef)
+}
+
+func (c *ConnectionCtrl) disconnect() {
+	if len(c.tabs) == 0 {
+		return
+	}
+NEXT:
+	for dbName, ctx := range c.dbCtx {
+		for _, tab := range c.tabs {
+			if tab.ctx == ctx {
+				continue NEXT
+			}
+		}
+
+		// db dropdown is showing the tables
+		selectedDB, _ := c.scr.ActiveDatabase()
+		if dbName == selectedDB {
+			continue
+		}
+
+		c.engine.Disconnect(ctx)
+		delete(c.dbCtx, dbName)
+	}
 }

@@ -610,6 +610,7 @@ func (u *Result) createColumn(title string, id int) (*gtk.TreeViewColumn, error)
 	}
 	cellRenderer.SetProperty("editable", true)
 	cellRenderer.SetProperty("xpad", 10)
+	cellRenderer.SetProperty("height", 30)
 	cellRenderer.Connect("edited", u.onEdited, id)
 
 	// i think "text" refers to a property of the column.

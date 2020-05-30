@@ -1,6 +1,9 @@
 package ctrl
 
 import (
+	"context"
+	"fmt"
+
 	"bitbucket.org/goreorto/sqlaid/clipboard"
 	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/gtk"
@@ -166,7 +169,7 @@ func (tc TableCtrl) init(
 	})
 
 	tc.connectionTab, err = gtk.NewConnectionTab(gtk.ConnectionTabOpts{
-		Title:   opts.TableDef.Name,
+		Title:   fmt.Sprintf("%s.%s", tc.dbName, opts.TableDef.Name),
 		Content: tc.grid,
 		OnRemove: func() {
 			opts.OnTabRemoved(&tc)
@@ -240,9 +243,10 @@ func (tc *TableCtrl) OnRefresh() {
 	tc.window.PushStatus("Table reloaded")
 }
 
-func (tc *TableCtrl) SetTableDef(tableDef driver.TableDef) {
+func (tc *TableCtrl) SetTableDef(ctx context.Context, tableDef driver.TableDef) {
 	tc.tableDef = tableDef
-	tc.connectionTab.SetTitle(tableDef.Name)
+	tc.ctx = ctx
+	tc.connectionTab.SetTitle(fmt.Sprintf("%s.%s", tc.dbName, tableDef.Name))
 	tc.OnConnect()
 }
 

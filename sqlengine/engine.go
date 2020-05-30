@@ -365,3 +365,7 @@ func (e *Engine) database(ctx Context) driver.Database {
 
 	return db
 }
+
+func (e *Engine) Database(ctx Context) driver.Database {
+	return e.database(ctx)
+}

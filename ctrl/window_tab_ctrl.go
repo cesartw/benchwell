@@ -52,7 +52,7 @@ func (c *WindowTabCtrl) Show() {
 
 func (c *WindowTabCtrl) Removed() {
 	if c.connectionCtrl != nil {
-		c.engine.Disconnect(c.connectionCtrl.ctx)
+		c.engine.Disconnect(c.connectionCtrl.mainCtx)
 		c.window.PushStatus("Disconnected")
 	}
 }
