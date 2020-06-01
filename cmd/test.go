@@ -17,7 +17,7 @@ var testCmd = &cobra.Command{
 		//return err
 		//}
 
-		result, err := config.Keychain.Get("dev")
+		result, err := config.Keychain.Get(nil, "dev")
 		fmt.Println("======", result)
 		return err
 	},

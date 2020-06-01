@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"bitbucket.org/goreorto/sqlaid/assets"
@@ -105,7 +107,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "",
 		fmt.Sprintf("config file (default is %s/config.json)", xdgHome+"/sqlaid/config.json"))
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "verbose output")
-	rootCmd.PersistentFlags().StringP("logfile", "f", "log.txt", "log out file")
+	rootCmd.PersistentFlags().StringP("logfile", "f", "", "log out file")
 	viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
 	viper.BindPFlag("logfile", rootCmd.PersistentFlags().Lookup("logfile"))
 }
@@ -120,9 +122,17 @@ func initConfig() {
 
 	err := viper.ReadInConfig()
 	if err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		fmt.Println("Using config file: ", viper.ConfigFileUsed())
 	} else {
-		fmt.Println("Cannot load config file: ", err.Error())
+		err = ioutil.WriteFile(cfgFile, []byte(assets.DEFAULT_CONFIG), os.FileMode(0666))
+		if err != nil {
+			fmt.Println("Cannot write config file: ", err.Error())
+		}
+		err = viper.ReadInConfig()
+	}
+
+	if err != nil {
+		viper.ReadConfig(bytes.NewBuffer([]byte(assets.DEFAULT_CONFIG)))
 	}
 
 	if viper.GetBool("verbose") {
@@ -142,6 +152,7 @@ func initConfig() {
 	config.Env.Version = version
 
 	config.RegisterStyle()
+	config.InitKeyChain(config.ModeBUILTIN)
 }
 
 func Execute() {

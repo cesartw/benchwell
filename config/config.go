@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"os"
 
-	"bitbucket.org/goreorto/sqlaid/assets"
+	"github.com/gotk3/gotk3/gtk"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+
+	"bitbucket.org/goreorto/sqlaid/assets"
 )
 
 const AppID = "com.sqlaid"
@@ -27,7 +29,7 @@ var configPath = os.Getenv("HOME") + "/.config/sqlhero/config.toml"
 type Config struct {
 	Version string `json:"-"`
 
-	Connections []*Connection
+	Connections []*Connection `mapstructure:"connections"`
 
 	GUI struct {
 		TabPosition    string `mapstructure:"tab_position"`
@@ -112,24 +114,25 @@ type Config struct {
 		PageSize int  `mapstructure:"page_size"`
 		DarkMode bool `mapstructure:"page_size"`
 	}
+	EncryptMode string `mapstructure:"encryptMode"`
 
-	Log *logrus.Logger `json:"-"`
+	Log *logrus.Logger `mapstructure:"-" json:"-"`
 
-	logFile string `json:"-"`
+	logFile string `mapstructure:"-" json:"-"`
 }
 
 // Connection ...
 type Connection struct {
-	Adapter   string
-	Type      string
-	Name      string
-	Host      string
-	Port      int
-	User      string
-	Password  string
-	Database  string
-	Options   string
-	Encrypted bool
+	Adapter   string `mapstructure:"-"`
+	Type      string `mapstructure:"-"`
+	Name      string `mapstructure:"name"`
+	Host      string `mapstructure:"host"`
+	Port      int    `mapstructure:"port"`
+	User      string `mapstructure:"user"`
+	Password  string `mapstructure:"password"`
+	Database  string `mapstructure:"database"`
+	Options   string `mapstructure:"options"`
+	Encrypted bool   `mapstructure:"encrypted"`
 }
 
 // GetDSN ...
@@ -177,11 +180,11 @@ func (c Connection) Valid() bool {
 }
 
 // Save current configuration
-func (c *Config) Save() error {
+func (c *Config) Save(w *gtk.ApplicationWindow) error {
 	var err error
 
 	for _, conn := range c.Connections {
-		err := conn.Encrypt()
+		err := conn.Encrypt(w)
 		if err != nil {
 			return err
 		}
@@ -196,7 +199,7 @@ func (c *Config) Save() error {
 	viper.MergeConfig(bytes.NewReader(d))
 
 	for _, conn := range c.Connections {
-		err := conn.Decrypt()
+		err := conn.Decrypt(w)
 		if err != nil {
 			return err
 		}
@@ -214,7 +217,7 @@ func (c *Config) CSS() string {
 	`
 }
 
-func (c *Connection) Encrypt() error {
+func (c *Connection) Encrypt(w *gtk.ApplicationWindow) error {
 	if c.Encrypted {
 		return nil
 	}
@@ -227,7 +230,7 @@ func (c *Connection) Encrypt() error {
 		"port":     fmt.Sprintf("%d", c.Port),
 	}
 
-	path, err := Keychain.Set(keys, c.Password)
+	path, err := Keychain.Set(&w.Window, keys, c.Password)
 	if err != nil {
 		return err
 	}
@@ -237,17 +240,17 @@ func (c *Connection) Encrypt() error {
 	return nil
 }
 
-func (c *Connection) Decrypt() error {
+func (c *Connection) Decrypt(w *gtk.ApplicationWindow) error {
 	if !c.Encrypted {
 		return nil
 	}
 
-	pass, err := Keychain.Get(c.Password)
-	if err == nil {
-		c.Password = pass
-	} else {
-		Env.Log.Error(err)
+	pass, err := Keychain.Get(&w.Window, c.Password)
+	if err != nil {
+		return err
 	}
+
+	c.Password = pass
 	c.Encrypted = false
 
 	return nil

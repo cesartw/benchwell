@@ -354,6 +354,7 @@ func (c *ConnectionScreen) ShowTableSchemaModal(tableName, schema string) {
 	content.Add(textView)
 
 	modal.Run()
+	modal.Destroy()
 }
 
 func (c *ConnectionScreen) SelectedTable() (string, bool) {

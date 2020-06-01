@@ -64,6 +64,14 @@ func NewList(opts ListOptions) (*List, error) {
 	return list, nil
 }
 
+func (u *List) Clear() {
+	u.UnselectAll()
+	u.activeItem.Set(nil)
+	u.activeItemIndex.Set(nil)
+	u.selectedItem.Set(nil)
+	u.selectedItemIndex.Set(nil)
+}
+
 func (u *List) onRightClick(_ *gtk.ListBox, e *gdk.Event) {
 	keyEvent := gdk.EventButtonNewFromEvent(e)
 

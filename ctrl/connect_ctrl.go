@@ -67,7 +67,7 @@ func (c *ConnectCtrl) onSave() {
 		config.Env.Connections[index] = c.scr.GetFormConnection()
 	}
 
-	config.Env.Save()
+	config.Env.Save(c.window.ApplicationWindow)
 	c.scr.SetConnections(config.Env.Connections)
 	c.scr.ConnectionList.SelectRow(c.scr.ConnectionList.GetRowAtIndex(index))
 
@@ -85,7 +85,7 @@ func (c *ConnectCtrl) onDeleteConnection() {
 		config.Env.Connections = append(config.Env.Connections[:index], config.Env.Connections[index+1:]...)
 	}
 
-	config.Env.Save()
+	config.Env.Save(c.window.ApplicationWindow)
 	c.scr.SetConnections(config.Env.Connections)
 	c.scr.ClearForm()
 
@@ -115,9 +115,10 @@ func (c *ConnectCtrl) onConnectionSelected() {
 		return
 	}
 
-	err := config.Env.Connections[row.GetIndex()].Decrypt()
+	err := config.Env.Connections[row.GetIndex()].Decrypt(c.window.ApplicationWindow)
 	if err != nil {
 		c.window.PushStatus("Fail to decrypt password")
+		c.scr.ConnectionList.Clear()
 		return
 	}
 
