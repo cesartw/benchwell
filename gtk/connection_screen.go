@@ -103,6 +103,7 @@ type ConnectionScreen struct {
 	schemaMenu   *gtk.MenuItem
 	truncateMenu *gtk.MenuItem
 	deleteMenu   *gtk.MenuItem
+	refreshMenu  *gtk.MenuItem
 
 	// tab switching
 	tabIndex int
@@ -380,6 +381,10 @@ func (c *ConnectionScreen) OnDeleteMenu(fn interface{}) {
 	c.deleteMenu.Connect("activate", fn)
 }
 
+func (c *ConnectionScreen) OnRefreshMenu(fn interface{}) {
+	c.refreshMenu.Connect("activate", fn)
+}
+
 func (c *ConnectionScreen) onTableListButtonPress(_ *gtk.ListBox, e *gdk.Event) {
 	keyEvent := gdk.EventButtonNewFromEvent(e)
 
@@ -428,10 +433,16 @@ func (c *ConnectionScreen) initTableMenu() error {
 		return err
 	}
 
+	c.refreshMenu, err = menuItemWithImage("Refresh", "gtk-refresh")
+	if err != nil {
+		return err
+	}
+
 	c.tableMenu.Add(c.newTabMenu)
 	c.tableMenu.Add(c.editMenu)
 	c.tableMenu.Add(c.schemaMenu)
 	c.tableMenu.Add(c.truncateMenu)
+	c.tableMenu.Add(c.refreshMenu)
 
 	return nil
 }

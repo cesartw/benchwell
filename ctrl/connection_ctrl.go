@@ -53,6 +53,7 @@ func (c ConnectionCtrl) Init(
 	}
 
 	c.scr.OnSchemaMenu(c.onSchemaMenu)
+	c.scr.OnRefreshMenu(c.onRefreshMenu)
 	c.scr.OnNewTabMenu(c.onNewTabMenu)
 
 	return &c, nil
@@ -158,6 +159,10 @@ func (c *ConnectionCtrl) onSchemaMenu() {
 	}
 
 	c.scr.ShowTableSchemaModal(tableName, schema)
+}
+
+func (c *ConnectionCtrl) onRefreshMenu() {
+	c.onDatabaseSelected()
 }
 
 func (c *ConnectionCtrl) onNewTabMenu() {
