@@ -188,6 +188,8 @@ NEXT:
 			continue
 		}
 
+		config.Env.Log.Debug("disconnecting: ", c.engine.Database(ctx).Name())
+
 		c.engine.Disconnect(ctx)
 		delete(c.dbCtx, dbName)
 	}

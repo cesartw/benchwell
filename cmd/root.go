@@ -152,7 +152,7 @@ func initConfig() {
 	config.Env.Version = version
 
 	config.RegisterStyle()
-	config.InitKeyChain(config.ModeBUILTIN)
+	config.InitKeyChain(config.Env.EncryptMode)
 }
 
 func Execute() {

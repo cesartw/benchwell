@@ -47,7 +47,16 @@ func (d *mysqlDriver) Connect(ctx context.Context, cfg config.Connection) (drive
 
 func (d *mysqlDriver) dsn() string {
 	colonS := strings.Split(d.cfgCon.GetDSN(), ":")
-	return strings.TrimPrefix(d.cfgCon.GetDSN(), colonS[0]+"://")
+	dsn := strings.TrimPrefix(d.cfgCon.GetDSN(), colonS[0]+"://")
+
+	if strings.Index(dsn, "?") == -1 {
+		dsn += "?"
+	} else {
+		dsn += "&"
+	}
+	dsn += "multiStatements=true"
+
+	return dsn
 }
 
 func (d *mysqlDriver) connect(ctx context.Context) (*mysqlConn, error) {
