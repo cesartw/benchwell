@@ -8,7 +8,6 @@ import (
 	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
 	"github.com/gotk3/gotk3/gdk"
-	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 )
 
@@ -88,14 +87,13 @@ func (c *ConnectionTab) SetTitle(title string) {
 
 type ConnectionScreen struct {
 	*gtk.Paned
-	dbCombo     *gtk.ComboBox
+	dbCombo     *gtk.ComboBoxText
 	tableFilter *gtk.SearchEntry
 	tableList   *List
 	tabber      *gtk.Notebook
 	tabs        []*ConnectionTab
 
 	databaseNames []string
-	dbStore       *gtk.ListStore
 
 	activeDatabase MVar
 
@@ -112,11 +110,6 @@ type ConnectionScreen struct {
 
 func (c *ConnectionScreen) init() error {
 	var err error
-
-	c.dbStore, err = gtk.ListStoreNew(glib.TYPE_STRING)
-	if err != nil {
-		return err
-	}
 
 	c.Paned, err = gtk.PanedNew(gtk.ORIENTATION_HORIZONTAL)
 	if err != nil {
@@ -151,11 +144,12 @@ func (c *ConnectionScreen) init() error {
 		return err
 	}
 
-	c.dbCombo, err = gtk.ComboBoxNewWithModelAndEntry(c.dbStore)
+	c.dbCombo, err = gtk.ComboBoxTextNew()
 	if err != nil {
 		return err
 	}
-	c.dbCombo.SetEntryTextColumn(0)
+	c.dbCombo.SetIDColumn(0)
+	//c.dbCombo.SetEntryTextColumn(0)
 
 	c.tableList, err = NewList(ListOptions{
 		SelectOnRightClick: true,
@@ -274,7 +268,8 @@ func (c *ConnectionScreen) SetDatabases(dbs []string) {
 	c.databaseNames = dbs
 
 	for _, name := range dbs {
-		c.dbStore.SetValue(c.dbStore.Append(), 0, name)
+		c.dbCombo.Append(name, name)
+		//c.dbStore.SetValue(c.dbStore.Append(), 0, name)
 	}
 }
 
@@ -397,26 +392,10 @@ func (c *ConnectionScreen) onTableListButtonPress(_ *gtk.ListBox, e *gdk.Event) 
 }
 
 func (c *ConnectionScreen) onDatabaseSelected() {
-	iter, err := c.dbCombo.GetActiveIter()
-	if err != nil {
-		config.Env.Log.Error(err)
-		return
-	}
-
-	v, err := c.dbStore.GetValue(iter, 0)
-	if err != nil {
-		config.Env.Log.Error(err)
-		return
-	}
-
-	dbName, err := v.GetString()
-	if err != nil {
-		config.Env.Log.Error(err)
-		return
-	}
-
+	dbName := c.dbCombo.GetActiveText()
 	c.activeDatabase.Set(dbName)
 }
+
 func (c *ConnectionScreen) initTableMenu() error {
 	var err error
 	c.tableMenu, err = gtk.MenuNew()
