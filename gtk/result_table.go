@@ -87,7 +87,7 @@ func NewResult(cols []driver.ColDef, data [][]interface{}, parser parser) (u *Re
 		return nil, err
 	}
 
-	u.ddMenu.clone, err = menuItemWithImage("Clone", "gtk-convert")
+	u.ddMenu.clone, err = menuItemWithImage("Clone Row", "gtk-convert")
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func NewResult(cols []driver.ColDef, data [][]interface{}, parser parser) (u *Re
 	u.ddMenu.cpInsert.Connect("activate", u.onCopyInsert)
 	u.ddMenu.Add(u.ddMenu.cpInsert)
 
-	u.ddMenu.cp, err = menuItemWithImage("Copy", "gtk-copy")
+	u.ddMenu.cp, err = menuItemWithImage("Copy Field", "gtk-copy")
 	if err != nil {
 		return
 	}

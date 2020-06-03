@@ -45,7 +45,7 @@ func (tc TableCtrl) init(
 	if err != nil {
 		return nil, err
 	}
-	tc.grid.ShowAll()
+	tc.grid.Show()
 	tc.grid.SetUpdateRecordFunc(func(
 		cols []driver.ColDef,
 		values []interface{},

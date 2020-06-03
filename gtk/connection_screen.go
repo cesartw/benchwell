@@ -195,7 +195,7 @@ func (c *ConnectionScreen) init() error {
 	// TODO: move to config
 	//c.tabber.SetProperty("tab-pos", gtk.POS_BOTTOM)
 	c.tabber.SetProperty("scrollable", true)
-	c.tabber.SetProperty("enable-popup", true)
+	c.tabber.SetProperty("enable-popup", false)
 	c.tabber.Connect("switch-page", func(_ *gtk.Notebook, _ *gtk.Widget, i int) {
 		c.tabIndex = i
 	})

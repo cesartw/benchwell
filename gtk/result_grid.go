@@ -20,11 +20,13 @@ type ResultGrid struct {
 	prevText string
 	offset   int64
 
-	result  *Result
-	btnPrev *gtk.Button
-	btnNext *gtk.Button
-	btnRsh  *gtk.Button
-	perPage *gtk.Entry
+	result         *Result
+	filterFrame    *gtk.Frame
+	btnPrev        *gtk.Button
+	btnNext        *gtk.Button
+	btnRsh         *gtk.Button
+	btnShowFilters *gtk.Button
+	perPage        *gtk.Entry
 	//offset    *gtk.Entry
 	pagerMenu *gtk.MenuButton
 
@@ -72,6 +74,12 @@ func NewResultGrid(
 		return nil, err
 	}
 
+	v.filterFrame, err = gtk.FrameNew("Filter:")
+	if err != nil {
+		return nil, err
+	}
+	v.filterFrame.SetProperty("shadow-type", gtk.SHADOW_ETCHED_IN)
+
 	v.btnAddRow.Connect("clicked", func() {
 		v.result.AddEmptyRow()
 	})
@@ -85,7 +93,9 @@ func NewResultGrid(
 			v.offset = 0
 		}
 	})
-
+	v.btnShowFilters.Connect("clicked", func() {
+		v.filterFrame.Show()
+	})
 	v.colFilter.Connect("search-changed", v.onColFilterSearchChanged)
 
 	btnGridBox, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
@@ -93,6 +103,7 @@ func NewResultGrid(
 		return nil, err
 	}
 	btnGridBox.PackStart(actionbar, false, false, 0)
+	btnGridBox.PackStart(v.filterFrame, false, false, 5)
 	btnGridBox.PackEnd(resultSW, true, true, 0)
 
 	resultBox, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
@@ -135,6 +146,8 @@ func NewResultGrid(
 	v.Paned.Pack2(resultBox, true, false)
 
 	v.disableAll()
+	v.Paned.ShowAll()
+	v.filterFrame.Hide()
 
 	return v, nil
 }
@@ -160,6 +173,7 @@ func (v *ResultGrid) Offset() int64 {
 func (v *ResultGrid) UpdateColumns(cols []driver.ColDef) error {
 	v.colFilter.SetText("")
 	v.offset = 0
+	v.addFilters(cols)
 	return v.result.UpdateColumns(cols)
 }
 
@@ -278,11 +292,16 @@ func (v *ResultGrid) actionbar() (*gtk.ActionBar, error) {
 		if err != nil {
 			return nil, err
 		}
+		v.btnShowFilters, err = gtk.ButtonNewFromIconName("gtk-find", gtk.ICON_SIZE_BUTTON)
+		if err != nil {
+			return nil, err
+		}
 		v.newRecordEnable(false)
 
 		actionbar.Add(v.btnAddRow)
 		actionbar.Add(v.btnDeleteRow)
 		actionbar.Add(v.btnCreateRow)
+		actionbar.Add(v.btnShowFilters)
 	}
 
 	// column filter
@@ -450,4 +469,42 @@ func (v *ResultGrid) onRowActivated(_ *gtk.TreeView, path *gtk.TreePath, col *gt
 
 	v.newRecordEnable(status == STATUS_NEW)
 	v.btnDeleteRow.SetSensitive(true)
+}
+
+func (v *ResultGrid) addFilters(cols []driver.ColDef) error {
+	cbField, err := gtk.ComboBoxTextNew()
+	if err != nil {
+		return err
+	}
+	cbField.Append("", "")
+	for _, col := range cols {
+		cbField.Append(col.Name, col.Name)
+	}
+
+	cbOp, err := gtk.ComboBoxTextNew()
+	if err != nil {
+		return err
+	}
+	for _, op := range []string{"=", "!=", ">", "<", ">=", "<="} {
+		cbOp.Append(op, op)
+	}
+
+	entry, err := gtk.EntryNew()
+	if err != nil {
+		return err
+	}
+
+	grid, err := gtk.GridNew()
+	if err != nil {
+		return err
+	}
+
+	grid.Attach(cbField, 0, 0, 2, 1)
+	grid.Attach(cbOp, 3, 0, 1, 1)
+	grid.Attach(entry, 4, 0, 2, 1)
+
+	v.filterFrame.Add(grid)
+	v.filterFrame.ShowAll()
+
+	return nil
 }
