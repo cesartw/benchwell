@@ -158,6 +158,8 @@ func (v *ResultGrid) Offset() int64 {
 }
 
 func (v *ResultGrid) UpdateColumns(cols []driver.ColDef) error {
+	v.colFilter.SetText("")
+	v.offset = 0
 	return v.result.UpdateColumns(cols)
 }
 
@@ -170,6 +172,8 @@ func (v *ResultGrid) UpdateData(data [][]interface{}) error {
 
 func (v *ResultGrid) UpdateRawData(cols []string, data [][]interface{}) error {
 	v.pagerEnable(false)
+	v.colFilter.SetText("")
+	v.offset = 0
 	return v.result.UpdateRawData(cols, data)
 }
 

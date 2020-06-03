@@ -104,13 +104,7 @@ func (c *WindowTabCtrl) launchConnection(ctx sqlengine.Context, conn *config.Con
 }
 
 func (c *WindowTabCtrl) onConnect() {
-	var conn *config.Connection
-	index := c.connectCtrl.scr.ActiveConnectionIndex()
-	if index == -1 {
-		conn = c.connectCtrl.scr.GetFormConnection()
-	} else {
-		conn = config.Env.Connections[index]
-	}
+	conn := c.connectCtrl.scr.GetFormConnection()
 
 	ctx, done := context.WithTimeout(context.TODO(), time.Second*5)
 	defer done()
