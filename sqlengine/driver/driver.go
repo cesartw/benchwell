@@ -35,6 +35,36 @@ var (
 	driverMU sync.Mutex
 )
 
+type CondStmt struct {
+	Field ColDef
+	Op    Operator
+	Value interface{}
+}
+
+type Operator string
+
+const (
+	Eq   Operator = "="
+	Neq  Operator = "!="
+	Gt   Operator = ">"
+	Lt   Operator = "<"
+	Gte  Operator = ">="
+	Lte  Operator = "<="
+	Like Operator = "like"
+	Int  Operator = "in"
+)
+
+var Operators = [8]Operator{
+	Eq,
+	Neq,
+	Gt,
+	Lt,
+	Gte,
+	Lte,
+	Like,
+	Int,
+}
+
 func init() {
 	drivers = make(map[string]Driver)
 }
@@ -163,4 +193,5 @@ type SortOption struct {
 type FetchTableOptions struct {
 	Offset, Limit int64
 	Sort          []SortOption
+	Conditions    []CondStmt
 }

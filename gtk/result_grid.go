@@ -20,8 +20,9 @@ type ResultGrid struct {
 	prevText string
 	offset   int64
 
+	conditions *Conditions
+
 	result         *Result
-	filterFrame    *gtk.Frame
 	btnPrev        *gtk.Button
 	btnNext        *gtk.Button
 	btnRsh         *gtk.Button
@@ -63,7 +64,6 @@ func NewResultGrid(
 	v.textView.Connect("key-press-event", v.onTextViewKeyPress)     // ctrl+enter exec query
 
 	var resultSW, textViewSW *gtk.ScrolledWindow
-
 	resultSW, err = gtk.ScrolledWindowNew(nil, nil)
 	if err != nil {
 		return nil, err
@@ -74,11 +74,10 @@ func NewResultGrid(
 		return nil, err
 	}
 
-	v.filterFrame, err = gtk.FrameNew("Filter:")
+	v.conditions, err = NewConditions(cols)
 	if err != nil {
 		return nil, err
 	}
-	v.filterFrame.SetProperty("shadow-type", gtk.SHADOW_ETCHED_IN)
 
 	v.btnAddRow.Connect("clicked", func() {
 		v.result.AddEmptyRow()
@@ -94,7 +93,7 @@ func NewResultGrid(
 		}
 	})
 	v.btnShowFilters.Connect("clicked", func() {
-		v.filterFrame.Show()
+		v.conditions.Show()
 	})
 	v.colFilter.Connect("search-changed", v.onColFilterSearchChanged)
 
@@ -103,7 +102,7 @@ func NewResultGrid(
 		return nil, err
 	}
 	btnGridBox.PackStart(actionbar, false, false, 0)
-	btnGridBox.PackStart(v.filterFrame, false, false, 5)
+	btnGridBox.PackStart(v.conditions, false, false, 5)
 	btnGridBox.PackEnd(resultSW, true, true, 0)
 
 	resultBox, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
@@ -147,7 +146,7 @@ func NewResultGrid(
 
 	v.disableAll()
 	v.Paned.ShowAll()
-	v.filterFrame.Hide()
+	v.conditions.Hide()
 
 	return v, nil
 }
@@ -170,10 +169,14 @@ func (v *ResultGrid) Offset() int64 {
 	return v.offset
 }
 
+func (v *ResultGrid) Conditions() ([]driver.CondStmt, error) {
+	return v.conditions.Statements()
+}
+
 func (v *ResultGrid) UpdateColumns(cols []driver.ColDef) error {
 	v.colFilter.SetText("")
 	v.offset = 0
-	v.addFilters(cols)
+	v.conditions.Update(cols)
 	return v.result.UpdateColumns(cols)
 }
 
@@ -469,42 +472,4 @@ func (v *ResultGrid) onRowActivated(_ *gtk.TreeView, path *gtk.TreePath, col *gt
 
 	v.newRecordEnable(status == STATUS_NEW)
 	v.btnDeleteRow.SetSensitive(true)
-}
-
-func (v *ResultGrid) addFilters(cols []driver.ColDef) error {
-	cbField, err := gtk.ComboBoxTextNew()
-	if err != nil {
-		return err
-	}
-	cbField.Append("", "")
-	for _, col := range cols {
-		cbField.Append(col.Name, col.Name)
-	}
-
-	cbOp, err := gtk.ComboBoxTextNew()
-	if err != nil {
-		return err
-	}
-	for _, op := range []string{"=", "!=", ">", "<", ">=", "<="} {
-		cbOp.Append(op, op)
-	}
-
-	entry, err := gtk.EntryNew()
-	if err != nil {
-		return err
-	}
-
-	grid, err := gtk.GridNew()
-	if err != nil {
-		return err
-	}
-
-	grid.Attach(cbField, 0, 0, 2, 1)
-	grid.Attach(cbOp, 3, 0, 1, 1)
-	grid.Attach(entry, 4, 0, 2, 1)
-
-	v.filterFrame.Add(grid)
-	v.filterFrame.ShowAll()
-
-	return nil
 }

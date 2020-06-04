@@ -221,15 +221,21 @@ func (tc *TableCtrl) OnConnect() {
 }
 
 func (tc *TableCtrl) OnRefresh() {
+	conditions, err := tc.grid.Conditions()
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+
 	_, data, err := tc.engine.FetchTable(
 		tc.ctx, tc.tableDef.Name,
 		driver.FetchTableOptions{
-			Offset: tc.grid.Offset(),
-			Limit:  tc.grid.PageSize(),
-			Sort:   tc.grid.SortOptions(),
+			Offset:     tc.grid.Offset(),
+			Limit:      tc.grid.PageSize(),
+			Sort:       tc.grid.SortOptions(),
+			Conditions: conditions,
 		},
 	)
-
 	if err != nil {
 		config.Env.Log.Error(err)
 		return

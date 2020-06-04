@@ -396,14 +396,31 @@ func (d *mysqlDb) FetchTable(
 ) {
 	var sqlRows *sql.Rows
 
-	query := fmt.Sprintf(`SELECT * FROM %s %s LIMIT ?, ?`,
-		tableName, FetchTableOptions(opts.Sort).SQL(tableName))
+	args := []interface{}{}
+	wheres := []string{}
+	for _, cond := range opts.Conditions {
+		if cond.Op == "" || cond.Field.Name == "" {
+			continue
+		}
+		args = append(args, cond.Value)
+		wheres = append(wheres, fmt.Sprintf("`%s` %s ?", cond.Field.Name, cond.Op))
+	}
+
+	where := ""
+	if len(wheres) > 0 {
+		where = "WHERE " + strings.Join(wheres, " AND ")
+	}
+
+	args = append(args, opts.Offset, opts.Limit)
+
+	query := fmt.Sprintf(`SELECT * FROM %s %s %s LIMIT ?, ?`,
+		tableName, where, FetchTableOptions(opts.Sort).SQL(tableName))
 
 	config.Env.Log.
 		WithFields(logrus.Fields{"query": query, "args": []interface{}{opts.Offset, opts.Limit}}).
 		Debug("FetchTable")
 
-	sqlRows, err = d.db.Query(query, opts.Offset, opts.Limit)
+	sqlRows, err = d.db.Query(query, args...)
 	if err != nil {
 		return nil, nil, err
 	}
