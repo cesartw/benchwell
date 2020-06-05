@@ -14,6 +14,7 @@ type Conditions struct {
 }
 
 type Condition struct {
+	activeCb   *gtk.CheckButton
 	fieldCb    *gtk.ComboBoxText
 	opCb       *gtk.ComboBoxText
 	valueEntry *gtk.Entry
@@ -47,7 +48,7 @@ func NewConditions(cols []driver.ColDef) (c *Conditions, err error) {
 
 	c.Frame.Add(c.grid)
 
-	return c, c.Add()
+	return c, nil //c.Add()
 }
 
 func (c *Conditions) Add() error {
@@ -58,14 +59,16 @@ func (c *Conditions) Add() error {
 	c.grid.Remove(c.btnAdd)
 
 	y := len(c.conditions)
-	c.grid.Attach(cond.fieldCb, 0, y, 2, 1)
-	c.grid.Attach(cond.opCb, 2, y, 1, 1)
-	c.grid.Attach(cond.valueEntry, 4, y, 2, 1)
-	c.grid.Attach(c.btnAdd, 6, y, 1, 1)
+	c.grid.Attach(cond.activeCb, 0, y, 2, 1)
+	c.grid.Attach(cond.fieldCb, 2, y, 2, 1)
+	c.grid.Attach(cond.fieldCb, 3, y, 2, 1)
+	c.grid.Attach(cond.opCb, 4, y, 1, 1)
+	c.grid.Attach(cond.valueEntry, 5, y, 2, 1)
+	c.grid.Attach(c.btnAdd, 8, y, 1, 1)
 	c.conditions = append(c.conditions, cond)
 
 	if y >= 1 {
-		c.grid.Attach(c.conditions[y-1].btnRm, 6, y-1, 1, 1)
+		c.grid.Attach(c.conditions[y-1].btnRm, 8, y-1, 1, 1)
 	}
 
 	cond.btnRm.Connect("clicked", func() {
@@ -76,7 +79,6 @@ func (c *Conditions) Add() error {
 				break
 			}
 		}
-
 	})
 
 	c.btnAdd.Show()
@@ -91,6 +93,9 @@ func (c *Conditions) Add() error {
 func (c *Conditions) Statements() ([]driver.CondStmt, error) {
 	stmts := []driver.CondStmt{}
 	for _, cond := range c.conditions {
+		if !cond.activeCb.GetActive() {
+			continue
+		}
 		var field driver.ColDef
 		textField := cond.fieldCb.GetActiveText()
 		for _, col := range c.cols {
@@ -129,6 +134,12 @@ func (c *Conditions) Update(cols []driver.ColDef) error {
 func newCondition(cols []driver.ColDef) (c *Condition, err error) {
 	c = &Condition{}
 
+	c.activeCb, err = gtk.CheckButtonNew()
+	if err != nil {
+		return nil, err
+	}
+	c.activeCb.SetActive(true)
+
 	c.fieldCb, err = gtk.ComboBoxTextNew()
 	if err != nil {
 		return nil, err
@@ -142,10 +153,10 @@ func newCondition(cols []driver.ColDef) (c *Condition, err error) {
 	if err != nil {
 		return nil, err
 	}
-
 	for _, op := range driver.Operators {
 		c.opCb.Append(string(op), string(op))
 	}
+	c.opCb.SetActive(0)
 
 	c.valueEntry, err = gtk.EntryNew()
 	if err != nil {
@@ -157,6 +168,7 @@ func newCondition(cols []driver.ColDef) (c *Condition, err error) {
 		return nil, err
 	}
 
+	c.activeCb.Show()
 	c.fieldCb.Show()
 	c.opCb.Show()
 	c.valueEntry.Show()
