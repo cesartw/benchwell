@@ -118,17 +118,59 @@ func (c *Conditions) Statements() ([]driver.CondStmt, error) {
 }
 
 func (c *Conditions) Update(cols []driver.ColDef) error {
-	c.cols = cols
 
-	for _, cond := range c.conditions {
-		c.grid.Remove(cond.fieldCb)
-		c.grid.Remove(cond.opCb)
-		c.grid.Remove(cond.valueEntry)
+	conds := c.conditions
+
+	for i, cond := range conds {
+		if cond.fieldCb.GetActiveText() != "" {
+			continue
+		}
+		c.grid.RemoveRow(i)
+		c.conditions = append(c.conditions[:i], c.conditions[i+1:]...)
 	}
 
-	c.conditions = nil
+	//update columns in remaining conditions
+	for _, cond := range c.conditions {
+		field := cond.fieldCb.GetActiveText()
 
-	return c.Add()
+		foundAt := -1
+		for i, col := range cols {
+			if col.Name != field {
+				continue
+			}
+			foundAt = i
+			break
+		}
+
+		// field is not part of the new table disable widget and move on
+		if foundAt == -1 {
+			cond.fieldCb.SetSensitive(false)
+			cond.opCb.SetSensitive(false)
+			cond.valueEntry.SetSensitive(false)
+			cond.activeCb.SetSensitive(false)
+			cond.activeCb.SetActive(false)
+			break
+		}
+
+		cond.fieldCb.SetSensitive(true)
+		cond.opCb.SetSensitive(true)
+		cond.valueEntry.SetSensitive(true)
+		cond.activeCb.SetSensitive(true)
+		cond.activeCb.SetActive(true)
+
+		cond.fieldCb.RemoveAll()
+		for _, col := range cols {
+			cond.fieldCb.Append(col.Name, col.Name)
+		}
+		cond.fieldCb.SetActive(foundAt)
+	}
+
+	c.cols = cols
+	if len(c.conditions) == 0 {
+		return c.Add()
+	}
+
+	return nil
 }
 
 func newCondition(cols []driver.ColDef) (c *Condition, err error) {
