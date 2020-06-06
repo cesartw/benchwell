@@ -22,11 +22,18 @@ type App struct {
 	DarkMode bool
 }
 
-func New(appid string) (*App, error) {
+func New(ctrl interface {
+	AppID() string
+	OnStartup()
+	OnActivate()
+	OnShutdown()
+	OnNewWindow()
+	OnPreferences()
+}) (*App, error) {
 	var err error
 	f := &App{}
 
-	f.Application, err = gtk.ApplicationNew(appid, glib.APPLICATION_FLAGS_NONE)
+	f.Application, err = gtk.ApplicationNew(ctrl.AppID(), glib.APPLICATION_FLAGS_NONE)
 	if err != nil {
 		return nil, err
 	}
@@ -51,6 +58,19 @@ func New(appid string) (*App, error) {
 	f.Application.SetAccelsForAction("win.tabnew", []string{"<control>T"})
 	// close sub tab, and main tab when there's no sub tabs left
 	f.Application.SetAccelsForAction("win.close", []string{"<control>W"})
+
+	f.Application.Connect("activate", func() {
+		f.Menu.Application.NewWindow.Connect("activate", ctrl.OnNewWindow)
+		f.Menu.Application.Preferences.Connect("activate", ctrl.OnPreferences)
+
+		f.Menu.Application.DarkMode.Connect("activate", func() {
+			f.ToggleMode()
+		})
+	})
+	f.Application.Connect("activate", ctrl.OnActivate)
+
+	// Connect function to application shutdown event, this is not required.
+	f.Application.Connect("shutdown", ctrl.OnShutdown)
 
 	return f, nil
 }

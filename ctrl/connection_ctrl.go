@@ -31,12 +31,12 @@ func (c ConnectionCtrl) Init(
 	c.mainCtx = ctx
 	c.conn = conn
 
-	dbNames, err := c.engine.Databases(c.mainCtx)
+	dbNames, err := c.Engine.Databases(c.mainCtx)
 	if err != nil {
 		return nil, err
 	}
 
-	c.scr, err = c.app.NewConnectionScreen()
+	c.scr, err = c.App.NewConnectionScreen()
 	if err != nil {
 		return nil, err
 	}
@@ -114,14 +114,14 @@ func (c *ConnectionCtrl) onDatabaseSelected() {
 	}
 
 	if c.dbCtx[dbName] == nil {
-		c.dbCtx[dbName], err = c.engine.UseDatabase(c.mainCtx, dbName)
+		c.dbCtx[dbName], err = c.Engine.UseDatabase(c.mainCtx, dbName)
 		if err != nil {
 			c.window.PushStatus("Error selecting database: `%s`", err.Error())
 			return
 		}
 	}
 
-	tables, err := c.engine.Tables(c.dbCtx[dbName])
+	tables, err := c.Engine.Tables(c.dbCtx[dbName])
 	if err != nil {
 		c.window.PushStatus("Error getting tables: `%s`", err.Error())
 		return
@@ -153,7 +153,7 @@ func (c *ConnectionCtrl) onSchemaMenu() {
 		return
 	}
 
-	schema, err := c.engine.GetCreateTable(c.dbCtx[c.dbName], tableName)
+	schema, err := c.Engine.GetCreateTable(c.dbCtx[c.dbName], tableName)
 	if err != nil {
 		config.Env.Log.Error(err, "getting table schema")
 	}
@@ -193,9 +193,9 @@ NEXT:
 			continue
 		}
 
-		config.Env.Log.Debug("disconnecting: ", c.engine.Database(ctx).Name())
+		config.Env.Log.Debug("disconnecting: ", c.Engine.Database(ctx).Name())
 
-		c.engine.Disconnect(ctx)
+		c.Engine.Disconnect(ctx)
 		delete(c.dbCtx, dbName)
 	}
 }

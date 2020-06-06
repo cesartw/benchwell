@@ -23,40 +23,24 @@ var rootCmd = &cobra.Command{
 	Short: "SQLaid: Database",
 	Long:  `Visit https://sqlaid.com for more details`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		config.Env.Log.Debug("application startup")
+		err := assets.Load()
+		if err != nil {
+			panic(err)
+		}
+
 		eng := sqlengine.New(config.Env)
 		defer eng.Dispose()
 
+		ctr := &ctrl.AppCtrl{}
+		ctr.Engine = eng
+		ctr.Config = config.Env
+
 		// Create a new application.
-		app, err := gtk.New(config.AppID)
+		ctr.App, err = gtk.New(ctr)
 		if err != nil {
 			return err
 		}
-
-		ctl, err := ctrl.AppCtrl{}.Init(ctrl.Options{
-			Engine: eng,
-			Config: config.Env,
-			App:    app,
-		})
-		if err != nil {
-			return err
-		}
-
-		// Connect function to application startup event, this is not required.
-		app.Connect("startup", func() {
-			config.Env.Log.Debug("application startup")
-			err := assets.Load()
-			if err != nil {
-				panic(err)
-			}
-		})
-
-		// Connect function to application activate event
-		app.Connect("activate", ctl.OnActivate)
-
-		// Connect function to application shutdown event, this is not required.
-		app.Connect("shutdown", func() {
-			config.Env.Log.Debug("application shutdown")
-		})
 
 		/*
 			systray.RunWithAppWindow(
@@ -90,7 +74,8 @@ var rootCmd = &cobra.Command{
 				func() { //quit
 				},
 			)*/
-		app.Run(nil)
+
+		ctr.App.Run(nil)
 
 		return nil
 	},

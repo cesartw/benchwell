@@ -48,7 +48,7 @@ func (c *ConnectCtrl) onTest() {
 		conn = c.scr.GetFormConnection()
 	}
 
-	ctx, err := c.engine.Connect(sqlengine.Context(context.TODO()), *conn)
+	ctx, err := c.Engine.Connect(sqlengine.Context(context.TODO()), *conn)
 	if err != nil {
 		config.Env.Log.Error(err)
 		c.window.PushStatus("Fail connection `%s`(%s): %s", conn.Name, conn.Host, err.Error())
@@ -56,7 +56,7 @@ func (c *ConnectCtrl) onTest() {
 	}
 
 	c.window.PushStatus("Connection to `%s`(%s) was successful", conn.Name, conn.Host)
-	c.engine.Disconnect(ctx)
+	c.Engine.Disconnect(ctx)
 }
 
 func (c *ConnectCtrl) onSave() {

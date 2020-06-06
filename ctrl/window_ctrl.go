@@ -18,7 +18,7 @@ func (c WindowCtrl) Init(parent *AppCtrl) (*WindowCtrl, error) {
 	var err error
 	ctrl := &c
 	ctrl.AppCtrl = parent
-	ctrl.window, err = gtk.Window{}.Init(parent.app.Application)
+	ctrl.window, err = gtk.Window{}.Init(parent.App.Application)
 	if err != nil {
 		return nil, err
 	}

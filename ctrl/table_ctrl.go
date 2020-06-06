@@ -40,7 +40,7 @@ func (tc TableCtrl) init(
 
 	tc.grid, err = gtk.NewResultGrid(nil, nil,
 		func(col driver.ColDef, value string) (interface{}, error) {
-			return tc.engine.ParseValue(tc.ctx, col, value)
+			return tc.Engine.ParseValue(tc.ctx, col, value)
 		})
 	if err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func (tc TableCtrl) init(
 		cols []driver.ColDef,
 		values []interface{},
 	) error {
-		_, err := tc.engine.UpdateField(ctx, tc.tableDef.Name, cols, values)
+		_, err := tc.Engine.UpdateField(ctx, tc.tableDef.Name, cols, values)
 		if err != nil {
 			tc.window.PushStatus(err.Error())
 			return err
@@ -62,7 +62,7 @@ func (tc TableCtrl) init(
 		cols []driver.ColDef,
 		values []interface{},
 	) ([]interface{}, error) {
-		data, err := tc.engine.InsertRecord(ctx, tc.tableDef.Name, cols, values)
+		data, err := tc.Engine.InsertRecord(ctx, tc.tableDef.Name, cols, values)
 		if err != nil {
 			tc.window.PushStatus(err.Error())
 			return nil, err
@@ -72,7 +72,7 @@ func (tc TableCtrl) init(
 
 		return data, nil
 	}).OnSubmit(func(value string) {
-		columns, data, err := tc.engine.Query(tc.ctx, value)
+		columns, data, err := tc.Engine.Query(tc.ctx, value)
 		if err != nil {
 			config.Env.Log.Error(err)
 			tc.window.PushStatus("Error: %s", err.Error())
@@ -84,7 +84,7 @@ func (tc TableCtrl) init(
 		/*dml, ddl := tc.parseQuery(value)
 
 		for _, query := range dml {
-			columns, data, err := tc.engine.Query(tc.ctx, query)
+			columns, data, err := tc.Engine.Query(tc.ctx, query)
 			if err != nil {
 				config.Env.Log.Error(err)
 				tc.window.PushStatus("Error: %s", err.Error())
@@ -95,7 +95,7 @@ func (tc TableCtrl) init(
 		}
 
 		for _, query := range ddl {
-			id, affected, err := tc.engine.Execute(tc.ctx, query)
+			id, affected, err := tc.Engine.Execute(tc.ctx, query)
 			if err != nil {
 				config.Env.Log.Error(err)
 				tc.window.PushStatus("Error: %s", err.Error())
@@ -126,7 +126,7 @@ func (tc TableCtrl) init(
 				return
 			}
 
-			tc.engine.DeleteRecord(tc.ctx, tc.tableDef.Name, cols, values)
+			tc.Engine.DeleteRecord(tc.ctx, tc.tableDef.Name, cols, values)
 			tc.grid.RemoveSelected()
 			tc.window.PushStatus("Record deleted")
 		}
@@ -145,7 +145,7 @@ func (tc TableCtrl) init(
 			return
 		}
 
-		values, err = tc.engine.InsertRecord(tc.ctx, tc.tableDef.Name, cols, values)
+		values, err = tc.Engine.InsertRecord(tc.ctx, tc.tableDef.Name, cols, values)
 		if err != nil {
 			tc.window.PushStatus(err.Error())
 			return
@@ -159,7 +159,7 @@ func (tc TableCtrl) init(
 
 		tc.window.PushStatus("Record saved")
 	}).OnCopyInsert(func(cols []driver.ColDef, values []interface{}) {
-		sql, err := tc.engine.GetInsertStatement(tc.ctx, tc.tableDef.Name, cols, values)
+		sql, err := tc.Engine.GetInsertStatement(tc.ctx, tc.tableDef.Name, cols, values)
 		if err != nil {
 			tc.window.PushStatus(err.Error())
 		}
@@ -187,7 +187,7 @@ func (tc TableCtrl) init(
 }
 
 func (tc *TableCtrl) OnConnect() {
-	def, data, err := tc.engine.FetchTable(
+	def, data, err := tc.Engine.FetchTable(
 		tc.ctx, tc.tableDef.Name,
 		driver.FetchTableOptions{
 			Offset: tc.grid.Offset(),
@@ -227,7 +227,7 @@ func (tc *TableCtrl) OnRefresh() {
 		return
 	}
 
-	_, data, err := tc.engine.FetchTable(
+	_, data, err := tc.Engine.FetchTable(
 		tc.ctx, tc.tableDef.Name,
 		driver.FetchTableOptions{
 			Offset:     tc.grid.Offset(),

@@ -52,7 +52,7 @@ func (c *WindowTabCtrl) Show() {
 
 func (c *WindowTabCtrl) Removed() {
 	if c.connectionCtrl != nil {
-		c.engine.Disconnect(c.connectionCtrl.mainCtx)
+		c.Engine.Disconnect(c.connectionCtrl.mainCtx)
 		c.window.PushStatus("Disconnected")
 	}
 }
@@ -109,7 +109,7 @@ func (c *WindowTabCtrl) onConnect() {
 	ctx, done := context.WithTimeout(context.TODO(), time.Second*5)
 	defer done()
 
-	ctx, err := c.engine.Connect(sqlengine.Context(ctx), *conn)
+	ctx, err := c.Engine.Connect(sqlengine.Context(ctx), *conn)
 	if err != nil {
 		config.Env.Log.Error(err)
 		c.window.PushStatus("Failed connect to `%s`(%s): %s", conn.Name, conn.Host, err.Error())
