@@ -6,10 +6,8 @@ type Tab struct {
 	*gtk.Box
 }
 
-func NewTab() (*Tab, error) {
-	t := &Tab{}
+func (t Tab) Init() (*Tab, error) {
 	var err error
-
 	t.Box, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if err != nil {
 		return nil, err
@@ -18,5 +16,5 @@ func NewTab() (*Tab, error) {
 	t.Box.SetVExpand(true)
 	t.Box.SetHExpand(true)
 
-	return t, nil
+	return &t, nil
 }

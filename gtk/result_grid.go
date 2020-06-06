@@ -37,18 +37,25 @@ type ResultGrid struct {
 
 	colFilter *gtk.SearchEntry
 
-	submitCallbacks []func(string)
+	submitCallback func(string)
 
 	//query type
 	isDML, isDDL bool
 }
 
-func NewResultGrid(
-	cols []driver.ColDef,
-	data [][]interface{},
+func (v ResultGrid) Init(
+	ctrl interface {
+		OnUpdateRecord([]driver.ColDef, []interface{}) error
+		OnCreateRecord([]driver.ColDef, []interface{}) ([]interface{}, error)
+		OnExecQuery(string)
+		OnRefresh()
+		OnDelete()
+		OnCreate()
+		OnCopyInsert([]driver.ColDef, []interface{})
+	},
 	parser parser,
-) (v *ResultGrid, err error) {
-	v = &ResultGrid{}
+) (*ResultGrid, error) {
+	var err error
 
 	v.Paned, err = gtk.PanedNew(gtk.ORIENTATION_VERTICAL)
 	if err != nil {
@@ -74,7 +81,7 @@ func NewResultGrid(
 		return nil, err
 	}
 
-	v.conditions, err = NewConditions(cols)
+	v.conditions, err = Conditions{}.Init()
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +125,7 @@ func NewResultGrid(
 	}
 	textViewSW.SetSizeRequest(-1, 200)
 
-	v.result, err = NewResult(cols, data, parser)
+	v.result, err = Result{}.Init(ctrl, parser)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +155,14 @@ func NewResultGrid(
 	v.Paned.ShowAll()
 	v.conditions.Hide()
 
-	return v, nil
+	v.submitCallback = ctrl.OnExecQuery
+	v.btnRsh.Connect("clicked", ctrl.OnRefresh)
+	v.btnPrev.Connect("clicked", ctrl.OnRefresh)
+	v.btnNext.Connect("clicked", ctrl.OnRefresh)
+	v.btnDeleteRow.Connect("clicked", ctrl.OnDelete)
+	v.btnCreateRow.Connect("clicked", ctrl.OnCreate)
+
+	return &v, nil
 }
 
 func (v *ResultGrid) PageSize() int64 {
@@ -192,51 +206,6 @@ func (v *ResultGrid) UpdateRawData(cols []string, data [][]interface{}) error {
 	v.colFilter.SetText("")
 	v.offset = 0
 	return v.result.UpdateRawData(cols, data)
-}
-
-func (v *ResultGrid) SetUpdateRecordFunc(fn func([]driver.ColDef, []interface{}) error) *ResultGrid {
-	v.result.SetUpdateRecordFunc(fn)
-	return v
-}
-
-func (v *ResultGrid) SetCreateRecordFunc(fn func([]driver.ColDef, []interface{}) ([]interface{}, error)) *ResultGrid {
-	v.result.SetCreateRecordFunc(fn)
-	return v
-}
-
-func (v *ResultGrid) OnSubmit(fn func(value string)) *ResultGrid {
-	v.submitCallbacks = append(v.submitCallbacks, fn)
-	return v
-}
-
-func (v *ResultGrid) OnRefresh(fn interface{}) *ResultGrid {
-	v.btnRsh.Connect("clicked", fn)
-	return v
-}
-
-func (v *ResultGrid) OnBack(fn interface{}) *ResultGrid {
-	v.btnPrev.Connect("clicked", fn)
-	return v
-}
-
-func (v *ResultGrid) OnForward(fn interface{}) *ResultGrid {
-	v.btnNext.Connect("clicked", fn)
-	return v
-}
-
-func (v *ResultGrid) OnCreate(fn interface{}) *ResultGrid {
-	v.btnCreateRow.Connect("clicked", fn)
-	return v
-}
-
-func (v *ResultGrid) OnDelete(fn interface{}) *ResultGrid {
-	v.btnDeleteRow.Connect("clicked", fn)
-	return v
-}
-
-func (v *ResultGrid) OnCopyInsert(fn func([]driver.ColDef, []interface{})) *ResultGrid {
-	v.result.OnCopyInsert(fn)
-	return v
 }
 
 func (v *ResultGrid) SelectedIsNewRecord() (bool, error) {
@@ -420,8 +389,8 @@ func (v *ResultGrid) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) bool {
 		if err != nil {
 			config.Env.Log.Error(err)
 		}
-		for _, fn := range v.submitCallbacks {
-			fn(txt)
+		if v.submitCallback != nil {
+			v.submitCallback(txt)
 		}
 		return true
 	}

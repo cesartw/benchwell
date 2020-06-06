@@ -38,137 +38,18 @@ func (tc TableCtrl) init(
 	tc.ConnectionCtrl = opts.Parent
 	tc.tableDef = opts.TableDef
 
-	tc.grid, err = gtk.NewResultGrid(nil, nil,
+	tc.grid, err = gtk.ResultGrid{}.Init(
+		&tc,
 		func(col driver.ColDef, value string) (interface{}, error) {
 			return tc.Engine.ParseValue(tc.ctx, col, value)
 		})
 	if err != nil {
 		return nil, err
 	}
+
 	tc.grid.Show()
-	tc.grid.SetUpdateRecordFunc(func(
-		cols []driver.ColDef,
-		values []interface{},
-	) error {
-		_, err := tc.Engine.UpdateField(ctx, tc.tableDef.Name, cols, values)
-		if err != nil {
-			tc.window.PushStatus(err.Error())
-			return err
-		}
 
-		tc.window.PushStatus("Saved")
-		return nil
-	}).SetCreateRecordFunc(func(
-		cols []driver.ColDef,
-		values []interface{},
-	) ([]interface{}, error) {
-		data, err := tc.Engine.InsertRecord(ctx, tc.tableDef.Name, cols, values)
-		if err != nil {
-			tc.window.PushStatus(err.Error())
-			return nil, err
-		} else {
-			tc.window.PushStatus("Inserted")
-		}
-
-		return data, nil
-	}).OnSubmit(func(value string) {
-		columns, data, err := tc.Engine.Query(tc.ctx, value)
-		if err != nil {
-			config.Env.Log.Error(err)
-			tc.window.PushStatus("Error: %s", err.Error())
-			return
-		}
-		tc.grid.UpdateRawData(columns, data)
-		tc.window.PushStatus("%d rows loaded", len(data))
-
-		/*dml, ddl := tc.parseQuery(value)
-
-		for _, query := range dml {
-			columns, data, err := tc.Engine.Query(tc.ctx, query)
-			if err != nil {
-				config.Env.Log.Error(err)
-				tc.window.PushStatus("Error: %s", err.Error())
-				return
-			}
-			tc.grid.UpdateRawData(columns, data)
-			tc.window.PushStatus("%d rows loaded", len(data))
-		}
-
-		for _, query := range ddl {
-			id, affected, err := tc.Engine.Execute(tc.ctx, query)
-			if err != nil {
-				config.Env.Log.Error(err)
-				tc.window.PushStatus("Error: %s", err.Error())
-				return
-			}
-			tc.window.PushStatus("Last inserted id: %s Affected rows: %d", id, affected)
-		}
-		*/
-	}).OnRefresh(func() {
-		tc.OnRefresh()
-	}).OnBack(func() {
-		tc.OnRefresh()
-	}).OnForward(func() {
-		tc.OnRefresh()
-	}).OnDelete(func() {
-		newRecord, err := tc.grid.SelectedIsNewRecord()
-		if err != nil {
-			return
-		}
-
-		if newRecord {
-			tc.grid.RemoveSelected()
-			tc.window.PushStatus("Record removed")
-		} else {
-			cols, values, err := tc.grid.GetRowID()
-			if err != nil {
-				config.Env.Log.Error(err)
-				return
-			}
-
-			tc.Engine.DeleteRecord(tc.ctx, tc.tableDef.Name, cols, values)
-			tc.grid.RemoveSelected()
-			tc.window.PushStatus("Record deleted")
-		}
-
-	}).OnCreate(func() {
-		newRecord, err := tc.grid.SelectedIsNewRecord()
-		if err != nil {
-			return
-		}
-		if !newRecord {
-			return
-		}
-
-		cols, values, err := tc.grid.GetRow()
-		if err != nil {
-			return
-		}
-
-		values, err = tc.Engine.InsertRecord(tc.ctx, tc.tableDef.Name, cols, values)
-		if err != nil {
-			tc.window.PushStatus(err.Error())
-			return
-		}
-
-		err = tc.grid.UpdateRow(values)
-		if err != nil {
-			tc.window.PushStatus(err.Error())
-			return
-		}
-
-		tc.window.PushStatus("Record saved")
-	}).OnCopyInsert(func(cols []driver.ColDef, values []interface{}) {
-		sql, err := tc.Engine.GetInsertStatement(tc.ctx, tc.tableDef.Name, cols, values)
-		if err != nil {
-			tc.window.PushStatus(err.Error())
-		}
-
-		clipboard.Copy(sql)
-		config.Env.Log.Debugf("insert copied: %s", sql)
-	})
-
-	tc.connectionTab, err = gtk.NewConnectionTab(gtk.ConnectionTabOpts{
+	tc.connectionTab, err = gtk.ConnectionTab{}.Init(gtk.ConnectionTabOpts{
 		Title:   fmt.Sprintf("%s.%s", tc.dbName, opts.TableDef.Name),
 		Content: tc.grid,
 		OnRemove: func() {
@@ -184,6 +65,96 @@ func (tc TableCtrl) init(
 	}
 
 	return &tc, nil
+}
+
+func (tc *TableCtrl) OnCopyInsert(cols []driver.ColDef, values []interface{}) {
+	sql, err := tc.Engine.GetInsertStatement(tc.ctx, tc.tableDef.Name, cols, values)
+	if err != nil {
+		tc.window.PushStatus(err.Error())
+	}
+
+	clipboard.Copy(sql)
+	config.Env.Log.Debugf("insert copied: %s", sql)
+}
+
+func (tc *TableCtrl) OnUpdateRecord(cols []driver.ColDef, values []interface{}) error {
+	_, err := tc.Engine.UpdateField(tc.ctx, tc.tableDef.Name, cols, values)
+	if err != nil {
+		tc.window.PushStatus(err.Error())
+		return err
+	}
+
+	tc.window.PushStatus("Saved")
+	return nil
+}
+
+func (tc *TableCtrl) OnCreateRecord(cols []driver.ColDef, values []interface{}) ([]interface{}, error) {
+	data, err := tc.Engine.InsertRecord(tc.ctx, tc.tableDef.Name, cols, values)
+	if err != nil {
+		tc.window.PushStatus(err.Error())
+		return nil, err
+	} else {
+		tc.window.PushStatus("Inserted")
+	}
+
+	return data, nil
+}
+
+func (tc *TableCtrl) OnExecQuery(value string) {
+	columns, data, err := tc.Engine.Query(tc.ctx, value)
+	if err != nil {
+		config.Env.Log.Error(err)
+		tc.window.PushStatus("Error: %s", err.Error())
+		return
+	}
+	tc.grid.UpdateRawData(columns, data)
+	tc.window.PushStatus("%d rows loaded", len(data))
+
+	/*dml, ddl := tc.parseQuery(value)
+
+	for _, query := range dml {
+		columns, data, err := tc.Engine.Query(tc.ctx, query)
+		if err != nil {
+			config.Env.Log.Error(err)
+			tc.window.PushStatus("Error: %s", err.Error())
+			return
+		}
+		tc.grid.UpdateRawData(columns, data)
+		tc.window.PushStatus("%d rows loaded", len(data))
+	}
+
+	for _, query := range ddl {
+		id, affected, err := tc.Engine.Execute(tc.ctx, query)
+		if err != nil {
+			config.Env.Log.Error(err)
+			tc.window.PushStatus("Error: %s", err.Error())
+			return
+		}
+		tc.window.PushStatus("Last inserted id: %s Affected rows: %d", id, affected)
+	}
+	*/
+}
+
+func (tc *TableCtrl) OnDelete() {
+	newRecord, err := tc.grid.SelectedIsNewRecord()
+	if err != nil {
+		return
+	}
+
+	if newRecord {
+		tc.grid.RemoveSelected()
+		tc.window.PushStatus("Record removed")
+	} else {
+		cols, values, err := tc.grid.GetRowID()
+		if err != nil {
+			config.Env.Log.Error(err)
+			return
+		}
+
+		tc.Engine.DeleteRecord(tc.ctx, tc.tableDef.Name, cols, values)
+		tc.grid.RemoveSelected()
+		tc.window.PushStatus("Record deleted")
+	}
 }
 
 func (tc *TableCtrl) OnConnect() {
@@ -247,6 +218,35 @@ func (tc *TableCtrl) OnRefresh() {
 	}
 
 	tc.window.PushStatus("Table reloaded")
+}
+
+func (tc *TableCtrl) OnCreate() {
+	newRecord, err := tc.grid.SelectedIsNewRecord()
+	if err != nil {
+		return
+	}
+	if !newRecord {
+		return
+	}
+
+	cols, values, err := tc.grid.GetRow()
+	if err != nil {
+		return
+	}
+
+	values, err = tc.Engine.InsertRecord(tc.ctx, tc.tableDef.Name, cols, values)
+	if err != nil {
+		tc.window.PushStatus(err.Error())
+		return
+	}
+
+	err = tc.grid.UpdateRow(values)
+	if err != nil {
+		tc.window.PushStatus(err.Error())
+		return
+	}
+
+	tc.window.PushStatus("Record saved")
 }
 
 func (tc *TableCtrl) SetTableDef(ctx context.Context, tableDef driver.TableDef) {

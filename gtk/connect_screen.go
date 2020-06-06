@@ -9,11 +9,6 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
-func NewConnectScreen() (*ConnectScreen, error) {
-	cs := &ConnectScreen{}
-	return cs, cs.init()
-}
-
 type ConnectScreen struct {
 	*gtk.Paned
 	ConnectionList *List
@@ -27,12 +22,19 @@ type ConnectScreen struct {
 	menuNew, menuTest, menuConnect, menuDel *gtk.MenuItem
 }
 
-func (c *ConnectScreen) init() error {
+func (c ConnectScreen) Init(ctrl interface {
+	OnConnectionSelected()
+	OnTest()
+	OnSave()
+	OnNewConnection()
+	OnDeleteConnection()
+	OnConnect()
+}) (*ConnectScreen, error) {
 	var err error
 
 	c.Paned, err = gtk.PanedNew(gtk.ORIENTATION_HORIZONTAL)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	c.Paned.SetHExpand(true)
@@ -40,12 +42,12 @@ func (c *ConnectScreen) init() error {
 
 	frame1, err := gtk.FrameNew("")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	frame2, err := gtk.FrameNew("")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	frame1.SetShadowType(gtk.SHADOW_IN)
@@ -53,9 +55,9 @@ func (c *ConnectScreen) init() error {
 	frame2.SetShadowType(gtk.SHADOW_IN)
 	frame2.SetSizeRequest(50, -1)
 
-	c.ConnectionList, err = NewList(ListOptions{SelectOnRightClick: true, StockIcon: "gtk-connect"})
+	c.ConnectionList, err = List{}.Init(ListOptions{SelectOnRightClick: true, StockIcon: "gtk-connect"})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	c.ConnectionList.OnButtonPress(c.onConnectListButtonPress)
@@ -69,26 +71,26 @@ func (c *ConnectScreen) init() error {
 
 	forms, err := c.forms()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	btnBox, err := gtk.ButtonBoxNew(gtk.ORIENTATION_HORIZONTAL)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	btnBox.SetLayout(gtk.BUTTONBOX_EDGE)
 
 	c.btnConnect, err = gtk.ButtonNew()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	c.btnSave, err = gtk.ButtonNew()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	c.btnTest, err = gtk.ButtonNew()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	c.btnConnect.SetLabel("Connect")
@@ -111,12 +113,20 @@ func (c *ConnectScreen) init() error {
 
 	err = c.initMenu()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	c.Paned.ShowAll()
 
-	return nil
+	c.menuNew.Connect("activate", ctrl.OnNewConnection)
+	c.menuDel.Connect("activate", ctrl.OnDeleteConnection)
+	c.btnTest.Connect("clicked", ctrl.OnTest)
+	c.btnSave.Connect("clicked", ctrl.OnSave)
+	c.btnConnect.Connect("clicked", ctrl.OnConnect)
+	c.ConnectionList.Connect("row-selected", ctrl.OnConnectionSelected)
+	c.ConnectionList.Connect("row-activated", ctrl.OnConnect)
+
+	return &c, nil
 }
 
 func (c *ConnectScreen) onConnectListButtonPress(_ *gtk.ListBox, e *gdk.Event) {
@@ -217,40 +227,11 @@ func (c *ConnectScreen) SetFormConnection(conn *config.Connection) {
 	}
 }
 
-func (c *ConnectScreen) OnConnectionSelected(fn interface{}) {
-	c.ConnectionList.Connect("row-selected", fn)
-}
-
-func (c *ConnectScreen) OnConnectionActivated(fn interface{}) {
-	c.ConnectionList.Connect("row-activated", fn)
-}
-
-func (c *ConnectScreen) onConnect() {
-	c.btnConnect.Emit("activate")
-}
-
-func (c *ConnectScreen) OnConnect(f interface{}) {
-	c.btnConnect.Connect("clicked", f)
-}
-
-func (c *ConnectScreen) OnSave(f interface{}) {
-	c.btnSave.Connect("clicked", f)
-}
-
-func (c *ConnectScreen) OnTest(f interface{}) {
-	c.btnTest.Connect("clicked", f)
-}
-
-func (c *ConnectScreen) OnNewConnection(f interface{}) {
-	c.menuNew.Connect("activate", f)
-}
-
-func (c *ConnectScreen) OnDeleteConnection(f interface{}) {
-	c.menuDel.Connect("activate", f)
-}
-
 func (c *ConnectScreen) ActiveConnectionIndex() int {
 	return c.ConnectionList.GetSelectedRow().GetIndex()
+}
+func (c *ConnectScreen) onConnect() {
+	c.btnConnect.Emit("activate")
 }
 
 func (c *ConnectScreen) Dispose() {

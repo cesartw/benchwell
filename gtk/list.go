@@ -28,12 +28,10 @@ type List struct {
 	selectedItemIndex MVar
 }
 
-func NewList(opts ListOptions) (*List, error) {
-	list := &List{
-		options: opts,
-	}
-
+func (list List) Init(opts ListOptions) (*List, error) {
 	var err error
+	list.options = opts
+
 	list.ListBox, err = gtk.ListBoxNew()
 	if err != nil {
 		return nil, err
@@ -61,7 +59,7 @@ func NewList(opts ListOptions) (*List, error) {
 		return list.options.FilterRegex.Match([]byte(name.String()))
 	})
 
-	return list, nil
+	return &list, nil
 }
 
 func (u *List) Clear() {

@@ -17,20 +17,12 @@ func (c ConnectCtrl) Init(p *WindowTabCtrl) (*ConnectCtrl, error) {
 	c.WindowTabCtrl = p
 
 	var err error
-	c.scr, err = gtk.NewConnectScreen()
+	c.scr, err = gtk.ConnectScreen{}.Init(&c)
 	if err != nil {
 		return nil, err
 	}
 
 	c.scr.SetConnections(config.Env.Connections)
-
-	c.scr.OnConnectionSelected(c.onConnectionSelected)
-
-	c.scr.OnTest(c.onTest)
-	c.scr.OnSave(c.onSave)
-
-	c.scr.OnNewConnection(c.onNewConnection)
-	c.scr.OnDeleteConnection(c.onDeleteConnection)
 
 	return &c, nil
 }
@@ -39,7 +31,7 @@ func (c *ConnectCtrl) AddEmptyTab() error {
 	return nil
 }
 
-func (c *ConnectCtrl) onTest() {
+func (c *ConnectCtrl) OnTest() {
 	var conn *config.Connection
 	index := c.scr.ActiveConnectionIndex()
 	if index > 0 {
@@ -59,7 +51,7 @@ func (c *ConnectCtrl) onTest() {
 	c.Engine.Disconnect(ctx)
 }
 
-func (c *ConnectCtrl) onSave() {
+func (c *ConnectCtrl) OnSave() {
 	index := c.scr.ActiveConnectionIndex()
 	if index == -1 || index >= len(config.Env.Connections) {
 		config.Env.Connections = append(config.Env.Connections, c.scr.GetFormConnection())
@@ -74,7 +66,7 @@ func (c *ConnectCtrl) onSave() {
 	c.window.PushStatus("Saved")
 }
 
-func (c *ConnectCtrl) onDeleteConnection() {
+func (c *ConnectCtrl) OnDeleteConnection() {
 	index := c.scr.ActiveConnectionIndex()
 	if index == -1 {
 		return
@@ -92,7 +84,7 @@ func (c *ConnectCtrl) onDeleteConnection() {
 	c.window.PushStatus("Deleted")
 }
 
-func (c *ConnectCtrl) onNewConnection() {
+func (c *ConnectCtrl) OnNewConnection() {
 	row, err := c.scr.ConnectionList.AddItem(gtk.Stringer("New Connection"))
 	if err != nil {
 		config.Env.Log.Error(err)
@@ -103,7 +95,7 @@ func (c *ConnectCtrl) onNewConnection() {
 	c.scr.SetFormConnection(&config.Connection{Name: "New Connection", Port: 3306})
 }
 
-func (c *ConnectCtrl) onConnectionSelected() {
+func (c *ConnectCtrl) OnConnectionSelected() {
 	row := c.scr.ConnectionList.GetSelectedRow()
 	if row.GetIndex() == -1 {
 		return

@@ -37,7 +37,7 @@ var rootCmd = &cobra.Command{
 		ctr.Config = config.Env
 
 		// Create a new application.
-		ctr.App, err = gtk.New(ctr)
+		ctr.App, err = gtk.Application{}.Init(ctr)
 		if err != nil {
 			return err
 		}

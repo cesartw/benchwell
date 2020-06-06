@@ -55,8 +55,13 @@ type Result struct {
 	onCopyInsertFn func([]driver.ColDef, []interface{})
 }
 
-func NewResult(cols []driver.ColDef, data [][]interface{}, parser parser) (u *Result, err error) {
-	u = &Result{parser: parser}
+func (u Result) Init(ctrl interface {
+	OnUpdateRecord([]driver.ColDef, []interface{}) error
+	OnCreateRecord([]driver.ColDef, []interface{}) ([]interface{}, error)
+	OnCopyInsert([]driver.ColDef, []interface{})
+}, parser parser) (*Result, error) {
+	var err error
+	u.parser = parser
 
 	u.TreeView, err = gtk.TreeViewNew()
 	if err != nil {
@@ -77,10 +82,10 @@ func NewResult(cols []driver.ColDef, data [][]interface{}, parser parser) (u *Re
 	u.TreeView.Connect("key-press-event", u.onTreeViewKeyPress)
 	u.TreeView.Connect("button-press-event", u.onTreeViewButtonPress)
 
-	if len(cols) > 0 {
-		u.UpdateColumns(cols)
-		u.UpdateData(data)
-	}
+	//if len(cols) > 0 {
+	//u.UpdateColumns(cols)
+	//u.UpdateData(data)
+	//}
 
 	u.ddMenu.Menu, err = gtk.MenuNew()
 	if err != nil {
@@ -103,12 +108,16 @@ func NewResult(cols []driver.ColDef, data [][]interface{}, parser parser) (u *Re
 
 	u.ddMenu.cp, err = menuItemWithImage("Copy Field", "gtk-copy")
 	if err != nil {
-		return
+		return nil, err
 	}
 	u.ddMenu.cp.Connect("activate", u.onCopy)
 	u.ddMenu.Add(u.ddMenu.cp)
 
-	return u, nil
+	u.updateCallback = ctrl.OnUpdateRecord
+	u.createCallback = ctrl.OnCreateRecord
+	u.onCopyInsertFn = ctrl.OnCopyInsert
+
+	return &u, nil
 }
 
 func (u *Result) UpdateColumns(cols []driver.ColDef) error {
@@ -326,14 +335,6 @@ func (u *Result) AddRow(row []interface{}) {
 	}
 }
 
-func (u *Result) SetUpdateRecordFunc(fn func([]driver.ColDef, []interface{}) error) {
-	u.updateCallback = fn
-}
-
-func (u *Result) SetCreateRecordFunc(fn func([]driver.ColDef, []interface{}) ([]interface{}, error)) {
-	u.createCallback = fn
-}
-
 func (u *Result) GetCurrentIter() (*gtk.TreeIter, error) {
 	var storeSelected *gtk.TreeIter
 
@@ -482,10 +483,6 @@ func (u *Result) UpdateRow(values []interface{}) error {
 	return u.store.Set(iter,
 		columns,
 		values)
-}
-
-func (u *Result) OnCopyInsert(f func([]driver.ColDef, []interface{})) {
-	u.onCopyInsertFn = f
 }
 
 func (u *Result) SortOptions() []driver.SortOption {

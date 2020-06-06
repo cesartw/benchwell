@@ -1,23 +1,14 @@
 package ctrl
 
 import (
-	"github.com/sirupsen/logrus"
-
 	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/gtk"
 	"bitbucket.org/goreorto/sqlaid/sqlengine"
 )
 
-type Options struct {
-	Config *config.Config
-	Log    *logrus.Logger
-	App    *gtk.App
-	Engine *sqlengine.Engine
-}
-
 type AppCtrl struct {
 	Config *config.Config
-	App    *gtk.App
+	App    *gtk.Application
 	Engine *sqlengine.Engine
 
 	windows []*WindowCtrl
@@ -28,10 +19,7 @@ func (c *AppCtrl) AppID() string {
 }
 
 func (c *AppCtrl) OnActivate() {
-	err := c.CreateWindow()
-	if err != nil {
-		panic(err)
-	}
+	c.OnNewWindow()
 
 	// TODO: every double click is triggering this handler
 	//c.factory.OnTabClick(c.onNotebookDoubleClick)
@@ -40,7 +28,7 @@ func (c *AppCtrl) OnActivate() {
 }
 
 func (c *AppCtrl) OnNewWindow() {
-	err := c.CreateWindow()
+	err := c.createWindow()
 	if err != nil {
 		panic(err)
 	}
@@ -57,7 +45,7 @@ func (c *AppCtrl) OnStartup() {
 	config.Env.Log.Debug("application started")
 }
 
-func (c *AppCtrl) CreateWindow() error {
+func (c *AppCtrl) createWindow() error {
 	window, err := WindowCtrl{}.Init(c)
 	if err != nil {
 		return err

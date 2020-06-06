@@ -25,7 +25,11 @@ type Window struct {
 	}
 }
 
-func (w Window) Init(app *gtk.Application) (*Window, error) {
+func (w Window) Init(app *gtk.Application, ctrl interface {
+	OnNewTab()
+	OnNewSubTab()
+	OnCloseTab()
+}) (*Window, error) {
 	var err error
 	w.ApplicationWindow, err = gtk.ApplicationWindowNew(app)
 	w.SetTitle("SQLaid")
@@ -64,6 +68,12 @@ func (w Window) Init(app *gtk.Application) (*Window, error) {
 	w.ShowAll()
 	// TODO: when we get a systray
 	//w.HideOnDelete()
+
+	// add main tab
+	w.Menu.NewTab.Connect("activate", ctrl.OnNewTab)
+	// action menu for sub tabs
+	w.Menu.NewSubTab.Connect("activate", ctrl.OnNewSubTab)
+	w.Menu.CloseTab.Connect("activate", ctrl.OnCloseTab)
 
 	return &w, nil
 }

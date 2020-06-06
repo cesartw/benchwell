@@ -11,11 +11,6 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
-func (f *App) NewConnectionScreen() (*ConnectionScreen, error) {
-	cs := &ConnectionScreen{}
-	return cs, cs.init()
-}
-
 type ConnectionTab struct {
 	label   *gtk.Label
 	btn     *gtk.Button
@@ -31,11 +26,8 @@ type ConnectionTabOpts struct {
 	OnRemove func()
 }
 
-func NewConnectionTab(opts ConnectionTabOpts) (*ConnectionTab, error) {
-	var (
-		err error
-		c   = &ConnectionTab{}
-	)
+func (c ConnectionTab) Init(opts ConnectionTabOpts) (*ConnectionTab, error) {
+	var err error
 
 	c.content, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if err != nil {
@@ -78,7 +70,7 @@ func NewConnectionTab(opts ConnectionTabOpts) (*ConnectionTab, error) {
 		c.btn.Connect("clicked", opts.OnRemove)
 	}
 
-	return c, nil
+	return &c, nil
 }
 
 func (c *ConnectionTab) SetTitle(title string) {
@@ -109,12 +101,21 @@ type ConnectionScreen struct {
 	tabIndex int
 }
 
-func (c *ConnectionScreen) init() error {
+func (c ConnectionScreen) Init(ctrl interface {
+	OnDatabaseSelected()
+	OnTableSelected()
+	OnSchemaMenu()
+	OnRefreshMenu()
+	OnNewTabMenu()
+	OnEditTable()
+	OnTruncateTable()
+	OnDeleteTable()
+}) (*ConnectionScreen, error) {
 	var err error
 
 	c.Paned, err = gtk.PanedNew(gtk.ORIENTATION_HORIZONTAL)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	c.Paned.SetHExpand(true)
@@ -124,14 +125,14 @@ func (c *ConnectionScreen) init() error {
 
 	sideBar, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	c.Paned.Pack1(sideBar, false, true)
 
 	c.tableFilter, err = gtk.SearchEntryNew()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	c.tableFilter.Connect("search-changed", c.onSearch)
 	c.tableFilter.SetPlaceholderText("Filter table: .*")
@@ -142,17 +143,17 @@ func (c *ConnectionScreen) init() error {
 
 	tableListSW, err := gtk.ScrolledWindowNew(nil, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	c.dbCombo, err = gtk.ComboBoxTextNew()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	c.dbCombo.SetIDColumn(0)
 	//c.dbCombo.SetEntryTextColumn(0)
 
-	c.tableList, err = NewList(ListOptions{
+	c.tableList, err = List{}.Init(ListOptions{
 		SelectOnRightClick: true,
 		IconFunc: func(name fmt.Stringer) *gdk.Pixbuf {
 			def, ok := name.(driver.TableDef)
@@ -167,7 +168,7 @@ func (c *ConnectionScreen) init() error {
 		},
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	c.tableList.SetHExpand(true)
 	c.tableList.SetVExpand(true)
@@ -183,12 +184,12 @@ func (c *ConnectionScreen) init() error {
 
 	mainSection, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	c.tabber, err = gtk.NotebookNew()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	c.tabber.SetVExpand(true)
 	c.tabber.SetHExpand(true)
@@ -215,7 +216,7 @@ func (c *ConnectionScreen) init() error {
 
 	err = c.initTableMenu()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// signals
@@ -224,7 +225,16 @@ func (c *ConnectionScreen) init() error {
 
 	c.Paned.ShowAll()
 
-	return nil
+	c.dbCombo.Connect("changed", ctrl.OnDatabaseSelected)
+	c.tableList.Connect("row-activated", ctrl.OnTableSelected)
+	c.schemaMenu.Connect("activate", ctrl.OnSchemaMenu)
+	c.refreshMenu.Connect("activate", ctrl.OnRefreshMenu)
+	c.newTabMenu.Connect("activate", ctrl.OnNewTabMenu)
+	c.editMenu.Connect("activate", ctrl.OnEditTable)
+	c.truncateMenu.Connect("activate", ctrl.OnTruncateTable)
+	c.deleteMenu.Connect("activate", ctrl.OnDeleteTable)
+
+	return &c, nil
 }
 
 func (c *ConnectionScreen) CurrentTabIndex() int {
@@ -276,14 +286,6 @@ func (c *ConnectionScreen) SetDatabases(dbs []string) {
 
 func (c *ConnectionScreen) SetTables(tables driver.TableDefs) {
 	c.tableList.UpdateItems(tables.ToStringer())
-}
-
-func (c *ConnectionScreen) OnDatabaseSelected(f interface{}) {
-	c.dbCombo.Connect("changed", f)
-}
-
-func (c *ConnectionScreen) OnTableSelected(f interface{}) {
-	c.tableList.Connect("row-activated", f)
 }
 
 func (c *ConnectionScreen) SetActiveDatabase(dbName string) {
@@ -359,30 +361,6 @@ func (c *ConnectionScreen) SelectedTable() (string, bool) {
 		return "", ok
 	}
 	return i.String(), true
-}
-
-func (c *ConnectionScreen) OnEditMenu(fn interface{}) {
-	c.editMenu.Connect("activate", fn)
-}
-
-func (c *ConnectionScreen) OnNewTabMenu(fn interface{}) {
-	c.newTabMenu.Connect("activate", fn)
-}
-
-func (c *ConnectionScreen) OnSchemaMenu(fn interface{}) {
-	c.schemaMenu.Connect("activate", fn)
-}
-
-func (c *ConnectionScreen) OnTruncateMenu(fn interface{}) {
-	c.truncateMenu.Connect("activate", fn)
-}
-
-func (c *ConnectionScreen) OnDeleteMenu(fn interface{}) {
-	c.deleteMenu.Connect("activate", fn)
-}
-
-func (c *ConnectionScreen) OnRefreshMenu(fn interface{}) {
-	c.refreshMenu.Connect("activate", fn)
 }
 
 func (c *ConnectionScreen) onTableListButtonPress(_ *gtk.ListBox, e *gdk.Event) {

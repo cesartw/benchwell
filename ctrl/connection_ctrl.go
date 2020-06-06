@@ -36,7 +36,7 @@ func (c ConnectionCtrl) Init(
 		return nil, err
 	}
 
-	c.scr, err = c.App.NewConnectionScreen()
+	c.scr, err = gtk.ConnectionScreen{}.Init(&c)
 	if err != nil {
 		return nil, err
 	}
@@ -45,16 +45,9 @@ func (c ConnectionCtrl) Init(
 
 	c.scr.ShowAll()
 
-	c.scr.OnDatabaseSelected(c.onDatabaseSelected)
-	c.scr.OnTableSelected(c.onTableSelected)
-
 	if c.conn.Database != "" {
 		c.scr.SetActiveDatabase(c.conn.Database)
 	}
-
-	c.scr.OnSchemaMenu(c.onSchemaMenu)
-	c.scr.OnRefreshMenu(c.onRefreshMenu)
-	c.scr.OnNewTabMenu(c.onNewTabMenu)
 
 	return &c, nil
 }
@@ -105,7 +98,7 @@ func (c *ConnectionCtrl) UpdateOrAddTab(tableDef driver.TableDef) error {
 	return nil
 }
 
-func (c *ConnectionCtrl) onDatabaseSelected() {
+func (c *ConnectionCtrl) OnDatabaseSelected() {
 	var err error
 	dbName, ok := c.scr.ActiveDatabase()
 	if !ok {
@@ -131,7 +124,7 @@ func (c *ConnectionCtrl) onDatabaseSelected() {
 	c.dbName = dbName
 }
 
-func (c *ConnectionCtrl) onTableSelected() {
+func (c *ConnectionCtrl) OnTableSelected() {
 	defer c.disconnect()
 
 	tableDef, ok := c.scr.ActiveTable()
@@ -143,11 +136,11 @@ func (c *ConnectionCtrl) onTableSelected() {
 	c.UpdateOrAddTab(tableDef)
 }
 
-func (c *ConnectionCtrl) Screen() interface{} {
-	return c.scr
-}
+func (c *ConnectionCtrl) OnEditTable()     {}
+func (c *ConnectionCtrl) OnTruncateTable() {}
+func (c *ConnectionCtrl) OnDeleteTable()   {}
 
-func (c *ConnectionCtrl) onSchemaMenu() {
+func (c *ConnectionCtrl) OnSchemaMenu() {
 	tableName, ok := c.scr.SelectedTable()
 	if !ok {
 		return
@@ -161,11 +154,11 @@ func (c *ConnectionCtrl) onSchemaMenu() {
 	c.scr.ShowTableSchemaModal(tableName, schema)
 }
 
-func (c *ConnectionCtrl) onRefreshMenu() {
-	c.onDatabaseSelected()
+func (c *ConnectionCtrl) OnRefreshMenu() {
+	c.OnDatabaseSelected()
 }
 
-func (c *ConnectionCtrl) onNewTabMenu() {
+func (c *ConnectionCtrl) OnNewTabMenu() {
 	tableDef, ok := c.scr.ActiveTable()
 	if !ok {
 		config.Env.Log.Debug("no table selected. odd!")
@@ -173,6 +166,10 @@ func (c *ConnectionCtrl) onNewTabMenu() {
 	}
 
 	c.AddTab(tableDef)
+}
+
+func (c *ConnectionCtrl) Screen() interface{} {
+	return c.scr
 }
 
 func (c *ConnectionCtrl) disconnect() {

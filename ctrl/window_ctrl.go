@@ -18,43 +18,41 @@ func (c WindowCtrl) Init(parent *AppCtrl) (*WindowCtrl, error) {
 	var err error
 	ctrl := &c
 	ctrl.AppCtrl = parent
-	ctrl.window, err = gtk.Window{}.Init(parent.App.Application)
+	ctrl.window, err = gtk.Window{}.Init(parent.App.Application, &c)
 	if err != nil {
 		return nil, err
 	}
 
-	// add main tab
-	c.window.Menu.NewTab.Connect("activate", func() {
-		err := c.AddTab()
-		if err != nil {
-			config.Env.Log.Error(err)
-			return
-		}
-		c.window.PushStatus("Ready")
-	})
-
-	// action menu for sub tabs
-	ctrl.window.Menu.NewSubTab.Connect("activate", func() {
-		err := ctrl.currentWindowTab().AddTab()
-		if err != nil {
-			config.Env.Log.Error(err)
-			return
-		}
-		ctrl.window.PushStatus("Ready")
-	})
-
-	ctrl.window.Menu.CloseTab.Connect("activate", func() {
-		if ctrl.currentWindowTab().Close() {
-			return
-		}
-
-		i := ctrl.window.CurrentPage()
-
-		ctrl.tabs = append(ctrl.tabs[i:], ctrl.tabs[:i+1]...)
-		ctrl.window.RemoveCurrentPage()
-	})
-
 	return ctrl, ctrl.AddTab()
+}
+
+func (c *WindowCtrl) OnNewSubTab() {
+	err := c.currentWindowTab().AddTab()
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+	c.window.PushStatus("Ready")
+}
+
+func (c *WindowCtrl) OnCloseTab() {
+	if c.currentWindowTab().Close() {
+		return
+	}
+
+	i := c.window.CurrentPage()
+
+	c.tabs = append(c.tabs[i:], c.tabs[:i+1]...)
+	c.window.RemoveCurrentPage()
+}
+
+func (c *WindowCtrl) OnNewTab() {
+	err := c.AddTab()
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+	c.window.PushStatus("Ready")
 }
 
 func (c *WindowCtrl) Show() {
@@ -65,16 +63,16 @@ func (c *WindowCtrl) Hide() {
 	c.window.Hide()
 }
 
-func (c *WindowCtrl) OnActivate() {
-	err := c.AddTab()
-	if err != nil {
-		c.window.PushStatus(err.Error())
-	} else {
-		c.window.PushStatus("Ready")
-	}
+//func (c *WindowCtrl) OnActivate() {
+//err := c.AddTab()
+//if err != nil {
+//c.window.PushStatus(err.Error())
+//} else {
+//c.window.PushStatus("Ready")
+//}
 
-	c.window.Show()
-}
+//c.window.Show()
+//}
 
 func (c *WindowCtrl) AddTab() error {
 	tab, err := WindowTabCtrl{}.Init(c)

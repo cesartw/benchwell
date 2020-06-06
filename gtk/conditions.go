@@ -21,8 +21,9 @@ type Condition struct {
 	btnRm      *gtk.Button
 }
 
-func NewConditions(cols []driver.ColDef) (c *Conditions, err error) {
-	c = &Conditions{cols: cols}
+func (c Conditions) Init() (*Conditions, error) {
+	var err error
+
 	c.Frame, err = gtk.FrameNew("Filter:")
 	if err != nil {
 		return nil, err
@@ -48,11 +49,11 @@ func NewConditions(cols []driver.ColDef) (c *Conditions, err error) {
 
 	c.Frame.Add(c.grid)
 
-	return c, nil //c.Add()
+	return &c, nil //c.Add()
 }
 
 func (c *Conditions) Add() error {
-	cond, err := newCondition(c.cols)
+	cond, err := Condition{}.Init(c.cols)
 	if err != nil {
 		return err
 	}
@@ -118,7 +119,6 @@ func (c *Conditions) Statements() ([]driver.CondStmt, error) {
 }
 
 func (c *Conditions) Update(cols []driver.ColDef) error {
-
 	conds := c.conditions
 
 	for i, cond := range conds {
@@ -173,8 +173,8 @@ func (c *Conditions) Update(cols []driver.ColDef) error {
 	return nil
 }
 
-func newCondition(cols []driver.ColDef) (c *Condition, err error) {
-	c = &Condition{}
+func (c Condition) Init(cols []driver.ColDef) (*Condition, error) {
+	var err error
 
 	c.activeCb, err = gtk.CheckButtonNew()
 	if err != nil {
@@ -216,5 +216,5 @@ func newCondition(cols []driver.ColDef) (c *Condition, err error) {
 	c.valueEntry.Show()
 	c.btnRm.Show()
 
-	return c, nil
+	return &c, nil
 }

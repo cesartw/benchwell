@@ -27,7 +27,7 @@ func (c WindowTabCtrl) Init(p *WindowCtrl) (*WindowTabCtrl, error) {
 	var err error
 	c.WindowCtrl = p
 
-	c.tab, err = gtk.NewTab()
+	c.tab, err = gtk.Tab{}.Init()
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,6 @@ func (c *WindowTabCtrl) launchConnect() {
 
 	c.currentCtrl = c.connectCtrl
 
-	c.connectCtrl.scr.OnConnect(c.onConnect)
 	c.tab.PackStart(c.connectCtrl.scr, true, true, 0)
 }
 
@@ -103,7 +102,7 @@ func (c *WindowTabCtrl) launchConnection(ctx sqlengine.Context, conn *config.Con
 	c.tab.PackStart(c.connectionCtrl.scr, true, true, 0)
 }
 
-func (c *WindowTabCtrl) onConnect() {
+func (c *WindowTabCtrl) OnConnect() {
 	conn := c.connectCtrl.scr.GetFormConnection()
 
 	ctx, done := context.WithTimeout(context.TODO(), time.Second*5)

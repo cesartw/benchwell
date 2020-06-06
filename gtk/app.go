@@ -8,7 +8,7 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
-type App struct {
+type Application struct {
 	*gtk.Application
 	windows []*Window
 	Menu    struct {
@@ -22,65 +22,64 @@ type App struct {
 	DarkMode bool
 }
 
-func New(ctrl interface {
+func (a Application) Init(ctrl interface {
 	AppID() string
 	OnStartup()
 	OnActivate()
 	OnShutdown()
 	OnNewWindow()
 	OnPreferences()
-}) (*App, error) {
+}) (*Application, error) {
 	var err error
-	f := &App{}
 
-	f.Application, err = gtk.ApplicationNew(ctrl.AppID(), glib.APPLICATION_FLAGS_NONE)
+	a.Application, err = gtk.ApplicationNew(ctrl.AppID(), glib.APPLICATION_FLAGS_NONE)
 	if err != nil {
 		return nil, err
 	}
-	f.DarkMode = config.Env.GUI.DarkMode
+	a.DarkMode = config.Env.GUI.DarkMode
 
-	f.Connect("startup", func() {
-		f.Menu.Application.NewWindow = glib.SimpleActionNew("new", nil)
-		f.Menu.Application.Preferences = glib.SimpleActionNew("prefs", nil)
-		f.Menu.Application.DarkMode = glib.SimpleActionNew("darkmode", nil)
+	a.Connect("startup", func() {
+		a.Menu.Application.NewWindow = glib.SimpleActionNew("new", nil)
+		a.Menu.Application.Preferences = glib.SimpleActionNew("prefs", nil)
+		a.Menu.Application.DarkMode = glib.SimpleActionNew("darkmode", nil)
 
-		f.AddAction(f.Menu.Application.NewWindow)
-		f.AddAction(f.Menu.Application.Preferences)
-		f.AddAction(f.Menu.Application.DarkMode)
-		f.SetTheme()
-		f.loadSettingsCSS()
+		a.AddAction(a.Menu.Application.NewWindow)
+		a.AddAction(a.Menu.Application.Preferences)
+		a.AddAction(a.Menu.Application.DarkMode)
+		a.SetTheme()
+		a.loadSettingsCSS()
 	})
 
-	//f.Application.SetAccelsForAction("app.new", []string{"<control>N"})
+	//a.Application.SetAccelsForAction("app.new", []string{"<control>N"})
 	// main tab
-	f.Application.SetAccelsForAction("win.new", []string{"<control>N"})
+	a.Application.SetAccelsForAction("win.new", []string{"<control>N"})
 	// sub tab
-	f.Application.SetAccelsForAction("win.tabnew", []string{"<control>T"})
+	a.Application.SetAccelsForAction("win.tabnew", []string{"<control>T"})
 	// close sub tab, and main tab when there's no sub tabs left
-	f.Application.SetAccelsForAction("win.close", []string{"<control>W"})
+	a.Application.SetAccelsForAction("win.close", []string{"<control>W"})
 
-	f.Application.Connect("activate", func() {
-		f.Menu.Application.NewWindow.Connect("activate", ctrl.OnNewWindow)
-		f.Menu.Application.Preferences.Connect("activate", ctrl.OnPreferences)
+	a.Application.Connect("activate", func() {
+		a.Menu.Application.NewWindow.Connect("activate", ctrl.OnNewWindow)
+		a.Menu.Application.Preferences.Connect("activate", ctrl.OnPreferences)
 
-		f.Menu.Application.DarkMode.Connect("activate", func() {
-			f.ToggleMode()
+		a.Menu.Application.DarkMode.Connect("activate", func() {
+			a.ToggleMode()
 		})
 	})
-	f.Application.Connect("activate", ctrl.OnActivate)
+	a.Application.Connect("activate", ctrl.OnActivate)
 
 	// Connect function to application shutdown event, this is not required.
-	f.Application.Connect("shutdown", ctrl.OnShutdown)
+	a.Application.Connect("shutdown", ctrl.OnShutdown)
 
-	return f, nil
+	return &a, nil
 }
 
-func (a *App) ToggleMode() {
+func (a *Application) ToggleMode() {
 	a.DarkMode = !a.DarkMode
 	a.SetTheme()
 }
 
-func (a *App) SetTheme() {
+func (a *Application) SetTheme() {
 	stylePath := assets.THEME_DARK + assets.BRAND_DARK
 	if !a.DarkMode {
 		stylePath = assets.THEME_LIGHT
@@ -88,7 +87,7 @@ func (a *App) SetTheme() {
 	a.loadCSS(stylePath)
 }
 
-func (a *App) loadCSS(path string) {
+func (a *Application) loadCSS(path string) {
 	css, err := gtk.CssProviderNew()
 	if err != nil {
 		panic(err)
@@ -107,7 +106,7 @@ func (a *App) loadCSS(path string) {
 	gtk.AddProviderForScreen(screen, css, gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 }
 
-func (a *App) loadSettingsCSS() {
+func (a *Application) loadSettingsCSS() {
 	css, err := gtk.CssProviderNew()
 	if err != nil {
 		panic(err)
