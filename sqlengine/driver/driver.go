@@ -69,17 +69,18 @@ type CondStmt struct {
 type Operator string
 
 const (
-	Eq   Operator = "="
-	Neq  Operator = "!="
-	Gt   Operator = ">"
-	Lt   Operator = "<"
-	Gte  Operator = ">="
-	Lte  Operator = "<="
-	Like Operator = "like"
-	Int  Operator = "in"
+	Eq     Operator = "="
+	Neq    Operator = "!="
+	Gt     Operator = ">"
+	Lt     Operator = "<"
+	Gte    Operator = ">="
+	Lte    Operator = "<="
+	Like   Operator = "like"
+	Int    Operator = "in"
+	IsNull Operator = "IS NULL"
 )
 
-var Operators = [8]Operator{
+var Operators = [9]Operator{
 	Eq,
 	Neq,
 	Gt,
@@ -88,6 +89,7 @@ var Operators = [8]Operator{
 	Lte,
 	Like,
 	Int,
+	IsNull,
 }
 
 func init() {

@@ -103,8 +103,9 @@ func (d *mysqlDriver) useDatabase(ctx context.Context, dbName string) (*sql.DB, 
 		return nil, err
 	}
 
-	driver.Log(ctx, fmt.Sprintf("USE %s", dbName))
-	_, err = db.db.ExecContext(ctx, fmt.Sprintf("USE %s", dbName))
+	query := fmt.Sprintf("USE %s", dbName)
+	driver.Log(ctx, query)
+	_, err = db.db.ExecContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -146,8 +147,9 @@ func (c *mysqlConn) LastError() error {
 
 // Databases ...
 func (c *mysqlConn) Databases(ctx context.Context) ([]string, error) {
-	driver.Log(ctx, "USE databases")
-	rows, err := c.db.Query(`SHOW databases`)
+	query := "SHOW databases"
+	driver.Log(ctx, query)
+	rows, err := c.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -171,8 +173,9 @@ func (d *mysqlDb) Name() string {
 }
 
 func (d *mysqlDb) Tables(ctx context.Context) ([]driver.TableDef, error) {
-	driver.Log(ctx, "SHOW FULL TABLES")
-	rows, err := d.db.Query("SHOW FULL TABLES")
+	query := "SHOW FULL TABLES"
+	driver.Log(ctx, query)
+	rows, err := d.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -202,9 +205,10 @@ func (d *mysqlDb) Tables(ctx context.Context) ([]driver.TableDef, error) {
 }
 
 func (d *mysqlDb) TableDefinition(ctx context.Context, tableName string) ([]driver.ColDef, error) {
-	driver.Log(ctx, "DESCRIBE "+tableName)
+	query := "DESCRIBE " + tableName
+	//driver.Log(ctx, query)
 
-	sqlRows, err := d.db.Query("DESCRIBE " + tableName)
+	sqlRows, err := d.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -397,20 +401,24 @@ func (o FetchTableOptions) SQL(tableName string) string {
 }
 
 func (d *mysqlDb) FetchTable(
-	ctx context.Context, tableName string, opts driver.FetchTableOptions,
+	ctx context.Context,
+	tableName string,
+	opts driver.FetchTableOptions,
 ) (
-	colDef []driver.ColDef, rows [][]interface{}, err error,
+	colDef []driver.ColDef,
+	rows [][]interface{},
+	err error,
 ) {
 	var sqlRows *sql.Rows
 
-	args := []interface{}{}
+	//args := []interface{}{}
 	wheres := []string{}
 	for _, cond := range opts.Conditions {
 		if cond.Op == "" || cond.Field.Name == "" {
 			continue
 		}
-		args = append(args, cond.Value)
-		wheres = append(wheres, fmt.Sprintf("`%s` %s ?", cond.Field.Name, cond.Op))
+		//args = append(args, cond.Value)
+		wheres = append(wheres, fmt.Sprintf("`%s` %s %#v", cond.Field.Name, cond.Op, cond.Value))
 	}
 
 	where := ""
@@ -418,14 +426,14 @@ func (d *mysqlDb) FetchTable(
 		where = "WHERE " + strings.Join(wheres, " AND ")
 	}
 
-	args = append(args, opts.Offset, opts.Limit)
+	//args = append(args, opts.Offset, opts.Limit)
 
-	query := fmt.Sprintf(`SELECT * FROM %s %s %s LIMIT ?, ?`,
-		tableName, where, FetchTableOptions(opts.Sort).SQL(tableName))
+	query := fmt.Sprintf(`SELECT * FROM %s %s %s LIMIT %d, %d`,
+		tableName, where, FetchTableOptions(opts.Sort).SQL(tableName), opts.Offset, opts.Limit)
 
 	driver.Log(ctx, query)
 
-	sqlRows, err = d.db.Query(query, args...)
+	sqlRows, err = d.db.Query(query)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -471,13 +479,10 @@ func (d *mysqlDb) DeleteRecord(ctx context.Context, tableName string, cols []dri
 
 	wheres := []string{}
 	for i := range cols {
-		wheres = append(wheres, fmt.Sprintf("%s = ?", cols[i].Name))
+		wheres = append(wheres, fmt.Sprintf("%s = %#v", cols[i].Name, args[i]))
 	}
 
-	query := fmt.Sprintf(`
-	DELETE FROM %s
-	WHERE %s
-	`, tableName, strings.Join(wheres, " AND "))
+	query := fmt.Sprintf(`DELETE FROM %s WHERE %s`, tableName, strings.Join(wheres, " AND "))
 
 	driver.Log(ctx, query)
 
@@ -524,12 +529,12 @@ func (d *mysqlDb) UpdateRecord(
 
 	query := `UPDATE %s SET %s WHERE %s = ?`
 
-	query = fmt.Sprintf(query, tableName, strings.Join(sets, ", "), pk.Name)
-	args = append(args, ID)
+	query = fmt.Sprintf(query, tableName, strings.Join(sets, ", "), pk.Name, ID)
+	//args = append(args, ID)
 
 	driver.Log(ctx, query)
 
-	result, err := d.db.Exec(query, args...)
+	result, err := d.db.Exec(query)
 	if err != nil {
 		return "", err
 	}
@@ -557,23 +562,22 @@ func (d *mysqlDb) UpdateField(
 	}
 
 	lastIndex := len(cols) - 1
-	args := []interface{}{values[lastIndex]}
-
 	wheres := []string{}
 
 	for i := 0; i <= len(cols)-2; i++ {
-		wheres = append(wheres, fmt.Sprintf("`%s` = ?", cols[i].Name))
-		args = append(args, values[i])
+		wheres = append(wheres, fmt.Sprintf("`%s` = %#v", cols[i].Name, values[i]))
+		//args = append(args, values[i])
 	}
 
-	query := fmt.Sprintf("UPDATE `%s` SET `%s` = ? WHERE %s",
+	query := fmt.Sprintf("UPDATE `%s` SET `%s` = %#v WHERE %s",
 		tableName,
 		cols[lastIndex].Name,
+		values[lastIndex],
 		strings.Join(wheres, " AND "))
 
 	driver.Log(ctx, query)
 
-	result, err := d.db.Exec(query, args...)
+	result, err := d.db.Exec(query)
 	if err != nil {
 		return "", err
 	}
@@ -606,9 +610,9 @@ func (d *mysqlDb) UpdateFields(
 
 	for i := range values {
 		if cols[i].PK && i <= keycount {
-			wheres = append(wheres, fmt.Sprintf("`%s` = ?", cols[i].Name))
+			wheres = append(wheres, fmt.Sprintf("`%s` = %#v", cols[i].Name, values[i]))
 		} else {
-			sets = append(sets, fmt.Sprintf("`%s` = ?", cols[i].Name))
+			sets = append(sets, fmt.Sprintf("`%s` = %#v", cols[i].Name, values[i]))
 		}
 	}
 
@@ -621,7 +625,7 @@ func (d *mysqlDb) UpdateFields(
 		strings.Join(wheres, " AND "))
 
 	driver.Log(ctx, query)
-	result, err := d.db.Exec(query, values...)
+	result, err := d.db.Exec(query)
 	if err != nil {
 		return "", err
 	}
@@ -681,8 +685,9 @@ func (d *mysqlDb) GetCreateTable(
 		err     error
 	)
 	// NOTE: ? doesn't work here
-	driver.Log(ctx, fmt.Sprintf("SHOW CREATE TABLE `%s`", tableName))
-	sqlRows, err = d.db.Query(fmt.Sprintf("SHOW CREATE TABLE `%s`", tableName))
+	query := fmt.Sprintf("SHOW CREATE TABLE `%s`", tableName)
+	driver.Log(ctx, query)
+	sqlRows, err = d.db.Query(query)
 	if err != nil {
 		return "", err
 	}
