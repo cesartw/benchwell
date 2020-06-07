@@ -31,6 +31,9 @@ func (c *ConnectCtrl) AddEmptyTab() error {
 	return nil
 }
 
+func (c *ConnectCtrl) SetFileText(s string) {
+}
+
 func (c *ConnectCtrl) OnTest() {
 	var conn *config.Connection
 	index := c.scr.ActiveConnectionIndex()

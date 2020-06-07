@@ -1,6 +1,8 @@
 package ctrl
 
 import (
+	"io/ioutil"
+
 	"github.com/gotk3/gotk3/gdk"
 	ggtk "github.com/gotk3/gotk3/gtk"
 
@@ -24,6 +26,16 @@ func (c WindowCtrl) Init(parent *AppCtrl) (*WindowCtrl, error) {
 	}
 
 	return ctrl, ctrl.AddTab()
+}
+
+func (c *WindowCtrl) OnFileSelected(filepath string) {
+	bytes, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		config.Env.Log.Error("reading file", err)
+		return
+	}
+
+	c.currentWindowTab().SetFileText(string(bytes))
 }
 
 func (c *WindowCtrl) OnNewSubTab() {

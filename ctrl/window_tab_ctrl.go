@@ -20,6 +20,7 @@ type WindowTabCtrl struct {
 	currentCtrl interface {
 		Close() bool
 		AddEmptyTab() error
+		SetFileText(string)
 	}
 }
 
@@ -44,6 +45,10 @@ func (c WindowTabCtrl) Init(p *WindowCtrl) (*WindowTabCtrl, error) {
 
 func (c *WindowTabCtrl) AddTab() error {
 	return c.currentCtrl.AddEmptyTab()
+}
+
+func (c *WindowTabCtrl) SetFileText(s string) {
+	c.currentCtrl.SetFileText(s)
 }
 
 func (c *WindowTabCtrl) Show() {

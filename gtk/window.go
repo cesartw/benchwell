@@ -21,6 +21,7 @@ type Window struct {
 		NewConnection *glib.SimpleAction
 		NewTab        *glib.SimpleAction
 		NewSubTab     *glib.SimpleAction
+		LoadFile      *glib.SimpleAction
 		CloseTab      *glib.SimpleAction
 	}
 }
@@ -29,6 +30,7 @@ func (w Window) Init(app *gtk.Application, ctrl interface {
 	OnNewTab()
 	OnNewSubTab()
 	OnCloseTab()
+	OnFileSelected(string)
 }) (*Window, error) {
 	var err error
 	w.ApplicationWindow, err = gtk.ApplicationWindowNew(app)
@@ -75,8 +77,30 @@ func (w Window) Init(app *gtk.Application, ctrl interface {
 	// action menu for sub tabs
 	w.Menu.NewSubTab.Connect("activate", ctrl.OnNewSubTab)
 	w.Menu.CloseTab.Connect("activate", ctrl.OnCloseTab)
+	w.Menu.LoadFile.Connect("activate", w.onOpenFile(ctrl.OnFileSelected))
 
 	return &w, nil
+}
+
+func (w *Window) onOpenFile(f func(string)) func() {
+	return func() {
+		openfileDialog, err := gtk.FileChooserDialogNewWith2Buttons("Select file", w, gtk.FILE_CHOOSER_ACTION_OPEN,
+			"Open", gtk.RESPONSE_OK,
+			"Cancel", gtk.RESPONSE_CANCEL,
+		)
+		if err != nil {
+			config.Env.Log.Error("open file dialog", err)
+			return
+		}
+		defer openfileDialog.Destroy()
+
+		response := openfileDialog.Run()
+		if response == gtk.RESPONSE_CANCEL {
+			return
+		}
+
+		f(openfileDialog.GetFilename())
+	}
 }
 
 func (w *Window) OnTabClick(f interface{}) {
@@ -165,9 +189,11 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 
 	w.Menu.NewTab = glib.SimpleActionNew("new", nil)
 	w.Menu.NewSubTab = glib.SimpleActionNew("tabnew", nil)
+	w.Menu.LoadFile = glib.SimpleActionNew("loadfile", nil)
 	w.Menu.CloseTab = glib.SimpleActionNew("close", nil)
 	w.AddAction(w.Menu.NewTab)
 	w.AddAction(w.Menu.NewSubTab)
+	w.AddAction(w.Menu.LoadFile)
 	w.AddAction(w.Menu.CloseTab)
 	w.AddAction(w.Menu.CloseTab)
 
@@ -175,6 +201,7 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 	menu.Append("+ Connection Tab", "win.new")
 	menu.Append("+ Table Tab", "win.tabnew")
 	menu.Append("- Table Tab", "win.close")
+	menu.Append("Open File", "win.loadfile")
 	menu.Append("Preferences", "app.preferences")
 	menu.Append("Dark toggle", "app.darkmode")
 

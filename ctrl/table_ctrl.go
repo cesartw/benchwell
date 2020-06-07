@@ -68,6 +68,10 @@ func (tc TableCtrl) Init(
 	return &tc, nil
 }
 
+func (tc *TableCtrl) SetQuery(query string) {
+	tc.grid.SetQuery(query)
+}
+
 func (tc *TableCtrl) OnCopyInsert(cols []driver.ColDef, values []interface{}) {
 	sql, err := tc.Engine.GetInsertStatement(tc.ctx, tc.tableDef.Name, cols, values)
 	if err != nil {

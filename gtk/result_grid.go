@@ -165,6 +165,27 @@ func (v ResultGrid) Init(
 	return &v, nil
 }
 
+func (v *ResultGrid) SetQuery(query string) {
+	buff, err := v.textView.GetBuffer()
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+
+	iter := buff.GetIterAtMark(buff.GetInsert())
+	offset := iter.GetOffset()
+
+	query, err = ChromaHighlight(query)
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+	buff.Delete(buff.GetStartIter(), buff.GetEndIter())
+	buff.InsertMarkup(buff.GetStartIter(), query)
+
+	buff.PlaceCursor(buff.GetIterAtOffset(offset))
+}
+
 func (v *ResultGrid) PageSize() int64 {
 	return 100
 	//s, err := v.perPage.GetText()

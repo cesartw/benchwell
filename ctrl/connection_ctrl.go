@@ -60,6 +60,14 @@ func (c *ConnectionCtrl) AddEmptyTab() error {
 	return c.AddTab(driver.TableDef{})
 }
 
+func (c *ConnectionCtrl) SetFileText(s string) {
+	if len(c.tabs) == 0 {
+		return
+	}
+
+	c.tabs[c.scr.CurrentTabIndex()].SetQuery(s)
+}
+
 func (c *ConnectionCtrl) AddTab(tableDef driver.TableDef) error {
 	tab, err := TableCtrl{}.Init(c.dbCtx[c.dbName], TableCtrlOpts{
 		Parent:       c,
