@@ -13,7 +13,6 @@ import (
 
 	// mysql implementation
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/sirupsen/logrus"
 
 	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
@@ -104,6 +103,7 @@ func (d *mysqlDriver) useDatabase(ctx context.Context, dbName string) (*sql.DB, 
 		return nil, err
 	}
 
+	driver.Log(ctx, fmt.Sprintf("USE %s", dbName))
 	_, err = db.db.ExecContext(ctx, fmt.Sprintf("USE %s", dbName))
 	if err != nil {
 		return nil, err
@@ -146,6 +146,7 @@ func (c *mysqlConn) LastError() error {
 
 // Databases ...
 func (c *mysqlConn) Databases(ctx context.Context) ([]string, error) {
+	driver.Log(ctx, "USE databases")
 	rows, err := c.db.Query(`SHOW databases`)
 	if err != nil {
 		return nil, err
@@ -170,6 +171,7 @@ func (d *mysqlDb) Name() string {
 }
 
 func (d *mysqlDb) Tables(ctx context.Context) ([]driver.TableDef, error) {
+	driver.Log(ctx, "SHOW FULL TABLES")
 	rows, err := d.db.Query("SHOW FULL TABLES")
 	if err != nil {
 		return nil, err
@@ -200,6 +202,8 @@ func (d *mysqlDb) Tables(ctx context.Context) ([]driver.TableDef, error) {
 }
 
 func (d *mysqlDb) TableDefinition(ctx context.Context, tableName string) ([]driver.ColDef, error) {
+	driver.Log(ctx, "DESCRIBE "+tableName)
+
 	sqlRows, err := d.db.Query("DESCRIBE " + tableName)
 	if err != nil {
 		return nil, err
@@ -234,6 +238,8 @@ func (d *mysqlDb) TableDefinition(ctx context.Context, tableName string) ([]driv
 }
 
 func (d *mysqlDb) Query(ctx context.Context, query string) (columnNames []string, data [][]interface{}, err error) {
+	driver.Log(ctx, query)
+
 	var sqlRows *sql.Rows
 	sqlRows, err = d.db.Query(query)
 	if err != nil {
@@ -289,7 +295,8 @@ func (c *mysqlDb) loadData(sqlRows *sql.Rows) ([]string, [][]interface{}, error)
 }
 
 func (d *mysqlDb) Execute(ctx context.Context, query string) (string, int64, error) {
-	config.Env.Log.WithFields(logrus.Fields{"query": query}).Debug("Execute")
+	driver.Log(ctx, query)
+
 	result, err := d.db.Exec(query)
 	if err != nil {
 		return "", 0, err
@@ -416,9 +423,7 @@ func (d *mysqlDb) FetchTable(
 	query := fmt.Sprintf(`SELECT * FROM %s %s %s LIMIT ?, ?`,
 		tableName, where, FetchTableOptions(opts.Sort).SQL(tableName))
 
-	config.Env.Log.
-		WithFields(logrus.Fields{"query": query, "args": []interface{}{opts.Offset, opts.Limit}}).
-		Debug("FetchTable")
+	driver.Log(ctx, query)
 
 	sqlRows, err = d.db.Query(query, args...)
 	if err != nil {
@@ -474,7 +479,8 @@ func (d *mysqlDb) DeleteRecord(ctx context.Context, tableName string, cols []dri
 	WHERE %s
 	`, tableName, strings.Join(wheres, " AND "))
 
-	config.Env.Log.WithFields(logrus.Fields{"query": query, "args": args}).Debug("DeleteRecord")
+	driver.Log(ctx, query)
+
 	_, err := d.db.Exec(query, args...)
 
 	return err
@@ -507,7 +513,6 @@ func (d *mysqlDb) UpdateRecord(
 
 	for i := range values {
 		if cols[i].PK {
-			config.Env.Log.Debug(cols[i].Name, oldValues[i])
 			ID = oldValues[i]
 			if reflect.DeepEqual(oldValues[i], values[i]) {
 				continue
@@ -517,16 +522,13 @@ func (d *mysqlDb) UpdateRecord(
 		args = append(args, values[i])
 	}
 
-	query :=
-		`
-UPDATE %s
-SET %s
-WHERE %s = ?`
+	query := `UPDATE %s SET %s WHERE %s = ?`
 
 	query = fmt.Sprintf(query, tableName, strings.Join(sets, ", "), pk.Name)
 	args = append(args, ID)
 
-	config.Env.Log.WithFields(logrus.Fields{"query": query, "args": args}).Debug("InsertRecord")
+	driver.Log(ctx, query)
+
 	result, err := d.db.Exec(query, args...)
 	if err != nil {
 		return "", err
@@ -569,7 +571,8 @@ func (d *mysqlDb) UpdateField(
 		cols[lastIndex].Name,
 		strings.Join(wheres, " AND "))
 
-	config.Env.Log.WithFields(logrus.Fields{"query": query, "args": args}).Debug("UpdateField")
+	driver.Log(ctx, query)
+
 	result, err := d.db.Exec(query, args...)
 	if err != nil {
 		return "", err
@@ -617,7 +620,7 @@ func (d *mysqlDb) UpdateFields(
 		sets,
 		strings.Join(wheres, " AND "))
 
-	config.Env.Log.WithFields(logrus.Fields{"query": query, "args": values}).Debug("UpdateFields")
+	driver.Log(ctx, query)
 	result, err := d.db.Exec(query, values...)
 	if err != nil {
 		return "", err
@@ -650,14 +653,11 @@ func (d *mysqlDb) InsertRecord(
 		qm[i] = "?"
 	}
 
-	query :=
-		`
-INSERT INTO %s(%s)
-VALUES (%s)`
+	query := `INSERT INTO %s(%s) VALUES (%s)`
 
 	query = fmt.Sprintf(query, tableName, strings.Join(collist, ","), strings.Join(qm, ","))
 
-	config.Env.Log.WithFields(logrus.Fields{"query": query, "args": args}).Debug("InsertRecord")
+	driver.Log(ctx, query)
 	result, err := d.db.Exec(query, args...)
 	if err != nil {
 		return nil, err
@@ -681,6 +681,7 @@ func (d *mysqlDb) GetCreateTable(
 		err     error
 	)
 	// NOTE: ? doesn't work here
+	driver.Log(ctx, fmt.Sprintf("SHOW CREATE TABLE `%s`", tableName))
 	sqlRows, err = d.db.Query(fmt.Sprintf("SHOW CREATE TABLE `%s`", tableName))
 	if err != nil {
 		return "", err
@@ -777,11 +778,7 @@ func (d *mysqlDb) fetchRecord(
 		return nil, errors.New("table doesn't have a primary key")
 	}
 
-	query :=
-		`
-SELECT *
-FROM %s
-WHERE %s = ?`
+	query := `SELECT * FROM %s WHERE %s = ?`
 
 	query = fmt.Sprintf(query, tableName, pk.Name)
 

@@ -75,6 +75,8 @@ github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1/go.mod h1:wJfORR
 github.com/gorilla/websocket v1.4.0/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
 github.com/gotk3/gotk3 v0.4.1-0.20200508185535-d1638cba009b h1:vb4TgF46fpxGkSBTolKHClJpOe+4jEnqI1cEByq6shU=
 github.com/gotk3/gotk3 v0.4.1-0.20200508185535-d1638cba009b/go.mod h1:/hqFpkNa9T3JgNAE2fLvCdov7c5bw//FHNZrZ3Uv9/Q=
+github.com/gotk3/gotk3 v0.4.1-0.20200606044958-b248c84e8b17 h1:S/6tEpm+QKmOFS//YB2B+Lt2rTWSNFymhJOckddIOwc=
+github.com/gotk3/gotk3 v0.4.1-0.20200606044958-b248c84e8b17/go.mod h1:/hqFpkNa9T3JgNAE2fLvCdov7c5bw//FHNZrZ3Uv9/Q=
 github.com/grpc-ecosystem/go-grpc-middleware v1.0.0/go.mod h1:FiyG127CGDf3tlThmgyCl78X/SZQqEOJBCDaAfeWzPs=
 github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0/go.mod h1:8NvIoxWQoOIhqOTXgfV/d3M/q6VIi02HzZEHgUlZvzk=
 github.com/grpc-ecosystem/grpc-gateway v1.9.0/go.mod h1:vNeuVxBJEsws4ogUvrchl83t/GYV9WGTSLVdBhOQFDY=

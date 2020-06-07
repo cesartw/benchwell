@@ -49,7 +49,7 @@ func (c ConnectionCtrl) Init(
 		c.scr.SetActiveDatabase(c.conn.Database)
 	}
 
-	return &c, nil
+	return &c, c.AddEmptyTab()
 }
 
 func (c *ConnectionCtrl) Close() bool {
@@ -61,10 +61,11 @@ func (c *ConnectionCtrl) AddEmptyTab() error {
 }
 
 func (c *ConnectionCtrl) AddTab(tableDef driver.TableDef) error {
-	tab, err := TableCtrl{}.init(c.dbCtx[c.dbName], TableCtrlOpts{
+	tab, err := TableCtrl{}.Init(c.dbCtx[c.dbName], TableCtrlOpts{
 		Parent:       c,
 		TableDef:     tableDef,
 		OnTabRemoved: c.onTabRemove,
+		Log:          c.scr.Log,
 	})
 	if err != nil {
 		return err
@@ -76,17 +77,6 @@ func (c *ConnectionCtrl) AddTab(tableDef driver.TableDef) error {
 
 	c.tabs = append(c.tabs, tab)
 	return c.scr.AddTab(tab.connectionTab, true)
-}
-
-func (c *ConnectionCtrl) onTabRemove(ctrl *TableCtrl) {
-	defer c.disconnect()
-
-	for i, tabCtrl := range c.tabs {
-		if tabCtrl == ctrl {
-			c.tabs = append(c.tabs[:i], c.tabs[i+1:]...)
-			break
-		}
-	}
 }
 
 func (c *ConnectionCtrl) UpdateOrAddTab(tableDef driver.TableDef) error {
@@ -170,6 +160,17 @@ func (c *ConnectionCtrl) OnNewTabMenu() {
 
 func (c *ConnectionCtrl) Screen() interface{} {
 	return c.scr
+}
+
+func (c *ConnectionCtrl) onTabRemove(ctrl *TableCtrl) {
+	defer c.disconnect()
+
+	for i, tabCtrl := range c.tabs {
+		if tabCtrl == ctrl {
+			c.tabs = append(c.tabs[:i], c.tabs[i+1:]...)
+			break
+		}
+	}
 }
 
 func (c *ConnectionCtrl) disconnect() {

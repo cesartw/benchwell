@@ -79,11 +79,13 @@ func (c *ConnectionTab) SetTitle(title string) {
 
 type ConnectionScreen struct {
 	*gtk.Paned
+	hPaned      *gtk.Paned
 	dbCombo     *gtk.ComboBoxText
 	tableFilter *gtk.SearchEntry
 	tableList   *List
 	tabber      *gtk.Notebook
 	tabs        []*ConnectionTab
+	logview     *gtk.TextView
 
 	databaseNames []string
 
@@ -113,13 +115,21 @@ func (c ConnectionScreen) Init(ctrl interface {
 }) (*ConnectionScreen, error) {
 	var err error
 
-	c.Paned, err = gtk.PanedNew(gtk.ORIENTATION_HORIZONTAL)
+	c.Paned, err = gtk.PanedNew(gtk.ORIENTATION_VERTICAL)
 	if err != nil {
 		return nil, err
 	}
+	c.Paned.SetWideHandle(true)
+	c.Paned.SetProperty("min-position", 100)
 
-	c.Paned.SetHExpand(true)
-	c.Paned.SetVExpand(true)
+	c.hPaned, err = gtk.PanedNew(gtk.ORIENTATION_HORIZONTAL)
+	if err != nil {
+		return nil, err
+	}
+	c.hPaned.SetProperty("min-position", 100)
+	c.hPaned.SetWideHandle(true)
+	c.hPaned.SetHExpand(true)
+	c.hPaned.SetVExpand(true)
 
 	// Sidebar
 
@@ -128,7 +138,7 @@ func (c ConnectionScreen) Init(ctrl interface {
 		return nil, err
 	}
 
-	c.Paned.Pack1(sideBar, false, true)
+	c.hPaned.Pack1(sideBar, false, true)
 
 	c.tableFilter, err = gtk.SearchEntryNew()
 	if err != nil {
@@ -212,7 +222,7 @@ func (c ConnectionScreen) Init(ctrl interface {
 	mainSection.SetVExpand(true)
 	mainSection.SetHExpand(true)
 
-	c.Paned.Pack2(mainSection, true, false)
+	c.hPaned.Pack2(mainSection, true, false)
 
 	err = c.initTableMenu()
 	if err != nil {
@@ -221,10 +231,27 @@ func (c ConnectionScreen) Init(ctrl interface {
 
 	// signals
 
-	c.dbCombo.Connect("changed", c.onDatabaseSelected)
+	logSW, err := gtk.ScrolledWindowNew(nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	c.logview, err = gtk.TextViewNew()
+	if err != nil {
+		return nil, err
+	}
+	c.logview.SetEditable(false)
+	c.logview.SetSizeRequest(-1, 30)
+	logSW.SetSizeRequest(-1, 30)
+
+	logSW.Add(c.logview)
+	c.Paned.Add1(c.hPaned)
+	c.Paned.Add2(logSW)
 
 	c.Paned.ShowAll()
+	c.hPaned.ShowAll()
 
+	c.dbCombo.Connect("changed", c.onDatabaseSelected)
 	c.dbCombo.Connect("changed", ctrl.OnDatabaseSelected)
 	c.tableList.Connect("row-activated", ctrl.OnTableSelected)
 	c.schemaMenu.Connect("activate", ctrl.OnSchemaMenu)
@@ -235,6 +262,17 @@ func (c ConnectionScreen) Init(ctrl interface {
 	c.deleteMenu.Connect("activate", ctrl.OnDeleteTable)
 
 	return &c, nil
+}
+
+func (c *ConnectionScreen) Log(s string) {
+	buff, err := c.logview.GetBuffer()
+	if err != nil {
+		return
+	}
+
+	buff.InsertMarkup(buff.GetStartIter(), s+"\n")
+	//func (v *TextView) ScrollToIter(iter *TextIter, within_margin float64, use_align bool, xalign, yalign float64) bool {
+	//c.logview.ScrollToIter(buff.GetEndIter(), 0, true, 0.0, 1.0)
 }
 
 func (c *ConnectionScreen) CurrentTabIndex() int {

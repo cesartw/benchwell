@@ -29,6 +29,7 @@ func InitKeyChain(mode string) {
 			Keychain.Mode = ModeDBUS
 			return
 		}
+		Env.Log.Errorf("failed to open dbus: %#v", err)
 
 		fallthrough
 	case ModeBUILTIN:

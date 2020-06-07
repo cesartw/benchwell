@@ -5,11 +5,36 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"bitbucket.org/goreorto/sqlaid/config"
 )
 
 const NULL_PATTERN = "<NULL>"
+
+type contextkey struct {
+	string
+}
+
+var (
+	ckLogger = contextkey{"logger"}
+)
+
+func Log(ctx context.Context, s string) {
+	l := ctx.Value(ckLogger)
+	if l == nil {
+		return
+	}
+	f, ok := l.(func(string))
+	if ok {
+		args := []interface{}{time.Now().Format("2006-01-02 15:04:05")}
+		f(fmt.Sprintf("[%s] "+s, args...))
+	}
+}
+
+func SetLogger(ctx context.Context, f func(string)) context.Context {
+	return context.WithValue(ctx, ckLogger, f)
+}
 
 type ColType uint
 type TableType uint

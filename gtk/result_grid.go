@@ -123,7 +123,7 @@ func (v ResultGrid) Init(
 	if err != nil {
 		return nil, err
 	}
-	textViewSW.SetSizeRequest(-1, 200)
+	//textViewSW.SetSizeRequest(-1, 200)
 
 	v.result, err = Result{}.Init(ctrl, parser)
 	if err != nil {

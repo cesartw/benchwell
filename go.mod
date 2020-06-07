@@ -6,7 +6,7 @@ require (
 	github.com/alecthomas/chroma v0.7.1
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/mock v1.4.3
-	github.com/gotk3/gotk3 v0.4.1-0.20200508185535-d1638cba009b
+	github.com/gotk3/gotk3 v0.4.1-0.20200606044958-b248c84e8b17
 	github.com/keybase/go-keychain v0.0.0-20200502122510-cda31fe0c86d
 	github.com/keybase/go.dbus v0.0.0-20200324223359-a94be52c0b03
 	github.com/mattn/go-isatty v0.0.12 // indirect
@@ -24,4 +24,4 @@ require (
 	gopkg.in/ini.v1 v1.52.0 // indirect
 )
 
-//replace github.com/gotk3/gotk3 v0.4.1-0.20200508185535-d1638cba009b => /home/goreorto/gopath/src/github.com/gotk3/gotk3
+//replace github.com/gotk3/gotk3 v0.4.1-0.20200606044958-b248c84e8b17 => /home/goreorto/gopath/src/github.com/gotk3/gotk3

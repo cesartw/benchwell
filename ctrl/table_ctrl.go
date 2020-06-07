@@ -26,15 +26,16 @@ type TableCtrlOpts struct {
 	Parent       *ConnectionCtrl
 	TableDef     driver.TableDef
 	OnTabRemoved func(*TableCtrl)
+	Log          func(string)
 }
 
-func (tc TableCtrl) init(
+func (tc TableCtrl) Init(
 	ctx sqlengine.Context,
 	opts TableCtrlOpts,
 ) (*TableCtrl, error) {
 	var err error
 
-	tc.ctx = ctx
+	tc.ctx = driver.SetLogger(ctx, opts.Log)
 	tc.ConnectionCtrl = opts.Parent
 	tc.tableDef = opts.TableDef
 
