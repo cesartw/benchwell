@@ -3,16 +3,15 @@ package assets
 const DEFAULT_CONFIG = `{
     "connections": [
         {
-            "Adapter": "",
-            "Database": "",
-            "Encrypted": true,
-            "Host": "localhost",
-            "Name": "localhost",
-            "Options": "",
-            "Password": "",
-            "Port": 3306,
-            "Type": "",
-            "User": "root"
+            "adapter": "",
+            "database": "",
+            "host": "localhost",
+            "name": "localhost",
+            "options": "",
+            "password": "",
+            "port": 3306,
+            "type": "",
+            "user": "root"
         }
     ],
     "gui": {
@@ -100,6 +99,6 @@ const DEFAULT_CONFIG = `{
         "tab_position": "top",
         "tabposition": "top"
     },
-    "verbose": true
+    "encryptMode": "DBUS"
 }
 `

@@ -28,7 +28,8 @@ func (c Conditions) Init() (*Conditions, error) {
 	if err != nil {
 		return nil, err
 	}
-	c.Frame.SetProperty("shadow-type", gtk.SHADOW_ETCHED_IN)
+	c.Frame.SetProperty("shadow-type", gtk.SHADOW_NONE)
+	c.Frame.SetName("conditions")
 
 	c.grid, err = gtk.GridNew()
 	if err != nil {

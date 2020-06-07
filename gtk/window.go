@@ -39,6 +39,7 @@ func (w Window) Init(app *gtk.Application, ctrl interface {
 	if err != nil {
 		return nil, err
 	}
+	w.nb.SetName("MainNotebook")
 
 	w.box, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if err != nil {
@@ -63,8 +64,8 @@ func (w Window) Init(app *gtk.Application, ctrl interface {
 	if err != nil {
 		return nil, err
 	}
-
 	w.SetTitlebar(header)
+
 	w.ShowAll()
 	// TODO: when we get a systray
 	//w.HideOnDelete()

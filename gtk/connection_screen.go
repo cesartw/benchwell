@@ -120,13 +120,11 @@ func (c ConnectionScreen) Init(ctrl interface {
 		return nil, err
 	}
 	c.Paned.SetWideHandle(true)
-	c.Paned.SetProperty("min-position", 100)
 
 	c.hPaned, err = gtk.PanedNew(gtk.ORIENTATION_HORIZONTAL)
 	if err != nil {
 		return nil, err
 	}
-	c.hPaned.SetProperty("min-position", 100)
 	c.hPaned.SetWideHandle(true)
 	c.hPaned.SetHExpand(true)
 	c.hPaned.SetVExpand(true)
@@ -240,13 +238,15 @@ func (c ConnectionScreen) Init(ctrl interface {
 	if err != nil {
 		return nil, err
 	}
+	c.logview.SetName("logger")
 	c.logview.SetEditable(false)
 	c.logview.SetSizeRequest(-1, 30)
-	logSW.SetSizeRequest(-1, 30)
+	c.logview.SetPixelsAboveLines(5)
+	c.logview.SetPixelsBelowLines(5)
 
 	logSW.Add(c.logview)
-	c.Paned.Add1(c.hPaned)
-	c.Paned.Add2(logSW)
+	c.Paned.Pack1(c.hPaned, false, false)
+	c.Paned.Pack2(logSW, false, true)
 
 	c.Paned.ShowAll()
 	c.hPaned.ShowAll()

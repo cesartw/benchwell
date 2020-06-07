@@ -29,4 +29,12 @@ list row {
 list row image {
 	margin-right: 3px;
 }
+
+#conditions {
+	padding: 10px;
+}
+
+#logger {
+	font-size: 14px;
+}
 `
