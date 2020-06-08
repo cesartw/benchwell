@@ -103,7 +103,7 @@ type ConnectionScreen struct {
 	tabIndex int
 }
 
-func (c ConnectionScreen) Init(ctrl interface {
+func (c ConnectionScreen) Init(w *Window, ctrl interface {
 	OnDatabaseSelected()
 	OnTableSelected()
 	OnSchemaMenu()

@@ -3,6 +3,8 @@ package assets
 const BRAND = `* {
 	font-size: 17px;
 	font-family: 'JetBrainsMono Nerd Font';
+	-GtkScrollbar-has-backward-stepper: true;
+	-GtkScrollbar-has-forward-stepper: true;
 }
 
 textview {
@@ -36,5 +38,9 @@ list row image {
 
 #logger {
 	font-size: 14px;
+}
+
+#queryactionbar box {
+	border-width: 0px;
 }
 `

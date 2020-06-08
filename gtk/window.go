@@ -77,12 +77,12 @@ func (w Window) Init(app *gtk.Application, ctrl interface {
 	// action menu for sub tabs
 	w.Menu.NewSubTab.Connect("activate", ctrl.OnNewSubTab)
 	w.Menu.CloseTab.Connect("activate", ctrl.OnCloseTab)
-	w.Menu.LoadFile.Connect("activate", w.onOpenFile(ctrl.OnFileSelected))
+	w.Menu.LoadFile.Connect("activate", w.OnOpenFile(ctrl.OnFileSelected))
 
 	return &w, nil
 }
 
-func (w *Window) onOpenFile(f func(string)) func() {
+func (w *Window) OnOpenFile(f func(string)) func() {
 	return func() {
 		openfileDialog, err := gtk.FileChooserDialogNewWith2Buttons("Select file", w, gtk.FILE_CHOOSER_ACTION_OPEN,
 			"Open", gtk.RESPONSE_OK,

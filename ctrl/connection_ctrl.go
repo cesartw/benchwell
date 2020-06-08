@@ -36,7 +36,7 @@ func (c ConnectionCtrl) Init(
 		return nil, err
 	}
 
-	c.scr, err = gtk.ConnectionScreen{}.Init(&c)
+	c.scr, err = gtk.ConnectionScreen{}.Init(c.window, &c)
 	if err != nil {
 		return nil, err
 	}

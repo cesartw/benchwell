@@ -35,6 +35,9 @@ type ResultGrid struct {
 	btnDeleteRow *gtk.Button
 	btnCreateRow *gtk.Button
 
+	btnSaveQuery *gtk.Button
+	btnLoadQuery *gtk.Button
+
 	colFilter *gtk.SearchEntry
 
 	submitCallback func(string)
@@ -44,6 +47,7 @@ type ResultGrid struct {
 }
 
 func (v ResultGrid) Init(
+	w *Window,
 	ctrl interface {
 		OnUpdateRecord([]driver.ColDef, []interface{}) error
 		OnCreateRecord([]driver.ColDef, []interface{}) ([]interface{}, error)
@@ -52,6 +56,7 @@ func (v ResultGrid) Init(
 		OnDelete()
 		OnCreate()
 		OnCopyInsert([]driver.ColDef, []interface{})
+		OnFileSelected(string)
 	},
 	parser parser,
 ) (*ResultGrid, error) {
@@ -66,6 +71,9 @@ func (v ResultGrid) Init(
 	if err != nil {
 		return nil, err
 	}
+	v.textView.SetName("query")
+	v.textView.SetHExpand(true)
+	v.textView.SetVExpand(true)
 
 	v.textView.Connect("key-release-event", v.onTextViewKeyRelease) // highlighting
 	v.textView.Connect("key-press-event", v.onTextViewKeyPress)     // ctrl+enter exec query
@@ -119,6 +127,30 @@ func (v ResultGrid) Init(
 
 	resultBox.PackStart(btnGridBox, true, true, 0)
 
+	tvBox, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	tvActionBar, err := gtk.ActionBarNew()
+	if err != nil {
+		return nil, err
+	}
+	v.btnSaveQuery, err = gtk.ButtonNewFromIconName("gtk-save", gtk.ICON_SIZE_BUTTON)
+	if err != nil {
+		return nil, err
+	}
+
+	v.btnLoadQuery, err = gtk.ButtonNewFromIconName("gtk-open", gtk.ICON_SIZE_BUTTON)
+	if err != nil {
+		return nil, err
+	}
+	v.btnLoadQuery.Connect("clicked", w.OnOpenFile(ctrl.OnFileSelected))
+
+	tvActionBar.PackEnd(v.btnSaveQuery)
+	tvActionBar.PackEnd(v.btnLoadQuery)
+	tvActionBar.SetName("queryactionbar")
+
 	textViewSW, err = gtk.ScrolledWindowNew(nil, nil)
 	if err != nil {
 		return nil, err
@@ -148,7 +180,9 @@ func (v ResultGrid) Init(
 	resultSW.Add(v.result)
 	textViewSW.Add(v.textView)
 
-	v.Paned.Pack1(textViewSW, false, false)
+	tvBox.PackStart(textViewSW, false, true, 0)
+	tvBox.PackEnd(tvActionBar, false, false, 0)
+	v.Paned.Pack1(tvBox, false, false)
 	v.Paned.Pack2(resultBox, true, false)
 
 	v.disableAll()
@@ -285,6 +319,7 @@ func (v *ResultGrid) actionbar() (*gtk.ActionBar, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		v.btnShowFilters, err = gtk.ButtonNewFromIconName("gtk-find", gtk.ICON_SIZE_BUTTON)
 		if err != nil {
 			return nil, err

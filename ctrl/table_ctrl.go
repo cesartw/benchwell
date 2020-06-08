@@ -40,6 +40,7 @@ func (tc TableCtrl) Init(
 	tc.tableDef = opts.TableDef
 
 	tc.grid, err = gtk.ResultGrid{}.Init(
+		tc.window,
 		&tc,
 		func(col driver.ColDef, value string) (interface{}, error) {
 			return tc.Engine.ParseValue(tc.ctx, col, value)
