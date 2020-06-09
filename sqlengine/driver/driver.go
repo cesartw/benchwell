@@ -33,7 +33,8 @@ func Log(ctx context.Context, s string) {
 }
 
 func SetLogger(ctx context.Context, f func(string)) context.Context {
-	return context.WithValue(ctx, ckLogger, f)
+	return ctx
+	//return context.WithValue(ctx, ckLogger, f)
 }
 
 type ColType uint
