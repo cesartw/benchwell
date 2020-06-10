@@ -2,6 +2,7 @@ package ctrl
 
 import (
 	"io/ioutil"
+	"os"
 
 	"github.com/gotk3/gotk3/gdk"
 	ggtk "github.com/gotk3/gotk3/gtk"
@@ -26,6 +27,14 @@ func (c WindowCtrl) Init(parent *AppCtrl) (*WindowCtrl, error) {
 	}
 
 	return ctrl, ctrl.AddTab()
+}
+
+func (c *WindowCtrl) OnSaveQuery(query, path string) {
+	err := ioutil.WriteFile(path, []byte(query), os.FileMode(666))
+	if err != nil {
+		c.window.PushStatus("failed to save file: %#v", err)
+	}
+
 }
 
 func (c *WindowCtrl) OnFileSelected(filepath string) {

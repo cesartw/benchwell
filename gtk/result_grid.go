@@ -57,6 +57,7 @@ func (v ResultGrid) Init(
 		OnCreate()
 		OnCopyInsert([]driver.ColDef, []interface{})
 		OnFileSelected(string)
+		OnSaveQuery(string, string)
 	},
 	parser parser,
 ) (*ResultGrid, error) {
@@ -146,6 +147,7 @@ func (v ResultGrid) Init(
 		return nil, err
 	}
 	v.btnLoadQuery.Connect("clicked", w.OnOpenFile(ctrl.OnFileSelected))
+	v.btnSaveQuery.Connect("clicked", v.onSaveQuery(w.OnSaveQuery, ctrl.OnSaveQuery))
 
 	tvActionBar.PackEnd(v.btnSaveQuery)
 	tvActionBar.PackEnd(v.btnLoadQuery)
@@ -218,6 +220,27 @@ func (v *ResultGrid) SetQuery(query string) {
 	buff.InsertMarkup(buff.GetStartIter(), query)
 
 	buff.PlaceCursor(buff.GetIterAtOffset(offset))
+}
+
+func (v *ResultGrid) onSaveQuery(
+	openDialog func(string, func(string, string)),
+	onSaveQuery func(string, string),
+) func() {
+	return func() {
+		buff, err := v.textView.GetBuffer()
+		if err != nil {
+			config.Env.Log.Error(err)
+			return
+		}
+
+		txt, err := buff.GetText(buff.GetStartIter(), buff.GetEndIter(), false)
+		if err != nil {
+			config.Env.Log.Error(err)
+			return
+		}
+
+		openDialog(txt, onSaveQuery)
+	}
 }
 
 func (v *ResultGrid) PageSize() int64 {

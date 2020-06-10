@@ -22,6 +22,7 @@ type Window struct {
 		NewTab        *glib.SimpleAction
 		NewSubTab     *glib.SimpleAction
 		LoadFile      *glib.SimpleAction
+		SaveQuery     *glib.SimpleAction
 		CloseTab      *glib.SimpleAction
 	}
 }
@@ -31,6 +32,7 @@ func (w Window) Init(app *gtk.Application, ctrl interface {
 	OnNewSubTab()
 	OnCloseTab()
 	OnFileSelected(string)
+	OnSaveQuery(string, string)
 }) (*Window, error) {
 	var err error
 	w.ApplicationWindow, err = gtk.ApplicationWindowNew(app)
@@ -78,6 +80,7 @@ func (w Window) Init(app *gtk.Application, ctrl interface {
 	w.Menu.NewSubTab.Connect("activate", ctrl.OnNewSubTab)
 	w.Menu.CloseTab.Connect("activate", ctrl.OnCloseTab)
 	w.Menu.LoadFile.Connect("activate", w.OnOpenFile(ctrl.OnFileSelected))
+	//w.Menu.SaveQuery.Connect("activate", w.OnSaveQuery(ctrl.OnSaveQuery))
 
 	return &w, nil
 }
@@ -101,6 +104,25 @@ func (w *Window) OnOpenFile(f func(string)) func() {
 
 		f(openfileDialog.GetFilename())
 	}
+}
+
+func (w *Window) OnSaveQuery(query string, f func(string, string)) {
+	openfileDialog, err := gtk.FileChooserDialogNewWith2Buttons("Save file", w, gtk.FILE_CHOOSER_ACTION_SAVE,
+		"Save", gtk.RESPONSE_OK,
+		"Cancel", gtk.RESPONSE_CANCEL,
+	)
+	if err != nil {
+		config.Env.Log.Error("save file dialog", err)
+		return
+	}
+	defer openfileDialog.Destroy()
+
+	response := openfileDialog.Run()
+	if response == gtk.RESPONSE_CANCEL {
+		return
+	}
+
+	f(query, openfileDialog.GetFilename())
 }
 
 func (w *Window) OnTabClick(f interface{}) {
@@ -194,7 +216,6 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 	w.AddAction(w.Menu.NewTab)
 	w.AddAction(w.Menu.NewSubTab)
 	w.AddAction(w.Menu.LoadFile)
-	w.AddAction(w.Menu.CloseTab)
 	w.AddAction(w.Menu.CloseTab)
 
 	menu.Append("Open window", "app.new")
