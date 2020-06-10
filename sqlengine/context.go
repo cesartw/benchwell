@@ -23,6 +23,7 @@ type Context struct {
 	context    context.Context
 	connection driver.Connection
 	database   driver.Database
+	Logger     func(string)
 }
 
 func (c *Context) Connection() driver.Connection {

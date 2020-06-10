@@ -12,8 +12,6 @@ import (
 
 const NULL_PATTERN = "<NULL>"
 
-var Logger func(string)
-
 type contextkey struct {
 	string
 }
@@ -23,15 +21,18 @@ var (
 )
 
 func Log(ctx context.Context, s string) {
-	if Logger != nil {
-		args := []interface{}{time.Now().Format("2006-01-02 15:04:05")}
-		Logger(fmt.Sprintf("[%s] "+s, args...))
+	if ctx.Value(ckLogger) == nil {
+		return
 	}
+	args := []interface{}{time.Now().Format("2006-01-02 15:04:05")}
+	ctx.Value(ckLogger).(func(string))((fmt.Sprintf("[%s] "+s, args...)))
 }
 
 func SetLogger(ctx context.Context, f func(string)) context.Context {
-	return ctx
-	//return context.WithValue(ctx, ckLogger, f)
+	if f == nil {
+		return ctx
+	}
+	return context.WithValue(ctx, ckLogger, f)
 }
 
 type ColType uint

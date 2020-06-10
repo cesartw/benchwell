@@ -54,7 +54,7 @@ func (e *Engine) Databases(c *Context) ([]string, error) {
 		return nil, errors.New("no connection available")
 	}
 
-	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	tmctx, cancel := prepereCtx(c, time.Minute)
 	defer cancel()
 
 	dbNames, err := conn.Databases(tmctx)
@@ -72,7 +72,7 @@ func (e *Engine) UseDatabase(c *Context, dbName string) (*Context, error) {
 		return c, ErrNoConnection
 	}
 
-	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	tmctx, cancel := prepereCtx(c, time.Minute)
 	defer cancel()
 
 	dbs, err := conn.Databases(tmctx)
@@ -112,7 +112,7 @@ func (e *Engine) Tables(c *Context) ([]driver.TableDef, error) {
 		return nil, ErrNoDatabase
 	}
 
-	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	tmctx, cancel := prepereCtx(c, time.Minute)
 	defer cancel()
 
 	return db.Tables(tmctx)
@@ -136,7 +136,7 @@ func (e *Engine) FetchTable(
 		return nil, nil, ErrNoDatabase
 	}
 
-	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	tmctx, cancel := prepereCtx(c, time.Minute)
 	defer cancel()
 
 	return db.FetchTable(tmctx, tableName, opts)
@@ -154,7 +154,7 @@ func (e *Engine) DeleteRecord(c *Context, tableName string, defs []driver.ColDef
 		return ErrNoDatabase
 	}
 
-	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	tmctx, cancel := prepereCtx(c, time.Minute)
 	defer cancel()
 
 	return db.DeleteRecord(tmctx, tableName, defs, values)
@@ -178,7 +178,7 @@ func (e *Engine) UpdateFields(
 		return "", ErrNoDatabase
 	}
 
-	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	tmctx, cancel := prepereCtx(c, time.Minute)
 	defer cancel()
 
 	return db.UpdateFields(tmctx, tableName, defs, values, keycount)
@@ -201,7 +201,7 @@ func (e *Engine) UpdateField(
 		return "", ErrNoDatabase
 	}
 
-	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	tmctx, cancel := prepereCtx(c, time.Minute)
 	defer cancel()
 
 	return db.UpdateField(tmctx, tableName, defs, values)
@@ -243,7 +243,7 @@ func (e *Engine) UpdateRecord(
 		return "", ErrNoDatabase
 	}
 
-	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	tmctx, cancel := prepereCtx(c, time.Minute)
 	defer cancel()
 
 	return db.UpdateRecord(tmctx, tableName, defs, values, oldValues)
@@ -266,7 +266,7 @@ func (e *Engine) InsertRecord(
 		return nil, ErrNoDatabase
 	}
 
-	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	tmctx, cancel := prepereCtx(c, time.Minute)
 	defer cancel()
 
 	return db.InsertRecord(tmctx, tableName, defs, values)
@@ -287,7 +287,7 @@ func (e *Engine) Query(c *Context, query string) ([]string, [][]interface{}, err
 	if db == nil {
 		return nil, nil, ErrNoDatabase
 	}
-	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	tmctx, cancel := prepereCtx(c, time.Minute)
 	defer cancel()
 
 	return db.Query(tmctx, query)
@@ -299,7 +299,7 @@ func (e *Engine) Execute(c *Context, query string) (string, int64, error) {
 		return "", 0, ErrNoDatabase
 	}
 
-	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	tmctx, cancel := prepereCtx(c, time.Minute)
 	defer cancel()
 
 	return db.Execute(tmctx, query)
@@ -311,7 +311,7 @@ func (e *Engine) GetCreateTable(c *Context, tableName string) (string, error) {
 		return "", ErrNoDatabase
 	}
 
-	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	tmctx, cancel := prepereCtx(c, time.Minute)
 	defer cancel()
 
 	return db.GetCreateTable(tmctx, tableName)
@@ -328,7 +328,7 @@ func (e *Engine) GetInsertStatement(
 		return "", ErrNoDatabase
 	}
 
-	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	tmctx, cancel := prepereCtx(c, time.Minute)
 	defer cancel()
 
 	return db.GetInsertStatement(tmctx, tableName, cols, values)
@@ -345,4 +345,10 @@ func (e *Engine) Dispose() {
 
 func (e *Engine) Database(c *Context) driver.Database {
 	return c.Database()
+}
+
+func prepereCtx(c *Context, d time.Duration) (context.Context, func()) {
+	ctx, cancel := context.WithTimeout(context.Background(), d)
+
+	return driver.SetLogger(ctx, c.Logger), cancel
 }

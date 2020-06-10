@@ -109,6 +109,7 @@ func (c *ConnectionCtrl) OnDatabaseSelected() {
 			c.window.PushStatus("Error selecting database: `%s`", err.Error())
 			return
 		}
+		c.dbCtx[dbName].Logger = c.scr.Log
 	}
 
 	tables, err := c.Engine.Tables(c.dbCtx[dbName])
