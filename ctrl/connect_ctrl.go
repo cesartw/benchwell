@@ -1,11 +1,8 @@
 package ctrl
 
 import (
-	"context"
-
 	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/gtk"
-	"bitbucket.org/goreorto/sqlaid/sqlengine"
 )
 
 type ConnectCtrl struct {
@@ -43,7 +40,7 @@ func (c *ConnectCtrl) OnTest() {
 		conn = c.scr.GetFormConnection()
 	}
 
-	ctx, err := c.Engine.Connect(sqlengine.Context(context.TODO()), *conn)
+	ctx, err := c.Engine.Connect(*conn)
 	if err != nil {
 		config.Env.Log.Error(err)
 		c.window.PushStatus("Fail connection `%s`(%s): %s", conn.Name, conn.Host, err.Error())

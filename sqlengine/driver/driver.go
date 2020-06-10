@@ -12,6 +12,8 @@ import (
 
 const NULL_PATTERN = "<NULL>"
 
+var Logger func(string)
+
 type contextkey struct {
 	string
 }
@@ -21,14 +23,9 @@ var (
 )
 
 func Log(ctx context.Context, s string) {
-	l := ctx.Value(ckLogger)
-	if l == nil {
-		return
-	}
-	f, ok := l.(func(string))
-	if ok {
+	if Logger != nil {
 		args := []interface{}{time.Now().Format("2006-01-02 15:04:05")}
-		f(fmt.Sprintf("[%s] "+s, args...))
+		Logger(fmt.Sprintf("[%s] "+s, args...))
 	}
 }
 

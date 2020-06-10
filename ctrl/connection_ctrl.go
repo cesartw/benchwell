@@ -11,9 +11,9 @@ type ConnectionCtrl struct {
 	*WindowTabCtrl
 
 	// db-less connection
-	mainCtx sqlengine.Context
+	mainCtx *sqlengine.Context
 
-	dbCtx  map[string]sqlengine.Context
+	dbCtx  map[string]*sqlengine.Context
 	scr    *gtk.ConnectionScreen
 	conn   *config.Connection
 	dbName string
@@ -22,11 +22,11 @@ type ConnectionCtrl struct {
 }
 
 func (c ConnectionCtrl) Init(
-	ctx sqlengine.Context,
+	ctx *sqlengine.Context,
 	p *WindowTabCtrl,
 	conn *config.Connection,
 ) (*ConnectionCtrl, error) {
-	c.dbCtx = map[string]sqlengine.Context{}
+	c.dbCtx = map[string]*sqlengine.Context{}
 	c.WindowTabCtrl = p
 	c.mainCtx = ctx
 	c.conn = conn
@@ -73,7 +73,6 @@ func (c *ConnectionCtrl) AddTab(tableDef driver.TableDef) error {
 		Parent:       c,
 		TableDef:     tableDef,
 		OnTabRemoved: c.onTabRemove,
-		Log:          c.scr.Log,
 	})
 	if err != nil {
 		return err

@@ -1,9 +1,6 @@
 package ctrl
 
 import (
-	"context"
-	"time"
-
 	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/gtk"
 	"bitbucket.org/goreorto/sqlaid/sqlengine"
@@ -84,7 +81,7 @@ func (c *WindowTabCtrl) launchConnect() {
 	c.tab.PackStart(c.connectCtrl.scr, true, true, 0)
 }
 
-func (c *WindowTabCtrl) launchConnection(ctx sqlengine.Context, conn *config.Connection) {
+func (c *WindowTabCtrl) launchConnection(ctx *sqlengine.Context, conn *config.Connection) {
 	var err error
 	c.connectionCtrl, err = ConnectionCtrl{}.Init(ctx, c, conn)
 	if err != nil {
@@ -110,10 +107,7 @@ func (c *WindowTabCtrl) launchConnection(ctx sqlengine.Context, conn *config.Con
 func (c *WindowTabCtrl) OnConnect() {
 	conn := c.connectCtrl.scr.GetFormConnection()
 
-	ctx, done := context.WithTimeout(context.TODO(), time.Second*5)
-	defer done()
-
-	ctx, err := c.Engine.Connect(sqlengine.Context(ctx), *conn)
+	ctx, err := c.Engine.Connect(*conn)
 	if err != nil {
 		config.Env.Log.Error(err)
 		c.window.PushStatus("Failed connect to `%s`(%s): %s", conn.Name, conn.Host, err.Error())

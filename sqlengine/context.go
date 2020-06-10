@@ -14,27 +14,37 @@ type contextkey struct {
 	string
 }
 
-// Context represent an engine session
-type Context context.Context
-
 var (
 	ckConnection = contextkey{"connection"}
 	ckDatabase   = contextkey{"database"}
 )
 
-var _ Context = (*sqlctx)(nil)
+type Context struct {
+	context    context.Context
+	connection driver.Connection
+	database   driver.Database
+}
 
-type sqlctx struct {
-	context.Context
+func (c *Context) Connection() driver.Connection {
+	return c.connection
+}
+
+func (c *Context) Database() driver.Database {
+	return c.database
+}
+
+func (c *Context) Context() context.Context {
+	if c == nil || c.context == nil {
+		return context.Background()
+	}
+
+	return c.context
 }
 
 // NewContext returns a new engine session
-func NewContext(c context.Context, conn driver.Connection) Context {
-	if c == nil {
-		c = context.Background()
-	}
-
-	return &sqlctx{
-		Context: context.WithValue(c, ckConnection, conn),
+func NewContext(conn driver.Connection, db driver.Database) *Context {
+	return &Context{
+		connection: conn,
+		database:   db,
 	}
 }

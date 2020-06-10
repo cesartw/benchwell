@@ -1,7 +1,6 @@
 package ctrl
 
 import (
-	"context"
 	"fmt"
 
 	"bitbucket.org/goreorto/sqlaid/clipboard"
@@ -14,7 +13,7 @@ import (
 // tableCtrl manages table result screen
 type TableCtrl struct {
 	*ConnectionCtrl
-	ctx      sqlengine.Context
+	ctx      *sqlengine.Context
 	tableDef driver.TableDef
 
 	// ui
@@ -26,16 +25,14 @@ type TableCtrlOpts struct {
 	Parent       *ConnectionCtrl
 	TableDef     driver.TableDef
 	OnTabRemoved func(*TableCtrl)
-	Log          func(string)
 }
 
 func (tc TableCtrl) Init(
-	ctx sqlengine.Context,
+	ctx *sqlengine.Context,
 	opts TableCtrlOpts,
 ) (*TableCtrl, error) {
 	var err error
-
-	tc.ctx = driver.SetLogger(ctx, opts.Log)
+	tc.ctx = ctx
 	tc.ConnectionCtrl = opts.Parent
 	tc.tableDef = opts.TableDef
 
@@ -255,7 +252,7 @@ func (tc *TableCtrl) OnCreate() {
 	tc.window.PushStatus("Record saved")
 }
 
-func (tc *TableCtrl) SetTableDef(ctx context.Context, tableDef driver.TableDef) {
+func (tc *TableCtrl) SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDef) {
 	tc.tableDef = tableDef
 	tc.ctx = ctx
 	tc.connectionTab.SetTitle(fmt.Sprintf("%s.%s", tc.dbName, tableDef.Name))

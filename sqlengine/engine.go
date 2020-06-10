@@ -21,6 +21,7 @@ type Engine struct {
 	config *config.Config
 
 	connections []driver.Connection
+	Logger      func(string)
 }
 
 // New return a new Engine
@@ -32,7 +33,7 @@ func New(conf *config.Config) *Engine {
 }
 
 // Connect to a database
-func (e *Engine) Connect(ctx Context, cfg config.Connection) (Context, error) {
+func (e *Engine) Connect(cfg config.Connection) (*Context, error) {
 	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
@@ -43,13 +44,12 @@ func (e *Engine) Connect(ctx Context, cfg config.Connection) (Context, error) {
 
 	e.connections = append(e.connections, conn)
 
-	c := NewContext(ctx, conn)
-	return c, nil
+	return NewContext(conn, nil), nil
 }
 
 // Databases returns a list databases
-func (e *Engine) Databases(ctx Context) ([]string, error) {
-	conn := e.connection(ctx)
+func (e *Engine) Databases(c *Context) ([]string, error) {
+	conn := c.Connection()
 	if conn == nil {
 		return nil, errors.New("no connection available")
 	}
@@ -66,10 +66,10 @@ func (e *Engine) Databases(ctx Context) ([]string, error) {
 }
 
 // UseDatabase ...
-func (e *Engine) UseDatabase(ctx Context, dbName string) (Context, error) {
-	conn := e.connection(ctx)
+func (e *Engine) UseDatabase(c *Context, dbName string) (*Context, error) {
+	conn := c.Connection()
 	if conn == nil {
-		return ctx, ErrNoConnection
+		return c, ErrNoConnection
 	}
 
 	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
@@ -77,7 +77,7 @@ func (e *Engine) UseDatabase(ctx Context, dbName string) (Context, error) {
 
 	dbs, err := conn.Databases(tmctx)
 	if err != nil {
-		return ctx, err
+		return c, err
 	}
 
 	var exists bool
@@ -89,25 +89,25 @@ func (e *Engine) UseDatabase(ctx Context, dbName string) (Context, error) {
 	}
 
 	if !exists {
-		return ctx, ErrDatabaseNotFound
+		return c, ErrDatabaseNotFound
 	}
 
 	db, err := conn.UseDatabase(tmctx, dbName)
 	if err != nil {
-		return ctx, err
+		return c, err
 	}
 
-	return context.WithValue(NewContext(nil, conn), ckDatabase, db), nil
+	return NewContext(conn, db), nil
 }
 
 // Tables ...
-func (e *Engine) Tables(ctx Context) ([]driver.TableDef, error) {
-	conn := e.connection(ctx)
+func (e *Engine) Tables(c *Context) ([]driver.TableDef, error) {
+	conn := c.Connection()
 	if conn == nil {
 		return nil, ErrNoConnection
 	}
 
-	db := e.database(ctx)
+	db := c.Database()
 	if db == nil {
 		return nil, ErrNoDatabase
 	}
@@ -120,16 +120,18 @@ func (e *Engine) Tables(ctx Context) ([]driver.TableDef, error) {
 
 // FetchTable returns table column definition and table data
 func (e *Engine) FetchTable(
-	ctx Context, tableName string, opts driver.FetchTableOptions,
+	c *Context,
+	tableName string,
+	opts driver.FetchTableOptions,
 ) (
 	[]driver.ColDef, [][]interface{}, error,
 ) {
-	conn := e.connection(ctx)
+	conn := c.Connection()
 	if conn == nil {
 		return nil, nil, ErrNoConnection
 	}
 
-	db := e.database(ctx)
+	db := c.Database()
 	if db == nil {
 		return nil, nil, ErrNoDatabase
 	}
@@ -141,13 +143,13 @@ func (e *Engine) FetchTable(
 }
 
 // DeleteRecord ...
-func (e *Engine) DeleteRecord(ctx Context, tableName string, defs []driver.ColDef, values []interface{}) error {
-	conn := e.connection(ctx)
+func (e *Engine) DeleteRecord(c *Context, tableName string, defs []driver.ColDef, values []interface{}) error {
+	conn := c.Connection()
 	if conn == nil {
 		return ErrNoConnection
 	}
 
-	db := e.database(ctx)
+	db := c.Database()
 	if db == nil {
 		return ErrNoDatabase
 	}
@@ -160,18 +162,18 @@ func (e *Engine) DeleteRecord(ctx Context, tableName string, defs []driver.ColDe
 
 // UpdateFields ...
 func (e *Engine) UpdateFields(
-	ctx Context,
+	c *Context,
 	tableName string,
 	defs []driver.ColDef,
 	values []interface{},
 	keycount int,
 ) (string, error) {
-	conn := e.connection(ctx)
+	conn := c.Connection()
 	if conn == nil {
 		return "", ErrNoConnection
 	}
 
-	db := e.database(ctx)
+	db := c.Database()
 	if db == nil {
 		return "", ErrNoDatabase
 	}
@@ -184,17 +186,17 @@ func (e *Engine) UpdateFields(
 
 // UpdateField ...
 func (e *Engine) UpdateField(
-	ctx Context,
+	c *Context,
 	tableName string,
 	defs []driver.ColDef,
 	values []interface{},
 ) (string, error) {
-	conn := e.connection(ctx)
+	conn := c.Connection()
 	if conn == nil {
 		return "", ErrNoConnection
 	}
 
-	db := e.database(ctx)
+	db := c.Database()
 	if db == nil {
 		return "", ErrNoDatabase
 	}
@@ -207,16 +209,16 @@ func (e *Engine) UpdateField(
 
 // ParseValue ...
 func (e *Engine) ParseValue(
-	ctx Context,
+	c *Context,
 	def driver.ColDef,
 	v string,
 ) (interface{}, error) {
-	conn := e.connection(ctx)
+	conn := c.Connection()
 	if conn == nil {
 		return "", ErrNoConnection
 	}
 
-	db := e.database(ctx)
+	db := c.Database()
 	if db == nil {
 		return "", ErrNoConnection
 	}
@@ -226,17 +228,17 @@ func (e *Engine) ParseValue(
 
 // UpdateRecord ...
 func (e *Engine) UpdateRecord(
-	ctx Context,
+	c *Context,
 	tableName string,
 	defs []driver.ColDef,
 	values, oldValues []interface{},
 ) (string, error) {
-	conn := e.connection(ctx)
+	conn := c.Connection()
 	if conn == nil {
 		return "", ErrNoConnection
 	}
 
-	db := e.database(ctx)
+	db := c.Database()
 	if db == nil {
 		return "", ErrNoDatabase
 	}
@@ -249,17 +251,17 @@ func (e *Engine) UpdateRecord(
 
 // InsertRecord ...
 func (e *Engine) InsertRecord(
-	ctx Context,
+	c *Context,
 	tableName string,
 	defs []driver.ColDef,
 	values []interface{},
 ) ([]interface{}, error) {
-	conn := e.connection(ctx)
+	conn := c.Connection()
 	if conn == nil {
 		return nil, ErrNoConnection
 	}
 
-	db := e.database(ctx)
+	db := c.Database()
 	if db == nil {
 		return nil, ErrNoDatabase
 	}
@@ -271,26 +273,28 @@ func (e *Engine) InsertRecord(
 }
 
 // Disconnect ...
-func (e *Engine) Disconnect(ctx Context) error {
-	conn := e.connection(ctx)
+func (e *Engine) Disconnect(c *Context) error {
+	conn := c.Connection()
 	if conn == nil {
 		return ErrNoConnection
 	}
 
-	return conn.Disconnect(ctx)
+	return conn.Disconnect(context.Background())
 }
 
-func (e *Engine) Query(ctx Context, query string) ([]string, [][]interface{}, error) {
-	db := e.database(ctx)
+func (e *Engine) Query(c *Context, query string) ([]string, [][]interface{}, error) {
+	db := c.Database()
 	if db == nil {
 		return nil, nil, ErrNoDatabase
 	}
+	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
 
-	return db.Query(ctx, query)
+	return db.Query(tmctx, query)
 }
 
-func (e *Engine) Execute(ctx Context, query string) (string, int64, error) {
-	db := e.database(ctx)
+func (e *Engine) Execute(c *Context, query string) (string, int64, error) {
+	db := c.Database()
 	if db == nil {
 		return "", 0, ErrNoDatabase
 	}
@@ -301,8 +305,8 @@ func (e *Engine) Execute(ctx Context, query string) (string, int64, error) {
 	return db.Execute(tmctx, query)
 }
 
-func (e *Engine) GetCreateTable(ctx Context, tableName string) (string, error) {
-	db := e.database(ctx)
+func (e *Engine) GetCreateTable(c *Context, tableName string) (string, error) {
+	db := c.Database()
 	if db == nil {
 		return "", ErrNoDatabase
 	}
@@ -314,12 +318,12 @@ func (e *Engine) GetCreateTable(ctx Context, tableName string) (string, error) {
 }
 
 func (e *Engine) GetInsertStatement(
-	ctx Context,
+	c *Context,
 	tableName string,
 	cols []driver.ColDef,
 	values []interface{},
 ) (string, error) {
-	db := e.database(ctx)
+	db := c.Database()
 	if db == nil {
 		return "", ErrNoDatabase
 	}
@@ -338,34 +342,7 @@ func (e *Engine) Dispose() {
 }
 
 // GETTERS
-func (e *Engine) connection(ctx Context) driver.Connection {
-	connI := ctx.Value(ckConnection)
-	if connI == nil {
-		return nil
-	}
 
-	conn, ok := connI.(driver.Connection)
-	if !ok {
-		return nil
-	}
-
-	return conn
-}
-
-func (e *Engine) database(ctx Context) driver.Database {
-	dbI := ctx.Value(ckDatabase)
-	if dbI == nil {
-		return nil
-	}
-
-	db, ok := dbI.(driver.Database)
-	if !ok {
-		return nil
-	}
-
-	return db
-}
-
-func (e *Engine) Database(ctx Context) driver.Database {
-	return e.database(ctx)
+func (e *Engine) Database(c *Context) driver.Database {
+	return c.Database()
 }
