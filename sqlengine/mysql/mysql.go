@@ -418,7 +418,29 @@ func (d *mysqlDb) FetchTable(
 			continue
 		}
 		//args = append(args, cond.Value)
-		wheres = append(wheres, fmt.Sprintf("`%s` %s %#v", cond.Field.Name, cond.Op, cond.Value))
+		switch cond.Op {
+		case driver.IsNull:
+			wheres = append(wheres, fmt.Sprintf("`%s` IS NULL", cond.Field.Name))
+		case driver.IsNotNull:
+			wheres = append(wheres, fmt.Sprintf("`%s` IS NOT NULL", cond.Field.Name))
+		case driver.Nin:
+			v := []string{}
+			for _, i := range strings.Split(cond.Value.(string), ",") {
+				v = append(v, fmt.Sprintf("%#v", i))
+			}
+			wheres = append(wheres, fmt.Sprintf("`%s` NOT IN (%s)",
+				cond.Field.Name, strings.Join(v, ", ")))
+		case driver.In:
+			v := []string{}
+			for _, i := range strings.Split(cond.Value.(string), ",") {
+				v = append(v, fmt.Sprintf("%#v", i))
+			}
+			wheres = append(wheres, fmt.Sprintf("`%s` IN (%s)",
+				cond.Field.Name, strings.Join(v, ", ")))
+		default:
+			wheres = append(wheres, fmt.Sprintf("`%s` %s %#v",
+				cond.Field.Name, string(cond.Op), cond.Value))
+		}
 	}
 
 	where := ""

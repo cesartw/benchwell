@@ -200,6 +200,10 @@ func (c Condition) Init(cols []driver.ColDef) (*Condition, error) {
 		c.opCb.Append(string(op), string(op))
 	}
 	c.opCb.SetActive(0)
+	c.opCb.Connect("changed", func() {
+		enable := c.opCb.GetActiveText() != string(driver.IsNull) && c.opCb.GetActiveText() != string(driver.IsNotNull)
+		c.valueEntry.SetSensitive(enable)
+	})
 
 	c.valueEntry, err = gtk.EntryNew()
 	if err != nil {
