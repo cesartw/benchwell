@@ -49,8 +49,9 @@ func (tc TableCtrl) Init(
 	tc.grid.Show()
 
 	tc.connectionTab, err = gtk.ConnectionTab{}.Init(gtk.ConnectionTabOpts{
-		Title:   fmt.Sprintf("%s.%s", tc.dbName, opts.TableDef.Name),
-		Content: tc.grid,
+		Database: tc.dbName,
+		Title:    fmt.Sprintf("%s.%s", tc.dbName, opts.TableDef.Name),
+		Content:  tc.grid,
 		OnRemove: func() {
 			opts.OnTabRemoved(&tc)
 		},

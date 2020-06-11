@@ -17,10 +17,12 @@ type ConnectionTab struct {
 	content *gtk.Box
 	header  *gtk.Box
 
-	index int
+	index    int
+	database string
 }
 
 type ConnectionTabOpts struct {
+	Database string
 	Title    string
 	Content  gtk.IWidget
 	OnRemove func()
@@ -29,6 +31,7 @@ type ConnectionTabOpts struct {
 func (c ConnectionTab) Init(opts ConnectionTabOpts) (*ConnectionTab, error) {
 	var err error
 
+	c.database = opts.Database
 	c.content, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if err != nil {
 		return nil, err
@@ -207,6 +210,11 @@ func (c ConnectionScreen) Init(w *Window, ctrl interface {
 	c.tabber.SetProperty("enable-popup", false)
 	c.tabber.Connect("switch-page", func(_ *gtk.Notebook, _ *gtk.Widget, i int) {
 		c.tabIndex = i
+		if i >= len(c.tabs) {
+			return
+		}
+
+		c.dbCombo.SetActiveID(c.tabs[i].database)
 	})
 
 	c.tabber.Connect("page-reordered", func(_ *gtk.Notebook, _ *gtk.Widget, i int) {
