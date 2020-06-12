@@ -125,10 +125,6 @@ func (w *Window) OnSaveQuery(query string, f func(string, string)) {
 	f(query, openfileDialog.GetFilename())
 }
 
-func (w *Window) OnTabClick(f interface{}) {
-	w.nb.Connect("button-press-event", f)
-}
-
 func (w *Window) AddTab(label *gtk.Label, wd gtk.IWidget, removed func()) error {
 	header, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
 	if err != nil {
@@ -156,7 +152,8 @@ func (w *Window) AddTab(label *gtk.Label, wd gtk.IWidget, removed func()) error 
 	w.nb.SetCurrentPage(w.nb.PageNum(wd))
 
 	btn.Connect("clicked", func() {
-		w.RemoveCurrentPage()
+		index := w.nb.PageNum(wd)
+		w.nb.RemovePage(index)
 		removed()
 	})
 

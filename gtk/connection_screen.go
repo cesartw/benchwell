@@ -217,6 +217,10 @@ func (c ConnectionScreen) Init(w *Window, ctrl interface {
 		c.dbCombo.SetActiveID(c.tabs[i].database)
 	})
 
+	c.tabber.Connect("page-removed", func(_ *gtk.Notebook, _ *gtk.Widget, i int) {
+		c.tabs = append(c.tabs[:i], c.tabs[i+1:]...)
+	})
+
 	c.tabber.Connect("page-reordered", func(_ *gtk.Notebook, _ *gtk.Widget, i int) {
 		t := c.tabs[i]
 
@@ -298,7 +302,6 @@ func (c *ConnectionScreen) AddTab(tab *ConnectionTab, switchNow bool) error {
 		}
 
 		c.tabber.RemovePage(index)
-		c.tabs = append(c.tabs[:index], c.tabs[index+1:]...)
 	})
 
 	if switchNow {

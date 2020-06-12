@@ -209,12 +209,13 @@ func (c *Config) Save(w *gtk.ApplicationWindow) error {
 }
 
 func (c *Config) CSS() string {
-	return string(assets.BRAND) + `
-	* {
-		font-size: 20px;
-		font-family: JetBrainsMono Nerd Font;
+	style := ""
+	if c.GUI.DarkMode {
+		style = assets.THEME_DARK + assets.BRAND + assets.BRAND_DARK
+	} else {
+		style = assets.THEME_LIGHT + assets.BRAND + assets.BRAND_LIGHT
 	}
-	`
+	return style
 }
 
 func (c *Connection) Encrypt(w *gtk.ApplicationWindow) error {

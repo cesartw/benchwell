@@ -1,7 +1,6 @@
 package gtk
 
 import (
-	"bitbucket.org/goreorto/sqlaid/assets"
 	"bitbucket.org/goreorto/sqlaid/config"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
@@ -46,7 +45,6 @@ func (a Application) Init(ctrl interface {
 		a.AddAction(a.Menu.Application.NewWindow)
 		a.AddAction(a.Menu.Application.Preferences)
 		a.AddAction(a.Menu.Application.DarkMode)
-		a.SetTheme()
 		a.loadSettingsCSS()
 	})
 
@@ -75,35 +73,8 @@ func (a Application) Init(ctrl interface {
 }
 
 func (a *Application) ToggleMode() {
-	a.DarkMode = !a.DarkMode
-	a.SetTheme()
-}
-
-func (a *Application) SetTheme() {
-	stylePath := assets.THEME_DARK + assets.BRAND_DARK
-	if !a.DarkMode {
-		stylePath = assets.THEME_LIGHT
-	}
-	a.loadCSS(stylePath)
-}
-
-func (a *Application) loadCSS(path string) {
-	css, err := gtk.CssProviderNew()
-	if err != nil {
-		panic(err)
-	}
-
-	err = css.LoadFromData(path)
-	if err != nil {
-		panic(err)
-	}
-
-	screen, err := gdk.ScreenGetDefault()
-	if err != nil {
-		panic(err)
-	}
-
-	gtk.AddProviderForScreen(screen, css, gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+	config.Env.GUI.DarkMode = !config.Env.GUI.DarkMode
+	a.loadSettingsCSS()
 }
 
 func (a *Application) loadSettingsCSS() {

@@ -1,4 +1,6 @@
-textview text, .view text {
+package assets
+
+const BRAND_LIGHT = `textview text, .view text {
 	background-color: #3d3d3d;
 }
 
@@ -6,17 +8,8 @@ entry, text {
 	background-color: #3d3d3d;
 }
 
-notebook > header.top > tabs > tab {
-	background-color: #2d2d2d;
-	border-color: #3d3d3d;
-}
-
-notebook > header.top > tabs > tab:checked {
+notebook > header > tabs > tab, notebook > header > tabs > tab:checked {
 	background-color: #3d3d3d;
-}
-
-notebook > header.top > tabs > tab:hover {
-	box-shadow: inset 0 -3px #680303;
 	border-color: #3d3d3d;
 }
 
@@ -34,5 +27,6 @@ treeview.view button {
 }
 
 notebook#MainNotebook header {
-	border-bottom-color: #3d3d3d;
+	border-bottom-color: #adadad;
 }
+`
