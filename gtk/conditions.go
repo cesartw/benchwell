@@ -2,6 +2,7 @@ package gtk
 
 import (
 	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
+	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 )
 
@@ -15,8 +16,10 @@ type Conditions struct {
 }
 
 type Condition struct {
+	cols       []driver.ColDef
 	activeCb   *gtk.CheckButton
-	fieldCb    *gtk.ComboBoxText
+	store      *gtk.ListStore
+	fieldCb    *gtk.ComboBox
 	opCb       *gtk.ComboBoxText
 	valueEntry *gtk.Entry
 	btnRm      *gtk.Button
@@ -96,11 +99,13 @@ func (c *Conditions) Add() error {
 func (c *Conditions) Statements() ([]driver.CondStmt, error) {
 	stmts := []driver.CondStmt{}
 	for _, cond := range c.conditions {
+		cond.tryToSelect()
 		if !cond.activeCb.GetActive() {
 			continue
 		}
 		var field driver.ColDef
-		textField := cond.fieldCb.GetActiveText()
+		// ffs
+		textField, _ := cond.Field()
 		for _, col := range c.cols {
 			if col.Name == textField {
 				field = col
@@ -121,10 +126,16 @@ func (c *Conditions) Statements() ([]driver.CondStmt, error) {
 }
 
 func (c *Conditions) Update(cols []driver.ColDef) error {
+	c.cols = cols
 	conds := c.conditions
 
 	for i, cond := range conds {
-		if cond.fieldCb.GetActiveText() != "" {
+		field, err := cond.Field()
+		if err != nil {
+			return err
+		}
+
+		if field != "" {
 			continue
 		}
 		c.grid.RemoveRow(i)
@@ -133,7 +144,10 @@ func (c *Conditions) Update(cols []driver.ColDef) error {
 
 	//update columns in remaining conditions
 	for _, cond := range c.conditions {
-		field := cond.fieldCb.GetActiveText()
+		field, err := cond.Field()
+		if err != nil {
+			return err
+		}
 
 		foundAt := -1
 		for i, col := range cols {
@@ -160,9 +174,9 @@ func (c *Conditions) Update(cols []driver.ColDef) error {
 		cond.activeCb.SetSensitive(true)
 		cond.activeCb.SetActive(true)
 
-		cond.fieldCb.RemoveAll()
+		cond.store.Clear()
 		for _, col := range cols {
-			cond.fieldCb.Append(col.Name, col.Name)
+			cond.store.SetValue(cond.store.Append(), 0, col.Name)
 		}
 		cond.fieldCb.SetActive(foundAt)
 	}
@@ -176,7 +190,14 @@ func (c *Conditions) Update(cols []driver.ColDef) error {
 }
 
 func (c Condition) Init(cols []driver.ColDef) (*Condition, error) {
+	c.cols = cols
 	var err error
+
+	c.store, _ = gtk.ListStoreNew(glib.TYPE_STRING)
+	c.store.SetValue(c.store.Append(), 0, "")
+	for _, col := range cols {
+		c.store.SetValue(c.store.Append(), 0, col.Name)
+	}
 
 	c.activeCb, err = gtk.CheckButtonNew()
 	if err != nil {
@@ -184,14 +205,20 @@ func (c Condition) Init(cols []driver.ColDef) (*Condition, error) {
 	}
 	c.activeCb.SetActive(true)
 
-	c.fieldCb, err = gtk.ComboBoxTextNew()
+	c.fieldCb, err = gtk.ComboBoxNewWithModelAndEntry(c.store.ToTreeModel())
 	if err != nil {
 		return nil, err
 	}
-	c.fieldCb.Append("", "")
-	for _, col := range cols {
-		c.fieldCb.Append(col.Name, col.Name)
-	}
+	c.fieldCb.SetEntryTextColumn(0)
+	completion, _ := gtk.EntryCompletionNew()
+	completion.SetProperty("inline-completion", true)
+	completion.SetTextColumn(0)
+	completion.SetMinimumKeyLength(2)
+	completion.SetModel(c.store)
+	completion.Connect("match-selected", c.onSelected)
+	//completion.Connect("cursor-on-match", c.onSelected)
+	entry, _ := c.fieldCb.GetEntry()
+	entry.SetCompletion(completion)
 
 	c.opCb, err = gtk.ComboBoxTextNew()
 	if err != nil {
@@ -216,11 +243,52 @@ func (c Condition) Init(cols []driver.ColDef) (*Condition, error) {
 		return nil, err
 	}
 
-	c.activeCb.Show()
-	c.fieldCb.Show()
-	c.opCb.Show()
-	c.valueEntry.Show()
-	c.btnRm.Show()
+	c.activeCb.ShowAll()
+	c.fieldCb.ShowAll()
+	c.opCb.ShowAll()
+	c.valueEntry.ShowAll()
+	c.btnRm.ShowAll()
 
 	return &c, nil
+}
+
+func (c *Condition) Field() (string, error) {
+	c.tryToSelect()
+	iter, err := c.fieldCb.GetActiveIter()
+	if err != nil {
+		return "", err
+	}
+
+	gvalue, err := c.store.GetValue(iter, 0)
+	if err != nil {
+		return "", err
+	}
+
+	textField, err := gvalue.GetString()
+	if err != nil {
+		return "", err
+	}
+
+	return textField, nil
+}
+
+func (c *Condition) tryToSelect() {
+	iter, err := c.fieldCb.GetActiveIter()
+	if iter != nil || err == nil {
+		return
+	}
+
+	e, _ := c.fieldCb.GetEntry()
+	field, _ := e.GetText()
+
+	for i, col := range c.cols {
+		if col.Name == field {
+			c.fieldCb.SetActive(i + 1) // + 1 because of the empty row
+			break
+		}
+	}
+}
+
+func (c *Condition) onSelected(_ *gtk.EntryCompletion, _ *gtk.TreeModel, iter *gtk.TreeIter) {
+	c.fieldCb.SetActiveIter(iter)
 }
