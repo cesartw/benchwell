@@ -22,9 +22,9 @@ type TableCtrl struct {
 }
 
 type TableCtrlOpts struct {
-	Parent       *ConnectionCtrl
-	TableDef     driver.TableDef
-	OnTabRemoved func(*TableCtrl)
+	Parent   *ConnectionCtrl
+	TableDef driver.TableDef
+	//OnTabRemoved func(*TableCtrl)
 }
 
 func (tc TableCtrl) Init(
@@ -47,14 +47,15 @@ func (tc TableCtrl) Init(
 	}
 
 	tc.grid.Show()
+	tabName := tc.dbName
+	if opts.TableDef.Name != "" {
+		tabName += "." + opts.TableDef.Name
+	}
 
 	tc.connectionTab, err = gtk.ConnectionTab{}.Init(gtk.ConnectionTabOpts{
 		Database: tc.dbName,
-		Title:    fmt.Sprintf("%s.%s", tc.dbName, opts.TableDef.Name),
+		Title:    tabName,
 		Content:  tc.grid,
-		OnRemove: func() {
-			opts.OnTabRemoved(&tc)
-		},
 	})
 	if err != nil {
 		return nil, err
@@ -65,6 +66,10 @@ func (tc TableCtrl) Init(
 	}
 
 	return &tc, nil
+}
+
+func (tc *TableCtrl) String() string {
+	return tc.ctx.Database().Name() + "." + tc.tableDef.Name
 }
 
 func (tc *TableCtrl) SetQuery(query string) {
@@ -253,11 +258,21 @@ func (tc *TableCtrl) OnCreate() {
 	tc.window.PushStatus("Record saved")
 }
 
-func (tc *TableCtrl) SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDef) {
+func (tc *TableCtrl) SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDef) (bool, error) {
+	if tc.ctx != nil && tc.ctx != ctx {
+		return false, nil
+	}
+
 	tc.tableDef = tableDef
-	tc.ctx = ctx
+	//tc.ctx = ctx
 	tc.connectionTab.SetTitle(fmt.Sprintf("%s.%s", tc.dbName, tableDef.Name))
 	tc.OnConnect()
+
+	return true, nil
+}
+
+func (tc *TableCtrl) OnTabRemove() {
+	tc.ConnectionCtrl.OnTabRemove(tc)
 }
 
 /*

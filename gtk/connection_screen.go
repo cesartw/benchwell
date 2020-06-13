@@ -6,78 +6,19 @@ import (
 
 	"bitbucket.org/goreorto/sqlaid/assets"
 	"bitbucket.org/goreorto/sqlaid/config"
+	"bitbucket.org/goreorto/sqlaid/sqlengine"
 	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
 )
 
-type ConnectionTab struct {
-	label   *gtk.Label
-	btn     *gtk.Button
-	content *gtk.Box
-	header  *gtk.Box
-
-	index    int
-	database string
-}
-
-type ConnectionTabOpts struct {
-	Database string
-	Title    string
-	Content  gtk.IWidget
-	OnRemove func()
-}
-
-func (c ConnectionTab) Init(opts ConnectionTabOpts) (*ConnectionTab, error) {
-	var err error
-
-	c.database = opts.Database
-	c.content, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
-	if err != nil {
-		return nil, err
+type tab struct {
+	*ConnectionTab
+	ctrl interface {
+		OnTabRemove()
+		SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDef) (bool, error)
+		String() string
 	}
-
-	c.content.PackStart(opts.Content, true, true, 0)
-	c.content.SetVExpand(true)
-	c.content.SetHExpand(true)
-	c.content.Show()
-
-	c.header, err = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	c.label, err = gtk.LabelNew(opts.Title)
-	if err != nil {
-		return nil, err
-	}
-
-	image, err := gtk.ImageNewFromIconName("window-close", gtk.ICON_SIZE_MENU)
-	if err != nil {
-		return nil, err
-	}
-
-	c.btn, err = gtk.ButtonNew()
-	if err != nil {
-		return nil, err
-	}
-
-	c.btn.SetImage(image)
-	c.btn.SetRelief(gtk.RELIEF_NONE)
-
-	c.header.PackStart(c.label, true, true, 0)
-	c.header.PackEnd(c.btn, false, false, 0)
-	c.header.ShowAll()
-
-	if opts.OnRemove != nil {
-		c.btn.Connect("clicked", opts.OnRemove)
-	}
-
-	return &c, nil
-}
-
-func (c *ConnectionTab) SetTitle(title string) {
-	c.label.SetText(title)
 }
 
 type ConnectionScreen struct {
@@ -87,7 +28,7 @@ type ConnectionScreen struct {
 	tableFilter *gtk.SearchEntry
 	tableList   *List
 	tabber      *gtk.Notebook
-	tabs        []*ConnectionTab
+	tabs        []tab
 	logview     *gtk.TextView
 
 	databaseNames []string
@@ -106,16 +47,19 @@ type ConnectionScreen struct {
 	tabIndex int
 }
 
-func (c ConnectionScreen) Init(w *Window, ctrl interface {
-	OnDatabaseSelected()
-	OnTableSelected()
-	OnSchemaMenu()
-	OnRefreshMenu()
-	OnNewTabMenu()
-	OnEditTable()
-	OnTruncateTable()
-	OnDeleteTable()
-}) (*ConnectionScreen, error) {
+func (c ConnectionScreen) Init(
+	w *Window,
+	ctrl interface {
+		OnDatabaseSelected()
+		OnTableSelected()
+		OnSchemaMenu()
+		OnRefreshMenu()
+		OnNewTabMenu()
+		OnEditTable()
+		OnTruncateTable()
+		OnDeleteTable()
+	},
+) (*ConnectionScreen, error) {
 	var err error
 
 	c.Paned, err = gtk.PanedNew(gtk.ORIENTATION_VERTICAL)
@@ -221,12 +165,7 @@ func (c ConnectionScreen) Init(w *Window, ctrl interface {
 		c.tabs = append(c.tabs[:i], c.tabs[i+1:]...)
 	})
 
-	c.tabber.Connect("page-reordered", func(_ *gtk.Notebook, _ *gtk.Widget, i int) {
-		t := c.tabs[i]
-
-		c.tabs[i] = c.tabs[c.tabIndex]
-		c.tabs[c.tabIndex] = t
-	})
+	c.tabber.Connect("page-reordered", c.onTabReorder)
 
 	mainSection.Add(c.tabber)
 	mainSection.SetVExpand(true)
@@ -276,6 +215,21 @@ func (c ConnectionScreen) Init(w *Window, ctrl interface {
 	return &c, nil
 }
 
+func (c *ConnectionScreen) onTabReorder(_ *gtk.Notebook, _ *gtk.Widget, landing int) {
+	// https://play.golang.com/p/YMfQouxHuvr
+	movingTab := c.tabs[c.tabIndex]
+
+	c.tabs = append(c.tabs[:c.tabIndex], c.tabs[c.tabIndex+1:]...)
+
+	lh := make([]tab, len(c.tabs[:landing]))
+	rh := make([]tab, len(c.tabs[landing:]))
+	copy(lh, c.tabs[:landing])
+	copy(rh, c.tabs[landing:])
+
+	c.tabs = append(lh, movingTab)
+	c.tabs = append(c.tabs, rh...)
+}
+
 func (c *ConnectionScreen) Log(s string) {
 	buff, err := c.logview.GetBuffer()
 	if err != nil {
@@ -291,26 +245,37 @@ func (c *ConnectionScreen) CurrentTabIndex() int {
 	return c.tabber.GetCurrentPage()
 }
 
-func (c *ConnectionScreen) AddTab(tab *ConnectionTab, switchNow bool) error {
-	c.tabber.AppendPage(tab.content, tab.header)
-	c.tabber.SetTabReorderable(tab.content, true)
+func (c *ConnectionScreen) SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDef) (bool, error) {
+	return c.tabs[c.tabber.GetCurrentPage()].ctrl.SetTableDef(ctx, tableDef)
+}
 
-	tab.btn.Connect("clicked", func() {
-		index := c.tabber.PageNum(tab.content)
+func (c *ConnectionScreen) AddTab(
+	ctab *ConnectionTab,
+	ctrl interface {
+		OnTabRemove()
+		SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDef) (bool, error)
+		String() string
+	},
+	switchNow bool,
+) error {
+	c.tabber.AppendPage(ctab.content, ctab.header)
+	c.tabber.SetTabReorderable(ctab.content, true)
+
+	ctab.btn.Connect("clicked", func() {
+		index := c.tabber.PageNum(ctab.content)
 		if index == -1 {
 			return
 		}
 
 		c.tabber.RemovePage(index)
+		ctrl.OnTabRemove()
 	})
 
 	if switchNow {
 		c.tabber.SetCurrentPage(c.tabber.GetNPages() - 1)
 	}
 
-	c.tabs = append(c.tabs, tab)
-
-	tab.index = c.tabber.PageNum(tab.content)
+	c.tabs = append(c.tabs, tab{ConnectionTab: ctab, ctrl: ctrl})
 
 	return nil
 }
@@ -490,4 +455,68 @@ func (c *ConnectionScreen) onSearch(e *gtk.SearchEntry) {
 		rg = regexp.MustCompile(fmt.Sprintf(".*%s.*", regexp.QuoteMeta(txt)))
 	}
 	c.tableList.SetFilterRegex(rg)
+}
+
+type ConnectionTab struct {
+	label   *gtk.Label
+	btn     *gtk.Button
+	content *gtk.Box
+	header  *gtk.Box
+
+	//index    int
+	database string
+}
+
+type ConnectionTabOpts struct {
+	Database string
+	Title    string
+	Content  gtk.IWidget
+}
+
+func (c ConnectionTab) Init(opts ConnectionTabOpts) (*ConnectionTab, error) {
+	var err error
+
+	c.database = opts.Database
+	c.content, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	c.content.PackStart(opts.Content, true, true, 0)
+	c.content.SetVExpand(true)
+	c.content.SetHExpand(true)
+	c.content.Show()
+
+	c.header, err = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	c.label, err = gtk.LabelNew(opts.Title)
+	if err != nil {
+		return nil, err
+	}
+
+	image, err := gtk.ImageNewFromIconName("window-close", gtk.ICON_SIZE_MENU)
+	if err != nil {
+		return nil, err
+	}
+
+	c.btn, err = gtk.ButtonNew()
+	if err != nil {
+		return nil, err
+	}
+
+	c.btn.SetImage(image)
+	c.btn.SetRelief(gtk.RELIEF_NONE)
+
+	c.header.PackStart(c.label, true, true, 0)
+	c.header.PackEnd(c.btn, false, false, 0)
+	c.header.ShowAll()
+
+	return &c, nil
+}
+
+func (c *ConnectionTab) SetTitle(title string) {
+	c.label.SetText(title)
 }

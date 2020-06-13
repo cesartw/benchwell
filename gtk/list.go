@@ -95,7 +95,7 @@ func (u *List) UpdateItems(names []fmt.Stringer) error {
 	for _, name := range names {
 		_, err := u.addItem(name, false)
 		if err != nil {
-			return err
+			//return err
 		}
 	}
 

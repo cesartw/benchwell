@@ -102,6 +102,10 @@ func (e *Engine) UseDatabase(c *Context, dbName string) (*Context, error) {
 
 // Tables ...
 func (e *Engine) Tables(c *Context) ([]driver.TableDef, error) {
+	if c.CacheTable != nil {
+		return c.CacheTable, nil
+	}
+
 	conn := c.Connection()
 	if conn == nil {
 		return nil, ErrNoConnection
@@ -115,7 +119,13 @@ func (e *Engine) Tables(c *Context) ([]driver.TableDef, error) {
 	tmctx, cancel := prepereCtx(c, time.Minute)
 	defer cancel()
 
-	return db.Tables(tmctx)
+	tables, err := db.Tables(tmctx)
+	if err != nil {
+		return nil, err
+	}
+	c.CacheTable = tables
+
+	return tables, err
 }
 
 // FetchTable returns table column definition and table data

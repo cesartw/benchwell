@@ -24,6 +24,8 @@ type Context struct {
 	connection driver.Connection
 	database   driver.Database
 	Logger     func(string)
+
+	CacheTable []driver.TableDef
 }
 
 func (c *Context) Connection() driver.Connection {

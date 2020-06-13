@@ -69,29 +69,35 @@ func (c *ConnectionCtrl) SetFileText(s string) {
 }
 
 func (c *ConnectionCtrl) AddTab(tableDef driver.TableDef) error {
+	// TODO: control doesn't know it's a tab. good or bad?
 	tab, err := TableCtrl{}.Init(c.dbCtx[c.dbName], TableCtrlOpts{
-		Parent:       c,
-		TableDef:     tableDef,
-		OnTabRemoved: c.onTabRemove,
+		Parent:   c,
+		TableDef: tableDef,
+		//OnTabRemoved: c.onTabRemove, // change to c.OnTabRemoved
 	})
 	if err != nil {
 		return err
 	}
 
-	if tableDef.IsZero() {
-		tab.connectionTab.SetTitle("New")
-	}
-
 	c.tabs = append(c.tabs, tab)
-	return c.scr.AddTab(tab.connectionTab, true)
+	return c.scr.AddTab(tab.connectionTab, tab, true)
 }
 
 func (c *ConnectionCtrl) UpdateOrAddTab(tableDef driver.TableDef) error {
-	if len(c.tabs) == 0 || c.tabs[c.scr.CurrentTabIndex()].ctx != c.dbCtx[c.dbName] {
+	ok, err := c.scr.SetTableDef(c.dbCtx[c.dbName], tableDef)
+	if err != nil {
+		return err
+	}
+
+	if !ok {
 		return c.AddTab(tableDef)
 	}
 
-	c.tabs[c.scr.CurrentTabIndex()].SetTableDef(c.dbCtx[c.dbName], tableDef)
+	//if len(c.tabs) == 0 || c.tabs[c.scr.CurrentTabIndex()].ctx != c.dbCtx[c.dbName] {
+	//return c.AddTab(tableDef)
+	//}
+
+	//c.tabs[c.scr.CurrentTabIndex()].SetTableDef(c.dbCtx[c.dbName], tableDef)
 	return nil
 }
 
@@ -153,6 +159,10 @@ func (c *ConnectionCtrl) OnSchemaMenu() {
 }
 
 func (c *ConnectionCtrl) OnRefreshMenu() {
+	if dbName, ok := c.scr.ActiveDatabase(); ok {
+		c.dbCtx[dbName].CacheTable = nil
+	}
+
 	c.OnDatabaseSelected()
 }
 
@@ -170,7 +180,7 @@ func (c *ConnectionCtrl) Screen() interface{} {
 	return c.scr
 }
 
-func (c *ConnectionCtrl) onTabRemove(ctrl *TableCtrl) {
+func (c *ConnectionCtrl) OnTabRemove(ctrl *TableCtrl) {
 	defer c.disconnect()
 
 	for i, tabCtrl := range c.tabs {
