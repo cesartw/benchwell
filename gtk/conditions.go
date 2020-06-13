@@ -5,6 +5,7 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
+// TODO: look into gtk.EntryCompletion for combobox
 type Conditions struct {
 	*gtk.Frame
 	grid       *gtk.Grid

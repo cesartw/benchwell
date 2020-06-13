@@ -3,7 +3,11 @@ package gtk
 import (
 	"fmt"
 
+	"bitbucket.org/goreorto/sqlaid/clipboard"
+	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
+	"github.com/gotk3/gotk3/gdk"
+	"github.com/gotk3/gotk3/gtk"
 )
 
 type Stringer string
@@ -44,4 +48,15 @@ func stringerSliceToColDefSlice(cols []fmt.Stringer) (r []driver.ColDef) {
 	}
 
 	return r
+}
+
+func ClipboardCopy(d string) {
+	cb, err := gtk.ClipboardGet(gdk.SELECTION_CLIPBOARD)
+	if err != nil {
+		config.Env.Log.Debug("using cmd clipboard")
+		clipboard.Copy(d)
+	}
+
+	cb.SetText(d)
+	cb.Store()
 }

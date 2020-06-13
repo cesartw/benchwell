@@ -42,6 +42,7 @@ type TableType uint
 const (
 	ColTypeBoolean ColType = iota
 	ColTypeString
+	ColTypeLongString
 	ColTypeFloat
 	ColTypeInt
 	ColTypeDate

@@ -3,7 +3,6 @@ package ctrl
 import (
 	"fmt"
 
-	"bitbucket.org/goreorto/sqlaid/clipboard"
 	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/gtk"
 	"bitbucket.org/goreorto/sqlaid/sqlengine"
@@ -82,7 +81,7 @@ func (tc *TableCtrl) OnCopyInsert(cols []driver.ColDef, values []interface{}) {
 		tc.window.PushStatus(err.Error())
 	}
 
-	clipboard.Copy(sql)
+	gtk.ClipboardCopy(sql)
 	config.Env.Log.Debugf("insert copied: %s", sql)
 }
 

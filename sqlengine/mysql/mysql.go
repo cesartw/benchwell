@@ -354,9 +354,9 @@ func (d *mysqlDb) parseType(mysqlStringType string) (driver.ColType, int, []stri
 	switch t {
 	case "enum":
 		return driver.ColTypeList, 0, strings.Split(s, ","), false
-	case "text":
-		return driver.ColTypeString, 0, nil, false
-	case "varchar":
+	case "text", "mediumtext", "longtext", "blob", "mediumblob", "longblob":
+		return driver.ColTypeLongString, 0, nil, false
+	case "varchar", "tinytext":
 		si, _ := strconv.Atoi(s)
 		return driver.ColTypeString, si, nil, false
 	case "int", "smallint", "mediumint", "bigint":
@@ -478,6 +478,14 @@ func (d *mysqlDb) FetchTable(
 
 		if err := sqlRows.Scan(row...); err != nil {
 			return nil, nil, err
+		}
+		for i, col := range row {
+			if b, ok := col.([]byte); ok {
+				row[i] = string(b)
+			}
+			if b, ok := col.([]uint8); ok {
+				row[i] = string(b)
+			}
 		}
 
 		rows = append(rows, row)

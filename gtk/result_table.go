@@ -6,14 +6,16 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 
-	"bitbucket.org/goreorto/sqlaid/clipboard"
 	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 )
+
+var once = sync.Once{}
 
 type MODE int
 
@@ -34,6 +36,7 @@ type parser func(driver.ColDef, string) (interface{}, error)
 type Result struct {
 	*gtk.TreeView
 	cols           []fmt.Stringer
+	coldefs        []driver.ColDef
 	data           [][]interface{}
 	store          *gtk.ListStore
 	updateCallback func([]driver.ColDef, []interface{}) error
@@ -49,8 +52,8 @@ type Result struct {
 		cp       *gtk.MenuItem
 	}
 
-	pathAtCursor *gtk.TreePath
-	colAtCursor  *gtk.TreeViewColumn
+	rowAtCursor *gtk.TreePath
+	colAtCursor *gtk.TreeViewColumn
 
 	onCopyInsertFn func([]driver.ColDef, []interface{})
 }
@@ -127,11 +130,12 @@ func (u *Result) UpdateColumns(cols []driver.ColDef) error {
 	}
 
 	u.cols = colDefSliceToStringerSlice(cols)
+	u.coldefs = cols
 	u.data = nil
 
 	columns := make([]glib.Type, len(u.cols)+1) // +1 internal status col
 	for i, col := range u.cols {
-		c, err := u.createColumn(col.String(), i)
+		c, err := u.createColumn(col.String(), i, u.coldefs[i].Type == driver.ColTypeLongString)
 		if err != nil {
 			return err
 		}
@@ -171,12 +175,13 @@ func (u *Result) UpdateRawData(cols []string, data [][]interface{}) error {
 		u.TreeView.RemoveColumn(u.TreeView.GetColumn(0))
 	}
 
+	u.coldefs = nil
 	u.cols = stringSliceToStringerSlice(cols)
 	u.data = data
 
 	columns := make([]glib.Type, len(u.cols))
 	for i, col := range u.cols {
-		gtkc, err := u.createColumn(col.String(), i)
+		gtkc, err := u.createColumn(col.String(), i, false)
 		if err != nil {
 			return err
 		}
@@ -293,31 +298,34 @@ func (u *Result) AddEmptyRow() (err error) {
 	return nil
 }
 
-func (u *Result) AddRow(row []interface{}) {
+func (u *Result) AddRow(originalRow []interface{}) {
 	// Get an iterator for a new row at the end of the list store
 	iter := u.store.Append()
 
-	if row == nil {
-		row = make([]interface{}, len(u.cols))
-	}
-
-	if len(row) != len(u.cols) {
+	if len(originalRow) != len(u.cols) {
 		log.Fatal("wrong row length")
 	}
 
-	columns := make([]int, len(row))
-	for i, d := range row {
-		columns[i] = i
-		if s, ok := d.(int64); ok {
-			row[i] = s
-		}
+	row := make([]interface{}, len(u.cols))
 
-		if s, ok := d.([]uint8); ok {
-			row[i] = string(s)
-		}
+	columns := make([]int, len(originalRow))
+	for i, d := range originalRow {
+		row[i] = originalRow[i]
+		columns[i] = i
 
 		if d == nil {
 			row[i] = "<NULL>"
+			continue
+		}
+
+		if u.coldefs[i].Type == driver.ColTypeLongString {
+			s := make([]byte, 255)
+			copy(s, []byte(d.(string)))
+			row[i] = strings.TrimSpace(strings.TrimLeft(strings.TrimLeft(strings.TrimLeft(string(s), "\t"), "\n"), "\r"))
+		}
+
+		if s, ok := d.(int64); ok {
+			row[i] = s
 		}
 	}
 
@@ -521,16 +529,18 @@ func (u *Result) onCopyInsert() {
 	u.onCopyInsertFn(cols, values)
 }
 
-func (u *Result) onEdited(cell *gtk.CellRendererText, path string, newValue string, userData interface{}) {
+func (u *Result) onEdited(_ *gtk.CellRendererText, rowPath string, newValue string, userData interface{}) {
 	config.Env.Log.Debug("cell edited")
 	if u.mode == MODE_RAW {
 		return
 	}
 
-	column := userData.(int)
-	row, _ := strconv.Atoi(path)
+	row, _ := strconv.Atoi(rowPath)
+	u.onSaveCell(row, userData.(int), newValue)
+}
 
-	tpath, err := gtk.TreePathNewFromString(path)
+func (u *Result) onSaveCell(row, column int, newValue string) {
+	tpath, err := gtk.TreePathNewFromString(fmt.Sprintf("%d", row))
 	if err != nil {
 		config.Env.Log.Error(err)
 		return
@@ -583,7 +593,7 @@ func (u *Result) onEdited(cell *gtk.CellRendererText, path string, newValue stri
 		}
 	}
 
-	affectedCol := u.cols[column].(driver.ColDef)
+	affectedCol := u.coldefs[column]
 	pkCols = append(pkCols, affectedCol)
 	parsedValue, err := u.parser(affectedCol, newValue)
 	if err != nil {
@@ -598,17 +608,42 @@ func (u *Result) onEdited(cell *gtk.CellRendererText, path string, newValue stri
 		config.Env.Log.Error(err)
 		return
 	}
+
+	u.data[row][column], _ = u.parser(u.coldefs[column], newValue)
 }
 
-func (u *Result) createColumn(title string, id int) (*gtk.TreeViewColumn, error) {
+func (u *Result) createColumn(title string, id int, useEditModal bool) (*gtk.TreeViewColumn, error) {
 	cellRenderer, err := gtk.CellRendererTextNew()
 	if err != nil {
 		return nil, err
 	}
 	cellRenderer.SetProperty("editable", true)
 	cellRenderer.SetProperty("xpad", 10)
-	cellRenderer.SetProperty("height", 30)
-	cellRenderer.Connect("edited", u.onEdited, id)
+	cellRenderer.SetProperty("height", 24)
+	cellRenderer.SetProperty("width-chars", 255)
+	cellRenderer.Connect("edited", func(cell *gtk.CellRendererText, path string, newValue string, userData interface{}) {
+		if !useEditModal {
+			u.onEdited(cell, path, newValue, userData)
+		}
+	}, id)
+	cellRenderer.Connect("editing-started", func() {
+		if !useEditModal {
+			return
+		}
+
+		u.editDialog(u.dataAtCursor(), func(newValue string) {
+			row, _ := strconv.Atoi(u.rowAtCursor.String())
+			var at int
+			for i, col := range u.cols {
+				if col.String() == u.colAtCursor.GetTitle() {
+					at = i
+					break
+				}
+			}
+
+			u.onSaveCell(row, at, newValue)
+		})
+	})
 
 	// i think "text" refers to a property of the column.
 	// `"text", id` means that the text source for the column should come from
@@ -640,21 +675,76 @@ func (u *Result) createColumn(title string, id int) (*gtk.TreeViewColumn, error)
 	return column, nil
 }
 
-func (u *Result) onTreeViewButtonPress(_ *gtk.TreeView, e *gdk.Event) {
-	keyEvent := gdk.EventButtonNewFromEvent(e)
-
-	if keyEvent.Button() != gdk.BUTTON_SECONDARY {
+func (u *Result) editDialog(data string, done func(string)) {
+	modal, err := gtk.DialogNewWithButtons("Edit", nil,
+		gtk.DIALOG_DESTROY_WITH_PARENT|gtk.DIALOG_MODAL,
+		[]interface{}{"Save", gtk.RESPONSE_ACCEPT},
+		[]interface{}{"Cancel", gtk.RESPONSE_CANCEL},
+	)
+	if err != nil {
 		return
 	}
+
+	modal.SetDefaultSize(400, 400)
+	content, err := modal.GetContentArea()
+	if err != nil {
+		return
+	}
+
+	sw, err := gtk.ScrolledWindowNew(nil, nil)
+	if err != nil {
+		return
+	}
+	sw.SetVExpand(true)
+	sw.SetHExpand(true)
+
+	textView, err := gtk.TextViewNew()
+	if err != nil {
+		return
+	}
+	textView.SetVExpand(true)
+	textView.SetHExpand(true)
+
+	buff, err := textView.GetBuffer()
+	if err != nil {
+		return
+	}
+
+	buff.Insert(buff.GetStartIter(), data)
+
+	sw.Add(textView)
+	content.Add(sw)
+	content.ShowAll()
+
+	resp := modal.Run()
+	defer modal.Destroy()
+
+	if resp != gtk.RESPONSE_ACCEPT {
+		return
+	}
+
+	data, err = buff.GetText(buff.GetStartIter(), buff.GetEndIter(), false)
+	if err != nil {
+		config.Env.Log.Error(err)
+	}
+
+	done(data)
+}
+
+func (u *Result) onTreeViewButtonPress(_ *gtk.TreeView, e *gdk.Event) {
+	keyEvent := gdk.EventButtonNewFromEvent(e)
 
 	path, col, _, _, ok := u.TreeView.GetPathAtPos(int(keyEvent.X()), int(keyEvent.Y()))
 	if !ok {
 		return
 	}
 
-	u.pathAtCursor = path
+	u.rowAtCursor = path
 	u.colAtCursor = col
 
+	if keyEvent.Button() != gdk.BUTTON_SECONDARY {
+		return
+	}
 	u.ddMenu.ShowAll()
 	u.ddMenu.PopupAtPointer(e)
 }
@@ -705,36 +795,27 @@ func (u *Result) onCloneRow() {
 }
 
 func (u *Result) onCopy() {
-	iter, err := u.store.GetIter(u.pathAtCursor)
-	if err != nil {
-		config.Env.Log.Errorf("getting iter at cursor: %s", err)
-		return
-	}
+	ClipboardCopy(u.dataAtCursor())
+}
 
-	var (
-		colIndex int
-		at       int
-	)
-
-	u.TreeView.GetColumns().FreeFull(func(c interface{}) {
-		if c.(*gtk.TreeViewColumn).GetTitle() == u.colAtCursor.GetTitle() {
-			at = colIndex
+func (u *Result) dataAtCursor() string {
+	var at int
+	for i, col := range u.cols {
+		if col.String() == u.colAtCursor.GetTitle() {
+			at = i
+			break
 		}
-		colIndex++
-	})
-
-	v, err := u.store.GetValue(iter, at)
-	if err != nil {
-		config.Env.Log.Errorf("getting store value: %s", err)
-		return
 	}
 
-	value, err := v.GoValue()
-	if err != nil {
-		config.Env.Log.Errorf("converting store value at %d to string: %s", at, err)
-		return
-	}
+	// NOTE: I think FreeFull is buggy
+	//u.TreeView.GetColumns().FreeFull(func(c interface{}) {
+	//if c.(*gtk.TreeViewColumn).GetTitle() == u.colAtCursor.GetTitle() {
+	//at = colIndex
+	//}
+	//colIndex++
+	//})
 
-	config.Env.Log.Debugf("value at %d is `%s`", at, value)
-	clipboard.Copy(value.(string))
+	row, _ := strconv.Atoi(u.rowAtCursor.String())
+
+	return string(u.data[row][at].(string))
 }

@@ -98,11 +98,9 @@ func (w *Window) OnOpenFile(f func(string)) func() {
 		defer openfileDialog.Destroy()
 
 		response := openfileDialog.Run()
-		if response == gtk.RESPONSE_CANCEL {
-			return
+		if response == gtk.RESPONSE_OK && openfileDialog.GetFilename() != "" {
+			f(openfileDialog.GetFilename())
 		}
-
-		f(openfileDialog.GetFilename())
 	}
 }
 
