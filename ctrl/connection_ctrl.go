@@ -93,11 +93,6 @@ func (c *ConnectionCtrl) UpdateOrAddTab(tableDef driver.TableDef) error {
 		return c.AddTab(tableDef)
 	}
 
-	//if len(c.tabs) == 0 || c.tabs[c.scr.CurrentTabIndex()].ctx != c.dbCtx[c.dbName] {
-	//return c.AddTab(tableDef)
-	//}
-
-	//c.tabs[c.scr.CurrentTabIndex()].SetTableDef(c.dbCtx[c.dbName], tableDef)
 	return nil
 }
 
@@ -122,6 +117,14 @@ func (c *ConnectionCtrl) OnDatabaseSelected() {
 	if err != nil {
 		c.window.PushStatus("Error getting tables: `%s`", err.Error())
 		return
+	}
+
+	for _, q := range c.conn.Queries {
+		tables = append(tables, driver.TableDef{
+			Name:  q.Name,
+			Type:  driver.TableTypeDummy,
+			Query: q.Query,
+		})
 	}
 
 	c.scr.SetTables(tables)

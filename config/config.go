@@ -32,9 +32,10 @@ type Config struct {
 	Connections []*Connection `mapstructure:"connections"`
 
 	GUI struct {
-		TabPosition    string `mapstructure:"tab_position"`
-		SubTabPosition string `mapstructure:"sub_tab_position"`
-		Editor         struct {
+		CellWidth             int    `mapstructure:"initial_cell_width"`
+		ConnectionTabPosition string `mapstructure:"connection_tab_position"`
+		TableTabPosition      string `mapstructure:"table_tab_position"`
+		Editor                struct {
 			WordWrap string `mapstructure:"word_wrap"`
 			Theme    struct {
 				Comment                  string `mapstructure:"comment"`
@@ -123,16 +124,22 @@ type Config struct {
 
 // Connection ...
 type Connection struct {
-	Adapter   string `mapstructure:"-"`
-	Type      string `mapstructure:"-"`
-	Name      string `mapstructure:"name"`
-	Host      string `mapstructure:"host"`
-	Port      int    `mapstructure:"port"`
-	User      string `mapstructure:"user"`
-	Password  string `mapstructure:"password"`
-	Database  string `mapstructure:"database"`
-	Options   string `mapstructure:"options"`
-	Encrypted bool   `mapstructure:"encrypted"`
+	Adapter   string  `mapstructure:"-"`
+	Type      string  `mapstructure:"-"`
+	Name      string  `mapstructure:"name"`
+	Host      string  `mapstructure:"host"`
+	Port      int     `mapstructure:"port"`
+	User      string  `mapstructure:"user"`
+	Password  string  `mapstructure:"password"`
+	Database  string  `mapstructure:"database"`
+	Options   string  `mapstructure:"options"`
+	Encrypted bool    `mapstructure:"encrypted"`
+	Queries   []Query `mapstructure:"queries"`
+}
+
+type Query struct {
+	Name  string `mapstructure:"name"`
+	Query string `mapstructure:"query"`
 }
 
 // GetDSN ...

@@ -131,11 +131,15 @@ func (e *Engine) Tables(c *Context) ([]driver.TableDef, error) {
 // FetchTable returns table column definition and table data
 func (e *Engine) FetchTable(
 	c *Context,
-	tableName string,
+	table driver.TableDef,
 	opts driver.FetchTableOptions,
 ) (
 	[]driver.ColDef, [][]interface{}, error,
 ) {
+	if table.Type == driver.TableTypeDummy {
+		return nil, nil, errors.New("not a table")
+	}
+
 	conn := c.Connection()
 	if conn == nil {
 		return nil, nil, ErrNoConnection
@@ -149,7 +153,7 @@ func (e *Engine) FetchTable(
 	tmctx, cancel := prepereCtx(c, time.Minute)
 	defer cancel()
 
-	return db.FetchTable(tmctx, tableName, opts)
+	return db.FetchTable(tmctx, table.Name, opts)
 }
 
 // DeleteRecord ...

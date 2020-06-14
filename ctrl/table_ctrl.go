@@ -166,36 +166,41 @@ func (tc *TableCtrl) OnDelete() {
 }
 
 func (tc *TableCtrl) OnConnect() {
-	def, data, err := tc.Engine.FetchTable(
-		tc.ctx, tc.tableDef.Name,
-		driver.FetchTableOptions{
-			Offset: tc.grid.Offset(),
-			Limit:  tc.grid.PageSize(),
-			Sort:   tc.grid.SortOptions(),
-		},
-	)
-	if err != nil {
-		config.Env.Log.Error(err)
-		return
-	}
-
-	if tc.tableDef.Type == driver.TableTypeRegular {
-		err = tc.grid.UpdateColumns(def)
+	switch tc.tableDef.Type {
+	case driver.TableTypeDummy:
+		tc.OnExecQuery(tc.tableDef.Query)
+	default:
+		def, data, err := tc.Engine.FetchTable(
+			tc.ctx, tc.tableDef,
+			driver.FetchTableOptions{
+				Offset: tc.grid.Offset(),
+				Limit:  tc.grid.PageSize(),
+				Sort:   tc.grid.SortOptions(),
+			},
+		)
 		if err != nil {
 			config.Env.Log.Error(err)
 			return
 		}
 
-		err = tc.grid.UpdateData(data)
-		if err != nil {
-			config.Env.Log.Error(err)
+		if tc.tableDef.Type == driver.TableTypeRegular {
+			err = tc.grid.UpdateColumns(def)
+			if err != nil {
+				config.Env.Log.Error(err)
+				return
+			}
+
+			err = tc.grid.UpdateData(data)
+			if err != nil {
+				config.Env.Log.Error(err)
+			}
+		} else {
+			columns := []string{}
+			for _, d := range def {
+				columns = append(columns, d.Name)
+			}
+			tc.grid.UpdateRawData(columns, data)
 		}
-	} else {
-		columns := []string{}
-		for _, d := range def {
-			columns = append(columns, d.Name)
-		}
-		tc.grid.UpdateRawData(columns, data)
 	}
 }
 
@@ -207,7 +212,7 @@ func (tc *TableCtrl) OnRefresh() {
 	}
 
 	_, data, err := tc.Engine.FetchTable(
-		tc.ctx, tc.tableDef.Name,
+		tc.ctx, tc.tableDef,
 		driver.FetchTableOptions{
 			Offset:     tc.grid.Offset(),
 			Limit:      tc.grid.PageSize(),

@@ -36,7 +36,6 @@ type parser func(driver.ColDef, string) (interface{}, error)
 type Result struct {
 	*gtk.TreeView
 	cols           []fmt.Stringer
-	coldefs        []driver.ColDef
 	data           [][]interface{}
 	store          *gtk.ListStore
 	updateCallback func([]driver.ColDef, []interface{}) error
@@ -130,12 +129,11 @@ func (u *Result) UpdateColumns(cols []driver.ColDef) error {
 	}
 
 	u.cols = colDefSliceToStringerSlice(cols)
-	u.coldefs = cols
 	u.data = nil
 
 	columns := make([]glib.Type, len(u.cols)+1) // +1 internal status col
 	for i, col := range u.cols {
-		c, err := u.createColumn(col.String(), i, u.coldefs[i].Type == driver.ColTypeLongString)
+		c, err := u.createColumn(col.String(), i, u.cols[i].(driver.ColDef).Type == driver.ColTypeLongString)
 		if err != nil {
 			return err
 		}
@@ -171,11 +169,11 @@ func (u *Result) UpdateData(data [][]interface{}) error {
 
 func (u *Result) UpdateRawData(cols []string, data [][]interface{}) error {
 	// columns shift to the left
+	u.mode = MODE_RAW
 	for _ = range u.cols {
 		u.TreeView.RemoveColumn(u.TreeView.GetColumn(0))
 	}
 
-	u.coldefs = nil
 	u.cols = stringSliceToStringerSlice(cols)
 	u.data = data
 
@@ -219,7 +217,6 @@ func (u *Result) UpdateRawData(cols []string, data [][]interface{}) error {
 		u.AddRow(row)
 	}
 
-	u.mode = MODE_RAW
 	return nil
 }
 
@@ -318,7 +315,7 @@ func (u *Result) AddRow(originalRow []interface{}) {
 			continue
 		}
 
-		if u.coldefs[i].Type == driver.ColTypeLongString {
+		if data, ok := d.(string); ok && len(data) > 1000 {
 			s := make([]byte, 255)
 			copy(s, []byte(d.(string)))
 			row[i] = strings.TrimSpace(strings.TrimLeft(strings.TrimLeft(strings.TrimLeft(string(s), "\t"), "\n"), "\r"))
@@ -329,15 +326,13 @@ func (u *Result) AddRow(originalRow []interface{}) {
 		}
 	}
 
-	columns = append(columns, len(row))
-	row = append(row, STATUS_PRISTINE)
+	if u.mode == MODE_DEF {
+		columns = append(columns, len(row))
+		row = append(row, STATUS_PRISTINE)
+	}
 
 	// Set the contents of the list store row that the iterator represents
-	err := u.store.Set(iter,
-		columns,
-		row,
-	)
-
+	err := u.store.Set(iter, columns, row)
 	if err != nil {
 		log.Fatal("Unable to add row:", err)
 	}
@@ -593,7 +588,7 @@ func (u *Result) onSaveCell(row, column int, newValue string) {
 		}
 	}
 
-	affectedCol := u.coldefs[column]
+	affectedCol := u.cols[column].(driver.ColDef)
 	pkCols = append(pkCols, affectedCol)
 	parsedValue, err := u.parser(affectedCol, newValue)
 	if err != nil {
@@ -609,7 +604,7 @@ func (u *Result) onSaveCell(row, column int, newValue string) {
 		return
 	}
 
-	u.data[row][column], _ = u.parser(u.coldefs[column], newValue)
+	u.data[row][column], _ = u.parser(affectedCol, newValue)
 }
 
 func (u *Result) createColumn(title string, id int, useEditModal bool) (*gtk.TreeViewColumn, error) {
@@ -619,8 +614,27 @@ func (u *Result) createColumn(title string, id int, useEditModal bool) (*gtk.Tre
 	}
 	cellRenderer.SetProperty("editable", true)
 	cellRenderer.SetProperty("xpad", 10)
-	cellRenderer.SetProperty("height", 24)
-	cellRenderer.SetProperty("width-chars", 255)
+	cellRenderer.SetProperty("height", 23)
+	cellRenderer.SetProperty("width-chars", config.Env.GUI.CellWidth)
+	cellRenderer.SetProperty("max-width-chars", config.Env.GUI.CellWidth)
+	cellRenderer.SetProperty("wrap-width", config.Env.GUI.CellWidth)
+
+	// i think "text" refers to a property of the column.
+	// `"text", id` means that the text source for the column should come from
+	// the listore column with id = `id`
+	// NOTE: single _ is not display, maybe it's an issue with my system
+	column, err := gtk.TreeViewColumnNewWithAttribute(strings.Replace(title, "_", "__", -1), cellRenderer, "text", id)
+	if err != nil {
+		return nil, err
+	}
+	column.SetResizable(true)
+	// TODO: this limits resizing
+	//column.SetMaxWidth(300)
+
+	if u.mode != MODE_DEF {
+		return column, nil
+	}
+
 	cellRenderer.Connect("edited", func(cell *gtk.CellRendererText, path string, newValue string, userData interface{}) {
 		if !useEditModal {
 			u.onEdited(cell, path, newValue, userData)
@@ -644,19 +658,6 @@ func (u *Result) createColumn(title string, id int, useEditModal bool) (*gtk.Tre
 			u.onSaveCell(row, at, newValue)
 		})
 	})
-
-	// i think "text" refers to a property of the column.
-	// `"text", id` means that the text source for the column should come from
-	// the listore column with id = `id`
-	// NOTE: single _ is not display, maybe it's an issue with my system
-	column, err := gtk.TreeViewColumnNewWithAttribute(strings.Replace(title, "_", "__", -1), cellRenderer, "text", id)
-	if err != nil {
-		return nil, err
-	}
-	column.SetResizable(true)
-	// TODO: this limits resizing
-	column.SetMaxWidth(300)
-
 	column.SetClickable(true)
 	column.Connect("clicked", func() {
 		if !column.GetSortIndicator() {

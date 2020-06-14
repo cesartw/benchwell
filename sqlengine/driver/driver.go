@@ -53,6 +53,7 @@ const (
 const (
 	TableTypeRegular TableType = iota
 	TableTypeView
+	TableTypeDummy
 )
 
 var (
@@ -174,8 +175,9 @@ type ColDef struct {
 
 type TableDefs []TableDef
 type TableDef struct {
-	Name string
-	Type TableType
+	Name  string
+	Type  TableType
+	Query string
 }
 
 func (t TableDef) String() string {

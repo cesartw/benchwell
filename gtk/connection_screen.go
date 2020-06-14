@@ -106,7 +106,6 @@ func (c ConnectionScreen) Init(
 		return nil, err
 	}
 	c.dbCombo.SetIDColumn(0)
-	//c.dbCombo.SetEntryTextColumn(0)
 
 	c.tableList, err = List{}.Init(ListOptions{
 		SelectOnRightClick: true,

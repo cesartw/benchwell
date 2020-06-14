@@ -288,6 +288,15 @@ func (c *mysqlDb) loadData(sqlRows *sql.Rows) ([]string, [][]interface{}, error)
 			return nil, nil, err
 		}
 
+		for i, col := range row {
+			if b, ok := col.([]byte); ok {
+				row[i] = string(b)
+			}
+			if b, ok := col.([]uint8); ok {
+				row[i] = string(b)
+			}
+		}
+
 		data = append(data, row)
 	}
 

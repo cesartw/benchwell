@@ -94,10 +94,9 @@ const DEFAULT_CONFIG = `{
         },
         "page_size": 100,
         "pagesize": 100,
-        "sub_tab_position": "top",
-        "subtabposition": "top",
-        "tab_position": "top",
-        "tabposition": "top"
+        "table_tab_position": "top",
+        "connection_tab_position": "top",
+		"initial_cell_width": 50
     },
     "encryptMode": "DBUS"
 }

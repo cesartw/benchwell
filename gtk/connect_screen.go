@@ -220,6 +220,7 @@ func (c *ConnectScreen) FocusForm() {
 
 func (c *ConnectScreen) SetFormConnection(conn *config.Connection) {
 	c.activeForm.SetConnection(conn)
+	c.activeForm.queries = conn.Queries
 	if conn.Valid() {
 		c.btnConnect.SetSensitive(true)
 		c.btnTest.SetSensitive(true)
@@ -291,7 +292,9 @@ func (c *ConnectScreen) forms() (*gtk.Box, error) {
 }
 
 func (c *ConnectScreen) GetFormConnection() *config.Connection {
-	return c.activeForm.GetConnection()
+	conn := c.activeForm.GetConnection()
+	conn.Queries = c.activeForm.queries
+	return conn
 }
 
 type stdform struct {
@@ -311,6 +314,7 @@ type stdform struct {
 	labelUser     *gtk.Label
 	labelPassword *gtk.Label
 	labelDatabase *gtk.Label
+	queries       []config.Query
 }
 
 func (f stdform) init() (*stdform, error) {

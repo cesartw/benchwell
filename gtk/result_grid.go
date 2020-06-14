@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gotk3/gotk3/gdk"
+	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 
 	"bitbucket.org/goreorto/sqlaid/config"
@@ -14,6 +15,7 @@ import (
 
 // ResultGrid is a table result tab content
 type ResultGrid struct {
+	w *Window
 	*gtk.Paned
 
 	textView *gtk.TextView
@@ -35,8 +37,11 @@ type ResultGrid struct {
 	btnDeleteRow *gtk.Button
 	btnCreateRow *gtk.Button
 
-	btnSaveQuery *gtk.Button
 	btnLoadQuery *gtk.Button
+	btnSaveMenu  *gtk.MenuButton
+
+	actionSaveFile *glib.SimpleAction
+	actionSaveFav  *glib.SimpleAction
 
 	colFilter *gtk.SearchEntry
 
@@ -61,6 +66,7 @@ func (v ResultGrid) Init(
 	},
 	parser parser,
 ) (*ResultGrid, error) {
+	v.w = w
 	var err error
 
 	v.Paned, err = gtk.PanedNew(gtk.ORIENTATION_VERTICAL)
@@ -137,19 +143,31 @@ func (v ResultGrid) Init(
 	if err != nil {
 		return nil, err
 	}
-	v.btnSaveQuery, err = gtk.ButtonNewFromIconName("gtk-save", gtk.ICON_SIZE_BUTTON)
-	if err != nil {
-		return nil, err
-	}
+
+	img, _ := gtk.ImageNewFromIconName("gtk-save", gtk.ICON_SIZE_BUTTON)
+	v.btnSaveMenu, err = gtk.MenuButtonNew()
+	v.btnSaveMenu.SetImage(img)
+	menu := glib.MenuNew()
+	menu.Append("Save As", "win.save.file")
+	menu.Append("Save fav", "win.save.fav")
+
+	v.actionSaveFile = glib.SimpleActionNew("save.file", nil)
+	v.actionSaveFav = glib.SimpleActionNew("save.fav", nil)
+
+	v.w.AddAction(v.actionSaveFile)
+	v.w.AddAction(v.actionSaveFav)
+
+	v.actionSaveFile.Connect("activate", v.onSaveQuery(w.OnSaveQuery, ctrl.OnSaveQuery))
+	v.btnSaveMenu.SetMenuModel(&menu.MenuModel)
 
 	v.btnLoadQuery, err = gtk.ButtonNewFromIconName("gtk-open", gtk.ICON_SIZE_BUTTON)
 	if err != nil {
 		return nil, err
 	}
-	v.btnLoadQuery.Connect("clicked", w.OnOpenFile(ctrl.OnFileSelected))
-	v.btnSaveQuery.Connect("clicked", v.onSaveQuery(w.OnSaveQuery, ctrl.OnSaveQuery))
 
-	tvActionBar.PackEnd(v.btnSaveQuery)
+	v.btnLoadQuery.Connect("clicked", w.OnOpenFile(ctrl.OnFileSelected))
+
+	tvActionBar.PackEnd(v.btnSaveMenu)
 	tvActionBar.PackEnd(v.btnLoadQuery)
 	tvActionBar.SetName("queryactionbar")
 
@@ -157,7 +175,6 @@ func (v ResultGrid) Init(
 	if err != nil {
 		return nil, err
 	}
-	//textViewSW.SetSizeRequest(-1, 200)
 
 	v.result, err = Result{}.Init(ctrl, parser)
 	if err != nil {
