@@ -5,17 +5,27 @@
 	-GtkScrollbar-has-forward-stepper: true;
 }
 
-notebook, notebook header.top  {
+notebook > header > tabs > tab {
+	border-left: 1px solid #dddddd;
+	border-right: 1px solid #dddddd;
+}
+
+notebook, notebook header  {
 	border: none;
 }
 
 notebook > header.top > tabs > tab {
 	border-radius: 0.5em 0.5em 0em 0.0em;
 	border-top: 1px solid #dddddd;
-	border-left: 1px solid #dddddd;
-	border-right: 1px solid #dddddd;
 	border-bottom: none;
 	margin-top: 5px;
+}
+
+notebook > header.bottom > tabs > tab {
+	border-radius: 0em 0.0em 0.5em 0.5em;
+	border-bottom: 1px solid #dddddd;
+	border-top: none;
+	margin-bottom: 5px;
 }
 
 notebook tabs tab label {

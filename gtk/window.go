@@ -45,6 +45,13 @@ func (w Window) Init(app *gtk.Application, ctrl interface {
 	}
 	w.nb.SetName("MainNotebook")
 
+	switch config.Env.GUI.ConnectionTabPosition {
+	case "bottom":
+		w.nb.SetProperty("tab-pos", gtk.POS_BOTTOM)
+	default:
+		w.nb.SetProperty("tab-pos", gtk.POS_TOP)
+	}
+
 	w.box, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if err != nil {
 		return nil, err

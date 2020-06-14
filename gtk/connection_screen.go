@@ -145,6 +145,14 @@ func (c ConnectionScreen) Init(
 	if err != nil {
 		return nil, err
 	}
+
+	switch config.Env.GUI.TableTabPosition {
+	case "bottom":
+		c.tabber.SetProperty("tab-pos", gtk.POS_BOTTOM)
+	default:
+		c.tabber.SetProperty("tab-pos", gtk.POS_TOP)
+	}
+
 	c.tabber.SetVExpand(true)
 	c.tabber.SetHExpand(true)
 	// TODO: move to config
