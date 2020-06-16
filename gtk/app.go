@@ -39,13 +39,14 @@ func (a Application) Init(ctrl interface {
 
 	a.Connect("startup", func() {
 		a.Menu.Application.NewWindow = glib.SimpleActionNew("new", nil)
-		a.Menu.Application.Preferences = glib.SimpleActionNew("prefs", nil)
+		a.Menu.Application.Preferences = glib.SimpleActionNew("preferences", nil)
 		a.Menu.Application.DarkMode = glib.SimpleActionNew("darkmode", nil)
 
 		a.AddAction(a.Menu.Application.NewWindow)
 		a.AddAction(a.Menu.Application.Preferences)
 		a.AddAction(a.Menu.Application.DarkMode)
 		a.loadSettingsCSS()
+		a.Menu.Application.Preferences.Connect("activate", a.OnShowPreferences)
 	})
 
 	//a.Application.SetAccelsForAction("app.new", []string{"<control>N"})
@@ -75,6 +76,33 @@ func (a Application) Init(ctrl interface {
 func (a *Application) ToggleMode() {
 	config.Env.GUI.DarkMode = !config.Env.GUI.DarkMode
 	a.loadSettingsCSS()
+}
+
+func (a *Application) OnShowPreferences() {
+	modal, err := gtk.DialogNewWithButtons("Preferences", nil,
+		gtk.DIALOG_DESTROY_WITH_PARENT|gtk.DIALOG_MODAL,
+		[]interface{}{"Done", gtk.RESPONSE_OK},
+	)
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+
+	//pref, err := Preferences{}.Init()
+	//if err != nil {
+	//config.Env.Log.Error(err)
+	//return
+	//}
+
+	//b, err := modal.GetContentArea()
+	//if err != nil {
+	//config.Env.Log.Error(err)
+	//return
+	//}
+	//b.Add(pref)
+
+	modal.Run()
+	defer modal.Destroy()
 }
 
 func (a *Application) loadSettingsCSS() {

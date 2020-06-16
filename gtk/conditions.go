@@ -127,19 +127,20 @@ func (c *Conditions) Statements() ([]driver.CondStmt, error) {
 
 func (c *Conditions) Update(cols []driver.ColDef) error {
 	c.cols = cols
-	conds := c.conditions
+	conditions := []*Condition{}
 
-	for i, cond := range conds {
+	// remove empty
+	for i, cond := range c.conditions {
 		field, err := cond.Field()
 		if err != nil {
 			return err
 		}
 
-		if field != "" {
+		if field == "" {
+			c.grid.RemoveRow(i)
 			continue
 		}
-		c.grid.RemoveRow(i)
-		c.conditions = append(c.conditions[:i], c.conditions[i+1:]...)
+		conditions = append(conditions, cond)
 	}
 
 	//update columns in remaining conditions
@@ -178,13 +179,15 @@ func (c *Conditions) Update(cols []driver.ColDef) error {
 		for _, col := range cols {
 			cond.store.SetValue(cond.store.Append(), 0, col.Name)
 		}
-		cond.fieldCb.SetActive(foundAt)
+		cond.fieldCb.SetActiveID(field)
 	}
 
 	c.cols = cols
 	if len(c.conditions) == 0 {
 		return c.Add()
 	}
+
+	c.conditions = conditions
 
 	return nil
 }
@@ -210,6 +213,7 @@ func (c Condition) Init(cols []driver.ColDef) (*Condition, error) {
 		return nil, err
 	}
 	c.fieldCb.SetEntryTextColumn(0)
+	c.fieldCb.SetProperty("id-column", 0)
 	completion, _ := gtk.EntryCompletionNew()
 	completion.SetProperty("inline-completion", true)
 	completion.SetTextColumn(0)
@@ -254,6 +258,10 @@ func (c Condition) Init(cols []driver.ColDef) (*Condition, error) {
 
 func (c *Condition) Field() (string, error) {
 	c.tryToSelect()
+	if c.fieldCb.GetActiveID() == "" {
+		return "", nil
+	}
+
 	iter, err := c.fieldCb.GetActiveIter()
 	if err != nil {
 		return "", err

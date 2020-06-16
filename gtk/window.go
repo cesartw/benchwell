@@ -191,28 +191,6 @@ func (w *Window) PageCount() int {
 }
 
 func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
-	header, err := gtk.HeaderBarNew()
-	if err != nil {
-		return nil, err
-	}
-	header.SetShowCloseButton(true)
-	header.SetTitle("SQLAID")
-	header.SetSubtitle(config.Env.Version)
-
-	// Create a new menu button
-	mbtn, err := gtk.MenuButtonNew()
-	if err != nil {
-		return nil, err
-	}
-	img, _ := gtk.ImageNewFromIconName("gtk-add", gtk.ICON_SIZE_MENU)
-	mbtn.SetImage(img)
-
-	// Set up the menu model for the button
-	menu := glib.MenuNew()
-	if menu == nil {
-		return nil, errors.New("nil menu")
-	}
-
 	w.Menu.NewTab = glib.SimpleActionNew("new", nil)
 	w.Menu.NewSubTab = glib.SimpleActionNew("tabnew", nil)
 	w.Menu.LoadFile = glib.SimpleActionNew("file.load", nil)
@@ -222,18 +200,56 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 	w.AddAction(w.Menu.LoadFile)
 	w.AddAction(w.Menu.CloseTab)
 
-	menu.Append("New window", "app.new")
-	menu.Append("New connection", "win.new")
-	menu.Append("New tab", "win.tabnew")
-	//menu.Append("- Table Tab", "win.close")
-	menu.Append("Open File", "win.file.load")
-	menu.Append("Preferences", "app.preferences")
-	menu.Append("Dark toggle", "app.darkmode")
+	header, err := gtk.HeaderBarNew()
+	if err != nil {
+		return nil, err
+	}
+	header.SetShowCloseButton(true)
+	header.SetTitle("SQLAID")
+	header.SetSubtitle(config.Env.Version)
 
-	mbtn.SetMenuModel(&menu.MenuModel)
+	// Create a new window menu button
+	windowBtnMenu, err := gtk.MenuButtonNew()
+	if err != nil {
+		return nil, err
+	}
+	addImg, _ := gtk.ImageNewFromIconName("gtk-add", gtk.ICON_SIZE_MENU)
+	windowBtnMenu.SetImage(addImg)
+
+	// Set up the menu model for the button
+	windowMenu := glib.MenuNew()
+	if windowMenu == nil {
+		return nil, errors.New("nil menu")
+	}
+	windowBtnMenu.SetMenuModel(&windowMenu.MenuModel)
+
+	windowMenu.Append("New window", "app.new")
+	windowMenu.Append("New connection", "win.new")
+	windowMenu.Append("New tab", "win.tabnew")
+	windowMenu.Append("Open File", "win.file.load")
+	//menu.Append("- Table Tab", "win.close")
+
+	// Create a new app menu button
+	appBtnMenu, err := gtk.MenuButtonNew()
+	if err != nil {
+		return nil, err
+	}
+	prefImg, _ := gtk.ImageNewFromIconName("gtk-preferences", gtk.ICON_SIZE_MENU)
+	appBtnMenu.SetImage(prefImg)
+
+	// Set up the menu model for the button
+	appMenu := glib.MenuNew()
+	if appMenu == nil {
+		return nil, errors.New("nil menu")
+	}
+	appBtnMenu.SetMenuModel(&appMenu.MenuModel)
+
+	appMenu.Append("Preferences", "app.preferences")
+	appMenu.Append("Dark toggle", "app.darkmode")
 
 	// add the menu button to the header
-	header.PackStart(mbtn)
+	header.PackStart(windowBtnMenu)
+	header.PackEnd(appBtnMenu)
 
 	// Assemble the window
 	return header, nil

@@ -113,7 +113,7 @@ type Config struct {
 			} `mapstructure:"theme"`
 		}
 		PageSize int  `mapstructure:"page_size"`
-		DarkMode bool `mapstructure:"page_size"`
+		DarkMode bool `mapstructure:"dark_mode"`
 	}
 	EncryptMode string `mapstructure:"encryptMode"`
 
