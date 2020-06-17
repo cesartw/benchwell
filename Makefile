@@ -1,4 +1,4 @@
-DATE=`date +%Y%M%d`
+DATE=`date +%Y%m%d`
 SHA=`git rev-parse HEAD | cut -c1-7`
 NIGHTLY_VERSION="nightly-${DATE}${SHA}"
 
