@@ -63,6 +63,7 @@ func (v ResultGrid) Init(
 		OnCopyInsert([]driver.ColDef, []interface{})
 		OnFileSelected(string)
 		OnSaveQuery(string, string)
+		OnSaveFav(string, string)
 	},
 	parser parser,
 ) (*ResultGrid, error) {
@@ -158,6 +159,7 @@ func (v ResultGrid) Init(
 	v.w.AddAction(v.actionSaveFav)
 
 	v.actionSaveFile.Connect("activate", v.onSaveQuery(w.OnSaveQuery, ctrl.OnSaveQuery))
+	v.actionSaveFav.Connect("activate", v.onSaveFav(ctrl.OnSaveFav))
 	v.btnSaveMenu.SetMenuModel(&menu.MenuModel)
 
 	v.btnLoadQuery, err = gtk.ButtonNewFromIconName("gtk-open", gtk.ICON_SIZE_BUTTON)
@@ -257,6 +259,36 @@ func (v *ResultGrid) onSaveQuery(
 		}
 
 		openDialog(txt, onSaveQuery)
+	}
+}
+
+func (v *ResultGrid) onSaveFav(
+	onSaveQuery func(string, string),
+) func() {
+	return func() {
+		name, err := v.askFavName()
+		if err != nil {
+			config.Env.Log.Error(err)
+			return
+		}
+
+		if name == "" {
+			return
+		}
+
+		buff, err := v.textView.GetBuffer()
+		if err != nil {
+			config.Env.Log.Error(err)
+			return
+		}
+
+		query, err := buff.GetText(buff.GetStartIter(), buff.GetEndIter(), false)
+		if err != nil {
+			config.Env.Log.Error(err)
+			return
+		}
+
+		onSaveQuery(name, query)
 	}
 }
 
@@ -537,4 +569,55 @@ func (v *ResultGrid) onRowActivated(_ *gtk.TreeView, path *gtk.TreePath, col *gt
 
 	v.newRecordEnable(status == STATUS_NEW)
 	v.btnDeleteRow.SetSensitive(true)
+}
+
+func (v *ResultGrid) askFavName() (string, error) {
+	modal, err := gtk.DialogNewWithButtons(
+		"Favorite Name",
+		v.w,
+		gtk.DIALOG_DESTROY_WITH_PARENT|gtk.DIALOG_MODAL,
+		[]interface{}{"Ok", gtk.RESPONSE_ACCEPT},
+		[]interface{}{"Cancel", gtk.RESPONSE_CANCEL},
+	)
+	if err != nil {
+		return "", err
+	}
+	modal.SetDefaultSize(250, 130)
+	content, err := modal.GetContentArea()
+	if err != nil {
+		return "", err
+	}
+
+	label, err := gtk.LabelNew("Enter favorite name")
+	if err != nil {
+		return "", err
+	}
+
+	entry, err := gtk.EntryNew()
+	if err != nil {
+		return "", err
+	}
+
+	box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 10)
+	if err != nil {
+		return "", err
+	}
+
+	box.PackStart(label, true, true, 0)
+	box.PackStart(entry, true, true, 0)
+	content.Add(box)
+	content.ShowAll()
+
+	defer modal.Destroy()
+	resp := modal.Run()
+	if resp != gtk.RESPONSE_ACCEPT {
+		return "", nil
+	}
+
+	name, err := entry.GetText()
+	if err != nil {
+		return "", err
+	}
+
+	return name, nil
 }

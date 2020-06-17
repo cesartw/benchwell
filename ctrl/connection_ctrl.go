@@ -143,9 +143,27 @@ func (c *ConnectionCtrl) OnTableSelected() {
 	c.UpdateOrAddTab(tableDef)
 }
 
-func (c *ConnectionCtrl) OnEditTable()     {}
+func (c *ConnectionCtrl) OnEditTable() {}
+
 func (c *ConnectionCtrl) OnTruncateTable() {}
-func (c *ConnectionCtrl) OnDeleteTable()   {}
+
+func (c *ConnectionCtrl) OnDeleteTable() {}
+
+func (c *ConnectionCtrl) OnCopySelect() {
+	tableDef, ok := c.scr.ActiveTable()
+	if !ok {
+		config.Env.Log.Debug("no table selected. odd!")
+		return
+	}
+
+	sql, err := c.Engine.GetSelectStatement(c.dbCtx[c.dbName], tableDef)
+	if err != nil {
+		c.window.PushStatus(err.Error())
+	}
+
+	gtk.ClipboardCopy(sql)
+	config.Env.Log.Debugf("select copied: %s", sql)
+}
 
 func (c *ConnectionCtrl) OnSchemaMenu() {
 	tableName, ok := c.scr.SelectedTable()
@@ -177,6 +195,14 @@ func (c *ConnectionCtrl) OnNewTabMenu() {
 	}
 
 	c.AddTab(tableDef)
+}
+
+func (c *ConnectionCtrl) OnSaveFav(name, query string) {
+	c.conn.Queries = append(c.conn.Queries, config.Query{
+		Name:  name,
+		Query: query,
+	})
+	config.Env.Save(c.window.ApplicationWindow)
 }
 
 func (c *ConnectionCtrl) Screen() interface{} {

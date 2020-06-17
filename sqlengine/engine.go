@@ -348,6 +348,21 @@ func (e *Engine) GetInsertStatement(
 	return db.GetInsertStatement(tmctx, tableName, cols, values)
 }
 
+func (e *Engine) GetSelectStatement(
+	c *Context,
+	table driver.TableDef,
+) (string, error) {
+	db := c.Database()
+	if db == nil {
+		return "", ErrNoDatabase
+	}
+
+	tmctx, cancel := prepereCtx(c, time.Minute)
+	defer cancel()
+
+	return db.GetSelectStatement(tmctx, table)
+}
+
 // Dispose ...
 func (e *Engine) Dispose() {
 	for _, c := range e.connections {

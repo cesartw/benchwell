@@ -171,7 +171,7 @@ func (p *providerbuiltin) ask(w *gtk.Window) (string, error) {
 		"Unlock keychain",
 		w,
 		gtk.DIALOG_DESTROY_WITH_PARENT|gtk.DIALOG_MODAL,
-		[]interface{}{"Unlock", gtk.RESPONSE_ACCEPT, "Cancel", gtk.RESPONSE_CANCEL},
+		[]interface{}{"Unlock", gtk.RESPONSE_ACCEPT},
 		[]interface{}{"Cancel", gtk.RESPONSE_CANCEL},
 	)
 	if err != nil {

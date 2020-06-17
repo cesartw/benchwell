@@ -420,7 +420,6 @@ func (d *mysqlDb) FetchTable(
 ) {
 	var sqlRows *sql.Rows
 
-	//args := []interface{}{}
 	wheres := []string{}
 	for _, cond := range opts.Conditions {
 		if cond.Op == "" || cond.Field.Name == "" {
@@ -801,6 +800,18 @@ func (d *mysqlDb) GetInsertStatement(
 	b.WriteString("(" + strings.Join(values, ", ") + ");")
 
 	return b.String(), nil
+}
+
+func (d *mysqlDb) GetSelectStatement(
+	ctx context.Context,
+	table driver.TableDef,
+) (string, error) {
+	switch table.Type {
+	case driver.TableTypeDummy:
+		return table.Query, nil
+	default:
+		return fmt.Sprintf(`SELECT * FROM %s`, table.Name), nil
+	}
 }
 
 func (d *mysqlDb) fetchRecord(

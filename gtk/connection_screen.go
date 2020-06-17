@@ -35,13 +35,14 @@ type ConnectionScreen struct {
 
 	activeDatabase MVar
 
-	tableMenu    *gtk.Menu
-	editMenu     *gtk.MenuItem
-	newTabMenu   *gtk.MenuItem
-	schemaMenu   *gtk.MenuItem
-	truncateMenu *gtk.MenuItem
-	deleteMenu   *gtk.MenuItem
-	refreshMenu  *gtk.MenuItem
+	tableMenu      *gtk.Menu
+	editMenu       *gtk.MenuItem
+	newTabMenu     *gtk.MenuItem
+	schemaMenu     *gtk.MenuItem
+	truncateMenu   *gtk.MenuItem
+	deleteMenu     *gtk.MenuItem
+	refreshMenu    *gtk.MenuItem
+	copySelectMenu *gtk.MenuItem
 
 	// tab switching
 	tabIndex int
@@ -58,6 +59,7 @@ func (c ConnectionScreen) Init(
 		OnEditTable()
 		OnTruncateTable()
 		OnDeleteTable()
+		OnCopySelect()
 	},
 ) (*ConnectionScreen, error) {
 	var err error
@@ -218,6 +220,7 @@ func (c ConnectionScreen) Init(
 	c.editMenu.Connect("activate", ctrl.OnEditTable)
 	c.truncateMenu.Connect("activate", ctrl.OnTruncateTable)
 	c.deleteMenu.Connect("activate", ctrl.OnDeleteTable)
+	c.copySelectMenu.Connect("activate", ctrl.OnCopySelect)
 
 	return &c, nil
 }
@@ -437,11 +440,31 @@ func (c *ConnectionScreen) initTableMenu() error {
 		return err
 	}
 
+	c.copySelectMenu, err = menuItemWithImage("Copy SELECT", "gtk-opy")
+	if err != nil {
+		return err
+	}
+
+	cowboy, err := menuItemWithImage("Cowboy", "gtk-delete")
+	if err != nil {
+		return err
+	}
 	c.tableMenu.Add(c.newTabMenu)
-	c.tableMenu.Add(c.editMenu)
+	c.tableMenu.Add(c.copySelectMenu)
 	c.tableMenu.Add(c.schemaMenu)
-	c.tableMenu.Add(c.truncateMenu)
+	c.tableMenu.Add(c.editMenu)
 	c.tableMenu.Add(c.refreshMenu)
+	c.tableMenu.Add(cowboy)
+
+	cowboyMenu, err := gtk.MenuNew()
+	if err != nil {
+		return err
+	}
+
+	cowboyMenu.Add(c.truncateMenu)
+	cowboyMenu.Add(c.deleteMenu)
+	cowboy.SetSubmenu(cowboyMenu)
+	cowboy.ShowAll()
 
 	return nil
 }

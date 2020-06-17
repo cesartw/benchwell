@@ -161,6 +161,7 @@ type Database interface {
 	// DDL
 	GetCreateTable(context.Context, string) (string, error)
 	GetInsertStatement(context.Context, string, []ColDef, []interface{}) (string, error)
+	GetSelectStatement(context.Context, TableDef) (string, error)
 }
 
 // ColDef describe a column
