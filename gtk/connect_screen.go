@@ -300,6 +300,7 @@ func (c *ConnectScreen) GetFormConnection() *config.Connection {
 type stdform struct {
 	*gtk.Box
 	fields []string
+	conn   *config.Connection
 
 	entryName     *gtk.Entry
 	entryHost     *gtk.Entry
@@ -436,6 +437,7 @@ func (f *stdform) GrabFocus() {
 }
 
 func (f *stdform) SetConnection(conn *config.Connection) {
+	f.conn = conn
 	f.entryName.SetText(conn.Name)
 	f.entryHost.SetText(conn.Host)
 	f.entryPort.SetText(fmt.Sprintf("%d", conn.Port))
@@ -445,20 +447,19 @@ func (f *stdform) SetConnection(conn *config.Connection) {
 }
 
 func (f *stdform) GetConnection() *config.Connection {
-	conn := &config.Connection{}
-	conn.Name, _ = f.entryName.GetText()
-	conn.Host, _ = f.entryHost.GetText()
+	f.conn.Name, _ = f.entryName.GetText()
+	f.conn.Host, _ = f.entryHost.GetText()
 	portS, _ := f.entryPort.GetText()
 	if portS == "" {
-		conn.Port = 3306
+		f.conn.Port = 3306
 	} else {
-		conn.Port, _ = strconv.Atoi(portS)
+		f.conn.Port, _ = strconv.Atoi(portS)
 	}
-	conn.User, _ = f.entryUser.GetText()
-	conn.Password, _ = f.entryPassword.GetText()
-	conn.Database, _ = f.entryDatabase.GetText()
+	f.conn.User, _ = f.entryUser.GetText()
+	f.conn.Password, _ = f.entryPassword.GetText()
+	f.conn.Database, _ = f.entryDatabase.GetText()
 
-	return conn
+	return f.conn
 }
 
 func (f *stdform) onChange(fn interface{}) {

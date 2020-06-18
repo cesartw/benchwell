@@ -455,6 +455,7 @@ func (d *mysqlDb) FetchTable(
 	if len(wheres) > 0 {
 		where = "WHERE " + strings.Join(wheres, " AND ")
 	}
+	where = strings.Replace(where, "%", "%%", -1)
 
 	//args = append(args, opts.Offset, opts.Limit)
 

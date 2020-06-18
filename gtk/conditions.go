@@ -130,17 +130,21 @@ func (c *Conditions) Update(cols []driver.ColDef) error {
 	conditions := []*Condition{}
 
 	// remove empty
-	for i, cond := range c.conditions {
-		field, err := cond.Field()
-		if err != nil {
-			return err
-		}
+	if len(c.conditions) > 1 {
+		for i, cond := range c.conditions {
+			field, err := cond.Field()
+			if err != nil {
+				return err
+			}
 
-		if field == "" {
-			c.grid.RemoveRow(i)
-			continue
+			if field == "" {
+				c.grid.RemoveRow(i)
+				continue
+			}
+			conditions = append(conditions, cond)
 		}
-		conditions = append(conditions, cond)
+	} else {
+		conditions = c.conditions
 	}
 
 	//update columns in remaining conditions
@@ -160,7 +164,7 @@ func (c *Conditions) Update(cols []driver.ColDef) error {
 		}
 
 		// field is not part of the new table disable widget and move on
-		if foundAt == -1 {
+		if foundAt == -1 && field != "" {
 			cond.fieldCb.SetSensitive(false)
 			cond.opCb.SetSensitive(false)
 			cond.valueEntry.SetSensitive(false)

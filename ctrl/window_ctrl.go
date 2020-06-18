@@ -34,7 +34,6 @@ func (c *WindowCtrl) OnSaveQuery(query, path string) {
 	if err != nil {
 		c.window.PushStatus("failed to save file: %#v", err)
 	}
-
 }
 
 func (c *WindowCtrl) OnFileSelected(filepath string) {

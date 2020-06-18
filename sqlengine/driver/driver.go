@@ -77,13 +77,14 @@ const (
 	Gte       Operator = ">="
 	Lte       Operator = "<="
 	Like      Operator = "LIKE"
+	NotLike   Operator = "NOT LIKE"
 	In        Operator = "IN"
 	Nin       Operator = "NOT IN"
 	IsNull    Operator = "IS NULL"
 	IsNotNull Operator = "NOT NULL"
 )
 
-var Operators = [11]Operator{
+var Operators = [12]Operator{
 	Eq,
 	Neq,
 	Gt,
@@ -91,6 +92,7 @@ var Operators = [11]Operator{
 	Gte,
 	Lte,
 	Like,
+	NotLike,
 	In,
 	Nin,
 	IsNull,
