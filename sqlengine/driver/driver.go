@@ -24,6 +24,10 @@ func Log(ctx context.Context, s string) {
 	if ctx.Value(ckLogger) == nil {
 		return
 	}
+
+	s = strings.Replace(s, "\n", " ", -1)
+	s = strings.Replace(s, "\t", " ", -1)
+	s = strings.Replace(s, "  ", " ", -1)
 	args := []interface{}{time.Now().Format("2006-01-02 15:04:05")}
 	ctx.Value(ckLogger).(func(string))((fmt.Sprintf("[%s] "+s, args...)))
 }

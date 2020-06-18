@@ -17,6 +17,7 @@ type tab struct {
 	ctrl interface {
 		OnTabRemove()
 		SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDef) (bool, error)
+		SetQuery(ctx *sqlengine.Context, query string) (bool, error)
 		String() string
 	}
 }
@@ -259,11 +260,16 @@ func (c *ConnectionScreen) SetTableDef(ctx *sqlengine.Context, tableDef driver.T
 	return c.tabs[c.tabber.GetCurrentPage()].ctrl.SetTableDef(ctx, tableDef)
 }
 
+func (c *ConnectionScreen) SetQuery(ctx *sqlengine.Context, query string) (bool, error) {
+	return c.tabs[c.tabber.GetCurrentPage()].ctrl.SetQuery(ctx, query)
+}
+
 func (c *ConnectionScreen) AddTab(
 	ctab *ConnectionTab,
 	ctrl interface {
 		OnTabRemove()
 		SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDef) (bool, error)
+		SetQuery(ctx *sqlengine.Context, query string) (bool, error)
 		String() string
 	},
 	switchNow bool,

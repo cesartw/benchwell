@@ -64,8 +64,8 @@ func (c *ConnectionCtrl) SetFileText(s string) {
 	if len(c.tabs) == 0 {
 		return
 	}
-
-	c.tabs[c.scr.CurrentTabIndex()].SetQuery(s)
+	tabCtrl := c.tabs[c.scr.CurrentTabIndex()]
+	tabCtrl.SetQuery(tabCtrl.ctx, s)
 }
 
 func (c *ConnectionCtrl) AddTab(tableDef driver.TableDef) error {
@@ -143,7 +143,33 @@ func (c *ConnectionCtrl) OnTableSelected() {
 	c.UpdateOrAddTab(tableDef)
 }
 
-func (c *ConnectionCtrl) OnEditTable() {}
+func (c *ConnectionCtrl) OnEditTable() {
+	tableDef, ok := c.scr.ActiveTable()
+	if !ok {
+		return
+	}
+
+	if tableDef.Type == driver.TableTypeDummy {
+		ok, err := c.scr.SetQuery(c.dbCtx[c.dbName], tableDef.Query)
+		if err != nil {
+			config.Env.Log.Error(err)
+			return
+		}
+
+		if ok {
+			return
+		}
+
+		// add tab for connection and try again
+		err = c.AddTab(tableDef)
+		if err != nil {
+			config.Env.Log.Error(err)
+			return
+		}
+
+		c.scr.SetQuery(c.dbCtx[c.dbName], tableDef.Query)
+	}
+}
 
 func (c *ConnectionCtrl) OnTruncateTable() {}
 

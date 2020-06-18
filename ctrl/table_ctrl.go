@@ -71,10 +71,6 @@ func (tc *TableCtrl) String() string {
 	return tc.ctx.Database().Name() + "." + tc.tableDef.Name
 }
 
-func (tc *TableCtrl) SetQuery(query string) {
-	tc.grid.SetQuery(query)
-}
-
 func (tc *TableCtrl) OnCopyInsert(cols []driver.ColDef, values []interface{}) {
 	sql, err := tc.Engine.GetInsertStatement(tc.ctx, tc.tableDef.Name, cols, values)
 	if err != nil {
@@ -272,6 +268,15 @@ func (tc *TableCtrl) SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDe
 	tc.connectionTab.SetTitle(fmt.Sprintf("%s.%s", tc.dbName, tableDef.Name))
 	tc.OnConnect()
 
+	return true, nil
+}
+
+func (tc *TableCtrl) SetQuery(ctx *sqlengine.Context, query string) (bool, error) {
+	if tc.ctx != nil && tc.ctx != ctx {
+		return false, nil
+	}
+
+	tc.grid.SetQuery(query)
 	return true, nil
 }
 
