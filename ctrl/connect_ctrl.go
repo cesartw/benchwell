@@ -85,7 +85,7 @@ func (c *ConnectCtrl) OnDeleteConnection() {
 }
 
 func (c *ConnectCtrl) OnNewConnection() {
-	row, err := c.scr.ConnectionList.AddItem(gtk.Stringer("New Connection"))
+	row, err := c.scr.ConnectionList.AppendItem(gtk.Stringer("New Connection"))
 	if err != nil {
 		config.Env.Log.Error(err)
 	}
@@ -110,7 +110,7 @@ func (c *ConnectCtrl) OnConnectionSelected() {
 	err := config.Env.Connections[row.GetIndex()].Decrypt(c.window.ApplicationWindow)
 	if err != nil {
 		c.window.PushStatus("Fail to decrypt password")
-		c.scr.ConnectionList.Clear()
+		c.scr.ConnectionList.ClearSelection()
 		return
 	}
 

@@ -52,6 +52,9 @@ func (c ConnectionCtrl) Init(
 	return &c, c.AddEmptyTab()
 }
 
+func (c *ConnectionCtrl) OnCopyLog() {
+}
+
 func (c *ConnectionCtrl) Close() bool {
 	return c.scr.Close()
 }
@@ -140,7 +143,11 @@ func (c *ConnectionCtrl) OnTableSelected() {
 		return
 	}
 
-	c.UpdateOrAddTab(tableDef)
+	if c.scr.CtrlMod() {
+		c.AddTab(tableDef)
+	} else {
+		c.UpdateOrAddTab(tableDef)
+	}
 }
 
 func (c *ConnectionCtrl) OnEditTable() {

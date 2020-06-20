@@ -30,20 +30,28 @@ type ConnectionScreen struct {
 	tableList   *List
 	tabber      *gtk.Notebook
 	tabs        []tab
-	logview     *gtk.TextView
+	logview     *List
 
 	databaseNames []string
 
 	activeDatabase MVar
 
-	tableMenu      *gtk.Menu
-	editMenu       *gtk.MenuItem
-	newTabMenu     *gtk.MenuItem
-	schemaMenu     *gtk.MenuItem
-	truncateMenu   *gtk.MenuItem
-	deleteMenu     *gtk.MenuItem
-	refreshMenu    *gtk.MenuItem
-	copySelectMenu *gtk.MenuItem
+	tablesMenu struct {
+		tableMenu      *gtk.Menu
+		editMenu       *gtk.MenuItem
+		newTabMenu     *gtk.MenuItem
+		schemaMenu     *gtk.MenuItem
+		truncateMenu   *gtk.MenuItem
+		deleteMenu     *gtk.MenuItem
+		refreshMenu    *gtk.MenuItem
+		copySelectMenu *gtk.MenuItem
+	}
+
+	logMenu struct {
+		logMenu   *gtk.Menu
+		clearMenu *gtk.MenuItem
+		copyMenu  *gtk.MenuItem
+	}
 
 	// tab switching
 	tabIndex int
@@ -61,6 +69,7 @@ func (c ConnectionScreen) Init(
 		OnTruncateTable()
 		OnDeleteTable()
 		OnCopySelect()
+		OnCopyLog()
 	},
 ) (*ConnectionScreen, error) {
 	var err error
@@ -110,7 +119,7 @@ func (c ConnectionScreen) Init(
 	}
 	c.dbCombo.SetIDColumn(0)
 
-	c.tableList, err = List{}.Init(ListOptions{
+	c.tableList, err = List{}.Init(&ListOptions{
 		SelectOnRightClick: true,
 		IconFunc: func(name fmt.Stringer) *gdk.Pixbuf {
 			def, ok := name.(driver.TableDef)
@@ -188,6 +197,11 @@ func (c ConnectionScreen) Init(
 		return nil, err
 	}
 
+	err = c.initLogMenu()
+	if err != nil {
+		return nil, err
+	}
+
 	// signals
 
 	logSW, err := gtk.ScrolledWindowNew(nil, nil)
@@ -195,15 +209,16 @@ func (c ConnectionScreen) Init(
 		return nil, err
 	}
 
-	c.logview, err = gtk.TextViewNew()
+	c.logview, err = List{}.Init(&ListOptions{SelectOnRightClick: true})
 	if err != nil {
 		return nil, err
 	}
 	c.logview.SetName("logger")
-	c.logview.SetEditable(false)
 	c.logview.SetSizeRequest(-1, 30)
-	c.logview.SetPixelsAboveLines(5)
-	c.logview.SetPixelsBelowLines(5)
+	c.logview.OnButtonPress(c.onLogViewButtonPress)
+	//c.logview.SetEditable(false)
+	//c.logview.SetPixelsAboveLines(5)
+	//c.logview.SetPixelsBelowLines(5)
 
 	logSW.Add(c.logview)
 	c.Paned.Pack1(c.hPaned, false, false)
@@ -215,13 +230,16 @@ func (c ConnectionScreen) Init(
 	c.dbCombo.Connect("changed", c.onDatabaseSelected)
 	c.dbCombo.Connect("changed", ctrl.OnDatabaseSelected)
 	c.tableList.Connect("row-activated", ctrl.OnTableSelected)
-	c.schemaMenu.Connect("activate", ctrl.OnSchemaMenu)
-	c.refreshMenu.Connect("activate", ctrl.OnRefreshMenu)
-	c.newTabMenu.Connect("activate", ctrl.OnNewTabMenu)
-	c.editMenu.Connect("activate", ctrl.OnEditTable)
-	c.truncateMenu.Connect("activate", ctrl.OnTruncateTable)
-	c.deleteMenu.Connect("activate", ctrl.OnDeleteTable)
-	c.copySelectMenu.Connect("activate", ctrl.OnCopySelect)
+	c.tablesMenu.schemaMenu.Connect("activate", ctrl.OnSchemaMenu)
+	c.tablesMenu.refreshMenu.Connect("activate", ctrl.OnRefreshMenu)
+	c.tablesMenu.newTabMenu.Connect("activate", ctrl.OnNewTabMenu)
+	c.tablesMenu.editMenu.Connect("activate", ctrl.OnEditTable)
+	c.tablesMenu.truncateMenu.Connect("activate", ctrl.OnTruncateTable)
+	c.tablesMenu.deleteMenu.Connect("activate", ctrl.OnDeleteTable)
+	c.tablesMenu.copySelectMenu.Connect("activate", ctrl.OnCopySelect)
+
+	c.logMenu.clearMenu.Connect("activate", c.onClearLog)
+	//c.logMenu.copyMenu.Connect("activate", ctrl.OnCopyLog)
 
 	return &c, nil
 }
@@ -242,14 +260,12 @@ func (c *ConnectionScreen) onTabReorder(_ *gtk.Notebook, _ *gtk.Widget, landing 
 }
 
 func (c *ConnectionScreen) Log(s string) {
-	buff, err := c.logview.GetBuffer()
-	if err != nil {
-		return
-	}
+	c.logview.PrependItem(Stringer(s))
+}
 
-	buff.InsertMarkup(buff.GetStartIter(), s+"\n")
-	//func (v *TextView) ScrollToIter(iter *TextIter, within_margin float64, use_align bool, xalign, yalign float64) bool {
-	//c.logview.ScrollToIter(buff.GetEndIter(), 0, true, 0.0, 1.0)
+// TODO: This sucks
+func (c *ConnectionScreen) CtrlMod() bool {
+	return c.tableList.CtrlMod()
 }
 
 func (c *ConnectionScreen) CurrentTabIndex() int {
@@ -407,8 +423,19 @@ func (c *ConnectionScreen) onTableListButtonPress(_ *gtk.ListBox, e *gdk.Event) 
 		return
 	}
 
-	c.tableMenu.ShowAll()
-	c.tableMenu.PopupAtPointer(e)
+	c.tablesMenu.tableMenu.ShowAll()
+	c.tablesMenu.tableMenu.PopupAtPointer(e)
+}
+
+func (c *ConnectionScreen) onLogViewButtonPress(_ *gtk.ListBox, e *gdk.Event) {
+	keyEvent := gdk.EventButtonNewFromEvent(e)
+
+	if keyEvent.Button() != gdk.BUTTON_SECONDARY {
+		return
+	}
+
+	c.logMenu.logMenu.ShowAll()
+	c.logMenu.logMenu.PopupAtPointer(e)
 }
 
 func (c *ConnectionScreen) onDatabaseSelected() {
@@ -418,42 +445,42 @@ func (c *ConnectionScreen) onDatabaseSelected() {
 
 func (c *ConnectionScreen) initTableMenu() error {
 	var err error
-	c.tableMenu, err = gtk.MenuNew()
+	c.tablesMenu.tableMenu, err = gtk.MenuNew()
 	if err != nil {
 		return err
 	}
 
-	c.editMenu, err = menuItemWithImage("Edit", "gtk-edit")
+	c.tablesMenu.editMenu, err = menuItemWithImage("Edit", "gtk-edit")
 	if err != nil {
 		return err
 	}
 
-	c.newTabMenu, err = menuItemWithImage("New tab", "gtk-new")
+	c.tablesMenu.newTabMenu, err = menuItemWithImage("New tab", "gtk-new")
 	if err != nil {
 		return err
 	}
 
-	c.schemaMenu, err = menuItemWithImage("Schema", "gtk-info")
+	c.tablesMenu.schemaMenu, err = menuItemWithImage("Schema", "gtk-info")
 	if err != nil {
 		return err
 	}
 
-	c.truncateMenu, err = menuItemWithImage("Truncate", "gtk-clear")
+	c.tablesMenu.truncateMenu, err = menuItemWithImage("Truncate", "gtk-clear")
 	if err != nil {
 		return err
 	}
 
-	c.deleteMenu, err = menuItemWithImage("Delete", "gtk-delete")
+	c.tablesMenu.deleteMenu, err = menuItemWithImage("Delete", "gtk-delete")
 	if err != nil {
 		return err
 	}
 
-	c.refreshMenu, err = menuItemWithImage("Refresh", "gtk-refresh")
+	c.tablesMenu.refreshMenu, err = menuItemWithImage("Refresh", "gtk-refresh")
 	if err != nil {
 		return err
 	}
 
-	c.copySelectMenu, err = menuItemWithImage("Copy SELECT", "gtk-opy")
+	c.tablesMenu.copySelectMenu, err = menuItemWithImage("Copy SELECT", "gtk-opy")
 	if err != nil {
 		return err
 	}
@@ -462,22 +489,45 @@ func (c *ConnectionScreen) initTableMenu() error {
 	if err != nil {
 		return err
 	}
-	c.tableMenu.Add(c.newTabMenu)
-	c.tableMenu.Add(c.copySelectMenu)
-	c.tableMenu.Add(c.schemaMenu)
-	c.tableMenu.Add(c.editMenu)
-	c.tableMenu.Add(c.refreshMenu)
-	c.tableMenu.Add(cowboy)
+	c.tablesMenu.tableMenu.Add(c.tablesMenu.newTabMenu)
+	c.tablesMenu.tableMenu.Add(c.tablesMenu.copySelectMenu)
+	c.tablesMenu.tableMenu.Add(c.tablesMenu.schemaMenu)
+	c.tablesMenu.tableMenu.Add(c.tablesMenu.editMenu)
+	c.tablesMenu.tableMenu.Add(c.tablesMenu.refreshMenu)
+	c.tablesMenu.tableMenu.Add(cowboy)
 
 	cowboyMenu, err := gtk.MenuNew()
 	if err != nil {
 		return err
 	}
 
-	cowboyMenu.Add(c.truncateMenu)
-	cowboyMenu.Add(c.deleteMenu)
+	cowboyMenu.Add(c.tablesMenu.truncateMenu)
+	cowboyMenu.Add(c.tablesMenu.deleteMenu)
 	cowboy.SetSubmenu(cowboyMenu)
 	cowboy.ShowAll()
+
+	return nil
+}
+
+func (c *ConnectionScreen) initLogMenu() error {
+	var err error
+	c.logMenu.logMenu, err = gtk.MenuNew()
+	if err != nil {
+		return err
+	}
+
+	c.logMenu.clearMenu, err = menuItemWithImage("Clear", "gtk-clear")
+	if err != nil {
+		return err
+	}
+
+	//c.logMenu.copyMenu, err = menuItemWithImage("Copy", "gtk-copy")
+	//if err != nil {
+	//return err
+	//}
+
+	c.logMenu.logMenu.Add(c.logMenu.clearMenu)
+	//c.logMenu.logMenu.Add(c.logMenu.copyMenu)
 
 	return nil
 }
@@ -498,6 +548,10 @@ func (c *ConnectionScreen) onSearch(e *gtk.SearchEntry) {
 		rg = regexp.MustCompile(fmt.Sprintf(".*%s.*", regexp.QuoteMeta(txt)))
 	}
 	c.tableList.SetFilterRegex(rg)
+}
+
+func (c *ConnectionScreen) onClearLog() {
+	c.logview.Clear()
 }
 
 type ConnectionTab struct {

@@ -20,15 +20,18 @@ type ListOptions struct {
 type List struct {
 	*gtk.ListBox
 
-	options ListOptions
+	options *ListOptions
+	rows    []*gtk.ListBoxRow
+	ctrlMod bool
 
+	// TODO: these may not be needed
 	activeItem        MVar
 	activeItemIndex   MVar
 	selectedItem      MVar
 	selectedItemIndex MVar
 }
 
-func (list List) Init(opts ListOptions) (*List, error) {
+func (list List) Init(opts *ListOptions) (*List, error) {
 	var err error
 	list.options = opts
 
@@ -36,6 +39,19 @@ func (list List) Init(opts ListOptions) (*List, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	list.Connect("button-press-event", func(_ *gtk.ListBox, e *gdk.Event) bool {
+		keyEvent := gdk.EventButtonNewFromEvent(e)
+		list.ctrlMod = keyEvent.State()&gdk.CONTROL_MASK > 0
+
+		return false
+	})
+
+	list.Connect("button-release-event", func(_ *gtk.ListBox, e *gdk.Event) bool {
+		list.ctrlMod = false
+
+		return false
+	})
 
 	list.SetProperty("activate-on-single-click", false)
 	list.Connect("row-activated", list.onRowActivated)
@@ -62,12 +78,26 @@ func (list List) Init(opts ListOptions) (*List, error) {
 	return &list, nil
 }
 
-func (u *List) Clear() {
+func (u *List) CtrlMod() bool {
+	return u.ctrlMod
+}
+
+func (u *List) ClearSelection() {
 	u.UnselectAll()
 	u.activeItem.Set(nil)
 	u.activeItemIndex.Set(nil)
 	u.selectedItem.Set(nil)
 	u.selectedItemIndex.Set(nil)
+}
+
+func (u *List) Clear() {
+	u.ClearSelection()
+	for _, row := range u.rows {
+		u.Remove(row)
+	}
+
+	u.rows = nil
+	u.options.Names = nil
 }
 
 func (u *List) onRightClick(_ *gtk.ListBox, e *gdk.Event) {
@@ -93,7 +123,7 @@ func (u *List) UpdateItems(names []fmt.Stringer) error {
 	u.options.Names = names
 
 	for _, name := range names {
-		_, err := u.addItem(name, false)
+		_, err := u.appendItem(name, false)
 		if err != nil {
 			//return err
 		}
@@ -104,11 +134,45 @@ func (u *List) UpdateItems(names []fmt.Stringer) error {
 	return nil
 }
 
-func (u *List) AddItem(name fmt.Stringer) (*gtk.ListBoxRow, error) {
-	return u.addItem(name, true)
+func (u *List) AppendItem(name fmt.Stringer) (*gtk.ListBoxRow, error) {
+	return u.appendItem(name, true)
 }
 
-func (u *List) addItem(name fmt.Stringer, appendToStore bool) (*gtk.ListBoxRow, error) {
+func (u *List) appendItem(name fmt.Stringer, addToStore bool) (*gtk.ListBoxRow, error) {
+	row, err := u.buildItem(name, addToStore)
+	if err != nil {
+		return nil, err
+	}
+
+	u.Add(row)
+	if addToStore {
+		u.options.Names = append(u.options.Names, name)
+	}
+	u.rows = append(u.rows, row)
+
+	return row, nil
+}
+
+func (u *List) PrependItem(name fmt.Stringer) (*gtk.ListBoxRow, error) {
+	return u.prependItem(name, true)
+}
+
+func (u *List) prependItem(name fmt.Stringer, addToStore bool) (*gtk.ListBoxRow, error) {
+	row, err := u.buildItem(name, addToStore)
+	if err != nil {
+		return nil, err
+	}
+
+	u.Prepend(row)
+	if addToStore {
+		u.options.Names = append([]fmt.Stringer{name}, u.options.Names...)
+	}
+	u.rows = append(u.rows, row)
+
+	return row, nil
+}
+
+func (u *List) buildItem(name fmt.Stringer, appendToStore bool) (*gtk.ListBoxRow, error) {
 	label, err := gtk.LabelNew(name.String())
 	if err != nil {
 		return nil, err
@@ -155,10 +219,6 @@ func (u *List) addItem(name fmt.Stringer, appendToStore bool) (*gtk.ListBoxRow, 
 
 	row.Add(widget)
 	row.ShowAll()
-	u.Add(row)
-	if appendToStore {
-		u.options.Names = append(u.options.Names, name)
-	}
 
 	return row, nil
 }
