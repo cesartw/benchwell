@@ -257,10 +257,17 @@ func (c *ConnectionScreen) CurrentTabIndex() int {
 }
 
 func (c *ConnectionScreen) SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDef) (bool, error) {
+	if c.tabber.GetCurrentPage() == -1 {
+		return false, nil
+	}
+
 	return c.tabs[c.tabber.GetCurrentPage()].ctrl.SetTableDef(ctx, tableDef)
 }
 
 func (c *ConnectionScreen) SetQuery(ctx *sqlengine.Context, query string) (bool, error) {
+	if c.tabber.GetCurrentPage() == -1 {
+		return false, nil
+	}
 	return c.tabs[c.tabber.GetCurrentPage()].ctrl.SetQuery(ctx, query)
 }
 

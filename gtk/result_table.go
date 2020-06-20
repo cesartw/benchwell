@@ -123,6 +123,7 @@ func (u Result) Init(ctrl interface {
 }
 
 func (u *Result) UpdateColumns(cols []driver.ColDef) error {
+	u.mode = MODE_DEF
 	// columns shift to the left
 	for _ = range u.cols {
 		u.TreeView.RemoveColumn(u.TreeView.GetColumn(0))
@@ -156,6 +157,7 @@ func (u *Result) UpdateColumns(cols []driver.ColDef) error {
 }
 
 func (u *Result) UpdateData(data [][]interface{}) error {
+	u.mode = MODE_DEF
 	u.data = data
 	u.store.Clear()
 
@@ -163,7 +165,6 @@ func (u *Result) UpdateData(data [][]interface{}) error {
 		u.AddRow(row)
 	}
 
-	u.mode = MODE_DEF
 	return nil
 }
 
@@ -640,6 +641,7 @@ func (u *Result) createColumn(title string, id int, useEditModal bool) (*gtk.Tre
 			u.onEdited(cell, path, newValue, userData)
 		}
 	}, id)
+
 	cellRenderer.Connect("editing-started", func() {
 		if !useEditModal {
 			return
@@ -658,6 +660,7 @@ func (u *Result) createColumn(title string, id int, useEditModal bool) (*gtk.Tre
 			u.onSaveCell(row, at, newValue)
 		})
 	})
+
 	column.SetClickable(true)
 	column.Connect("clicked", func() {
 		if !column.GetSortIndicator() {

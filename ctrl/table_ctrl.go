@@ -155,7 +155,11 @@ func (tc *TableCtrl) OnDelete() {
 			return
 		}
 
-		tc.Engine.DeleteRecord(tc.ctx, tc.tableDef.Name, cols, values)
+		err = tc.Engine.DeleteRecord(tc.ctx, tc.tableDef.Name, cols, values)
+		if err != nil {
+			tc.window.PushStatus(err.Error())
+			return
+		}
 		tc.grid.RemoveSelected()
 		tc.window.PushStatus("Record deleted")
 	}

@@ -518,14 +518,14 @@ func (d *mysqlDb) DeleteRecord(ctx context.Context, tableName string, cols []dri
 
 	wheres := []string{}
 	for i := range cols {
-		wheres = append(wheres, fmt.Sprintf("%s = %#v", cols[i].Name, args[i]))
+		wheres = append(wheres, fmt.Sprintf("`%s` = %#v", cols[i].Name, args[i]))
 	}
 
 	query := fmt.Sprintf(`DELETE FROM %s WHERE %s`, tableName, strings.Join(wheres, " AND "))
 
 	driver.Log(ctx, query)
 
-	_, err := d.db.Exec(query, args...)
+	_, err := d.db.Exec(query)
 
 	return err
 }
