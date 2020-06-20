@@ -84,7 +84,6 @@ func (tc *TableCtrl) OnCopyInsert(cols []driver.ColDef, values []interface{}) {
 func (tc *TableCtrl) OnUpdateRecord(cols []driver.ColDef, values []interface{}) error {
 	_, err := tc.Engine.UpdateField(tc.ctx, tc.tableDef.Name, cols, values)
 	if err != nil {
-		tc.window.PushStatus(err.Error())
 		return err
 	}
 
@@ -95,7 +94,6 @@ func (tc *TableCtrl) OnUpdateRecord(cols []driver.ColDef, values []interface{}) 
 func (tc *TableCtrl) OnCreateRecord(cols []driver.ColDef, values []interface{}) ([]interface{}, error) {
 	data, err := tc.Engine.InsertRecord(tc.ctx, tc.tableDef.Name, cols, values)
 	if err != nil {
-		tc.window.PushStatus(err.Error())
 		return nil, err
 	} else {
 		tc.window.PushStatus("Inserted")
@@ -107,8 +105,6 @@ func (tc *TableCtrl) OnCreateRecord(cols []driver.ColDef, values []interface{}) 
 func (tc *TableCtrl) OnExecQuery(value string) {
 	columns, data, err := tc.Engine.Query(tc.ctx, value)
 	if err != nil {
-		config.Env.Log.Error(err)
-		tc.window.PushStatus("Error: %s", err.Error())
 		return
 	}
 	tc.grid.UpdateRawData(columns, data)
@@ -157,7 +153,6 @@ func (tc *TableCtrl) OnDelete() {
 
 		err = tc.Engine.DeleteRecord(tc.ctx, tc.tableDef.Name, cols, values)
 		if err != nil {
-			tc.window.PushStatus(err.Error())
 			return
 		}
 		tc.grid.RemoveSelected()
@@ -179,7 +174,6 @@ func (tc *TableCtrl) OnConnect() {
 			},
 		)
 		if err != nil {
-			config.Env.Log.Error(err)
 			return
 		}
 
@@ -221,13 +215,12 @@ func (tc *TableCtrl) OnRefresh() {
 		},
 	)
 	if err != nil {
-		config.Env.Log.Error(err)
 		return
 	}
 
 	err = tc.grid.UpdateData(data)
 	if err != nil {
-		config.Env.Log.Error(err)
+		return
 	}
 
 	tc.window.PushStatus("Table reloaded")
@@ -249,7 +242,6 @@ func (tc *TableCtrl) OnCreate() {
 
 	values, err = tc.Engine.InsertRecord(tc.ctx, tc.tableDef.Name, cols, values)
 	if err != nil {
-		tc.window.PushStatus(err.Error())
 		return
 	}
 
@@ -268,7 +260,6 @@ func (tc *TableCtrl) SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDe
 	}
 
 	tc.tableDef = tableDef
-	//tc.ctx = ctx
 	tc.connectionTab.SetTitle(fmt.Sprintf("%s.%s", tc.dbName, tableDef.Name))
 	tc.OnConnect()
 

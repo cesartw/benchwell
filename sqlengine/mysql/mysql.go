@@ -107,6 +107,7 @@ func (d *mysqlDriver) useDatabase(ctx context.Context, dbName string) (*sql.DB, 
 	driver.Log(ctx, query)
 	_, err = db.db.ExecContext(ctx, query)
 	if err != nil {
+		driver.Log(ctx, err.Error())
 		return nil, err
 	}
 
@@ -129,6 +130,7 @@ func (c *mysqlConn) Reconnect(ctx context.Context) error {
 func (c *mysqlConn) UseDatabase(ctx context.Context, db string) (driver.Database, error) {
 	sqldb, err := c.driver.useDatabase(ctx, db)
 	if err != nil {
+		driver.Log(ctx, err.Error())
 		return nil, err
 	}
 
@@ -151,6 +153,7 @@ func (c *mysqlConn) Databases(ctx context.Context) ([]string, error) {
 	driver.Log(ctx, query)
 	rows, err := c.db.Query(query)
 	if err != nil {
+		driver.Log(ctx, err.Error())
 		return nil, err
 	}
 
@@ -177,6 +180,7 @@ func (d *mysqlDb) Tables(ctx context.Context) ([]driver.TableDef, error) {
 	driver.Log(ctx, query)
 	rows, err := d.db.Query(query)
 	if err != nil {
+		driver.Log(ctx, err.Error())
 		return nil, err
 	}
 
@@ -210,6 +214,7 @@ func (d *mysqlDb) TableDefinition(ctx context.Context, tableName string) ([]driv
 
 	sqlRows, err := d.db.Query(query)
 	if err != nil {
+		driver.Log(ctx, err.Error())
 		return nil, err
 	}
 
@@ -247,6 +252,7 @@ func (d *mysqlDb) Query(ctx context.Context, query string) (columnNames []string
 	var sqlRows *sql.Rows
 	sqlRows, err = d.db.Query(query)
 	if err != nil {
+		driver.Log(ctx, err.Error())
 		return nil, nil, err
 	}
 
@@ -312,6 +318,7 @@ func (d *mysqlDb) Execute(ctx context.Context, query string) (string, int64, err
 
 	result, err := d.db.Exec(query)
 	if err != nil {
+		driver.Log(ctx, err.Error())
 		return "", 0, err
 	}
 
@@ -466,6 +473,7 @@ func (d *mysqlDb) FetchTable(
 
 	sqlRows, err = d.db.Query(query)
 	if err != nil {
+		driver.Log(ctx, err.Error())
 		return nil, nil, err
 	}
 
@@ -526,6 +534,9 @@ func (d *mysqlDb) DeleteRecord(ctx context.Context, tableName string, cols []dri
 	driver.Log(ctx, query)
 
 	_, err := d.db.Exec(query)
+	if err != nil {
+		driver.Log(ctx, err.Error())
+	}
 
 	return err
 }
@@ -575,6 +586,7 @@ func (d *mysqlDb) UpdateRecord(
 
 	result, err := d.db.Exec(query)
 	if err != nil {
+		driver.Log(ctx, err.Error())
 		return "", err
 	}
 
@@ -618,6 +630,7 @@ func (d *mysqlDb) UpdateField(
 
 	result, err := d.db.Exec(query)
 	if err != nil {
+		driver.Log(ctx, err.Error())
 		return "", err
 	}
 
@@ -666,6 +679,7 @@ func (d *mysqlDb) UpdateFields(
 	driver.Log(ctx, query)
 	result, err := d.db.Exec(query)
 	if err != nil {
+		driver.Log(ctx, err.Error())
 		return "", err
 	}
 
@@ -703,6 +717,7 @@ func (d *mysqlDb) InsertRecord(
 	driver.Log(ctx, query)
 	result, err := d.db.Exec(query, args...)
 	if err != nil {
+		driver.Log(ctx, err.Error())
 		return nil, err
 	}
 
