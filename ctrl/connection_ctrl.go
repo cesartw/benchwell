@@ -47,9 +47,10 @@ func (c ConnectionCtrl) Init(
 
 	if c.conn.Database != "" {
 		c.scr.SetActiveDatabase(c.conn.Database)
+		return &c, c.AddEmptyTab()
 	}
 
-	return &c, c.AddEmptyTab()
+	return &c, nil
 }
 
 func (c *ConnectionCtrl) OnCopyLog() {
@@ -60,7 +61,10 @@ func (c *ConnectionCtrl) Close() bool {
 }
 
 func (c *ConnectionCtrl) AddEmptyTab() error {
-	return c.AddTab(driver.TableDef{})
+	if _, ok := c.scr.ActiveDatabase(); ok {
+		return c.AddTab(driver.TableDef{})
+	}
+	return nil
 }
 
 func (c *ConnectionCtrl) SetFileText(s string) {

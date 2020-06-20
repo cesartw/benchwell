@@ -61,7 +61,7 @@ func (tc TableCtrl) Init(
 	}
 
 	if !tc.tableDef.IsZero() {
-		tc.OnConnect()
+		tc.OnLoadTable()
 	}
 
 	return &tc, nil
@@ -160,7 +160,7 @@ func (tc *TableCtrl) OnDelete() {
 	}
 }
 
-func (tc *TableCtrl) OnConnect() {
+func (tc *TableCtrl) OnLoadTable() {
 	switch tc.tableDef.Type {
 	case driver.TableTypeDummy:
 		tc.OnExecQuery(tc.tableDef.Query)
@@ -261,7 +261,7 @@ func (tc *TableCtrl) SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDe
 
 	tc.tableDef = tableDef
 	tc.connectionTab.SetTitle(fmt.Sprintf("%s.%s", tc.dbName, tableDef.Name))
-	tc.OnConnect()
+	tc.OnLoadTable()
 
 	return true, nil
 }
