@@ -830,6 +830,45 @@ func (d *mysqlDb) GetSelectStatement(
 	}
 }
 
+func (d *mysqlDb) DeleteTable(
+	ctx context.Context,
+	table driver.TableDef,
+) error {
+	switch table.Type {
+	case driver.TableTypeDummy:
+		return nil
+	default:
+		query := fmt.Sprintf(`DROP TABLE %s`, table.Name)
+		driver.Log(ctx, query)
+
+		_, err := d.db.ExecContext(ctx, query)
+		if err != nil {
+			driver.Log(ctx, err.Error())
+		}
+
+		return nil
+	}
+}
+
+func (d *mysqlDb) TruncateTable(
+	ctx context.Context,
+	table driver.TableDef,
+) error {
+	switch table.Type {
+	case driver.TableTypeDummy:
+		return nil
+	default:
+		query := fmt.Sprintf(`TRUNCATE TABLE %s`, table.Name)
+		driver.Log(ctx, query)
+
+		_, err := d.db.ExecContext(ctx, query)
+		if err != nil {
+			driver.Log(ctx, err.Error())
+		}
+		return nil
+	}
+}
+
 func (d *mysqlDb) fetchRecord(
 	tableName string,
 	cols []driver.ColDef,

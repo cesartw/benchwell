@@ -363,6 +363,36 @@ func (e *Engine) GetSelectStatement(
 	return db.GetSelectStatement(tmctx, table)
 }
 
+func (e *Engine) TruncateTable(
+	c *Context,
+	table driver.TableDef,
+) error {
+	db := c.Database()
+	if db == nil {
+		return ErrNoDatabase
+	}
+
+	tmctx, cancel := prepereCtx(c, time.Minute)
+	defer cancel()
+
+	return db.TruncateTable(tmctx, table)
+}
+
+func (e *Engine) DeleteTable(
+	c *Context,
+	table driver.TableDef,
+) error {
+	db := c.Database()
+	if db == nil {
+		return ErrNoDatabase
+	}
+
+	tmctx, cancel := prepereCtx(c, time.Minute)
+	defer cancel()
+
+	return db.DeleteTable(tmctx, table)
+}
+
 // Dispose ...
 func (e *Engine) Dispose() {
 	for _, c := range e.connections {

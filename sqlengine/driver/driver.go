@@ -154,6 +154,8 @@ type Connection interface {
 type Database interface {
 	Tables(context.Context) ([]TableDef, error)
 	TableDefinition(ctx context.Context, tableName string) ([]ColDef, error)
+	DeleteTable(ctx context.Context, table TableDef) error
+	TruncateTable(ctx context.Context, table TableDef) error
 	FetchTable(ctx context.Context, tableName string, opts FetchTableOptions) ([]ColDef, [][]interface{}, error)
 	DeleteRecord(ctx context.Context, tableName string, defs []ColDef, values []interface{}) error
 	UpdateRecord(ctx context.Context, tableName string, cols []ColDef, values, oldValues []interface{}) (string, error)

@@ -182,9 +182,25 @@ func (c *ConnectionCtrl) OnEditTable() {
 	}
 }
 
-func (c *ConnectionCtrl) OnTruncateTable() {}
+func (c *ConnectionCtrl) OnTruncateTable() {
+	tableDef, ok := c.scr.ActiveTable()
+	if !ok {
+		config.Env.Log.Debug("no table selected. odd!")
+		return
+	}
 
-func (c *ConnectionCtrl) OnDeleteTable() {}
+	c.Engine.TruncateTable(c.dbCtx[c.dbName], tableDef)
+}
+
+func (c *ConnectionCtrl) OnDeleteTable() {
+	tableDef, ok := c.scr.ActiveTable()
+	if !ok {
+		config.Env.Log.Debug("no table selected. odd!")
+		return
+	}
+
+	c.Engine.DeleteTable(c.dbCtx[c.dbName], tableDef)
+}
 
 func (c *ConnectionCtrl) OnCopySelect() {
 	tableDef, ok := c.scr.ActiveTable()
@@ -196,6 +212,7 @@ func (c *ConnectionCtrl) OnCopySelect() {
 	sql, err := c.Engine.GetSelectStatement(c.dbCtx[c.dbName], tableDef)
 	if err != nil {
 		c.window.PushStatus(err.Error())
+		return
 	}
 
 	gtk.ClipboardCopy(sql)
