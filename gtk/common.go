@@ -8,6 +8,7 @@ import (
 	"io"
 	"sync"
 
+	"bitbucket.org/goreorto/sqlaid/config"
 	"github.com/alecthomas/chroma"
 	"github.com/alecthomas/chroma/formatters"
 	"github.com/alecthomas/chroma/quick"
@@ -73,7 +74,12 @@ func ChromaHighlight(inputString string) (out string, err error) {
 	writer := bufio.NewWriter(buff)
 
 	// Doing the job (io.Writer, SourceText, language(go), Lexer(pango), style(pygments))
-	if err = quick.Highlight(writer, inputString, "sql", "pango", "sqlaid-dark"); err != nil {
+	theme := "sqlaid-dark"
+	if !config.Env.GUI.DarkMode {
+		theme = "sqlaid-light"
+	}
+
+	if err = quick.Highlight(writer, inputString, "sql", "pango", theme); err != nil {
 		return
 	}
 	writer.Flush()

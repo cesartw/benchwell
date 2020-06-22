@@ -96,7 +96,8 @@ const DEFAULT_CONFIG = `{
         "pagesize": 100,
         "table_tab_position": "top",
         "connection_tab_position": "top",
-		"initial_cell_width": 50
+		"initial_cell_width": 50,
+		"dark_mode": true
     },
     "encryptMode": "DBUS"
 }

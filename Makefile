@@ -12,7 +12,7 @@ build:
 install:
 	@go install -mod=vendor ${LDFLAGS} bitbucket.org/goreorto/sqlaid
 
-assets:
+assets: assets/data/*
 	go generate assets/*.go
 
 clean:

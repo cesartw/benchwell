@@ -1,16 +1,12 @@
 package assets
 
 const BRAND_LIGHT = `textview text, .view text {
-	background-color: #3d3d3d;
 }
 
 entry, text {
-	background-color: #3d3d3d;
 }
 
 notebook > header > tabs > tab, notebook > header > tabs > tab:checked {
-	background-color: #3d3d3d;
-	border-color: #3d3d3d;
 }
 
 /*header*/
@@ -23,10 +19,8 @@ treeview.view button {
 }
 
 #queryactionbar box {
-	background-color: #3d3d3d;
 }
 
 notebook#MainNotebook header {
-	border-bottom-color: #adadad;
 }
 `
