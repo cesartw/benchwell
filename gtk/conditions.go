@@ -13,6 +13,8 @@ type Conditions struct {
 	btnAdd     *gtk.Button
 	conditions []*Condition
 	cols       []driver.ColDef
+
+	onApplyConditions func()
 }
 
 type Condition struct {
@@ -25,8 +27,9 @@ type Condition struct {
 	btnRm      *gtk.Button
 }
 
-func (c Conditions) Init() (*Conditions, error) {
+func (c Conditions) Init(ctrl interface{ OnApplyConditions() }) (*Conditions, error) {
 	var err error
+	c.onApplyConditions = ctrl.OnApplyConditions
 
 	c.Frame, err = gtk.FrameNew("Filter:")
 	if err != nil {
@@ -62,6 +65,8 @@ func (c *Conditions) Add() error {
 	if err != nil {
 		return err
 	}
+	cond.valueEntry.Connect("activate", c.onApplyConditions)
+
 	c.grid.Remove(c.btnAdd)
 
 	y := len(c.conditions)

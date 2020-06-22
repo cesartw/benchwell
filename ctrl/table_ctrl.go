@@ -226,6 +226,10 @@ func (tc *TableCtrl) OnRefresh() {
 	tc.window.PushStatus("Table reloaded")
 }
 
+func (tc *TableCtrl) OnApplyConditions() {
+	tc.OnRefresh()
+}
+
 func (tc *TableCtrl) OnCreate() {
 	newRecord, err := tc.grid.SelectedIsNewRecord()
 	if err != nil {

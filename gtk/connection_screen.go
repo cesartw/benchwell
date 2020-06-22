@@ -480,7 +480,7 @@ func (c *ConnectionScreen) initTableMenu() error {
 		return err
 	}
 
-	c.tablesMenu.copySelectMenu, err = menuItemWithImage("Copy SELECT", "gtk-opy")
+	c.tablesMenu.copySelectMenu, err = menuItemWithImage("Copy SELECT", "gtk-copy")
 	if err != nil {
 		return err
 	}

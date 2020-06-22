@@ -64,6 +64,7 @@ func (v ResultGrid) Init(
 		OnFileSelected(string)
 		OnSaveQuery(string, string)
 		OnSaveFav(string, string)
+		OnApplyConditions()
 	},
 	parser parser,
 ) (*ResultGrid, error) {
@@ -97,7 +98,7 @@ func (v ResultGrid) Init(
 		return nil, err
 	}
 
-	v.conditions, err = Conditions{}.Init()
+	v.conditions, err = Conditions{}.Init(ctrl)
 	if err != nil {
 		return nil, err
 	}
