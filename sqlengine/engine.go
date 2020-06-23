@@ -32,18 +32,58 @@ func New(conf *config.Config) *Engine {
 	}
 }
 
-// Connect to a database
-func (e *Engine) Connect(cfg config.Connection) (*Context, error) {
-	tmctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+func (e *Engine) runWithTimeout(timeout time.Duration, f func(context.Context)) error {
+	tmctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	conn, err := driver.Connect(tmctx, cfg)
+	done := make(chan struct{}, 1)
+	go func() {
+		f(tmctx)
+		done <- struct{}{}
+	}()
+
+	select {
+	case <-tmctx.Done():
+		return errors.New("timeout after " + timeout.String())
+	case <-done:
+		return nil
+	}
+}
+
+// Connect to a database
+func (e *Engine) ConnectWithTimeout(cfg config.Connection) (*Context, error) {
+	timeout := 2 * time.Second
+
+	var (
+		conn driver.Connection
+		err  error
+	)
+
+	timeoutErr := e.runWithTimeout(timeout, func(ctx context.Context) {
+		conn, err = driver.Connect(ctx, cfg)
+	})
+	if timeoutErr != nil {
+		return nil, timeoutErr
+	}
 	if err != nil {
 		return nil, err
 	}
 
 	e.connections = append(e.connections, conn)
+	return NewContext(conn, nil), nil
+}
 
+// Connect to a database
+func (e *Engine) Connect(cfg config.Connection) (*Context, error) {
+	timeout := 2 * time.Second
+	tmctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	conn, err := driver.Connect(tmctx, cfg)
+	if err != nil {
+		return nil, e.timeoutErr(err, timeout)
+	}
+	e.connections = append(e.connections, conn)
 	return NewContext(conn, nil), nil
 }
 
@@ -410,4 +450,16 @@ func prepereCtx(c *Context, d time.Duration) (context.Context, func()) {
 	ctx, cancel := context.WithTimeout(context.Background(), d)
 
 	return driver.SetLogger(ctx, c.Logger), cancel
+}
+
+func (e *Engine) timeoutErr(err error, timeout time.Duration) error {
+	if err == nil {
+		return nil
+	}
+
+	if err.Error() == "context timeout" {
+		return errors.New("timeout after " + timeout.String())
+	}
+
+	return err
 }

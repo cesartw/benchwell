@@ -17,7 +17,7 @@ type TableCtrl struct {
 
 	// ui
 	connectionTab *gtk.ConnectionTab
-	grid          *gtk.ResultGrid
+	resultView    *gtk.ResultView
 }
 
 type TableCtrlOpts struct {
@@ -35,7 +35,7 @@ func (tc TableCtrl) Init(
 	tc.ConnectionCtrl = opts.Parent
 	tc.tableDef = opts.TableDef
 
-	tc.grid, err = gtk.ResultGrid{}.Init(
+	tc.resultView, err = gtk.ResultView{}.Init(
 		tc.window,
 		&tc,
 		func(col driver.ColDef, value string) (interface{}, error) {
@@ -45,7 +45,7 @@ func (tc TableCtrl) Init(
 		return nil, err
 	}
 
-	tc.grid.Show()
+	tc.resultView.Show()
 	tabName := tc.dbName
 	if opts.TableDef.Name != "" {
 		tabName += "." + opts.TableDef.Name
@@ -54,7 +54,7 @@ func (tc TableCtrl) Init(
 	tc.connectionTab, err = gtk.ConnectionTab{}.Init(gtk.ConnectionTabOpts{
 		Database: tc.dbName,
 		Title:    tabName,
-		Content:  tc.grid,
+		Content:  tc.resultView,
 	})
 	if err != nil {
 		return nil, err
@@ -107,7 +107,7 @@ func (tc *TableCtrl) OnExecQuery(value string) {
 	if err != nil {
 		return
 	}
-	tc.grid.UpdateRawData(columns, data)
+	tc.resultView.UpdateRawData(columns, data)
 	tc.window.PushStatus("%d rows loaded", len(data))
 
 	/*dml, ddl := tc.parseQuery(value)
@@ -119,7 +119,7 @@ func (tc *TableCtrl) OnExecQuery(value string) {
 			tc.window.PushStatus("Error: %s", err.Error())
 			return
 		}
-		tc.grid.UpdateRawData(columns, data)
+		tc.resultView.UpdateRawData(columns, data)
 		tc.window.PushStatus("%d rows loaded", len(data))
 	}
 
@@ -136,16 +136,16 @@ func (tc *TableCtrl) OnExecQuery(value string) {
 }
 
 func (tc *TableCtrl) OnDelete() {
-	newRecord, err := tc.grid.SelectedIsNewRecord()
+	newRecord, err := tc.resultView.SelectedIsNewRecord()
 	if err != nil {
 		return
 	}
 
 	if newRecord {
-		tc.grid.RemoveSelected()
+		tc.resultView.RemoveSelected()
 		tc.window.PushStatus("Record removed")
 	} else {
-		cols, values, err := tc.grid.GetRowID()
+		cols, values, err := tc.resultView.GetRowID()
 		if err != nil {
 			config.Env.Log.Error(err)
 			return
@@ -155,7 +155,7 @@ func (tc *TableCtrl) OnDelete() {
 		if err != nil {
 			return
 		}
-		tc.grid.RemoveSelected()
+		tc.resultView.RemoveSelected()
 		tc.window.PushStatus("Record deleted")
 	}
 }
@@ -168,9 +168,8 @@ func (tc *TableCtrl) OnLoadTable() {
 		def, data, err := tc.Engine.FetchTable(
 			tc.ctx, tc.tableDef,
 			driver.FetchTableOptions{
-				Offset: tc.grid.Offset(),
-				Limit:  tc.grid.PageSize(),
-				Sort:   tc.grid.SortOptions(),
+				Offset: tc.resultView.Offset(),
+				Limit:  tc.resultView.PageSize(),
 			},
 		)
 		if err != nil {
@@ -178,13 +177,13 @@ func (tc *TableCtrl) OnLoadTable() {
 		}
 
 		if tc.tableDef.Type == driver.TableTypeRegular {
-			err = tc.grid.UpdateColumns(def)
+			err = tc.resultView.UpdateColumns(def)
 			if err != nil {
 				config.Env.Log.Error(err)
 				return
 			}
 
-			err = tc.grid.UpdateData(data)
+			err = tc.resultView.UpdateData(data)
 			if err != nil {
 				config.Env.Log.Error(err)
 			}
@@ -193,13 +192,13 @@ func (tc *TableCtrl) OnLoadTable() {
 			for _, d := range def {
 				columns = append(columns, d.Name)
 			}
-			tc.grid.UpdateRawData(columns, data)
+			tc.resultView.UpdateRawData(columns, data)
 		}
 	}
 }
 
 func (tc *TableCtrl) OnRefresh() {
-	conditions, err := tc.grid.Conditions()
+	conditions, err := tc.resultView.Conditions()
 	if err != nil {
 		config.Env.Log.Error(err)
 		return
@@ -208,9 +207,9 @@ func (tc *TableCtrl) OnRefresh() {
 	_, data, err := tc.Engine.FetchTable(
 		tc.ctx, tc.tableDef,
 		driver.FetchTableOptions{
-			Offset:     tc.grid.Offset(),
-			Limit:      tc.grid.PageSize(),
-			Sort:       tc.grid.SortOptions(),
+			Offset:     tc.resultView.Offset(),
+			Limit:      tc.resultView.PageSize(),
+			Sort:       tc.resultView.SortOptions(),
 			Conditions: conditions,
 		},
 	)
@@ -218,7 +217,7 @@ func (tc *TableCtrl) OnRefresh() {
 		return
 	}
 
-	err = tc.grid.UpdateData(data)
+	err = tc.resultView.UpdateData(data)
 	if err != nil {
 		return
 	}
@@ -231,7 +230,7 @@ func (tc *TableCtrl) OnApplyConditions() {
 }
 
 func (tc *TableCtrl) OnCreate() {
-	newRecord, err := tc.grid.SelectedIsNewRecord()
+	newRecord, err := tc.resultView.SelectedIsNewRecord()
 	if err != nil {
 		return
 	}
@@ -239,7 +238,7 @@ func (tc *TableCtrl) OnCreate() {
 		return
 	}
 
-	cols, values, err := tc.grid.GetRow()
+	cols, values, err := tc.resultView.GetRow()
 	if err != nil {
 		return
 	}
@@ -249,7 +248,7 @@ func (tc *TableCtrl) OnCreate() {
 		return
 	}
 
-	err = tc.grid.UpdateRow(values)
+	err = tc.resultView.UpdateRow(values)
 	if err != nil {
 		tc.window.PushStatus(err.Error())
 		return
@@ -275,7 +274,7 @@ func (tc *TableCtrl) SetQuery(ctx *sqlengine.Context, query string) (bool, error
 		return false, nil
 	}
 
-	tc.grid.SetQuery(query)
+	tc.resultView.SetQuery(query)
 	return true, nil
 }
 

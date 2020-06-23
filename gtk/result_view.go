@@ -13,8 +13,8 @@ import (
 	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
 )
 
-// ResultGrid is a table result tab content
-type ResultGrid struct {
+// ResultView is a table result tab content
+type ResultView struct {
 	w *Window
 	*gtk.Paned
 
@@ -51,7 +51,7 @@ type ResultGrid struct {
 	isDML, isDDL bool
 }
 
-func (v ResultGrid) Init(
+func (v ResultView) Init(
 	w *Window,
 	ctrl interface {
 		OnUpdateRecord([]driver.ColDef, []interface{}) error
@@ -67,7 +67,7 @@ func (v ResultGrid) Init(
 		OnApplyConditions()
 	},
 	parser parser,
-) (*ResultGrid, error) {
+) (*ResultView, error) {
 	v.w = w
 	var err error
 
@@ -221,7 +221,7 @@ func (v ResultGrid) Init(
 	return &v, nil
 }
 
-func (v *ResultGrid) SetQuery(query string) {
+func (v *ResultView) SetQuery(query string) {
 	buff, err := v.textView.GetBuffer()
 	if err != nil {
 		config.Env.Log.Error(err)
@@ -242,7 +242,7 @@ func (v *ResultGrid) SetQuery(query string) {
 	buff.PlaceCursor(buff.GetIterAtOffset(offset))
 }
 
-func (v *ResultGrid) onSaveQuery(
+func (v *ResultView) onSaveQuery(
 	openDialog func(string, func(string, string)),
 	onSaveQuery func(string, string),
 ) func() {
@@ -263,7 +263,7 @@ func (v *ResultGrid) onSaveQuery(
 	}
 }
 
-func (v *ResultGrid) onSaveFav(
+func (v *ResultView) onSaveFav(
 	onSaveQuery func(string, string),
 ) func() {
 	return func() {
@@ -293,7 +293,7 @@ func (v *ResultGrid) onSaveFav(
 	}
 }
 
-func (v *ResultGrid) PageSize() int64 {
+func (v *ResultView) PageSize() int64 {
 	return 100
 	//s, err := v.perPage.GetText()
 	//if err != nil {
@@ -307,40 +307,40 @@ func (v *ResultGrid) PageSize() int64 {
 
 	//return size
 }
-func (v *ResultGrid) Offset() int64 {
+func (v *ResultView) Offset() int64 {
 	return v.offset
 }
 
-func (v *ResultGrid) Conditions() ([]driver.CondStmt, error) {
+func (v *ResultView) Conditions() ([]driver.CondStmt, error) {
 	return v.conditions.Statements()
 }
 
-func (v *ResultGrid) UpdateColumns(cols []driver.ColDef) error {
+func (v *ResultView) UpdateColumns(cols []driver.ColDef) error {
 	v.colFilter.SetText("")
 	v.offset = 0
 	v.conditions.Update(cols)
 	return v.result.UpdateColumns(cols)
 }
 
-func (v *ResultGrid) UpdateData(data [][]interface{}) error {
+func (v *ResultView) UpdateData(data [][]interface{}) error {
 	v.pagerEnable(true)
 	v.btnAddRow.SetSensitive(true)
 
 	return v.result.UpdateData(data)
 }
 
-func (v *ResultGrid) UpdateRawData(cols []string, data [][]interface{}) error {
+func (v *ResultView) UpdateRawData(cols []string, data [][]interface{}) error {
 	v.pagerEnable(false)
 	v.colFilter.SetText("")
 	v.offset = 0
 	return v.result.UpdateRawData(cols, data)
 }
 
-func (v *ResultGrid) SelectedIsNewRecord() (bool, error) {
+func (v *ResultView) SelectedIsNewRecord() (bool, error) {
 	return v.result.SelectedIsNewRecord()
 }
 
-func (v *ResultGrid) RemoveSelected() error {
+func (v *ResultView) RemoveSelected() error {
 	err := v.result.RemoveSelected()
 	if err != nil {
 		return err
@@ -351,15 +351,15 @@ func (v *ResultGrid) RemoveSelected() error {
 	return nil
 }
 
-func (v *ResultGrid) GetRowID() ([]driver.ColDef, []interface{}, error) {
+func (v *ResultView) GetRowID() ([]driver.ColDef, []interface{}, error) {
 	return v.result.GetRowID()
 }
 
-func (u *ResultGrid) GetRow() ([]driver.ColDef, []interface{}, error) {
+func (u *ResultView) GetRow() ([]driver.ColDef, []interface{}, error) {
 	return u.result.GetRow()
 }
 
-func (u *ResultGrid) UpdateRow(values []interface{}) error {
+func (u *ResultView) UpdateRow(values []interface{}) error {
 	err := u.result.UpdateRow(values)
 	if err == nil {
 		u.newRecordEnable(false)
@@ -367,11 +367,11 @@ func (u *ResultGrid) UpdateRow(values []interface{}) error {
 	return err
 }
 
-func (u *ResultGrid) SortOptions() []driver.SortOption {
+func (u *ResultView) SortOptions() []driver.SortOption {
 	return u.result.SortOptions()
 }
 
-func (v *ResultGrid) actionbar() (*gtk.ActionBar, error) {
+func (v *ResultView) actionbar() (*gtk.ActionBar, error) {
 	actionbar, err := gtk.ActionBarNew()
 	if err != nil {
 		return nil, err
@@ -449,7 +449,7 @@ func (v *ResultGrid) actionbar() (*gtk.ActionBar, error) {
 	return actionbar, nil
 }
 
-func (v *ResultGrid) pagerEnable(b bool) {
+func (v *ResultView) pagerEnable(b bool) {
 	v.btnPrev.SetSensitive(b)
 	v.btnNext.SetSensitive(b)
 	v.btnRsh.SetSensitive(b)
@@ -459,7 +459,7 @@ func (v *ResultGrid) pagerEnable(b bool) {
 	//v.offset.SetSensitive(b)
 }
 
-func (v *ResultGrid) disableAll() {
+func (v *ResultView) disableAll() {
 	v.btnPrev.SetSensitive(false)
 	v.btnNext.SetSensitive(false)
 	v.btnRsh.SetSensitive(false)
@@ -468,11 +468,11 @@ func (v *ResultGrid) disableAll() {
 	v.btnCreateRow.SetSensitive(false)
 }
 
-func (v *ResultGrid) newRecordEnable(b bool) {
+func (v *ResultView) newRecordEnable(b bool) {
 	v.btnCreateRow.SetSensitive(b)
 }
 
-func (v *ResultGrid) onTextViewKeyRelease(_ *gtk.TextView, e *gdk.Event) {
+func (v *ResultView) onTextViewKeyRelease(_ *gtk.TextView, e *gdk.Event) {
 	buff, err := v.textView.GetBuffer()
 	if err != nil {
 		config.Env.Log.Error(err)
@@ -505,7 +505,7 @@ func (v *ResultGrid) onTextViewKeyRelease(_ *gtk.TextView, e *gdk.Event) {
 	buff.PlaceCursor(buff.GetIterAtOffset(offset))
 }
 
-func (v *ResultGrid) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) bool {
+func (v *ResultView) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) bool {
 	keyEvent := gdk.EventKeyNewFromEvent(e)
 
 	if keyEvent.KeyVal() == gdk.KEY_Return && keyEvent.State()&gdk.CONTROL_MASK > 0 {
@@ -527,7 +527,7 @@ func (v *ResultGrid) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) bool {
 	return false
 }
 
-func (v *ResultGrid) onColFilterSearchChanged() {
+func (v *ResultView) onColFilterSearchChanged() {
 	txt, err := v.colFilter.GetText()
 	if err != nil {
 		config.Env.Log.Error(err, "colFilter.GetText")
@@ -546,7 +546,7 @@ func (v *ResultGrid) onColFilterSearchChanged() {
 	})
 }
 
-func (v *ResultGrid) onRowActivated(_ *gtk.TreeView, path *gtk.TreePath, col *gtk.TreeViewColumn) {
+func (v *ResultView) onRowActivated(_ *gtk.TreeView, path *gtk.TreePath, col *gtk.TreeViewColumn) {
 	if v.result.mode == MODE_RAW {
 		return
 	}
@@ -572,7 +572,7 @@ func (v *ResultGrid) onRowActivated(_ *gtk.TreeView, path *gtk.TreePath, col *gt
 	v.btnDeleteRow.SetSensitive(true)
 }
 
-func (v *ResultGrid) askFavName() (string, error) {
+func (v *ResultView) askFavName() (string, error) {
 	modal, err := gtk.DialogNewWithButtons(
 		"Favorite Name",
 		v.w,

@@ -624,7 +624,7 @@ func (u *Result) createColumn(title string, id int, useEditModal bool) (*gtk.Tre
 	// `"text", id` means that the text source for the column should come from
 	// the listore column with id = `id`
 	// NOTE: single _ is not display, maybe it's an issue with my system
-	column, err := gtk.TreeViewColumnNewWithAttribute(strings.Replace(title, "_", "__", -1), cellRenderer, "text", id)
+	column, err := gtk.TreeViewColumnNewWithAttribute(underscoreFix(title), cellRenderer, "text", id)
 	if err != nil {
 		return nil, err
 	}
@@ -651,7 +651,7 @@ func (u *Result) createColumn(title string, id int, useEditModal bool) (*gtk.Tre
 			row, _ := strconv.Atoi(u.rowAtCursor.String())
 			var at int
 			for i, col := range u.cols {
-				if col.String() == u.colAtCursor.GetTitle() {
+				if col.String() == underscoreUnfix(u.colAtCursor.GetTitle()) {
 					at = i
 					break
 				}
@@ -805,7 +805,7 @@ func (u *Result) onCopy() {
 func (u *Result) dataAtCursor() string {
 	var at int
 	for i, col := range u.cols {
-		if col.String() == u.colAtCursor.GetTitle() {
+		if col.String() == underscoreUnfix(u.colAtCursor.GetTitle()) {
 			at = i
 			break
 		}
@@ -822,4 +822,12 @@ func (u *Result) dataAtCursor() string {
 	row, _ := strconv.Atoi(u.rowAtCursor.String())
 
 	return string(u.data[row][at].(string))
+}
+
+func underscoreFix(s string) string {
+	return strings.Replace(s, "_", "__", -1)
+}
+
+func underscoreUnfix(s string) string {
+	return strings.Replace(s, "__", "_", -1)
 }
