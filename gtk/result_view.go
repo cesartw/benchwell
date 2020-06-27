@@ -18,7 +18,7 @@ type ResultView struct {
 	w *Window
 	*gtk.Paned
 
-	textView *gtk.TextView
+	textView *TextView
 	prevText string
 	offset   int64
 
@@ -76,7 +76,7 @@ func (v ResultView) Init(
 		return nil, err
 	}
 
-	v.textView, err = gtk.TextViewNew()
+	v.textView, err = TextView{}.Init(TextViewOptions{true, true})
 	if err != nil {
 		return nil, err
 	}
@@ -84,8 +84,8 @@ func (v ResultView) Init(
 	v.textView.SetHExpand(true)
 	v.textView.SetVExpand(true)
 
-	v.textView.Connect("key-release-event", v.onTextViewKeyRelease) // highlighting
-	v.textView.Connect("key-press-event", v.onTextViewKeyPress)     // ctrl+enter exec query
+	//v.textView.Connect("key-release-event", v.onTextViewKeyRelease) // highlighting
+	v.textView.Connect("key-press-event", v.onTextViewKeyPress) // ctrl+enter exec query
 
 	var resultSW, textViewSW *gtk.ScrolledWindow
 	resultSW, err = gtk.ScrolledWindowNew(nil, nil)

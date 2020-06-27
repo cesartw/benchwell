@@ -73,12 +73,12 @@ func ChromaHighlight(inputString string) (out string, err error) {
 	buff := new(bytes.Buffer)
 	writer := bufio.NewWriter(buff)
 
-	// Doing the job (io.Writer, SourceText, language(go), Lexer(pango), style(pygments))
 	theme := "sqlaid-dark"
 	if !config.Env.GUI.DarkMode {
 		theme = "sqlaid-light"
 	}
 
+	// Doing the job (io.Writer, SourceText, language(go), Lexer(pango), style(pygments))
 	if err = quick.Highlight(writer, inputString, "sql", "pango", theme); err != nil {
 		return
 	}
