@@ -1,6 +1,7 @@
 package ctrl
 
 import (
+	"context"
 	"fmt"
 
 	"bitbucket.org/goreorto/sqlaid/config"
@@ -161,40 +162,55 @@ func (tc *TableCtrl) OnDelete() {
 }
 
 func (tc *TableCtrl) OnLoadTable() {
-	switch tc.tableDef.Type {
-	case driver.TableTypeDummy:
-		tc.OnExecQuery(tc.tableDef.Query)
-	default:
-		def, data, err := tc.Engine.FetchTable(
-			tc.ctx, tc.tableDef,
-			driver.FetchTableOptions{
-				Offset: tc.resultView.Offset(),
-				Limit:  tc.resultView.PageSize(),
-			},
-		)
-		if err != nil {
-			return
-		}
-
-		if tc.tableDef.Type == driver.TableTypeRegular {
-			err = tc.resultView.UpdateColumns(def)
+	cancel := tc.window.Go(func(ctx context.Context) func() {
+		switch tc.tableDef.Type {
+		case driver.TableTypeDummy:
+			// TODO: query is done on the background
+			return func() {
+				tc.OnExecQuery(tc.tableDef.Query)
+			}
+		default:
+			def, data, err := tc.Engine.FetchTable(
+				tc.ctx.WithContext(ctx), tc.tableDef,
+				driver.FetchTableOptions{
+					Offset: tc.resultView.Offset(),
+					Limit:  tc.resultView.PageSize(),
+				},
+			)
 			if err != nil {
-				config.Env.Log.Error(err)
-				return
+				return func() {}
 			}
 
-			err = tc.resultView.UpdateData(data)
-			if err != nil {
-				config.Env.Log.Error(err)
+			if tc.tableDef.Type == driver.TableTypeRegular {
+				return func() {
+					err = tc.resultView.UpdateColumns(def)
+					if err != nil {
+						config.Env.Log.Error(err)
+						return
+					}
+
+					err = tc.resultView.UpdateData(data)
+					if err != nil {
+						config.Env.Log.Error(err)
+					}
+				}
+			} else {
+				columns := []string{}
+				for _, d := range def {
+					columns = append(columns, d.Name)
+				}
+
+				return func() {
+					tc.resultView.UpdateRawData(columns, data)
+					if err != nil {
+						config.Env.Log.Error(err)
+					}
+				}
 			}
-		} else {
-			columns := []string{}
-			for _, d := range def {
-				columns = append(columns, d.Name)
-			}
-			tc.resultView.UpdateRawData(columns, data)
 		}
-	}
+	})
+
+	tc.resultView.Block(cancel)
 }
 
 func (tc *TableCtrl) OnRefresh() {

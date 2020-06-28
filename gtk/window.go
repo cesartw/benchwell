@@ -1,8 +1,10 @@
 package gtk
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"bitbucket.org/goreorto/sqlaid/config"
@@ -253,4 +255,36 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 
 	// Assemble the window
 	return header, nil
+}
+
+func (w *Window) Go(job func(context.Context) func()) func() {
+	cancel := make(chan struct{}, 0)
+	done := make(chan struct{}, 0)
+	onDone := func() {}
+	ctxCancel := func() {}
+
+	go func() {
+		go func() {
+			var ctx context.Context
+			ctx, ctxCancel = context.WithCancel(context.Background())
+			onDone = job(ctx)
+			close(done)
+		}()
+
+		select {
+		case <-done:
+			if onDone != nil {
+				_, err := glib.IdleAdd(onDone)
+				if err != nil {
+					log.Fatal("IdleAdd() failed:", err)
+				}
+			}
+		case <-cancel:
+		}
+	}()
+
+	return func() {
+		ctxCancel()
+		close(cancel)
+	}
 }

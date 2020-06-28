@@ -40,7 +40,7 @@ func (c *ConnectCtrl) OnTest() {
 		conn = c.scr.GetFormConnection()
 	}
 
-	ctx, err := c.Engine.Connect(*conn)
+	ctx, err := c.Engine.Connect(nil, *conn)
 	if err != nil {
 		config.Env.Log.Error(err)
 		c.window.PushStatus("Fail connection `%s`(%s): %s", conn.Name, conn.Host, err.Error())
@@ -123,4 +123,12 @@ func (c *ConnectCtrl) Screen() interface{} {
 
 func (c *ConnectCtrl) Close() bool {
 	return false
+}
+
+func (c *ConnectCtrl) Connecting(cancel func()) {
+	c.scr.Connecting(cancel)
+}
+
+func (c *ConnectCtrl) CancelConnecting() {
+	c.scr.CancelConnecting()
 }

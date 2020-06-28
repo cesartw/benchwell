@@ -104,12 +104,12 @@ func (d *mysqlDriver) useDatabase(ctx context.Context, dbName string) (*sql.DB, 
 	}
 
 	query := fmt.Sprintf("USE %s", dbName)
-	driver.Log(ctx, query)
 	_, err = db.db.ExecContext(ctx, query)
 	if err != nil {
-		driver.Log(ctx, err.Error())
+		driver.LogError(ctx, err)
 		return nil, err
 	}
+	driver.Log(ctx, query)
 
 	return db.db, nil
 }
@@ -130,7 +130,7 @@ func (c *mysqlConn) Reconnect(ctx context.Context) error {
 func (c *mysqlConn) UseDatabase(ctx context.Context, db string) (driver.Database, error) {
 	sqldb, err := c.driver.useDatabase(ctx, db)
 	if err != nil {
-		driver.Log(ctx, err.Error())
+		driver.LogError(ctx, err)
 		return nil, err
 	}
 
@@ -150,12 +150,12 @@ func (c *mysqlConn) LastError() error {
 // Databases ...
 func (c *mysqlConn) Databases(ctx context.Context) ([]string, error) {
 	query := "SHOW databases"
-	driver.Log(ctx, query)
-	rows, err := c.db.Query(query)
+	rows, err := c.db.QueryContext(ctx, query)
 	if err != nil {
-		driver.Log(ctx, err.Error())
+		driver.LogError(ctx, err)
 		return nil, err
 	}
+	driver.Log(ctx, query)
 
 	dbs := make([]string, 0)
 	for rows.Next() {
@@ -177,12 +177,12 @@ func (d *mysqlDb) Name() string {
 
 func (d *mysqlDb) Tables(ctx context.Context) ([]driver.TableDef, error) {
 	query := "SHOW FULL TABLES"
-	driver.Log(ctx, query)
-	rows, err := d.db.Query(query)
+	rows, err := d.db.QueryContext(ctx, query)
 	if err != nil {
-		driver.Log(ctx, err.Error())
+		driver.LogError(ctx, err)
 		return nil, err
 	}
+	driver.Log(ctx, query)
 
 	tables := []driver.TableDef{}
 	for rows.Next() {
@@ -210,11 +210,10 @@ func (d *mysqlDb) Tables(ctx context.Context) ([]driver.TableDef, error) {
 
 func (d *mysqlDb) TableDefinition(ctx context.Context, tableName string) ([]driver.ColDef, error) {
 	query := "DESCRIBE " + tableName
-	//driver.Log(ctx, query)
 
-	sqlRows, err := d.db.Query(query)
+	sqlRows, err := d.db.QueryContext(ctx, query)
 	if err != nil {
-		driver.Log(ctx, err.Error())
+		driver.LogError(ctx, err)
 		return nil, err
 	}
 
@@ -247,14 +246,13 @@ func (d *mysqlDb) TableDefinition(ctx context.Context, tableName string) ([]driv
 }
 
 func (d *mysqlDb) Query(ctx context.Context, query string) (columnNames []string, data [][]interface{}, err error) {
-	driver.Log(ctx, query)
-
 	var sqlRows *sql.Rows
-	sqlRows, err = d.db.Query(query)
+	sqlRows, err = d.db.QueryContext(ctx, query)
 	if err != nil {
-		driver.Log(ctx, err.Error())
+		driver.LogError(ctx, err)
 		return nil, nil, err
 	}
+	driver.Log(ctx, query)
 
 	defer sqlRows.Close()
 
@@ -266,7 +264,7 @@ func (d *mysqlDb) Query(ctx context.Context, query string) (columnNames []string
 	// insert or update
 	if len(columnNames) == 0 {
 		sqlRows.Close()
-		sqlRows, err = d.db.Query("SELECT ROW_COUNT() AS affected_rows, LAST_INSERT_ID() AS last_inserted_id")
+		sqlRows, err = d.db.QueryContext(ctx, "SELECT ROW_COUNT() AS affected_rows, LAST_INSERT_ID() AS last_inserted_id")
 		if err != nil {
 			return nil, nil, err
 		}
@@ -314,13 +312,12 @@ func (c *mysqlDb) loadData(sqlRows *sql.Rows) ([]string, [][]interface{}, error)
 }
 
 func (d *mysqlDb) Execute(ctx context.Context, query string) (string, int64, error) {
-	driver.Log(ctx, query)
-
-	result, err := d.db.Exec(query)
+	result, err := d.db.ExecContext(ctx, query)
 	if err != nil {
-		driver.Log(ctx, err.Error())
+		driver.LogError(ctx, err)
 		return "", 0, err
 	}
+	driver.Log(ctx, query)
 
 	id, err := result.LastInsertId()
 	if err != nil {
@@ -469,13 +466,12 @@ func (d *mysqlDb) FetchTable(
 	query := fmt.Sprintf(`SELECT * FROM %s %s %s LIMIT %d, %d`,
 		tableName, where, FetchTableOptions(opts.Sort).SQL(tableName), opts.Offset, opts.Limit)
 
-	driver.Log(ctx, query)
-
-	sqlRows, err = d.db.Query(query)
+	sqlRows, err = d.db.QueryContext(ctx, query)
 	if err != nil {
-		driver.Log(ctx, err.Error())
+		driver.LogError(ctx, err)
 		return nil, nil, err
 	}
+	driver.Log(ctx, query)
 
 	defer sqlRows.Close()
 
@@ -531,12 +527,13 @@ func (d *mysqlDb) DeleteRecord(ctx context.Context, tableName string, cols []dri
 
 	query := fmt.Sprintf(`DELETE FROM %s WHERE %s`, tableName, strings.Join(wheres, " AND "))
 
-	driver.Log(ctx, query)
-
-	_, err := d.db.Exec(query)
+	_, err := d.db.ExecContext(ctx, query)
 	if err != nil {
-		driver.Log(ctx, err.Error())
+		driver.LogError(ctx, err)
+		return err
 	}
+
+	driver.Log(ctx, query)
 
 	return err
 }
@@ -582,13 +579,13 @@ func (d *mysqlDb) UpdateRecord(
 	query = fmt.Sprintf(query, tableName, strings.Join(sets, ", "), pk.Name, ID)
 	//args = append(args, ID)
 
-	driver.Log(ctx, query)
-
-	result, err := d.db.Exec(query)
+	result, err := d.db.ExecContext(ctx, query)
 	if err != nil {
-		driver.Log(ctx, err.Error())
+		driver.LogError(ctx, err)
 		return "", err
 	}
+
+	driver.Log(ctx, query)
 
 	id, err := result.LastInsertId()
 	if err != nil {
@@ -626,13 +623,13 @@ func (d *mysqlDb) UpdateField(
 		values[lastIndex],
 		strings.Join(wheres, " AND "))
 
-	driver.Log(ctx, query)
-
-	result, err := d.db.Exec(query)
+	result, err := d.db.ExecContext(ctx, query)
 	if err != nil {
-		driver.Log(ctx, err.Error())
+		driver.LogError(ctx, err)
 		return "", err
 	}
+
+	driver.Log(ctx, query)
 
 	id, err := result.LastInsertId()
 	if err != nil {
@@ -676,12 +673,12 @@ func (d *mysqlDb) UpdateFields(
 		sets,
 		strings.Join(wheres, " AND "))
 
-	driver.Log(ctx, query)
-	result, err := d.db.Exec(query)
+	result, err := d.db.ExecContext(ctx, query)
 	if err != nil {
-		driver.Log(ctx, err.Error())
+		driver.LogError(ctx, err)
 		return "", err
 	}
+	driver.Log(ctx, query)
 
 	id, err := result.LastInsertId()
 	if err != nil {
@@ -714,19 +711,19 @@ func (d *mysqlDb) InsertRecord(
 
 	query = fmt.Sprintf(query, tableName, strings.Join(collist, ","), strings.Join(qm, ","))
 
-	driver.Log(ctx, query)
-	result, err := d.db.Exec(query, args...)
+	result, err := d.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		driver.Log(ctx, err.Error())
+		driver.LogError(ctx, err)
 		return nil, err
 	}
+	driver.Log(ctx, query)
 
 	id, err := result.LastInsertId()
 	if err != nil {
 		return nil, err
 	}
 
-	return d.fetchRecord(tableName, cols, id)
+	return d.fetchRecord(ctx, tableName, cols, id)
 }
 
 func (d *mysqlDb) GetCreateTable(
@@ -740,11 +737,11 @@ func (d *mysqlDb) GetCreateTable(
 	)
 	// NOTE: ? doesn't work here
 	query := fmt.Sprintf("SHOW CREATE TABLE `%s`", tableName)
-	driver.Log(ctx, query)
-	sqlRows, err = d.db.Query(query)
+	sqlRows, err = d.db.QueryContext(ctx, query)
 	if err != nil {
 		return "", err
 	}
+	driver.Log(ctx, query)
 
 	defer sqlRows.Close()
 
@@ -839,12 +836,13 @@ func (d *mysqlDb) DeleteTable(
 		return nil
 	default:
 		query := fmt.Sprintf(`DROP TABLE %s`, table.Name)
-		driver.Log(ctx, query)
 
 		_, err := d.db.ExecContext(ctx, query)
 		if err != nil {
-			driver.Log(ctx, err.Error())
+			driver.LogError(ctx, err)
+			return nil
 		}
+		driver.Log(ctx, query)
 
 		return nil
 	}
@@ -859,17 +857,20 @@ func (d *mysqlDb) TruncateTable(
 		return nil
 	default:
 		query := fmt.Sprintf(`TRUNCATE TABLE %s`, table.Name)
-		driver.Log(ctx, query)
 
 		_, err := d.db.ExecContext(ctx, query)
 		if err != nil {
-			driver.Log(ctx, err.Error())
+			driver.LogError(ctx, err)
+			return nil
 		}
+
+		driver.Log(ctx, query)
 		return nil
 	}
 }
 
 func (d *mysqlDb) fetchRecord(
+	ctx context.Context,
 	tableName string,
 	cols []driver.ColDef,
 	id int64,
@@ -892,7 +893,7 @@ func (d *mysqlDb) fetchRecord(
 
 	query = fmt.Sprintf(query, tableName, pk.Name)
 
-	sqlRows, err := d.db.Query(query, id)
+	sqlRows, err := d.db.QueryContext(ctx, query, id)
 	if err != nil {
 		return nil, err
 	}

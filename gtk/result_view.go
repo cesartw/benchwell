@@ -16,7 +16,8 @@ import (
 // ResultView is a table result tab content
 type ResultView struct {
 	w *Window
-	*gtk.Paned
+	*CancelOverlay
+	Paned *gtk.Paned
 
 	textView *TextView
 	prevText string
@@ -75,6 +76,10 @@ func (v ResultView) Init(
 	if err != nil {
 		return nil, err
 	}
+	v.CancelOverlay, err = CancelOverlay{}.Init(v.Paned)
+	if err != nil {
+		return nil, err
+	}
 
 	v.textView, err = TextView{}.Init(TextViewOptions{true, true})
 	if err != nil {
@@ -84,7 +89,6 @@ func (v ResultView) Init(
 	v.textView.SetHExpand(true)
 	v.textView.SetVExpand(true)
 
-	//v.textView.Connect("key-release-event", v.onTextViewKeyRelease) // highlighting
 	v.textView.Connect("key-press-event", v.onTextViewKeyPress) // ctrl+enter exec query
 
 	var resultSW, textViewSW *gtk.ScrolledWindow
@@ -221,6 +225,10 @@ func (v ResultView) Init(
 	return &v, nil
 }
 
+func (v *ResultView) Block(cancel func()) {
+	v.Run(cancel)
+}
+
 func (v *ResultView) SetQuery(query string) {
 	buff, err := v.textView.GetBuffer()
 	if err != nil {
@@ -316,6 +324,8 @@ func (v *ResultView) Conditions() ([]driver.CondStmt, error) {
 }
 
 func (v *ResultView) UpdateColumns(cols []driver.ColDef) error {
+	defer v.Stop()
+
 	v.colFilter.SetText("")
 	v.offset = 0
 	v.conditions.Update(cols)
@@ -323,6 +333,8 @@ func (v *ResultView) UpdateColumns(cols []driver.ColDef) error {
 }
 
 func (v *ResultView) UpdateData(data [][]interface{}) error {
+	defer v.Stop()
+
 	v.pagerEnable(true)
 	v.btnAddRow.SetSensitive(true)
 
@@ -330,6 +342,8 @@ func (v *ResultView) UpdateData(data [][]interface{}) error {
 }
 
 func (v *ResultView) UpdateRawData(cols []string, data [][]interface{}) error {
+	defer v.Stop()
+
 	v.pagerEnable(false)
 	v.colFilter.SetText("")
 	v.offset = 0
@@ -470,39 +484,6 @@ func (v *ResultView) disableAll() {
 
 func (v *ResultView) newRecordEnable(b bool) {
 	v.btnCreateRow.SetSensitive(b)
-}
-
-func (v *ResultView) onTextViewKeyRelease(_ *gtk.TextView, e *gdk.Event) {
-	buff, err := v.textView.GetBuffer()
-	if err != nil {
-		config.Env.Log.Error(err)
-		return
-	}
-
-	txt, err := buff.GetText(buff.GetStartIter(), buff.GetEndIter(), false)
-	if err != nil {
-		config.Env.Log.Error(err)
-		return
-	}
-
-	// hacky. easiest way to selection reset and bad behavior on non-printable key strokes
-	if txt == v.prevText {
-		return
-	}
-	v.prevText = txt
-
-	iter := buff.GetIterAtMark(buff.GetInsert())
-	offset := iter.GetOffset()
-
-	txt, err = ChromaHighlight(txt)
-	if err != nil {
-		config.Env.Log.Error(err)
-		return
-	}
-	buff.Delete(buff.GetStartIter(), buff.GetEndIter())
-	buff.InsertMarkup(buff.GetStartIter(), txt)
-
-	buff.PlaceCursor(buff.GetIterAtOffset(offset))
 }
 
 func (v *ResultView) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) bool {

@@ -44,6 +44,11 @@ func (c *Context) Context() context.Context {
 	return c.context
 }
 
+func (c *Context) WithContext(ctx context.Context) *Context {
+	c.context = ctx
+	return c
+}
+
 // NewContext returns a new engine session
 func NewContext(conn driver.Connection, db driver.Database) *Context {
 	return &Context{

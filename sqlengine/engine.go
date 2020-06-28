@@ -74,9 +74,9 @@ func (e *Engine) ConnectWithTimeout(cfg config.Connection) (*Context, error) {
 }
 
 // Connect to a database
-func (e *Engine) Connect(cfg config.Connection) (*Context, error) {
+func (e *Engine) Connect(ctx context.Context, cfg config.Connection) (*Context, error) {
 	timeout := 2 * time.Second
-	tmctx, cancel := context.WithTimeout(context.Background(), timeout)
+	tmctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	conn, err := driver.Connect(tmctx, cfg)
@@ -84,6 +84,7 @@ func (e *Engine) Connect(cfg config.Connection) (*Context, error) {
 		return nil, e.timeoutErr(err, timeout)
 	}
 	e.connections = append(e.connections, conn)
+
 	return NewContext(conn, nil), nil
 }
 
@@ -94,10 +95,7 @@ func (e *Engine) Databases(c *Context) ([]string, error) {
 		return nil, errors.New("no connection available")
 	}
 
-	tmctx, cancel := prepereCtx(c, time.Minute)
-	defer cancel()
-
-	dbNames, err := conn.Databases(tmctx)
+	dbNames, err := conn.Databases(c.Context())
 	if err != nil {
 		return nil, err
 	}
@@ -112,10 +110,7 @@ func (e *Engine) UseDatabase(c *Context, dbName string) (*Context, error) {
 		return c, ErrNoConnection
 	}
 
-	tmctx, cancel := prepereCtx(c, time.Minute)
-	defer cancel()
-
-	dbs, err := conn.Databases(tmctx)
+	dbs, err := conn.Databases(c.Context())
 	if err != nil {
 		return c, err
 	}
@@ -132,7 +127,7 @@ func (e *Engine) UseDatabase(c *Context, dbName string) (*Context, error) {
 		return c, ErrDatabaseNotFound
 	}
 
-	db, err := conn.UseDatabase(tmctx, dbName)
+	db, err := conn.UseDatabase(c.Context(), dbName)
 	if err != nil {
 		return c, err
 	}
@@ -156,10 +151,7 @@ func (e *Engine) Tables(c *Context) ([]driver.TableDef, error) {
 		return nil, ErrNoDatabase
 	}
 
-	tmctx, cancel := prepereCtx(c, time.Minute)
-	defer cancel()
-
-	tables, err := db.Tables(tmctx)
+	tables, err := db.Tables(c.Context())
 	if err != nil {
 		return nil, err
 	}
@@ -190,10 +182,7 @@ func (e *Engine) FetchTable(
 		return nil, nil, ErrNoDatabase
 	}
 
-	tmctx, cancel := prepereCtx(c, time.Minute)
-	defer cancel()
-
-	return db.FetchTable(tmctx, table.Name, opts)
+	return db.FetchTable(c.Context(), table.Name, opts)
 }
 
 // DeleteRecord ...
@@ -208,10 +197,7 @@ func (e *Engine) DeleteRecord(c *Context, tableName string, defs []driver.ColDef
 		return ErrNoDatabase
 	}
 
-	tmctx, cancel := prepereCtx(c, time.Minute)
-	defer cancel()
-
-	return db.DeleteRecord(tmctx, tableName, defs, values)
+	return db.DeleteRecord(c.Context(), tableName, defs, values)
 }
 
 // UpdateFields ...
@@ -232,10 +218,7 @@ func (e *Engine) UpdateFields(
 		return "", ErrNoDatabase
 	}
 
-	tmctx, cancel := prepereCtx(c, time.Minute)
-	defer cancel()
-
-	return db.UpdateFields(tmctx, tableName, defs, values, keycount)
+	return db.UpdateFields(c.Context(), tableName, defs, values, keycount)
 }
 
 // UpdateField ...
@@ -255,10 +238,7 @@ func (e *Engine) UpdateField(
 		return "", ErrNoDatabase
 	}
 
-	tmctx, cancel := prepereCtx(c, time.Minute)
-	defer cancel()
-
-	return db.UpdateField(tmctx, tableName, defs, values)
+	return db.UpdateField(c.Context(), tableName, defs, values)
 }
 
 // ParseValue ...
@@ -297,10 +277,7 @@ func (e *Engine) UpdateRecord(
 		return "", ErrNoDatabase
 	}
 
-	tmctx, cancel := prepereCtx(c, time.Minute)
-	defer cancel()
-
-	return db.UpdateRecord(tmctx, tableName, defs, values, oldValues)
+	return db.UpdateRecord(c.Context(), tableName, defs, values, oldValues)
 }
 
 // InsertRecord ...
@@ -320,10 +297,7 @@ func (e *Engine) InsertRecord(
 		return nil, ErrNoDatabase
 	}
 
-	tmctx, cancel := prepereCtx(c, time.Minute)
-	defer cancel()
-
-	return db.InsertRecord(tmctx, tableName, defs, values)
+	return db.InsertRecord(c.Context(), tableName, defs, values)
 }
 
 // Disconnect ...
@@ -341,10 +315,8 @@ func (e *Engine) Query(c *Context, query string) ([]string, [][]interface{}, err
 	if db == nil {
 		return nil, nil, ErrNoDatabase
 	}
-	tmctx, cancel := prepereCtx(c, time.Minute)
-	defer cancel()
 
-	return db.Query(tmctx, query)
+	return db.Query(c.Context(), query)
 }
 
 func (e *Engine) Execute(c *Context, query string) (string, int64, error) {
@@ -353,10 +325,7 @@ func (e *Engine) Execute(c *Context, query string) (string, int64, error) {
 		return "", 0, ErrNoDatabase
 	}
 
-	tmctx, cancel := prepereCtx(c, time.Minute)
-	defer cancel()
-
-	return db.Execute(tmctx, query)
+	return db.Execute(c.Context(), query)
 }
 
 func (e *Engine) GetCreateTable(c *Context, tableName string) (string, error) {
@@ -365,10 +334,7 @@ func (e *Engine) GetCreateTable(c *Context, tableName string) (string, error) {
 		return "", ErrNoDatabase
 	}
 
-	tmctx, cancel := prepereCtx(c, time.Minute)
-	defer cancel()
-
-	return db.GetCreateTable(tmctx, tableName)
+	return db.GetCreateTable(c.Context(), tableName)
 }
 
 func (e *Engine) GetInsertStatement(
@@ -382,10 +348,7 @@ func (e *Engine) GetInsertStatement(
 		return "", ErrNoDatabase
 	}
 
-	tmctx, cancel := prepereCtx(c, time.Minute)
-	defer cancel()
-
-	return db.GetInsertStatement(tmctx, tableName, cols, values)
+	return db.GetInsertStatement(c.Context(), tableName, cols, values)
 }
 
 func (e *Engine) GetSelectStatement(
@@ -397,10 +360,7 @@ func (e *Engine) GetSelectStatement(
 		return "", ErrNoDatabase
 	}
 
-	tmctx, cancel := prepereCtx(c, time.Minute)
-	defer cancel()
-
-	return db.GetSelectStatement(tmctx, table)
+	return db.GetSelectStatement(c.Context(), table)
 }
 
 func (e *Engine) TruncateTable(
@@ -412,10 +372,7 @@ func (e *Engine) TruncateTable(
 		return ErrNoDatabase
 	}
 
-	tmctx, cancel := prepereCtx(c, time.Minute)
-	defer cancel()
-
-	return db.TruncateTable(tmctx, table)
+	return db.TruncateTable(c.Context(), table)
 }
 
 func (e *Engine) DeleteTable(
@@ -427,10 +384,7 @@ func (e *Engine) DeleteTable(
 		return ErrNoDatabase
 	}
 
-	tmctx, cancel := prepereCtx(c, time.Minute)
-	defer cancel()
-
-	return db.DeleteTable(tmctx, table)
+	return db.DeleteTable(c.Context(), table)
 }
 
 // Dispose ...
@@ -444,12 +398,6 @@ func (e *Engine) Dispose() {
 
 func (e *Engine) Database(c *Context) driver.Database {
 	return c.Database()
-}
-
-func prepereCtx(c *Context, d time.Duration) (context.Context, func()) {
-	ctx, cancel := context.WithTimeout(context.Background(), d)
-
-	return driver.SetLogger(ctx, c.Logger), cancel
 }
 
 func (e *Engine) timeoutErr(err error, timeout time.Duration) error {

@@ -13,7 +13,9 @@ type ConnectScreen struct {
 	*gtk.Paned
 	ConnectionList *List
 	activeForm     *stdform
+	formOverlay    *CancelOverlay
 
+	btnBox     *gtk.ButtonBox
 	btnSave    *gtk.Button
 	btnConnect *gtk.Button
 	btnTest    *gtk.Button
@@ -51,9 +53,7 @@ func (c ConnectScreen) Init(ctrl interface {
 	}
 
 	frame1.SetShadowType(gtk.SHADOW_IN)
-	frame1.SetSizeRequest(50, -1)
 	frame2.SetShadowType(gtk.SHADOW_IN)
-	frame2.SetSizeRequest(50, -1)
 
 	c.ConnectionList, err = List{}.Init(&ListOptions{SelectOnRightClick: true, StockIcon: "gtk-connect"})
 	if err != nil {
@@ -61,10 +61,6 @@ func (c ConnectScreen) Init(ctrl interface {
 	}
 
 	c.ConnectionList.OnButtonPress(c.onConnectListButtonPress)
-	c.ConnectionList.Connect("row-activated", func() {
-		c.btnConnect.Emit("activate")
-	})
-
 	c.ConnectionList.SetHExpand(true)
 	c.ConnectionList.SetVExpand(true)
 	frame1.Add(c.ConnectionList)
@@ -74,11 +70,11 @@ func (c ConnectScreen) Init(ctrl interface {
 		return nil, err
 	}
 
-	btnBox, err := gtk.ButtonBoxNew(gtk.ORIENTATION_HORIZONTAL)
+	c.btnBox, err = gtk.ButtonBoxNew(gtk.ORIENTATION_HORIZONTAL)
 	if err != nil {
 		return nil, err
 	}
-	btnBox.SetLayout(gtk.BUTTONBOX_EDGE)
+	c.btnBox.SetLayout(gtk.BUTTONBOX_EDGE)
 
 	c.btnConnect, err = gtk.ButtonNew()
 	if err != nil {
@@ -101,15 +97,16 @@ func (c ConnectScreen) Init(ctrl interface {
 	c.btnTest.SetSensitive(false)
 	c.btnSave.SetSensitive(false)
 
-	btnBox.Add(c.btnConnect)
-	btnBox.Add(c.btnTest)
-	btnBox.Add(c.btnSave)
+	c.btnBox.Add(c.btnConnect)
+	c.btnBox.Add(c.btnTest)
+	c.btnBox.Add(c.btnSave)
 
-	forms.Add(btnBox)
+	forms.Add(c.btnBox)
 	frame2.Add(forms)
+	c.formOverlay, err = CancelOverlay{}.Init(frame2)
 
 	c.Paned.Pack1(frame1, false, true)
-	c.Paned.Pack2(frame2, false, false)
+	c.Paned.Pack2(c.formOverlay, false, false)
 
 	err = c.initMenu()
 	if err != nil {
@@ -214,6 +211,16 @@ func (c *ConnectScreen) ClearForm() {
 	c.btnSave.SetSensitive(false)
 }
 
+func (c *ConnectScreen) Connecting(cancel func()) {
+	c.formOverlay.Run(cancel)
+	c.ConnectionList.SetSensitive(false)
+}
+
+func (c *ConnectScreen) CancelConnecting() {
+	c.formOverlay.Stop()
+	c.ConnectionList.SetSensitive(true)
+}
+
 func (c *ConnectScreen) FocusForm() {
 	c.activeForm.GrabFocus()
 }
@@ -231,6 +238,7 @@ func (c *ConnectScreen) SetFormConnection(conn *config.Connection) {
 func (c *ConnectScreen) ActiveConnectionIndex() int {
 	return c.ConnectionList.GetSelectedRow().GetIndex()
 }
+
 func (c *ConnectScreen) onConnect() {
 	c.btnConnect.Emit("activate")
 }

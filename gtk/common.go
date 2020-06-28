@@ -133,3 +133,72 @@ func pangoFormatter(w io.Writer, style *chroma.Style, it chroma.Iterator) error 
 	}
 	return nil
 }
+
+type CancelOverlay struct {
+	*gtk.Overlay
+	btnCancel *gtk.Button
+	spinner   *gtk.Spinner
+	box       *gtk.Box
+
+	onCancel func()
+}
+
+func (c CancelOverlay) Init(widget gtk.IWidget) (*CancelOverlay, error) {
+	var err error
+	c.Overlay, err = gtk.OverlayNew()
+	if err != nil {
+		return nil, err
+	}
+
+	c.btnCancel, err = gtk.ButtonNewWithLabel("Cancel")
+	if err != nil {
+		return nil, err
+	}
+	c.btnCancel.SetSizeRequest(100, 30)
+
+	c.spinner, err = gtk.SpinnerNew()
+	if err != nil {
+		return nil, err
+	}
+
+	c.box, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	box.SetSizeRequest(100, 150)
+	box.SetVAlign(gtk.ALIGN_CENTER)
+	box.SetHAlign(gtk.ALIGN_CENTER)
+	box.SetVExpand(true)
+	box.SetHExpand(true)
+
+	c.box.Add(box)
+	box.PackStart(c.spinner, true, true, 0)
+	box.PackStart(c.btnCancel, false, false, 0)
+
+	c.Add(widget)
+
+	c.btnCancel.Connect("clicked", func() {
+		c.Stop()
+		c.onCancel()
+	})
+
+	return &c, nil
+}
+
+func (c *CancelOverlay) Run(onCancel func()) {
+	c.box.ShowAll()
+	c.spinner.Start()
+	c.AddOverlay(c.box)
+	c.onCancel = onCancel
+}
+
+func (c *CancelOverlay) Stop() {
+	c.Remove(c.box)
+	c.spinner.Stop()
+}

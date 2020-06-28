@@ -75,6 +75,7 @@ func (list List) Init(opts *ListOptions) (*List, error) {
 		return list.options.FilterRegex.Match([]byte(name.String()))
 	})
 
+	list.ShowAll()
 	return &list, nil
 }
 

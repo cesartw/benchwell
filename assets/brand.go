@@ -72,4 +72,8 @@ list row image {
 #queryactionbar box {
 	border-width: 0;
 }
+
+overlay > box {
+	background-color: rgba(0, 0, 0, 0.4);
+}
 `

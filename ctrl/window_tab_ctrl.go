@@ -1,6 +1,8 @@
 package ctrl
 
 import (
+	"context"
+
 	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/gtk"
 	"bitbucket.org/goreorto/sqlaid/sqlengine"
@@ -107,13 +109,22 @@ func (c *WindowTabCtrl) launchConnection(ctx *sqlengine.Context, conn *config.Co
 func (c *WindowTabCtrl) OnConnect() {
 	conn := c.connectCtrl.scr.GetFormConnection()
 
-	ctx, err := c.Engine.Connect(*conn)
-	if err != nil {
-		config.Env.Log.Error(err)
-		c.window.PushStatus("Failed connect to `%s`(%s): %s", conn.Name, conn.Host, err.Error())
-		return
-	}
-	c.window.PushStatus("Connected to `%s`(%s)", conn.Name, conn.Host)
+	cancel := c.window.Go(func(ctx context.Context) func() {
+		engineCtx, err := c.Engine.Connect(ctx, *conn)
+		if err != nil {
+			return func() {
+				config.Env.Log.Error(err)
+				c.window.PushStatus("Failed connect to `%s`(%s): %s", conn.Name, conn.Host, err.Error())
+				c.connectCtrl.CancelConnecting()
+			}
+		}
 
-	c.launchConnection(ctx, conn)
+		return func() {
+			c.window.PushStatus("Connected to `%s`(%s)", conn.Name, conn.Host)
+			c.connectCtrl.CancelConnecting()
+			c.launchConnection(engineCtx, conn)
+		}
+	})
+
+	c.connectCtrl.Connecting(cancel)
 }
