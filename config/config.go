@@ -130,8 +130,9 @@ type Config struct {
 // Connection ...
 type Connection struct {
 	Adapter   string  `mapstructure:"-"`
-	Type      string  `mapstructure:"-"`
+	Type      string  `mapstructure:"type"`
 	Name      string  `mapstructure:"name"`
+	Socket    string  `mapstructure:"socket"`
 	Host      string  `mapstructure:"host"`
 	Port      int     `mapstructure:"port"`
 	User      string  `mapstructure:"user"`
@@ -164,10 +165,18 @@ func (c Connection) GetDSN() string {
 		b.WriteString("@")
 	}
 
-	b.WriteString("tcp(" + c.Host)
-	if c.Port != 0 {
-		b.WriteString(fmt.Sprintf(":%d", c.Port))
+	switch c.Type {
+	case "tcp":
+		b.WriteString("tcp(" + c.Host)
+		if c.Port != 0 {
+			b.WriteString(fmt.Sprintf(":%d", c.Port))
+		}
+	case "socket":
+		b.WriteString("unix(" + c.Socket)
+	default:
+		return ""
 	}
+
 	b.WriteString(")")
 
 	b.WriteString("/" + c.Database)
@@ -181,11 +190,18 @@ func (c Connection) GetDSN() string {
 }
 
 func (c Connection) Valid() bool {
-	if c.Host == "" {
-		return false
-	}
-	if c.User == "" {
-		return false
+	switch c.Type {
+	case "tcp":
+		if c.Host == "" {
+			return false
+		}
+		if c.User == "" {
+			return false
+		}
+	case "socket":
+		if c.Socket == "" {
+			return false
+		}
 	}
 
 	return true

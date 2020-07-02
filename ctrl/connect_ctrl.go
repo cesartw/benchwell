@@ -92,7 +92,7 @@ func (c *ConnectCtrl) OnNewConnection() {
 	c.scr.ConnectionList.SelectRow(row)
 	c.scr.ClearForm()
 	c.scr.FocusForm()
-	c.scr.SetFormConnection(&config.Connection{Name: "New Connection", Port: 3306})
+	c.scr.SetConnection(&config.Connection{Name: "New Connection", Port: 3306})
 }
 
 func (c *ConnectCtrl) OnConnectionSelected() {
@@ -114,7 +114,7 @@ func (c *ConnectCtrl) OnConnectionSelected() {
 		return
 	}
 
-	c.scr.SetFormConnection(config.Env.Connections[row.GetIndex()])
+	c.scr.SetConnection(config.Env.Connections[row.GetIndex()])
 }
 
 func (c *ConnectCtrl) Screen() interface{} {
