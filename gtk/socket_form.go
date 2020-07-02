@@ -6,7 +6,7 @@ import (
 )
 
 type socketForm struct {
-	*gtk.Box
+	*gtk.Grid
 	fields []string
 	conn   *config.Connection
 
@@ -27,22 +27,13 @@ type socketForm struct {
 func (f socketForm) Init() (*socketForm, error) {
 	var err error
 
-	f.Box, err = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
+	f.Grid, err = gtk.GridNew()
 	if err != nil {
 		return nil, err
 	}
-
-	labelsBox, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	inputsBox, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
-	if err != nil {
-		return nil, err
-	}
-	f.Box.PackStart(labelsBox, true, false, 5)
-	f.Box.PackStart(inputsBox, false, false, 5)
+	f.SetName("form")
+	f.SetColumnHomogeneous(true)
+	f.SetRowSpacing(5)
 
 	f.labelName, err = gtk.LabelNew("Name")
 	if err != nil {
@@ -101,16 +92,20 @@ func (f socketForm) Init() (*socketForm, error) {
 		return nil, err
 	}
 
-	labelsBox.PackStart(f.labelName, true, true, 5)
-	inputsBox.PackStart(f.entryName, true, true, 5)
-	labelsBox.PackStart(f.labelSocket, true, true, 5)
-	inputsBox.PackStart(f.entrySocket, true, true, 5)
-	labelsBox.PackStart(f.labelUser, true, true, 5)
-	inputsBox.PackStart(f.entryUser, true, true, 5)
-	labelsBox.PackStart(f.labelPassword, true, true, 5)
-	inputsBox.PackStart(f.entryPassword, true, true, 5)
-	labelsBox.PackStart(f.labelDatabase, true, true, 5)
-	inputsBox.PackStart(f.entryDatabase, true, true, 5)
+	f.Attach(f.labelName, 0, 0, 1, 1)
+	f.Attach(f.entryName, 1, 0, 2, 1)
+
+	f.Attach(f.labelSocket, 0, 2, 1, 1)
+	f.Attach(f.entrySocket, 1, 2, 2, 1)
+
+	f.Attach(f.labelUser, 0, 3, 1, 1)
+	f.Attach(f.entryUser, 1, 3, 2, 1)
+
+	f.Attach(f.labelPassword, 0, 4, 1, 1)
+	f.Attach(f.entryPassword, 1, 4, 2, 1)
+
+	f.Attach(f.labelDatabase, 0, 5, 1, 1)
+	f.Attach(f.entryDatabase, 1, 5, 2, 1)
 
 	return &f, nil
 }

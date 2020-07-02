@@ -76,4 +76,8 @@ list row image {
 overlay > box {
 	background-color: rgba(0, 0, 0, 0.4);
 }
+
+#form {
+	padding: 10px;
+}
 `

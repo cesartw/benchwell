@@ -138,6 +138,8 @@ type Connection struct {
 	User      string  `mapstructure:"user"`
 	Password  string  `mapstructure:"password"`
 	Database  string  `mapstructure:"database"`
+	SshHost   string  `mapstructure:"sshhost"`
+	SshAgent  string  `mapstructure:"sshsocket"`
 	Options   string  `mapstructure:"options"`
 	Encrypted bool    `mapstructure:"encrypted"`
 	Queries   []Query `mapstructure:"queries"`
@@ -173,6 +175,13 @@ func (c Connection) GetDSN() string {
 		}
 	case "socket":
 		b.WriteString("unix(" + c.Socket)
+	case "ssh":
+		b.WriteString("ssh(" + c.Host)
+
+		if c.Port != 0 {
+			b.WriteString(fmt.Sprintf(":%d", c.Port))
+		}
+		b.WriteString("," + c.SshHost + ";" + c.SshAgent)
 	default:
 		return ""
 	}

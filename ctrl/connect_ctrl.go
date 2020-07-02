@@ -1,6 +1,8 @@
 package ctrl
 
 import (
+	"context"
+
 	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/gtk"
 )
@@ -40,7 +42,7 @@ func (c *ConnectCtrl) OnTest() {
 		conn = c.scr.GetFormConnection()
 	}
 
-	ctx, err := c.Engine.Connect(nil, *conn)
+	ctx, err := c.Engine.Connect(context.Background(), *conn)
 	if err != nil {
 		config.Env.Log.Error(err)
 		c.window.PushStatus("Fail connection `%s`(%s): %s", conn.Name, conn.Host, err.Error())

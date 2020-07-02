@@ -13,6 +13,7 @@ type ConnectScreen struct {
 		notebook   *gtk.Notebook
 		tcpForm    *tcpForm
 		socketForm *socketForm
+		sshForm    *sshForm
 		active     interface {
 			Clear()
 			GetConnection() *config.Connection
@@ -184,7 +185,7 @@ func (c *ConnectScreen) initMenu() error {
 	return nil
 }
 
-func (c *ConnectScreen) buildTcpForm() (gtk.IWidget, *tcpForm, error) {
+func (c *ConnectScreen) buildTcpForm() (*gtk.Label, *tcpForm, error) {
 	label, err := gtk.LabelNew("TCP/IP")
 	if err != nil {
 		return nil, nil, err
@@ -201,13 +202,30 @@ func (c *ConnectScreen) buildTcpForm() (gtk.IWidget, *tcpForm, error) {
 	return label, frm, nil
 }
 
-func (c *ConnectScreen) buildSocketForm() (gtk.IWidget, *socketForm, error) {
+func (c *ConnectScreen) buildSocketForm() (*gtk.Label, *socketForm, error) {
 	label, err := gtk.LabelNew("Socket")
 	if err != nil {
 		return nil, nil, err
 	}
 
 	frm, err := socketForm{}.Init()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	frm.ShowAll()
+	label.Show()
+
+	return label, frm, nil
+}
+
+func (c *ConnectScreen) buildSshForm() (*gtk.Label, *sshForm, error) {
+	label, err := gtk.LabelNew("SSH")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	frm, err := sshForm{}.Init()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -250,6 +268,10 @@ func (c *ConnectScreen) FocusForm() {
 }
 
 func (c *ConnectScreen) SetConnection(conn *config.Connection) {
+	c.forms.tcpForm.Clear()
+	c.forms.socketForm.Clear()
+	c.forms.sshForm.Clear()
+
 	switch conn.Type {
 	case "tcp":
 		c.forms.active = c.forms.tcpForm
@@ -257,6 +279,9 @@ func (c *ConnectScreen) SetConnection(conn *config.Connection) {
 	case "socket":
 		c.forms.active = c.forms.socketForm
 		c.forms.notebook.SetCurrentPage(1)
+	case "ssh":
+		c.forms.active = c.forms.sshForm
+		c.forms.notebook.SetCurrentPage(2)
 	default:
 		return
 	}
@@ -291,13 +316,12 @@ func (c *ConnectScreen) buildForms() (*gtk.Box, error) {
 	if err != nil {
 		return nil, err
 	}
+	c.forms.notebook.SetCanFocus(true)
 	box.Add(c.forms.notebook)
 
 	box.SetSizeRequest(300, 200)
 	box.SetVAlign(gtk.ALIGN_CENTER)
 	box.SetHAlign(gtk.ALIGN_CENTER)
-	c.forms.notebook.SetShowBorder(true)
-	c.forms.notebook.SetCanFocus(true)
 
 	// TCP
 	{
@@ -363,6 +387,39 @@ func (c *ConnectScreen) buildForms() (*gtk.Box, error) {
 
 		c.forms.notebook.AppendPage(frm, label)
 		c.forms.socketForm = frm
+	}
+
+	// SSH
+	{
+		label, frm, err := c.buildSshForm()
+		if err != nil {
+			return nil, err
+		}
+		frm.onChange(func(_ *gtk.Entry, e *gdk.Event) bool {
+			conn := c.forms.active.GetConnection()
+
+			if conn.Valid() {
+				c.btnConnect.SetSensitive(true)
+				c.btnTest.SetSensitive(true)
+				c.btnSave.SetSensitive(true)
+
+				keyEvent := gdk.EventKeyNewFromEvent(e)
+				if keyEvent.KeyVal() == 65293 && keyEvent.State()&gdk.CONTROL_MASK > 0 {
+					c.btnConnect.Emit("activate")
+					return false
+				}
+
+				return false
+			}
+
+			c.btnConnect.SetSensitive(false)
+			c.btnTest.SetSensitive(false)
+			c.btnSave.SetSensitive(false)
+			return false
+		})
+
+		c.forms.notebook.AppendPage(frm, label)
+		c.forms.sshForm = frm
 	}
 
 	c.forms.active = c.forms.tcpForm

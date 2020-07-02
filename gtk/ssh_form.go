@@ -8,36 +8,41 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 )
 
-type tcpForm struct {
+type sshForm struct {
 	*gtk.Grid
 	fields []string
 	conn   *config.Connection
 
 	entryName     *gtk.Entry
-	entryHost     *gtk.Entry
+	entryDbHost   *gtk.Entry
 	entryPort     *gtk.Entry
 	entryUser     *gtk.Entry
 	entryPassword *gtk.Entry
 	entryDatabase *gtk.Entry
 
 	labelName     *gtk.Label
-	labelHost     *gtk.Label
+	labelDbHost   *gtk.Label
 	labelPort     *gtk.Label
 	labelUser     *gtk.Label
 	labelPassword *gtk.Label
 	labelDatabase *gtk.Label
+
+	entrySshHost  *gtk.Entry
+	entrySshAgent *gtk.Entry
+
+	labelSshHost  *gtk.Label
+	labelSshAgent *gtk.Label
 }
 
-func (f tcpForm) Init() (*tcpForm, error) {
+func (f sshForm) Init() (*sshForm, error) {
 	var err error
-
 	f.Grid, err = gtk.GridNew()
 	if err != nil {
 		return nil, err
 	}
 	f.SetName("form")
-	f.SetColumnHomogeneous(true)
-	f.SetRowSpacing(5)
+	f.Grid.SetColumnHomogeneous(true)
+	f.Grid.SetRowSpacing(5)
 
 	f.labelName, err = gtk.LabelNew("Name")
 	if err != nil {
@@ -50,13 +55,13 @@ func (f tcpForm) Init() (*tcpForm, error) {
 		return nil, err
 	}
 
-	f.labelHost, err = gtk.LabelNew("Host")
+	f.labelDbHost, err = gtk.LabelNew("Host")
 	if err != nil {
 		return nil, err
 	}
-	f.labelHost.SetHAlign(gtk.ALIGN_START)
+	f.labelDbHost.SetHAlign(gtk.ALIGN_START)
 
-	f.entryHost, err = gtk.EntryNew()
+	f.entryDbHost, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
@@ -108,11 +113,54 @@ func (f tcpForm) Init() (*tcpForm, error) {
 		return nil, err
 	}
 
+	// SSH
+	sshFrame, err := gtk.FrameNew("SSH")
+	if err != nil {
+		return nil, err
+	}
+	sshFrame.SetProperty("shadow-type", gtk.SHADOW_NONE)
+
+	sshBox, err := gtk.GridNew()
+	if err != nil {
+		return nil, err
+	}
+
+	f.labelSshHost, err = gtk.LabelNew("Host")
+	if err != nil {
+		return nil, err
+	}
+	f.labelSshHost.SetHAlign(gtk.ALIGN_START)
+
+	f.entrySshHost, err = gtk.EntryNew()
+	if err != nil {
+		return nil, err
+	}
+
+	f.labelSshAgent, err = gtk.LabelNew("Agent")
+	if err != nil {
+		return nil, err
+	}
+	f.labelSshAgent.SetHAlign(gtk.ALIGN_START)
+
+	f.entrySshAgent, err = gtk.EntryNew()
+	if err != nil {
+		return nil, err
+	}
+
+	sshBox.SetColumnHomogeneous(true)
+	sshBox.SetRowSpacing(5)
+	sshBox.Attach(f.labelSshHost, 0, 0, 1, 1)
+	sshBox.Attach(f.entrySshHost, 1, 0, 2, 1)
+	sshBox.Attach(f.labelSshAgent, 0, 1, 1, 1)
+	sshBox.Attach(f.entrySshAgent, 1, 1, 2, 1)
+	sshFrame.Add(sshBox)
+
+	//f.Grid.SetRowHomogeneous(true)
 	f.Attach(f.labelName, 0, 0, 1, 1)
 	f.Attach(f.entryName, 1, 0, 2, 1)
 
-	f.Attach(f.labelHost, 0, 1, 1, 1)
-	f.Attach(f.entryHost, 1, 1, 2, 1)
+	f.Attach(f.labelDbHost, 0, 1, 1, 1)
+	f.Attach(f.entryDbHost, 1, 1, 2, 1)
 
 	f.Attach(f.labelPort, 0, 2, 1, 1)
 	f.Attach(f.entryPort, 1, 2, 2, 1)
@@ -126,36 +174,57 @@ func (f tcpForm) Init() (*tcpForm, error) {
 	f.Attach(f.labelDatabase, 0, 5, 1, 1)
 	f.Attach(f.entryDatabase, 1, 5, 2, 1)
 
+	f.Attach(sshFrame, 0, 6, 3, 2)
+
 	return &f, nil
 }
 
-func (f *tcpForm) Clear() {
+func (f *sshForm) newInput(l string) (*gtk.Label, *gtk.Entry, error) {
+	label, err := gtk.LabelNew(l)
+	if err != nil {
+		return nil, nil, err
+	}
+	label.SetHAlign(gtk.ALIGN_START)
+
+	entry, err := gtk.EntryNew()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return label, entry, nil
+}
+
+func (f *sshForm) Clear() {
 	f.entryName.SetText("")
-	f.entryHost.SetText("")
+	f.entryDbHost.SetText("")
 	f.entryPort.SetText("")
 	f.entryUser.SetText("")
 	f.entryPassword.SetText("")
 	f.entryDatabase.SetText("")
+	f.entrySshHost.SetText("")
+	f.entrySshAgent.SetText("")
 }
 
-func (f *tcpForm) GrabFocus() {
+func (f *sshForm) GrabFocus() {
 	f.entryName.GrabFocus()
 }
 
-func (f *tcpForm) SetConnection(conn *config.Connection) {
+func (f *sshForm) SetConnection(conn *config.Connection) {
 	f.conn = conn
 	f.entryName.SetText(conn.Name)
-	f.entryHost.SetText(conn.Host)
+	f.entryDbHost.SetText(conn.Host)
 	f.entryPort.SetText(fmt.Sprintf("%d", conn.Port))
 	f.entryUser.SetText(conn.User)
 	f.entryPassword.SetText(conn.Password)
 	f.entryDatabase.SetText(conn.Database)
+	f.entrySshHost.SetText(conn.SshHost)
+	f.entrySshAgent.SetText(conn.SshAgent)
 }
 
-func (f *tcpForm) GetConnection() *config.Connection {
-	f.conn.Type = "socket"
+func (f *sshForm) GetConnection() *config.Connection {
+	f.conn.Type = "ssh"
 	f.conn.Name, _ = f.entryName.GetText()
-	f.conn.Host, _ = f.entryHost.GetText()
+	f.conn.Host, _ = f.entryDbHost.GetText()
 	portS, _ := f.entryPort.GetText()
 	if portS == "" {
 		f.conn.Port = 3306
@@ -165,15 +234,19 @@ func (f *tcpForm) GetConnection() *config.Connection {
 	f.conn.User, _ = f.entryUser.GetText()
 	f.conn.Password, _ = f.entryPassword.GetText()
 	f.conn.Database, _ = f.entryDatabase.GetText()
+	f.conn.SshHost, _ = f.entrySshHost.GetText()
+	f.conn.SshAgent, _ = f.entrySshAgent.GetText()
 
 	return f.conn
 }
 
-func (f *tcpForm) onChange(fn interface{}) {
+func (f *sshForm) onChange(fn interface{}) {
 	f.entryName.Connect("key-release-event", fn)
-	f.entryHost.Connect("key-release-event", fn)
+	f.entryDbHost.Connect("key-release-event", fn)
 	f.entryPort.Connect("key-release-event", fn)
 	f.entryUser.Connect("key-release-event", fn)
 	f.entryPassword.Connect("key-release-event", fn)
 	f.entryDatabase.Connect("key-release-event", fn)
+	f.entrySshHost.Connect("key-release-event", fn)
+	f.entrySshAgent.Connect("key-release-event", fn)
 }
