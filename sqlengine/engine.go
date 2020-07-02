@@ -95,7 +95,7 @@ func (e *Engine) Databases(c *Context) ([]string, error) {
 		return nil, errors.New("no connection available")
 	}
 
-	dbNames, err := conn.Databases(c.Context())
+	dbNames, err := conn.Databases(driver.SetLogger(c.Context(), c.Logger))
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (e *Engine) UseDatabase(c *Context, dbName string) (*Context, error) {
 		return c, ErrNoConnection
 	}
 
-	dbs, err := conn.Databases(c.Context())
+	dbs, err := conn.Databases(driver.SetLogger(c.Context(), c.Logger))
 	if err != nil {
 		return c, err
 	}
@@ -127,7 +127,7 @@ func (e *Engine) UseDatabase(c *Context, dbName string) (*Context, error) {
 		return c, ErrDatabaseNotFound
 	}
 
-	db, err := conn.UseDatabase(c.Context(), dbName)
+	db, err := conn.UseDatabase(driver.SetLogger(c.Context(), c.Logger), dbName)
 	if err != nil {
 		return c, err
 	}
@@ -151,7 +151,7 @@ func (e *Engine) Tables(c *Context) ([]driver.TableDef, error) {
 		return nil, ErrNoDatabase
 	}
 
-	tables, err := db.Tables(c.Context())
+	tables, err := db.Tables(driver.SetLogger(c.Context(), c.Logger))
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +182,7 @@ func (e *Engine) FetchTable(
 		return nil, nil, ErrNoDatabase
 	}
 
-	return db.FetchTable(c.Context(), table.Name, opts)
+	return db.FetchTable(driver.SetLogger(driver.SetLogger(c.Context(), c.Logger), c.Logger), table.Name, opts)
 }
 
 // DeleteRecord ...
@@ -197,7 +197,7 @@ func (e *Engine) DeleteRecord(c *Context, tableName string, defs []driver.ColDef
 		return ErrNoDatabase
 	}
 
-	return db.DeleteRecord(c.Context(), tableName, defs, values)
+	return db.DeleteRecord(driver.SetLogger(c.Context(), c.Logger), tableName, defs, values)
 }
 
 // UpdateFields ...
@@ -218,7 +218,7 @@ func (e *Engine) UpdateFields(
 		return "", ErrNoDatabase
 	}
 
-	return db.UpdateFields(c.Context(), tableName, defs, values, keycount)
+	return db.UpdateFields(driver.SetLogger(c.Context(), c.Logger), tableName, defs, values, keycount)
 }
 
 // UpdateField ...
@@ -238,7 +238,7 @@ func (e *Engine) UpdateField(
 		return "", ErrNoDatabase
 	}
 
-	return db.UpdateField(c.Context(), tableName, defs, values)
+	return db.UpdateField(driver.SetLogger(c.Context(), c.Logger), tableName, defs, values)
 }
 
 // ParseValue ...
@@ -277,7 +277,7 @@ func (e *Engine) UpdateRecord(
 		return "", ErrNoDatabase
 	}
 
-	return db.UpdateRecord(c.Context(), tableName, defs, values, oldValues)
+	return db.UpdateRecord(driver.SetLogger(c.Context(), c.Logger), tableName, defs, values, oldValues)
 }
 
 // InsertRecord ...
@@ -297,7 +297,7 @@ func (e *Engine) InsertRecord(
 		return nil, ErrNoDatabase
 	}
 
-	return db.InsertRecord(c.Context(), tableName, defs, values)
+	return db.InsertRecord(driver.SetLogger(c.Context(), c.Logger), tableName, defs, values)
 }
 
 // Disconnect ...
@@ -316,7 +316,7 @@ func (e *Engine) Query(c *Context, query string) ([]string, [][]interface{}, err
 		return nil, nil, ErrNoDatabase
 	}
 
-	return db.Query(c.Context(), query)
+	return db.Query(driver.SetLogger(c.Context(), c.Logger), query)
 }
 
 func (e *Engine) Execute(c *Context, query string) (string, int64, error) {
@@ -325,7 +325,7 @@ func (e *Engine) Execute(c *Context, query string) (string, int64, error) {
 		return "", 0, ErrNoDatabase
 	}
 
-	return db.Execute(c.Context(), query)
+	return db.Execute(driver.SetLogger(c.Context(), c.Logger), query)
 }
 
 func (e *Engine) GetCreateTable(c *Context, tableName string) (string, error) {
@@ -334,7 +334,7 @@ func (e *Engine) GetCreateTable(c *Context, tableName string) (string, error) {
 		return "", ErrNoDatabase
 	}
 
-	return db.GetCreateTable(c.Context(), tableName)
+	return db.GetCreateTable(driver.SetLogger(c.Context(), c.Logger), tableName)
 }
 
 func (e *Engine) GetInsertStatement(
@@ -348,7 +348,7 @@ func (e *Engine) GetInsertStatement(
 		return "", ErrNoDatabase
 	}
 
-	return db.GetInsertStatement(c.Context(), tableName, cols, values)
+	return db.GetInsertStatement(driver.SetLogger(c.Context(), c.Logger), tableName, cols, values)
 }
 
 func (e *Engine) GetSelectStatement(
@@ -360,7 +360,7 @@ func (e *Engine) GetSelectStatement(
 		return "", ErrNoDatabase
 	}
 
-	return db.GetSelectStatement(c.Context(), table)
+	return db.GetSelectStatement(driver.SetLogger(c.Context(), c.Logger), table)
 }
 
 func (e *Engine) TruncateTable(
@@ -372,7 +372,7 @@ func (e *Engine) TruncateTable(
 		return ErrNoDatabase
 	}
 
-	return db.TruncateTable(c.Context(), table)
+	return db.TruncateTable(driver.SetLogger(c.Context(), c.Logger), table)
 }
 
 func (e *Engine) DeleteTable(
@@ -384,7 +384,7 @@ func (e *Engine) DeleteTable(
 		return ErrNoDatabase
 	}
 
-	return db.DeleteTable(c.Context(), table)
+	return db.DeleteTable(driver.SetLogger(c.Context(), c.Logger), table)
 }
 
 // Dispose ...

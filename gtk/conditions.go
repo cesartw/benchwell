@@ -1,6 +1,7 @@
 package gtk
 
 import (
+	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
@@ -104,13 +105,16 @@ func (c *Conditions) Add() error {
 func (c *Conditions) Statements() ([]driver.CondStmt, error) {
 	stmts := []driver.CondStmt{}
 	for _, cond := range c.conditions {
-		cond.tryToSelect()
 		if !cond.activeCb.GetActive() {
 			continue
 		}
 		var field driver.ColDef
 		// ffs
-		textField, _ := cond.Field()
+		textField, err := cond.Field()
+		if err != nil {
+			return nil, err
+		}
+
 		for _, col := range c.cols {
 			if col.Name == textField {
 				field = col
@@ -154,6 +158,7 @@ func (c *Conditions) Update(cols []driver.ColDef) error {
 
 	//update columns in remaining conditions
 	for _, cond := range c.conditions {
+		cond.cols = cols
 		field, err := cond.Field()
 		if err != nil {
 			return err
@@ -185,13 +190,13 @@ func (c *Conditions) Update(cols []driver.ColDef) error {
 		cond.activeCb.SetActive(true)
 
 		cond.store.Clear()
-		for _, col := range cols {
+		cond.store.SetValue(cond.store.Append(), 0, "")
+		for _, col := range c.cols {
 			cond.store.SetValue(cond.store.Append(), 0, col.Name)
 		}
 		cond.fieldCb.SetActiveID(field)
 	}
 
-	c.cols = cols
 	if len(c.conditions) == 0 {
 		return c.Add()
 	}
@@ -223,15 +228,21 @@ func (c Condition) Init(cols []driver.ColDef) (*Condition, error) {
 	}
 	c.fieldCb.SetEntryTextColumn(0)
 	c.fieldCb.SetProperty("id-column", 0)
-	completion, _ := gtk.EntryCompletionNew()
+	completion, err := gtk.EntryCompletionNew()
+	if err != nil {
+		return nil, err
+	}
+	completion.SetProperty("text-column", 0)
 	completion.SetProperty("inline-completion", true)
-	completion.SetTextColumn(0)
+	completion.SetProperty("inline-selection", true)
 	completion.SetMinimumKeyLength(2)
 	completion.SetModel(c.store)
-	completion.Connect("match-selected", c.onSelected)
-	//completion.Connect("cursor-on-match", c.onSelected)
-	entry, _ := c.fieldCb.GetEntry()
+	entry, err := c.fieldCb.GetEntry()
+	if err != nil {
+		return nil, err
+	}
 	entry.SetCompletion(completion)
+	entry.Connect("focus-out-event", c.onFocusOut)
 
 	c.opCb, err = gtk.ComboBoxTextNew()
 	if err != nil {
@@ -266,7 +277,6 @@ func (c Condition) Init(cols []driver.ColDef) (*Condition, error) {
 }
 
 func (c *Condition) Field() (string, error) {
-	c.tryToSelect()
 	if c.fieldCb.GetActiveID() == "" {
 		return "", nil
 	}
@@ -289,23 +299,35 @@ func (c *Condition) Field() (string, error) {
 	return textField, nil
 }
 
-func (c *Condition) tryToSelect() {
-	iter, err := c.fieldCb.GetActiveIter()
-	if iter != nil || err == nil {
+func (c *Condition) onFocusOut() {
+	entry, err := c.fieldCb.GetEntry()
+	if err != nil {
+		config.Env.Log.Error(err)
 		return
 	}
 
-	e, _ := c.fieldCb.GetEntry()
-	field, _ := e.GetText()
+	field, err := entry.GetText()
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+	}
+
+	selectedText, err := c.Field()
+	if err != nil {
+		config.Env.Log.Error(err)
+		return
+
+	}
+
+	if field == selectedText {
+		return
+	}
 
 	for i, col := range c.cols {
-		if col.Name == field {
-			c.fieldCb.SetActive(i + 1) // + 1 because of the empty row
-			break
+		if col.Name != field {
+			continue
 		}
-	}
-}
 
-func (c *Condition) onSelected(_ *gtk.EntryCompletion, _ *gtk.TreeModel, iter *gtk.TreeIter) {
-	c.fieldCb.SetActiveIter(iter)
+		c.fieldCb.SetActive(i + 1) // +1 because of the blank row
+	}
 }
