@@ -19,6 +19,7 @@ treeview.view button {
 }
 
 #queryactionbar box {
+	background-color: #fff;
 }
 
 notebook#MainNotebook header {
