@@ -129,7 +129,7 @@ type Config struct {
 
 // Connection ...
 type Connection struct {
-	Adapter   string  `mapstructure:"-"`
+	Adapter   string  `mapstructure:"adapter"`
 	Type      string  `mapstructure:"type"`
 	Name      string  `mapstructure:"name"`
 	Socket    string  `mapstructure:"socket"`
@@ -196,24 +196,6 @@ func (c Connection) GetDSN() string {
 	}
 
 	return b.String()
-}
-
-func (c Connection) Valid() bool {
-	switch c.Type {
-	case "tcp":
-		if c.Host == "" {
-			return false
-		}
-		if c.User == "" {
-			return false
-		}
-	case "socket":
-		if c.Socket == "" {
-			return false
-		}
-	}
-
-	return true
 }
 
 // Save current configuration

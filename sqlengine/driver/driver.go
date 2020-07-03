@@ -158,9 +158,19 @@ func Connect(ctx context.Context, cfg config.Connection) (Connection, error) {
 	return d.Connect(ctx, cfg)
 }
 
+func ValidateConnection(conn config.Connection) bool {
+	driver, ok := drivers[conn.Adapter]
+	if !ok {
+		panic("unknown driver")
+	}
+
+	return driver.ValidateConnection(conn)
+}
+
 // Driver is a database implementation for SQLHero
 type Driver interface {
 	Connect(context.Context, config.Connection) (Connection, error)
+	ValidateConnection(config.Connection) bool
 }
 
 // Connection ...

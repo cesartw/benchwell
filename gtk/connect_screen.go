@@ -2,6 +2,7 @@ package gtk
 
 import (
 	"bitbucket.org/goreorto/sqlaid/config"
+	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
 )
@@ -16,7 +17,7 @@ type ConnectScreen struct {
 		sshForm    *sshForm
 		active     interface {
 			Clear()
-			GetConnection() *config.Connection
+			GetConnection() (*config.Connection, bool)
 			GrabFocus()
 			SetConnection(conn *config.Connection)
 		}
@@ -283,16 +284,16 @@ func (c *ConnectScreen) SetConnection(conn *config.Connection) {
 		c.forms.active = c.forms.sshForm
 		c.forms.notebook.SetCurrentPage(2)
 	default:
+		config.Env.Log.Errorf("invalid connection type '%s'", conn.Type)
 		return
 	}
 
 	c.forms.active.SetConnection(conn)
 
-	if conn.Valid() {
-		c.btnConnect.SetSensitive(true)
-		c.btnTest.SetSensitive(true)
-		c.btnSave.SetSensitive(true)
-	}
+	valid := driver.ValidateConnection(*conn)
+	c.btnConnect.SetSensitive(valid)
+	c.btnTest.SetSensitive(valid)
+	c.btnSave.SetSensitive(valid)
 }
 
 func (c *ConnectScreen) ActiveConnectionIndex() int {
@@ -329,28 +330,7 @@ func (c *ConnectScreen) buildForms() (*gtk.Box, error) {
 		if err != nil {
 			return nil, err
 		}
-		frm.onChange(func(_ *gtk.Entry, e *gdk.Event) bool {
-			conn := c.forms.active.GetConnection()
-
-			if conn.Valid() {
-				c.btnConnect.SetSensitive(true)
-				c.btnTest.SetSensitive(true)
-				c.btnSave.SetSensitive(true)
-
-				keyEvent := gdk.EventKeyNewFromEvent(e)
-				if keyEvent.KeyVal() == 65293 && keyEvent.State()&gdk.CONTROL_MASK > 0 {
-					c.btnConnect.Emit("activate")
-					return false
-				}
-
-				return false
-			}
-
-			c.btnConnect.SetSensitive(false)
-			c.btnTest.SetSensitive(false)
-			c.btnSave.SetSensitive(false)
-			return false
-		})
+		frm.onChange(c.onFormChanged)
 
 		c.forms.notebook.AppendPage(frm, label)
 		c.forms.tcpForm = frm
@@ -362,28 +342,7 @@ func (c *ConnectScreen) buildForms() (*gtk.Box, error) {
 		if err != nil {
 			return nil, err
 		}
-		frm.onChange(func(_ *gtk.Entry, e *gdk.Event) bool {
-			conn := c.forms.active.GetConnection()
-
-			if conn.Valid() {
-				c.btnConnect.SetSensitive(true)
-				c.btnTest.SetSensitive(true)
-				c.btnSave.SetSensitive(true)
-
-				keyEvent := gdk.EventKeyNewFromEvent(e)
-				if keyEvent.KeyVal() == 65293 && keyEvent.State()&gdk.CONTROL_MASK > 0 {
-					c.btnConnect.Emit("activate")
-					return false
-				}
-
-				return false
-			}
-
-			c.btnConnect.SetSensitive(false)
-			c.btnTest.SetSensitive(false)
-			c.btnSave.SetSensitive(false)
-			return false
-		})
+		frm.onChange(c.onFormChanged)
 
 		c.forms.notebook.AppendPage(frm, label)
 		c.forms.socketForm = frm
@@ -395,40 +354,62 @@ func (c *ConnectScreen) buildForms() (*gtk.Box, error) {
 		if err != nil {
 			return nil, err
 		}
-		frm.onChange(func(_ *gtk.Entry, e *gdk.Event) bool {
-			conn := c.forms.active.GetConnection()
-
-			if conn.Valid() {
-				c.btnConnect.SetSensitive(true)
-				c.btnTest.SetSensitive(true)
-				c.btnSave.SetSensitive(true)
-
-				keyEvent := gdk.EventKeyNewFromEvent(e)
-				if keyEvent.KeyVal() == 65293 && keyEvent.State()&gdk.CONTROL_MASK > 0 {
-					c.btnConnect.Emit("activate")
-					return false
-				}
-
-				return false
-			}
-
-			c.btnConnect.SetSensitive(false)
-			c.btnTest.SetSensitive(false)
-			c.btnSave.SetSensitive(false)
-			return false
-		})
+		frm.onChange(c.onFormChanged)
 
 		c.forms.notebook.AppendPage(frm, label)
 		c.forms.sshForm = frm
 	}
 
 	c.forms.active = c.forms.tcpForm
+	// forms need to be built before can handle this signal
+	c.forms.notebook.Connect("switch-page", c.onChangeCurrentPage)
 
 	return box, nil
 }
 
 func (c *ConnectScreen) GetFormConnection() *config.Connection {
-	conn := c.forms.active.GetConnection()
+	conn, _ := c.forms.active.GetConnection()
 	//conn.Queries = c.activeForm.queries
 	return conn
+}
+
+func (c *ConnectScreen) onChangeCurrentPage(_ *gtk.Notebook, _ gtk.IWidget, currentPage int) {
+	switch currentPage {
+	case 0:
+		c.forms.active = c.forms.tcpForm
+	case 1:
+		c.forms.active = c.forms.socketForm
+	case 2:
+		c.forms.active = c.forms.sshForm
+	}
+
+	conn, isNew := c.forms.active.GetConnection()
+	if isNew {
+		c.btnConnect.SetSensitive(false)
+		c.btnTest.SetSensitive(false)
+		c.btnSave.SetSensitive(false)
+		return
+	}
+
+	c.btnConnect.SetSensitive(driver.ValidateConnection(*conn))
+	c.btnTest.SetSensitive(driver.ValidateConnection(*conn))
+	c.btnSave.SetSensitive(driver.ValidateConnection(*conn))
+}
+
+func (c *ConnectScreen) onFormChanged(_ *gtk.Entry, e *gdk.Event) {
+	conn, _ := c.forms.active.GetConnection()
+
+	valid := driver.ValidateConnection(*conn)
+	c.btnConnect.SetSensitive(valid)
+	c.btnTest.SetSensitive(valid)
+	c.btnSave.SetSensitive(valid)
+
+	if valid {
+		keyEvent := gdk.EventKeyNewFromEvent(e)
+		if keyEvent.KeyVal() == 65293 && keyEvent.State()&gdk.CONTROL_MASK > 0 {
+			c.btnConnect.Emit("activate")
+		}
+
+		return
+	}
 }

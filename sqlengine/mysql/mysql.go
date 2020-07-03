@@ -44,6 +44,34 @@ func (d *mysqlDriver) Connect(ctx context.Context, cfg config.Connection) (drive
 	return d.connect(ctx)
 }
 
+func (d *mysqlDriver) ValidateConnection(c config.Connection) bool {
+	switch c.Type {
+	case "ssh":
+		if c.SshAgent == "" {
+			return false
+		}
+		if c.SshHost == "" {
+			return false
+		}
+		fallthrough
+	case "tcp":
+		if c.Host == "" {
+			return false
+		}
+		if c.User == "" {
+			return false
+		}
+	case "socket":
+		if c.Socket == "" {
+			return false
+		}
+	default:
+		return false
+	}
+
+	return true
+}
+
 func (d *mysqlDriver) dsn() string {
 	colonS := strings.Split(d.cfgCon.GetDSN(), ":")
 	dsn := strings.TrimPrefix(d.cfgCon.GetDSN(), colonS[0]+"://")

@@ -221,23 +221,30 @@ func (f *sshForm) SetConnection(conn *config.Connection) {
 	f.entrySshAgent.SetText(conn.SshAgent)
 }
 
-func (f *sshForm) GetConnection() *config.Connection {
-	f.conn.Type = "ssh"
-	f.conn.Name, _ = f.entryName.GetText()
-	f.conn.Host, _ = f.entryDbHost.GetText()
+func (f *sshForm) GetConnection() (*config.Connection, bool) {
+	var newConn bool
+	conn := f.conn
+	if conn == nil {
+		conn = &config.Connection{Adapter: "mysql"}
+		newConn = true
+	}
+
+	conn.Type = "ssh"
+	conn.Name, _ = f.entryName.GetText()
+	conn.Host, _ = f.entryDbHost.GetText()
 	portS, _ := f.entryPort.GetText()
 	if portS == "" {
-		f.conn.Port = 3306
+		conn.Port = 3306
 	} else {
-		f.conn.Port, _ = strconv.Atoi(portS)
+		conn.Port, _ = strconv.Atoi(portS)
 	}
-	f.conn.User, _ = f.entryUser.GetText()
-	f.conn.Password, _ = f.entryPassword.GetText()
-	f.conn.Database, _ = f.entryDatabase.GetText()
-	f.conn.SshHost, _ = f.entrySshHost.GetText()
-	f.conn.SshAgent, _ = f.entrySshAgent.GetText()
+	conn.User, _ = f.entryUser.GetText()
+	conn.Password, _ = f.entryPassword.GetText()
+	conn.Database, _ = f.entryDatabase.GetText()
+	conn.SshHost, _ = f.entrySshHost.GetText()
+	conn.SshAgent, _ = f.entrySshAgent.GetText()
 
-	return f.conn
+	return conn, newConn
 }
 
 func (f *sshForm) onChange(fn interface{}) {

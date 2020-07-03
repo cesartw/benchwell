@@ -152,21 +152,28 @@ func (f *tcpForm) SetConnection(conn *config.Connection) {
 	f.entryDatabase.SetText(conn.Database)
 }
 
-func (f *tcpForm) GetConnection() *config.Connection {
-	f.conn.Type = "socket"
-	f.conn.Name, _ = f.entryName.GetText()
-	f.conn.Host, _ = f.entryHost.GetText()
+func (f *tcpForm) GetConnection() (*config.Connection, bool) {
+	var newConn bool
+	conn := f.conn
+	if conn == nil {
+		newConn = true
+		conn = &config.Connection{Adapter: "mysql"}
+	}
+
+	conn.Type = "tcp"
+	conn.Name, _ = f.entryName.GetText()
+	conn.Host, _ = f.entryHost.GetText()
 	portS, _ := f.entryPort.GetText()
 	if portS == "" {
-		f.conn.Port = 3306
+		conn.Port = 3306
 	} else {
-		f.conn.Port, _ = strconv.Atoi(portS)
+		conn.Port, _ = strconv.Atoi(portS)
 	}
-	f.conn.User, _ = f.entryUser.GetText()
-	f.conn.Password, _ = f.entryPassword.GetText()
-	f.conn.Database, _ = f.entryDatabase.GetText()
+	conn.User, _ = f.entryUser.GetText()
+	conn.Password, _ = f.entryPassword.GetText()
+	conn.Database, _ = f.entryDatabase.GetText()
 
-	return f.conn
+	return conn, newConn
 }
 
 func (f *tcpForm) onChange(fn interface{}) {

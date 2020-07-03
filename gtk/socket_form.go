@@ -131,15 +131,21 @@ func (f *socketForm) SetConnection(conn *config.Connection) {
 	f.entryDatabase.SetText(conn.Database)
 }
 
-func (f *socketForm) GetConnection() *config.Connection {
-	f.conn.Type = "tcp"
-	f.conn.Name, _ = f.entryName.GetText()
-	f.conn.Socket, _ = f.entrySocket.GetText()
-	f.conn.User, _ = f.entryUser.GetText()
-	f.conn.Password, _ = f.entryPassword.GetText()
-	f.conn.Database, _ = f.entryDatabase.GetText()
+func (f *socketForm) GetConnection() (*config.Connection, bool) {
+	var newConn bool
+	conn := f.conn
+	if conn == nil {
+		newConn = true
+		conn = &config.Connection{Adapter: "mysql"}
+	}
+	conn.Type = "socket"
+	conn.Name, _ = f.entryName.GetText()
+	conn.Socket, _ = f.entrySocket.GetText()
+	conn.User, _ = f.entryUser.GetText()
+	conn.Password, _ = f.entryPassword.GetText()
+	conn.Database, _ = f.entryDatabase.GetText()
 
-	return f.conn
+	return conn, newConn
 }
 
 func (f *socketForm) onChange(fn interface{}) {

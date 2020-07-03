@@ -1,7 +1,7 @@
 {
     "connections": [
         {
-            "adapter": "",
+            "adapter": "mysql",
             "database": "",
             "host": "localhost",
             "name": "localhost",
