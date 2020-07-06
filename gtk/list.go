@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"regexp"
 
-	"bitbucket.org/goreorto/sqlaid/config"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
+
+	"bitbucket.org/goreorto/sqlaid/config"
 )
 
 type ListOptions struct {
@@ -29,11 +30,16 @@ type List struct {
 	activeItemIndex   MVar
 	selectedItem      MVar
 	selectedItemIndex MVar
+	ctrl              listCtrl
+}
+type listCtrl interface {
+	Config() *config.Config
 }
 
-func (list List) Init(opts *ListOptions) (*List, error) {
+func (list List) Init(_ *Window, opts *ListOptions, ctrl listCtrl) (*List, error) {
 	var err error
 	list.options = opts
+	list.ctrl = ctrl
 
 	list.ListBox, err = gtk.ListBoxNew()
 	if err != nil {
@@ -67,7 +73,7 @@ func (list List) Init(opts *ListOptions) (*List, error) {
 			return true
 		}
 		if row.GetIndex() >= len(list.options.Names) {
-			config.Env.Log.Debug("mmh, list is larger than the model(fake model)")
+			list.ctrl.Config().Debug("mmh, list is larger than the model(fake model)")
 			return true
 		}
 

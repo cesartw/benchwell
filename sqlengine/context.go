@@ -5,6 +5,8 @@ import (
 
 	// drivers
 	_ "bitbucket.org/goreorto/sqlaid/sqlengine/mysql"
+	_ "bitbucket.org/goreorto/sqlaid/sqlengine/sqlite"
+
 	//_ "bitbucket.org/goreorto/sqlaid/sqlengine/test"
 
 	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"

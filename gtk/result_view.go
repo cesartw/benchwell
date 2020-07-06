@@ -50,26 +50,31 @@ type ResultView struct {
 
 	//query type
 	isDML, isDDL bool
+	ctrl         resultViewCtrl
+}
+
+type resultViewCtrl interface {
+	OnUpdateRecord([]driver.ColDef, []interface{}) error
+	OnCreateRecord([]driver.ColDef, []interface{}) ([]interface{}, error)
+	OnExecQuery(string)
+	OnRefresh()
+	OnDelete()
+	OnCreate()
+	OnCopyInsert([]driver.ColDef, []interface{})
+	OnFileSelected(string)
+	OnSaveQuery(string, string)
+	OnSaveFav(string, string)
+	OnApplyConditions()
+	Config() *config.Config
 }
 
 func (v ResultView) Init(
 	w *Window,
-	ctrl interface {
-		OnUpdateRecord([]driver.ColDef, []interface{}) error
-		OnCreateRecord([]driver.ColDef, []interface{}) ([]interface{}, error)
-		OnExecQuery(string)
-		OnRefresh()
-		OnDelete()
-		OnCreate()
-		OnCopyInsert([]driver.ColDef, []interface{})
-		OnFileSelected(string)
-		OnSaveQuery(string, string)
-		OnSaveFav(string, string)
-		OnApplyConditions()
-	},
+	ctrl resultViewCtrl,
 	parser parser,
 ) (*ResultView, error) {
 	v.w = w
+	v.ctrl = ctrl
 	var err error
 
 	v.Paned, err = gtk.PanedNew(gtk.ORIENTATION_VERTICAL)
@@ -81,7 +86,7 @@ func (v ResultView) Init(
 		return nil, err
 	}
 
-	v.textView, err = TextView{}.Init(TextViewOptions{true, true})
+	v.textView, err = TextView{}.Init(v.w, TextViewOptions{true, true}, ctrl)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +107,7 @@ func (v ResultView) Init(
 		return nil, err
 	}
 
-	v.conditions, err = Conditions{}.Init(ctrl)
+	v.conditions, err = Conditions{}.Init(v.w, ctrl)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +188,7 @@ func (v ResultView) Init(
 		return nil, err
 	}
 
-	v.result, err = Result{}.Init(ctrl, parser)
+	v.result, err = Result{}.Init(v.w, ctrl, parser)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +206,7 @@ func (v ResultView) Init(
 		"char":      gtk.WRAP_CHAR,
 		"word":      gtk.WRAP_WORD,
 		"word_char": gtk.WRAP_WORD_CHAR,
-	}[config.Env.GUI.Editor.WordWrap])
+	}[v.ctrl.Config().Editor.WordWrap.String()])
 
 	resultSW.Add(v.result)
 	textViewSW.Add(v.textView)
@@ -232,16 +237,16 @@ func (v *ResultView) Block(cancel func()) {
 func (v *ResultView) SetQuery(query string) {
 	buff, err := v.textView.GetBuffer()
 	if err != nil {
-		config.Env.Log.Error(err)
+		v.ctrl.Config().Error(err)
 		return
 	}
 
 	iter := buff.GetIterAtMark(buff.GetInsert())
 	offset := iter.GetOffset()
 
-	query, err = ChromaHighlight(query)
+	query, err = ChromaHighlight(v.ctrl.Config().EditorTheme(), query)
 	if err != nil {
-		config.Env.Log.Error(err)
+		v.ctrl.Config().Error(err)
 		return
 	}
 	buff.Delete(buff.GetStartIter(), buff.GetEndIter())
@@ -257,13 +262,13 @@ func (v *ResultView) onSaveQuery(
 	return func() {
 		buff, err := v.textView.GetBuffer()
 		if err != nil {
-			config.Env.Log.Error(err)
+			v.ctrl.Config().Error(err)
 			return
 		}
 
 		txt, err := buff.GetText(buff.GetStartIter(), buff.GetEndIter(), false)
 		if err != nil {
-			config.Env.Log.Error(err)
+			v.ctrl.Config().Error(err)
 			return
 		}
 
@@ -277,7 +282,7 @@ func (v *ResultView) onSaveFav(
 	return func() {
 		name, err := v.askFavName()
 		if err != nil {
-			config.Env.Log.Error(err)
+			v.ctrl.Config().Error(err)
 			return
 		}
 
@@ -287,13 +292,13 @@ func (v *ResultView) onSaveFav(
 
 		buff, err := v.textView.GetBuffer()
 		if err != nil {
-			config.Env.Log.Error(err)
+			v.ctrl.Config().Error(err)
 			return
 		}
 
 		query, err := buff.GetText(buff.GetStartIter(), buff.GetEndIter(), false)
 		if err != nil {
-			config.Env.Log.Error(err)
+			v.ctrl.Config().Error(err)
 			return
 		}
 
@@ -363,6 +368,10 @@ func (v *ResultView) RemoveSelected() error {
 	v.newRecordEnable(false)
 
 	return nil
+}
+
+func (v *ResultView) ForEachSelected(f func([]driver.ColDef, []interface{})) error {
+	return v.result.ForEachSelected(f)
 }
 
 func (v *ResultView) GetRowID() ([]driver.ColDef, []interface{}, error) {
@@ -492,12 +501,12 @@ func (v *ResultView) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) bool {
 	if keyEvent.KeyVal() == gdk.KEY_Return && keyEvent.State()&gdk.CONTROL_MASK > 0 {
 		buff, err := v.textView.GetBuffer()
 		if err != nil {
-			config.Env.Log.Error(err)
+			v.ctrl.Config().Error(err)
 			return true
 		}
 		txt, err := buff.GetText(buff.GetStartIter(), buff.GetEndIter(), false)
 		if err != nil {
-			config.Env.Log.Error(err)
+			v.ctrl.Config().Error(err)
 		}
 		if v.submitCallback != nil {
 			v.submitCallback(txt)
@@ -511,7 +520,7 @@ func (v *ResultView) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) bool {
 func (v *ResultView) onColFilterSearchChanged() {
 	txt, err := v.colFilter.GetText()
 	if err != nil {
-		config.Env.Log.Error(err, "colFilter.GetText")
+		v.ctrl.Config().Error(err, "colFilter.GetText")
 		return
 	}
 
@@ -534,18 +543,18 @@ func (v *ResultView) onRowActivated(_ *gtk.TreeView, path *gtk.TreePath, col *gt
 
 	iter, err := v.result.store.GetIter(path)
 	if err != nil {
-		config.Env.Log.Error(err)
+		v.ctrl.Config().Error(err)
 		return
 	}
 
 	s, err := v.result.store.GetValue(iter, len(v.result.cols))
 	if err != nil {
-		config.Env.Log.Error(err)
+		v.ctrl.Config().Error(err)
 		return
 	}
 	status, err := s.GoValue()
 	if err != nil {
-		config.Env.Log.Error(err)
+		v.ctrl.Config().Error(err)
 		return
 	}
 

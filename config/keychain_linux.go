@@ -17,7 +17,7 @@ import (
 )
 
 // modes: NONE=providernoop, DBUS=providerdbus, FALLBACK=providerbuiltin
-func InitKeyChain(mode string) {
+func initKeyChain(mode string) {
 	Keychain = new(kc)
 
 	switch mode {
@@ -29,7 +29,7 @@ func InitKeyChain(mode string) {
 			Keychain.Mode = ModeDBUS
 			return
 		}
-		Env.Log.Errorf("failed to open dbus: %#v", err)
+		//Env.Log.Errorf("failed to open dbus: %#v", err)
 
 		fallthrough
 	case ModeBUILTIN:
@@ -169,7 +169,7 @@ func (p *providerbuiltin) ask(w *gtk.Window) (string, error) {
 
 	modal, err := gtk.DialogNewWithButtons(
 		"Unlock keychain",
-		w,
+		nil,
 		gtk.DIALOG_DESTROY_WITH_PARENT|gtk.DIALOG_MODAL,
 		[]interface{}{"Unlock", gtk.RESPONSE_ACCEPT},
 		[]interface{}{"Cancel", gtk.RESPONSE_CANCEL},

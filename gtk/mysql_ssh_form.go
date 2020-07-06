@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"bitbucket.org/goreorto/sqlaid/config"
 	"github.com/gotk3/gotk3/gtk"
+
+	"bitbucket.org/goreorto/sqlaid/config"
 )
 
 type sshForm struct {
@@ -34,7 +35,7 @@ type sshForm struct {
 	labelSshAgent *gtk.Label
 }
 
-func (f sshForm) Init() (*sshForm, error) {
+func (f sshForm) Init(_ *Window) (*sshForm, error) {
 	var err error
 	f.Grid, err = gtk.GridNew()
 	if err != nil {
@@ -195,6 +196,7 @@ func (f *sshForm) newInput(l string) (*gtk.Label, *gtk.Entry, error) {
 }
 
 func (f *sshForm) Clear() {
+	f.conn = nil
 	f.entryName.SetText("")
 	f.entryDbHost.SetText("")
 	f.entryPort.SetText("")
@@ -225,10 +227,11 @@ func (f *sshForm) GetConnection() (*config.Connection, bool) {
 	var newConn bool
 	conn := f.conn
 	if conn == nil {
-		conn = &config.Connection{Adapter: "mysql"}
+		conn = &config.Connection{}
 		newConn = true
 	}
 
+	conn.Adapter = "mysql"
 	conn.Type = "ssh"
 	conn.Name, _ = f.entryName.GetText()
 	conn.Host, _ = f.entryDbHost.GetText()
@@ -247,13 +250,14 @@ func (f *sshForm) GetConnection() (*config.Connection, bool) {
 	return conn, newConn
 }
 
-func (f *sshForm) onChange(fn interface{}) {
-	f.entryName.Connect("key-release-event", fn)
-	f.entryDbHost.Connect("key-release-event", fn)
-	f.entryPort.Connect("key-release-event", fn)
-	f.entryUser.Connect("key-release-event", fn)
-	f.entryPassword.Connect("key-release-event", fn)
-	f.entryDatabase.Connect("key-release-event", fn)
-	f.entrySshHost.Connect("key-release-event", fn)
-	f.entrySshAgent.Connect("key-release-event", fn)
+func (f *sshForm) onChange(fn func(form)) {
+	ff := func() { fn(f) }
+	f.entryName.Connect("key-release-event", ff)
+	f.entryDbHost.Connect("key-release-event", ff)
+	f.entryPort.Connect("key-release-event", ff)
+	f.entryUser.Connect("key-release-event", ff)
+	f.entryPassword.Connect("key-release-event", ff)
+	f.entryDatabase.Connect("key-release-event", ff)
+	f.entrySshHost.Connect("key-release-event", ff)
+	f.entrySshAgent.Connect("key-release-event", ff)
 }

@@ -143,7 +143,7 @@ func (c *ConnectionCtrl) OnTableSelected() {
 
 	tableDef, ok := c.scr.ActiveTable()
 	if !ok {
-		config.Env.Log.Debug("no table selected. odd!")
+		c.Config().Debug("no table selected. odd!")
 		return
 	}
 
@@ -163,7 +163,7 @@ func (c *ConnectionCtrl) OnEditTable() {
 	if tableDef.Type == driver.TableTypeDummy {
 		ok, err := c.scr.SetQuery(c.dbCtx[c.dbName], tableDef.Query)
 		if err != nil {
-			config.Env.Log.Error(err)
+			c.Config().Error(err)
 			return
 		}
 
@@ -174,7 +174,7 @@ func (c *ConnectionCtrl) OnEditTable() {
 		// add tab for connection and try again
 		err = c.AddTab(tableDef)
 		if err != nil {
-			config.Env.Log.Error(err)
+			c.Config().Error(err)
 			return
 		}
 
@@ -185,7 +185,7 @@ func (c *ConnectionCtrl) OnEditTable() {
 func (c *ConnectionCtrl) OnTruncateTable() {
 	tableDef, ok := c.scr.ActiveTable()
 	if !ok {
-		config.Env.Log.Debug("no table selected. odd!")
+		c.Config().Debug("no table selected. odd!")
 		return
 	}
 
@@ -195,7 +195,7 @@ func (c *ConnectionCtrl) OnTruncateTable() {
 func (c *ConnectionCtrl) OnDeleteTable() {
 	tableDef, ok := c.scr.ActiveTable()
 	if !ok {
-		config.Env.Log.Debug("no table selected. odd!")
+		c.Config().Debug("no table selected. odd!")
 		return
 	}
 
@@ -205,7 +205,7 @@ func (c *ConnectionCtrl) OnDeleteTable() {
 func (c *ConnectionCtrl) OnCopySelect() {
 	tableDef, ok := c.scr.ActiveTable()
 	if !ok {
-		config.Env.Log.Debug("no table selected. odd!")
+		c.Config().Debug("no table selected. odd!")
 		return
 	}
 
@@ -216,7 +216,7 @@ func (c *ConnectionCtrl) OnCopySelect() {
 	}
 
 	gtk.ClipboardCopy(sql)
-	config.Env.Log.Debugf("select copied: %s", sql)
+	c.Config().Debugf("select copied: %s", sql)
 }
 
 func (c *ConnectionCtrl) OnSchemaMenu() {
@@ -227,7 +227,7 @@ func (c *ConnectionCtrl) OnSchemaMenu() {
 
 	schema, err := c.Engine.GetCreateTable(c.dbCtx[c.dbName], tableName)
 	if err != nil {
-		config.Env.Log.Error(err, "getting table schema")
+		c.Config().Error(err, "getting table schema")
 	}
 
 	c.scr.ShowTableSchemaModal(tableName, schema)
@@ -244,7 +244,7 @@ func (c *ConnectionCtrl) OnRefreshMenu() {
 func (c *ConnectionCtrl) OnNewTabMenu() {
 	tableDef, ok := c.scr.ActiveTable()
 	if !ok {
-		config.Env.Log.Debug("no table selected. odd!")
+		c.Config().Debug("no table selected. odd!")
 		return
 	}
 
@@ -256,7 +256,7 @@ func (c *ConnectionCtrl) OnSaveFav(name, query string) {
 		Name:  name,
 		Query: query,
 	})
-	config.Env.Save(c.window.ApplicationWindow)
+	//c.Config().Save(c.window.ApplicationWindow)
 }
 
 func (c *ConnectionCtrl) Screen() interface{} {
@@ -292,7 +292,7 @@ NEXT:
 			continue
 		}
 
-		config.Env.Log.Debug("disconnecting: ", c.Engine.Database(ctx).Name())
+		c.Config().Debug("disconnecting: ", c.Engine.Database(ctx).Name())
 
 		c.Engine.Disconnect(ctx)
 		delete(c.dbCtx, dbName)

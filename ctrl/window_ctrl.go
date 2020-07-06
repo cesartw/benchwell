@@ -7,7 +7,6 @@ import (
 	"github.com/gotk3/gotk3/gdk"
 	ggtk "github.com/gotk3/gotk3/gtk"
 
-	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/gtk"
 )
 
@@ -39,7 +38,7 @@ func (c *WindowCtrl) OnSaveQuery(query, path string) {
 func (c *WindowCtrl) OnFileSelected(filepath string) {
 	bytes, err := ioutil.ReadFile(filepath)
 	if err != nil {
-		config.Env.Log.Error("reading file", err)
+		c.Config().Error("reading file", err)
 		return
 	}
 
@@ -49,7 +48,7 @@ func (c *WindowCtrl) OnFileSelected(filepath string) {
 func (c *WindowCtrl) OnNewSubTab() {
 	err := c.currentWindowTab().AddTab()
 	if err != nil {
-		config.Env.Log.Error(err)
+		c.Config().Error(err)
 		return
 	}
 	c.window.PushStatus("Ready")
@@ -69,7 +68,7 @@ func (c *WindowCtrl) OnCloseTab() {
 func (c *WindowCtrl) OnNewTab() {
 	err := c.AddTab()
 	if err != nil {
-		config.Env.Log.Error(err)
+		c.Config().Error(err)
 		return
 	}
 	c.window.PushStatus("Ready")
@@ -123,6 +122,6 @@ func (c *WindowCtrl) onNotebookDoubleClick(_ *ggtk.ListBox, e *gdk.Event) {
 	}
 
 	if err := c.AddTab(); err != nil {
-		config.Env.Log.Error(err)
+		c.Config().Error(err)
 	}
 }

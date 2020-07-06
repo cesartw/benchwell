@@ -1,8 +1,9 @@
 package gtk
 
 import (
-	"bitbucket.org/goreorto/sqlaid/config"
 	"github.com/gotk3/gotk3/gtk"
+
+	"bitbucket.org/goreorto/sqlaid/config"
 )
 
 type socketForm struct {
@@ -24,7 +25,7 @@ type socketForm struct {
 	queries       []config.Query
 }
 
-func (f socketForm) Init() (*socketForm, error) {
+func (f socketForm) Init(_ *Window) (*socketForm, error) {
 	var err error
 
 	f.Grid, err = gtk.GridNew()
@@ -92,8 +93,8 @@ func (f socketForm) Init() (*socketForm, error) {
 		return nil, err
 	}
 
-	f.Attach(f.labelName, 0, 0, 1, 1)
-	f.Attach(f.entryName, 1, 0, 2, 1)
+	f.Attach(f.labelName, 0, 1, 1, 1)
+	f.Attach(f.entryName, 1, 1, 2, 1)
 
 	f.Attach(f.labelSocket, 0, 2, 1, 1)
 	f.Attach(f.entrySocket, 1, 2, 2, 1)
@@ -111,6 +112,7 @@ func (f socketForm) Init() (*socketForm, error) {
 }
 
 func (f *socketForm) Clear() {
+	f.conn = nil
 	f.entryName.SetText("")
 	f.entrySocket.SetText("")
 	f.entryUser.SetText("")
@@ -136,8 +138,9 @@ func (f *socketForm) GetConnection() (*config.Connection, bool) {
 	conn := f.conn
 	if conn == nil {
 		newConn = true
-		conn = &config.Connection{Adapter: "mysql"}
+		conn = &config.Connection{}
 	}
+	conn.Adapter = "mysql"
 	conn.Type = "socket"
 	conn.Name, _ = f.entryName.GetText()
 	conn.Socket, _ = f.entrySocket.GetText()
@@ -148,10 +151,11 @@ func (f *socketForm) GetConnection() (*config.Connection, bool) {
 	return conn, newConn
 }
 
-func (f *socketForm) onChange(fn interface{}) {
-	f.entryName.Connect("key-release-event", fn)
-	f.entrySocket.Connect("key-release-event", fn)
-	f.entryUser.Connect("key-release-event", fn)
-	f.entryPassword.Connect("key-release-event", fn)
-	f.entryDatabase.Connect("key-release-event", fn)
+func (f *socketForm) onChange(fn func(form)) {
+	ff := func() { fn(f) }
+	f.entryName.Connect("key-release-event", ff)
+	f.entrySocket.Connect("key-release-event", ff)
+	f.entryUser.Connect("key-release-event", ff)
+	f.entryPassword.Connect("key-release-event", ff)
+	f.entryDatabase.Connect("key-release-event", ff)
 }

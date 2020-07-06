@@ -6,7 +6,7 @@ type Tab struct {
 	*gtk.Box
 }
 
-func (t Tab) Init() (*Tab, error) {
+func (t Tab) Init(_ *Window) (*Tab, error) {
 	var err error
 	t.Box, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if err != nil {

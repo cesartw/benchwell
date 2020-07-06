@@ -147,11 +147,15 @@ func Connect(ctx context.Context, cfg config.Connection) (Connection, error) {
 	colonS := strings.Split(cfg.GetDSN(), ":")
 
 	driverMU.Lock()
-	d, ok := drivers[colonS[0]]
+	driverName := colonS[0]
+	if driverName == "file" {
+		driverName = "sqlite"
+	}
+	d, ok := drivers[driverName]
 	driverMU.Unlock()
 
 	if !ok {
-		return nil, fmt.Errorf("unknown driver: %s", colonS[0])
+		return nil, fmt.Errorf("unknown driver: %s", driverName)
 	}
 
 	// kind hacky
@@ -161,7 +165,7 @@ func Connect(ctx context.Context, cfg config.Connection) (Connection, error) {
 func ValidateConnection(conn config.Connection) bool {
 	driver, ok := drivers[conn.Adapter]
 	if !ok {
-		panic("unknown driver")
+		panic("unknown driver: " + conn.Adapter)
 	}
 
 	return driver.ValidateConnection(conn)

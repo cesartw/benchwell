@@ -3,9 +3,10 @@ package gtk
 import (
 	"fmt"
 
-	"bitbucket.org/goreorto/sqlaid/config"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
+
+	"bitbucket.org/goreorto/sqlaid/config"
 )
 
 var WHITESPACE = [2]string{" ", "\t"}
@@ -22,21 +23,26 @@ func isWhitespace(s string) bool {
 type TextView struct {
 	*gtk.TextView
 	buffer *TextBuffer
+	ctrl   textViewCtrl
 }
 
 type TextViewOptions struct {
 	Highlight bool
 	Undoable  bool
 }
+type textViewCtrl interface {
+	Config() *config.Config
+}
 
-func (t TextView) Init(opts TextViewOptions) (*TextView, error) {
+func (t TextView) Init(_ *Window, opts TextViewOptions, ctrl textViewCtrl) (*TextView, error) {
 	var err error
+	t.ctrl = ctrl
 	t.TextView, err = gtk.TextViewNew()
 	if err != nil {
 		return nil, err
 	}
 
-	t.buffer, err = TextBuffer{}.Init(opts.Undoable, opts.Highlight)
+	t.buffer, err = TextBuffer{}.Init(opts.Undoable, opts.Highlight, ctrl)
 	if err != nil {
 		return nil, err
 	}
@@ -144,9 +150,10 @@ type TextBuffer struct {
 	redostack         stack
 	inProgress        bool
 	notUndoableAction bool
+	ctrl              textViewCtrl
 }
 
-func (t TextBuffer) Init(undoable, highlight bool) (*TextBuffer, error) {
+func (t TextBuffer) Init(undoable, highlight bool, ctrl textViewCtrl) (*TextBuffer, error) {
 	var (
 		err      error
 		tagTable *gtk.TextTagTable
@@ -156,6 +163,7 @@ func (t TextBuffer) Init(undoable, highlight bool) (*TextBuffer, error) {
 		return nil, err
 	}
 
+	t.ctrl = ctrl
 	t.TextBuffer, err = gtk.TextBufferNew(tagTable)
 	if err != nil {
 		return nil, err
@@ -187,16 +195,16 @@ func (t *TextBuffer) onChanged() {
 func (t *TextBuffer) highlight() {
 	txt, err := t.GetText(t.GetStartIter(), t.GetEndIter(), false)
 	if err != nil {
-		config.Env.Log.Error(err)
+		t.ctrl.Config().Error(err)
 		return
 	}
 
 	iter := t.GetIterAtMark(t.GetInsert())
 	offset := iter.GetOffset()
 
-	txt, err = ChromaHighlight(txt)
+	txt, err = ChromaHighlight(t.ctrl.Config().EditorTheme(), txt)
 	if err != nil {
-		config.Env.Log.Error(err)
+		t.ctrl.Config().Error(err)
 		return
 	}
 	t.Delete(t.GetStartIter(), t.GetEndIter())
@@ -247,7 +255,7 @@ func (t *TextBuffer) onDeleteRange(_ *gtk.TextBuffer, start, end *gtk.TextIter) 
 
 	undoAction, err := undoableDelete{}.Init(t.TextBuffer, start, end)
 	if err != nil {
-		config.Env.Log.Error(err)
+		t.ctrl.Config().Error(err)
 		return
 	}
 

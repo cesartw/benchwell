@@ -8,11 +8,12 @@ import (
 	"strings"
 	"sync"
 
-	"bitbucket.org/goreorto/sqlaid/config"
-	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
+
+	"bitbucket.org/goreorto/sqlaid/config"
+	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
 )
 
 var once = sync.Once{}
@@ -55,15 +56,20 @@ type Result struct {
 	colAtCursor *gtk.TreeViewColumn
 
 	onCopyInsertFn func([]driver.ColDef, []interface{})
+	ctrl           resultCtrl
 }
 
-func (u Result) Init(ctrl interface {
+type resultCtrl interface {
 	OnUpdateRecord([]driver.ColDef, []interface{}) error
 	OnCreateRecord([]driver.ColDef, []interface{}) ([]interface{}, error)
 	OnCopyInsert([]driver.ColDef, []interface{})
-}, parser parser) (*Result, error) {
+	Config() *config.Config
+}
+
+func (u Result) Init(_ *Window, ctrl resultCtrl, parser parser) (*Result, error) {
 	var err error
 	u.parser = parser
+	u.ctrl = ctrl
 
 	u.TreeView, err = gtk.TreeViewNew()
 	if err != nil {
@@ -435,6 +441,35 @@ func (u *Result) GetRowID() ([]driver.ColDef, []interface{}, error) {
 	return pkCols, values, nil
 }
 
+func (u *Result) ForEachSelected(f func([]driver.ColDef, []interface{})) error {
+	selection, err := u.GetSelection()
+	if err != nil {
+		return err
+	}
+	// TODO: maybe there's a memory leak here.
+	//       using FreeFull causes a 'double free or corruption' error
+	selection.GetSelectedRows(u.store).Foreach(func(i interface{}) {
+		path := i.(*gtk.TreePath)
+		row, _ := strconv.Atoi(path.String())
+
+		pkCols := []driver.ColDef{}
+		values := []interface{}{}
+		for i, col := range u.cols {
+			def := col.(driver.ColDef)
+			if !def.PK {
+				continue
+			}
+
+			pkCols = append(pkCols, def)
+			values = append(values, u.data[row][i])
+		}
+
+		f(pkCols, values)
+	})
+
+	return nil
+}
+
 func (u *Result) GetRow() ([]driver.ColDef, []interface{}, error) {
 	iter, err := u.GetCurrentIter()
 	if err != nil {
@@ -526,7 +561,7 @@ func (u *Result) onCopyInsert() {
 }
 
 func (u *Result) onEdited(_ *gtk.CellRendererText, rowPath string, newValue string, userData interface{}) {
-	config.Env.Log.Debug("cell edited")
+	u.ctrl.Config().Debug("cell edited")
 	if u.mode == MODE_RAW {
 		return
 	}
@@ -538,31 +573,31 @@ func (u *Result) onEdited(_ *gtk.CellRendererText, rowPath string, newValue stri
 func (u *Result) onSaveCell(row, column int, newValue string) {
 	tpath, err := gtk.TreePathNewFromString(fmt.Sprintf("%d", row))
 	if err != nil {
-		config.Env.Log.Error(err)
+		u.ctrl.Config().Error(err)
 		return
 	}
 
 	iter, err := u.store.GetIter(tpath)
 	if err != nil {
-		config.Env.Log.Error(err)
+		u.ctrl.Config().Error(err)
 		return
 	}
 
 	err = u.store.SetValue(iter, column, newValue)
 	if err != nil {
-		config.Env.Log.Error(err)
+		u.ctrl.Config().Error(err)
 		return
 	}
 
 	// is a new record
 	lastColValue, err := u.store.GetValue(iter, len(u.cols))
 	if err != nil {
-		config.Env.Log.Error(err)
+		u.ctrl.Config().Error(err)
 		return
 	}
 	status, err := lastColValue.GoValue()
 	if err != nil {
-		config.Env.Log.Error(err)
+		u.ctrl.Config().Error(err)
 		return
 	}
 	if status.(int) == STATUS_NEW {
@@ -593,7 +628,7 @@ func (u *Result) onSaveCell(row, column int, newValue string) {
 	pkCols = append(pkCols, affectedCol)
 	parsedValue, err := u.parser(affectedCol, newValue)
 	if err != nil {
-		config.Env.Log.Error(err)
+		u.ctrl.Config().Error(err)
 		return
 	}
 
@@ -601,7 +636,7 @@ func (u *Result) onSaveCell(row, column int, newValue string) {
 
 	err = u.updateCallback(pkCols, values)
 	if err != nil {
-		config.Env.Log.Error(err)
+		u.ctrl.Config().Error(err)
 		return
 	}
 
@@ -616,9 +651,9 @@ func (u *Result) createColumn(title string, id int, useEditModal bool) (*gtk.Tre
 	cellRenderer.SetProperty("editable", true)
 	cellRenderer.SetProperty("xpad", 10)
 	cellRenderer.SetProperty("height", 23)
-	cellRenderer.SetProperty("width-chars", config.Env.GUI.CellWidth)
-	cellRenderer.SetProperty("max-width-chars", config.Env.GUI.CellWidth)
-	cellRenderer.SetProperty("wrap-width", config.Env.GUI.CellWidth)
+	cellRenderer.SetProperty("width-chars", u.ctrl.Config().GUI.CellWidth.String())
+	cellRenderer.SetProperty("max-width-chars", u.ctrl.Config().GUI.CellWidth.String())
+	cellRenderer.SetProperty("wrap-width", u.ctrl.Config().GUI.CellWidth.String())
 
 	// i think "text" refers to a property of the column.
 	// `"text", id` means that the text source for the column should come from
@@ -729,7 +764,7 @@ func (u *Result) editDialog(data string, done func(string)) {
 
 	data, err = buff.GetText(buff.GetStartIter(), buff.GetEndIter(), false)
 	if err != nil {
-		config.Env.Log.Error(err)
+		u.ctrl.Config().Error(err)
 	}
 
 	done(data)
@@ -764,24 +799,24 @@ func (u *Result) onTreeViewKeyPress(_ *gtk.TreeView, e *gdk.Event) {
 func (u *Result) onCloneRow() {
 	cols, data, err := u.GetRow()
 	if err != nil {
-		config.Env.Log.Error("getting current row", err)
+		u.ctrl.Config().Error("getting current row", err)
 		return
 	}
 
 	err = u.AddEmptyRow()
 	if err != nil {
-		config.Env.Log.Error("adding empty row", err)
+		u.ctrl.Config().Error("adding empty row", err)
 		return
 	}
 
 	iter, err := u.GetCurrentIter()
 	if err != nil {
-		config.Env.Log.Errorf("getting new row iter: %s", err)
+		u.ctrl.Config().Errorf("getting new row iter: %s", err)
 		return
 
 	}
 	if iter == nil {
-		config.Env.Log.Debug("no row selected")
+		u.ctrl.Config().Debug("no row selected")
 		return
 	}
 
@@ -792,7 +827,7 @@ func (u *Result) onCloneRow() {
 
 		err = u.store.SetValue(iter, i, data[i])
 		if err != nil {
-			config.Env.Log.Errorf("setting value: %s", err)
+			u.ctrl.Config().Errorf("setting value: %s", err)
 			return
 		}
 	}

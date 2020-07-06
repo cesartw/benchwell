@@ -7,15 +7,25 @@ import (
 )
 
 type AppCtrl struct {
-	Config *config.Config
+	config *config.Config
 	App    *gtk.Application
 	Engine *sqlengine.Engine
 
 	windows []*WindowCtrl
 }
 
+func (c AppCtrl) Init(cfg *config.Config, eng *sqlengine.Engine) *AppCtrl {
+	c.config = cfg
+	c.Engine = eng
+	return &c
+}
+
 func (c *AppCtrl) AppID() string {
 	return config.AppID
+}
+
+func (c *AppCtrl) Config() *config.Config {
+	return c.config
 }
 
 func (c *AppCtrl) OnActivate() {
@@ -34,15 +44,15 @@ func (c *AppCtrl) OnNewWindow() {
 	}
 }
 func (c *AppCtrl) OnPreferences() {
-	config.Env.Log.Print("launch preferences modal")
+	c.config.Print("launch preferences modal")
 }
 
 func (c *AppCtrl) OnShutdown() {
-	config.Env.Log.Debug("application shutdown")
+	c.config.Debug("application shutdown")
 }
 
 func (c *AppCtrl) OnStartup() {
-	config.Env.Log.Debug("application started")
+	c.config.Debug("application started")
 }
 
 func (c *AppCtrl) createWindow() error {

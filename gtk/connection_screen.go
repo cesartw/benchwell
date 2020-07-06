@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/gotk3/gotk3/gdk"
+	"github.com/gotk3/gotk3/gtk"
+
 	"bitbucket.org/goreorto/sqlaid/assets"
 	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/sqlengine"
 	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
-	"github.com/gotk3/gotk3/gdk"
-	"github.com/gotk3/gotk3/gtk"
 )
 
 type tab struct {
@@ -21,9 +22,25 @@ type tab struct {
 		String() string
 	}
 }
+type connectionScreenCtrl interface {
+	OnDatabaseSelected()
+	OnTableSelected()
+	OnSchemaMenu()
+	OnRefreshMenu()
+	OnNewTabMenu()
+	OnEditTable()
+	OnTruncateTable()
+	OnDeleteTable()
+	OnCopySelect()
+	OnCopyLog()
+	Config() *config.Config
+}
 
 type ConnectionScreen struct {
 	*gtk.Paned
+	ctrl connectionScreenCtrl
+
+	w           *Window
 	hPaned      *gtk.Paned
 	dbCombo     *gtk.ComboBoxText
 	tableFilter *gtk.SearchEntry
@@ -59,20 +76,11 @@ type ConnectionScreen struct {
 
 func (c ConnectionScreen) Init(
 	w *Window,
-	ctrl interface {
-		OnDatabaseSelected()
-		OnTableSelected()
-		OnSchemaMenu()
-		OnRefreshMenu()
-		OnNewTabMenu()
-		OnEditTable()
-		OnTruncateTable()
-		OnDeleteTable()
-		OnCopySelect()
-		OnCopyLog()
-	},
+	ctrl connectionScreenCtrl,
 ) (*ConnectionScreen, error) {
 	var err error
+	c.w = w
+	c.ctrl = ctrl
 
 	c.Paned, err = gtk.PanedNew(gtk.ORIENTATION_VERTICAL)
 	if err != nil {
@@ -119,7 +127,7 @@ func (c ConnectionScreen) Init(
 	}
 	c.dbCombo.SetIDColumn(0)
 
-	c.tableList, err = List{}.Init(&ListOptions{
+	c.tableList, err = List{}.Init(c.w, &ListOptions{
 		SelectOnRightClick: true,
 		IconFunc: func(name fmt.Stringer) *gdk.Pixbuf {
 			def, ok := name.(driver.TableDef)
@@ -132,7 +140,7 @@ func (c ConnectionScreen) Init(
 			}
 			return assets.Table
 		},
-	})
+	}, ctrl)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +166,7 @@ func (c ConnectionScreen) Init(
 		return nil, err
 	}
 
-	switch config.Env.GUI.TableTabPosition {
+	switch c.ctrl.Config().GUI.TableTabPosition.String() {
 	case "bottom":
 		c.tabber.SetProperty("tab-pos", gtk.POS_BOTTOM)
 	default:
@@ -209,7 +217,7 @@ func (c ConnectionScreen) Init(
 		return nil, err
 	}
 
-	c.logview, err = List{}.Init(&ListOptions{SelectOnRightClick: true})
+	c.logview, err = List{}.Init(c.w, &ListOptions{SelectOnRightClick: true}, ctrl)
 	if err != nil {
 		return nil, err
 	}
@@ -389,9 +397,9 @@ func (c *ConnectionScreen) ShowTableSchemaModal(tableName, schema string) {
 	textView.SetVExpand(true)
 	textView.SetHExpand(true)
 
-	schema, err = ChromaHighlight(schema)
+	schema, err = ChromaHighlight(c.ctrl.Config().EditorTheme(), schema)
 	if err != nil {
-		config.Env.Log.Error(err)
+		c.ctrl.Config().Error(err)
 		return
 	}
 	buff, err := textView.GetBuffer()

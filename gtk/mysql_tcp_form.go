@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"bitbucket.org/goreorto/sqlaid/config"
 	"github.com/gotk3/gotk3/gtk"
+
+	"bitbucket.org/goreorto/sqlaid/config"
 )
 
 type tcpForm struct {
@@ -28,7 +29,7 @@ type tcpForm struct {
 	labelDatabase *gtk.Label
 }
 
-func (f tcpForm) Init() (*tcpForm, error) {
+func (f tcpForm) Init(_ *Window) (*tcpForm, error) {
 	var err error
 
 	f.Grid, err = gtk.GridNew()
@@ -130,6 +131,7 @@ func (f tcpForm) Init() (*tcpForm, error) {
 }
 
 func (f *tcpForm) Clear() {
+	f.conn = nil
 	f.entryName.SetText("")
 	f.entryHost.SetText("")
 	f.entryPort.SetText("")
@@ -157,9 +159,10 @@ func (f *tcpForm) GetConnection() (*config.Connection, bool) {
 	conn := f.conn
 	if conn == nil {
 		newConn = true
-		conn = &config.Connection{Adapter: "mysql"}
+		conn = &config.Connection{}
 	}
 
+	conn.Adapter = "mysql"
 	conn.Type = "tcp"
 	conn.Name, _ = f.entryName.GetText()
 	conn.Host, _ = f.entryHost.GetText()
@@ -176,11 +179,12 @@ func (f *tcpForm) GetConnection() (*config.Connection, bool) {
 	return conn, newConn
 }
 
-func (f *tcpForm) onChange(fn interface{}) {
-	f.entryName.Connect("key-release-event", fn)
-	f.entryHost.Connect("key-release-event", fn)
-	f.entryPort.Connect("key-release-event", fn)
-	f.entryUser.Connect("key-release-event", fn)
-	f.entryPassword.Connect("key-release-event", fn)
-	f.entryDatabase.Connect("key-release-event", fn)
+func (f *tcpForm) onChange(fn func(form)) {
+	ff := func() { fn(f) }
+	f.entryName.Connect("key-release-event", ff)
+	f.entryHost.Connect("key-release-event", ff)
+	f.entryPort.Connect("key-release-event", ff)
+	f.entryUser.Connect("key-release-event", ff)
+	f.entryPassword.Connect("key-release-event", ff)
+	f.entryDatabase.Connect("key-release-event", ff)
 }

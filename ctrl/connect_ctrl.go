@@ -16,12 +16,12 @@ func (c ConnectCtrl) Init(p *WindowTabCtrl) (*ConnectCtrl, error) {
 	c.WindowTabCtrl = p
 
 	var err error
-	c.scr, err = gtk.ConnectScreen{}.Init(&c)
+	c.scr, err = gtk.ConnectScreen{}.Init(c.window, &c)
 	if err != nil {
 		return nil, err
 	}
 
-	c.scr.SetConnections(config.Env.Connections)
+	c.scr.SetConnections(c.Config().Connections)
 
 	return &c, nil
 }
@@ -37,14 +37,14 @@ func (c *ConnectCtrl) OnTest() {
 	var conn *config.Connection
 	index := c.scr.ActiveConnectionIndex()
 	if index > 0 {
-		conn = config.Env.Connections[index]
+		conn = c.Config().Connections[index]
 	} else {
 		conn = c.scr.GetFormConnection()
 	}
 
 	ctx, err := c.Engine.Connect(context.Background(), *conn)
 	if err != nil {
-		config.Env.Log.Error(err)
+		c.Config().Error(err)
 		c.window.PushStatus("Fail connection `%s`(%s): %s", conn.Name, conn.Host, err.Error())
 		return
 	}
@@ -54,16 +54,20 @@ func (c *ConnectCtrl) OnTest() {
 }
 
 func (c *ConnectCtrl) OnSave() {
-	index := c.scr.ActiveConnectionIndex()
-	if index == -1 || index >= len(config.Env.Connections) {
-		config.Env.Connections = append(config.Env.Connections, c.scr.GetFormConnection())
-	} else {
-		config.Env.Connections[index] = c.scr.GetFormConnection()
+	conn := c.scr.GetFormConnection()
+	err := c.Config().SaveConnection(conn)
+	if err != nil {
+		c.window.PushStatus(err.Error())
+		return
 	}
 
-	config.Env.Save(c.window.ApplicationWindow)
-	c.scr.SetConnections(config.Env.Connections)
-	c.scr.ConnectionList.SelectRow(c.scr.ConnectionList.GetRowAtIndex(index))
+	c.scr.SetConnections(c.Config().Connections)
+	for i, co := range c.Config().Connections {
+		if co.ID == conn.ID {
+			c.scr.ConnectionList.SelectRow(c.scr.ConnectionList.GetRowAtIndex(i))
+			break
+		}
+	}
 
 	c.window.PushStatus("Saved")
 }
@@ -74,13 +78,14 @@ func (c *ConnectCtrl) OnDeleteConnection() {
 		return
 	}
 
-	// deleting an saved connection
-	if index < len(config.Env.Connections) {
-		config.Env.Connections = append(config.Env.Connections[:index], config.Env.Connections[index+1:]...)
+	err := c.Config().DeleteConnection(c.Config().Connections[index])
+	if err != nil {
+		c.window.PushStatus(err.Error())
+		return
 	}
 
-	config.Env.Save(c.window.ApplicationWindow)
-	c.scr.SetConnections(config.Env.Connections)
+	//c.Config().Save(c.window.ApplicationWindow)
+	c.scr.SetConnections(c.Config().Connections)
 	c.scr.ClearForm()
 
 	c.window.PushStatus("Deleted")
@@ -89,7 +94,7 @@ func (c *ConnectCtrl) OnDeleteConnection() {
 func (c *ConnectCtrl) OnNewConnection() {
 	row, err := c.scr.ConnectionList.AppendItem(gtk.Stringer("New Connection"))
 	if err != nil {
-		config.Env.Log.Error(err)
+		c.Config().Error(err)
 	}
 	c.scr.ConnectionList.SelectRow(row)
 	c.scr.ClearForm()
@@ -103,20 +108,20 @@ func (c *ConnectCtrl) OnConnectionSelected() {
 		return
 	}
 
-	if row.GetIndex() >= len(config.Env.Connections) {
+	if row.GetIndex() >= len(c.Config().Connections) {
 		c.scr.ClearForm()
 		c.scr.FocusForm()
 		return
 	}
 
-	err := config.Env.Connections[row.GetIndex()].Decrypt(c.window.ApplicationWindow)
+	err := c.Config().Connections[row.GetIndex()].Decrypt(c.window.ApplicationWindow)
 	if err != nil {
 		c.window.PushStatus("Fail to decrypt password")
 		c.scr.ConnectionList.ClearSelection()
 		return
 	}
 
-	c.scr.SetConnection(config.Env.Connections[row.GetIndex()])
+	c.scr.SetConnection(c.Config().Connections[row.GetIndex()])
 }
 
 func (c *ConnectCtrl) Screen() interface{} {

@@ -7,9 +7,10 @@ import (
 	"log"
 	"time"
 
-	"bitbucket.org/goreorto/sqlaid/config"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
+
+	"bitbucket.org/goreorto/sqlaid/config"
 )
 
 type Window struct {
@@ -27,19 +28,24 @@ type Window struct {
 		SaveQuery     *glib.SimpleAction
 		CloseTab      *glib.SimpleAction
 	}
+	ctrl windowCtrl
 }
 
-func (w Window) Init(app *gtk.Application, ctrl interface {
+type windowCtrl interface {
 	OnNewTab()
 	OnNewSubTab()
 	OnCloseTab()
 	OnFileSelected(string)
 	OnSaveQuery(string, string)
-}) (*Window, error) {
+	Config() *config.Config
+}
+
+func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 	var err error
 	w.ApplicationWindow, err = gtk.ApplicationWindowNew(app)
 	w.SetTitle("SQLaid")
 	w.SetSizeRequest(1024, 768)
+	w.ctrl = ctrl
 
 	w.nb, err = gtk.NotebookNew()
 	if err != nil {
@@ -47,7 +53,7 @@ func (w Window) Init(app *gtk.Application, ctrl interface {
 	}
 	w.nb.SetName("MainNotebook")
 
-	switch config.Env.GUI.ConnectionTabPosition {
+	switch w.ctrl.Config().GUI.ConnectionTabPosition.String() {
 	case "bottom":
 		w.nb.SetProperty("tab-pos", gtk.POS_BOTTOM)
 	default:
@@ -101,7 +107,7 @@ func (w *Window) OnOpenFile(f func(string)) func() {
 			"Cancel", gtk.RESPONSE_CANCEL,
 		)
 		if err != nil {
-			config.Env.Log.Error("open file dialog", err)
+			w.ctrl.Config().Error("open file dialog", err)
 			return
 		}
 		defer openfileDialog.Destroy()
@@ -119,7 +125,7 @@ func (w *Window) OnSaveQuery(query string, f func(string, string)) {
 		"Cancel", gtk.RESPONSE_CANCEL,
 	)
 	if err != nil {
-		config.Env.Log.Error("save file dialog", err)
+		w.ctrl.Config().Error("save file dialog", err)
 		return
 	}
 	defer openfileDialog.Destroy()
@@ -208,7 +214,7 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 	}
 	header.SetShowCloseButton(true)
 	header.SetTitle("SQLAID")
-	header.SetSubtitle(config.Env.Version)
+	header.SetSubtitle(w.ctrl.Config().Version)
 
 	// Create a new window menu button
 	windowBtnMenu, err := gtk.MenuButtonNew()

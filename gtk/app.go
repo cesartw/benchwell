@@ -1,10 +1,11 @@
 package gtk
 
 import (
-	"bitbucket.org/goreorto/sqlaid/config"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
+
+	"bitbucket.org/goreorto/sqlaid/config"
 )
 
 type Application struct {
@@ -19,23 +20,27 @@ type Application struct {
 	}
 
 	DarkMode bool
+	ctrl     applicationCtrl
 }
-
-func (a Application) Init(ctrl interface {
+type applicationCtrl interface {
 	AppID() string
 	OnStartup()
 	OnActivate()
 	OnShutdown()
 	OnNewWindow()
 	OnPreferences()
-}) (*Application, error) {
+	Config() *config.Config
+}
+
+func (a Application) Init(ctrl applicationCtrl) (*Application, error) {
 	var err error
+	a.ctrl = ctrl
 
 	a.Application, err = gtk.ApplicationNew(ctrl.AppID(), glib.APPLICATION_FLAGS_NONE)
 	if err != nil {
 		return nil, err
 	}
-	a.DarkMode = config.Env.GUI.DarkMode
+	a.DarkMode = ctrl.Config().GUI.DarkMode.Bool()
 
 	a.Connect("startup", func() {
 		a.Menu.Application.NewWindow = glib.SimpleActionNew("new", nil)
@@ -74,7 +79,7 @@ func (a Application) Init(ctrl interface {
 }
 
 func (a *Application) ToggleMode() {
-	config.Env.GUI.DarkMode = !config.Env.GUI.DarkMode
+	a.ctrl.Config().GUI.DarkMode.SetBool(!a.ctrl.Config().GUI.DarkMode.Bool())
 	a.loadSettingsCSS()
 }
 
@@ -84,7 +89,7 @@ func (a *Application) OnShowPreferences() {
 		[]interface{}{"Done", gtk.RESPONSE_OK},
 	)
 	if err != nil {
-		config.Env.Log.Error(err)
+		a.ctrl.Config().Error(err)
 		return
 	}
 
@@ -114,7 +119,7 @@ func (a *Application) loadSettingsCSS() {
 	// TODO: works, need to check vendoring
 	//css.LoadFromResource("/org/gtk/libgtk/theme/Adwaita/gtk-contained-dark.css")
 
-	err = css.LoadFromData(config.Env.CSS())
+	err = css.LoadFromData(a.ctrl.Config().CSS())
 	if err != nil {
 		panic(err)
 	}

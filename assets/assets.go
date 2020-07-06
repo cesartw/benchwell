@@ -3,7 +3,6 @@
 //go:generate go run ../main.go assets -t const -n BRAND assets/data/brand-base.css:assets/brand.go
 //go:generate go run ../main.go assets -t const -n BRAND_DARK assets/data/brand-dark.css:assets/brand_dark.go
 //go:generate go run ../main.go assets -t const -n BRAND_LIGHT assets/data/brand-light.css:assets/brand_light.go
-//go:generate go run ../main.go assets -t const -n DEFAULT_CONFIG assets/data/config.dist.json:assets/config.go
 package assets
 
 import (

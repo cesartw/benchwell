@@ -1,23 +1,29 @@
 package gtk
 
 import (
-	"bitbucket.org/goreorto/sqlaid/config"
-	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
+
+	"bitbucket.org/goreorto/sqlaid/config"
+	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
 )
 
 // TODO: look into gtk.EntryCompletion for combobox
 type Conditions struct {
+	w *Window
 	*gtk.Frame
 	grid       *gtk.Grid
 	btnAdd     *gtk.Button
 	conditions []*Condition
 	cols       []driver.ColDef
 
-	onApplyConditions func()
+	ctrl conditionsCtrl
 }
 
+type conditionsCtrl interface {
+	OnApplyConditions()
+	Config() *config.Config
+}
 type Condition struct {
 	cols       []driver.ColDef
 	activeCb   *gtk.CheckButton
@@ -26,11 +32,13 @@ type Condition struct {
 	opCb       *gtk.ComboBoxText
 	valueEntry *gtk.Entry
 	btnRm      *gtk.Button
+	ctrl       conditionsCtrl
 }
 
-func (c Conditions) Init(ctrl interface{ OnApplyConditions() }) (*Conditions, error) {
+func (c Conditions) Init(w *Window, ctrl conditionsCtrl) (*Conditions, error) {
 	var err error
-	c.onApplyConditions = ctrl.OnApplyConditions
+	c.w = w
+	c.ctrl = ctrl
 
 	c.Frame, err = gtk.FrameNew("Filter:")
 	if err != nil {
@@ -62,11 +70,11 @@ func (c Conditions) Init(ctrl interface{ OnApplyConditions() }) (*Conditions, er
 }
 
 func (c *Conditions) Add() error {
-	cond, err := Condition{}.Init(c.cols)
+	cond, err := Condition{}.Init(c.w, c.cols, c.ctrl)
 	if err != nil {
 		return err
 	}
-	cond.valueEntry.Connect("activate", c.onApplyConditions)
+	cond.valueEntry.Connect("activate", c.ctrl.OnApplyConditions)
 
 	c.grid.Remove(c.btnAdd)
 
@@ -206,8 +214,9 @@ func (c *Conditions) Update(cols []driver.ColDef) error {
 	return nil
 }
 
-func (c Condition) Init(cols []driver.ColDef) (*Condition, error) {
+func (c Condition) Init(_ *Window, cols []driver.ColDef, ctrl conditionsCtrl) (*Condition, error) {
 	c.cols = cols
+	c.ctrl = ctrl
 	var err error
 
 	c.store, _ = gtk.ListStoreNew(glib.TYPE_STRING)
@@ -302,19 +311,19 @@ func (c *Condition) Field() (string, error) {
 func (c *Condition) onFocusOut() {
 	entry, err := c.fieldCb.GetEntry()
 	if err != nil {
-		config.Env.Log.Error(err)
+		c.ctrl.Config().Error(err)
 		return
 	}
 
 	field, err := entry.GetText()
 	if err != nil {
-		config.Env.Log.Error(err)
+		c.ctrl.Config().Error(err)
 		return
 	}
 
 	selectedText, err := c.Field()
 	if err != nil {
-		config.Env.Log.Error(err)
+		c.ctrl.Config().Error(err)
 		return
 
 	}

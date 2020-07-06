@@ -27,7 +27,7 @@ func (c WindowTabCtrl) Init(p *WindowCtrl) (*WindowTabCtrl, error) {
 	var err error
 	c.WindowCtrl = p
 
-	c.tab, err = gtk.Tab{}.Init()
+	c.tab, err = gtk.Tab{}.Init(c.window)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (c *WindowTabCtrl) launchConnect() {
 	var err error
 	c.connectCtrl, err = ConnectCtrl{}.Init(c)
 	if err != nil {
-		config.Env.Log.Error(err)
+		c.Config().Error(err)
 		return
 	}
 	if c.connectionCtrl != nil {
@@ -87,7 +87,7 @@ func (c *WindowTabCtrl) launchConnection(ctx *sqlengine.Context, conn *config.Co
 	var err error
 	c.connectionCtrl, err = ConnectionCtrl{}.Init(ctx, c, conn)
 	if err != nil {
-		config.Env.Log.Error(err)
+		c.Config().Error(err)
 		return
 	}
 
@@ -113,7 +113,7 @@ func (c *WindowTabCtrl) OnConnect() {
 		engineCtx, err := c.Engine.Connect(ctx, *conn)
 		if err != nil {
 			return func() {
-				config.Env.Log.Error(err)
+				c.Config().Error(err)
 				c.window.PushStatus("Failed connect to `%s`(%s): %s", conn.Name, conn.Host, err.Error())
 				c.connectCtrl.CancelConnecting()
 			}
