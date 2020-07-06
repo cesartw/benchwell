@@ -1,6 +1,7 @@
 package assets
 
 const DEFAULT_CONFIG = `
+PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS "settings" (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     name NVARCHAR(300) UNIQUE NOT NULL,
@@ -31,7 +32,7 @@ CREATE TABLE IF NOT EXISTS "queries" (
     name text NOT NULL DEFAULT "",
 	query text NOT NULL DEFAULT "",
     connections_id INTEGER NOT NULL,
-    FOREIGN KEY(connections_id) REFERENCES connections(id)
+    FOREIGN KEY(connections_id) REFERENCES connections(id) ON DELETE CASCADE
 );
 
 INSERT OR IGNORE INTO settings(name, value) VALUES("gui.editor.word_wrap", "word"),
