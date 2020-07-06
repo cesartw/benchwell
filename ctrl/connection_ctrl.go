@@ -252,11 +252,11 @@ func (c *ConnectionCtrl) OnNewTabMenu() {
 }
 
 func (c *ConnectionCtrl) OnSaveFav(name, query string) {
-	c.conn.Queries = append(c.conn.Queries, config.Query{
-		Name:  name,
-		Query: query,
+	c.Config().SaveQuery(&config.Query{
+		Name:         name,
+		Query:        query,
+		ConnectionID: c.conn.ID,
 	})
-	//c.Config().Save(c.window.ApplicationWindow)
 }
 
 func (c *ConnectionCtrl) Screen() interface{} {

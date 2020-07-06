@@ -220,6 +220,34 @@ func (c *Config) loadConnections() error {
 		conn.Decrypt(nil)
 	}
 
+	return c.loadQueries()
+}
+
+func (c *Config) loadQueries() error {
+	rows, err := c.db.Query("SELECT * FROM queries")
+	if err != nil {
+		return err
+	}
+
+	connMap := map[int64]*Connection{}
+	for _, conn := range c.Connections {
+		connMap[conn.ID] = conn
+	}
+
+	for rows.Next() {
+		query := &Query{}
+		err := rows.Scan(&query.ID, &query.Name, &query.Query, &query.ConnectionID)
+		if err != nil {
+			return err
+		}
+
+		connMap[query.ConnectionID].Queries = append(connMap[query.ConnectionID].Queries, query)
+	}
+
+	for _, conn := range c.Connections {
+		conn.Decrypt(nil)
+	}
+
 	return nil
 }
 
@@ -289,6 +317,40 @@ func (c *Config) SaveConnection(conn *Connection) error {
 			conn.Adapter, conn.Type, conn.Name, conn.Socket, conn.File,
 			conn.Host, conn.Port, conn.User, conn.Password, conn.Database,
 			conn.SshHost, conn.SshAgent, conn.Options, conn.Encrypted, conn.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Config) SaveQuery(query *Query) error {
+	if query.ID == 0 {
+		sql := `INSERT INTO queries(name, query, connections_id)
+				VALUES(?, ?, ?)`
+		result, err := c.db.Exec(sql, query.Name, query.Query, query.ConnectionID)
+		if err != nil {
+			return err
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			return err
+		}
+		query.ID = id
+
+		for _, conn := range c.Connections {
+			if conn.ID == query.ConnectionID {
+				conn.Queries = append(conn.Queries, query)
+				break
+			}
+		}
+	} else {
+		sql := `UPDATE queries
+					SET name = ?, query = ?
+				WHERE ID = ?`
+		_, err := c.db.Exec(sql,
+			query.Name, query.Query, query.ID)
 		if err != nil {
 			return err
 		}
@@ -412,12 +474,14 @@ type Connection struct {
 	SshAgent  string
 	Options   string
 	Encrypted bool
-	Queries   []Query
+	Queries   []*Query
 }
 
 type Query struct {
-	Name  string `mapstructure:"name"`
-	Query string `mapstructure:"query"`
+	ID           int64
+	Name         string
+	Query        string
+	ConnectionID int64
 }
 
 // GetDSN ...

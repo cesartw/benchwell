@@ -20,10 +20,18 @@ CREATE TABLE IF NOT EXISTS "connections" (
     port integer NULL DEFAULT "",
     encrypted BOOLEAN NOT NULL DEFAULT 0 CHECK (encrypted IN (0,1)),
 
-	socket    text NOT NULL DEFAULT "",
-	file      text NOT NULL DEFAULT "",
-	sshHost   text NOT NULL DEFAULT "",
-	sshAgent  text NOT NULL DEFAULT ""
+    socket    text NOT NULL DEFAULT "",
+    file      text NOT NULL DEFAULT "",
+    sshHost   text NOT NULL DEFAULT "",
+    sshAgent  text NOT NULL DEFAULT ""
+);
+
+CREATE TABLE IF NOT EXISTS "queries" (
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    name text NOT NULL DEFAULT "",
+	query text NOT NULL DEFAULT "",
+    connections_id INTEGER NOT NULL,
+    FOREIGN KEY(connections_id) REFERENCES connections(id)
 );
 
 INSERT OR IGNORE INTO settings(name, value) VALUES("gui.editor.word_wrap", "word"),
