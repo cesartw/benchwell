@@ -64,7 +64,6 @@ func (c ConnectScreen) Init(w *Window, ctrl connectScreenCtrl) (*ConnectScreen, 
 	if err != nil {
 		return nil, err
 	}
-
 	c.Paned.SetHExpand(true)
 	c.Paned.SetVExpand(true)
 
@@ -171,7 +170,7 @@ func (c ConnectScreen) Init(w *Window, ctrl connectScreenCtrl) (*ConnectScreen, 
 		return nil, err
 	}
 
-	c.Paned.Pack1(frame1, false, true)
+	c.Paned.Pack1(frame1, true, true)
 	c.Paned.Pack2(c.formOverlay, true, false)
 	c.Paned.ShowAll()
 

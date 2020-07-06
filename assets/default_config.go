@@ -1,13 +1,13 @@
 package assets
 
 const DEFAULT_CONFIG = `
-CREATE TABLE "config" (
+CREATE TABLE IF NOT EXISTS "settings" (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    name NVARCHAR(300) NOT NULL,
+    name NVARCHAR(300) UNIQUE NOT NULL,
     value NVARCHAR(300) NOT NULL
 );
 
-CREATE TABLE "connections" (
+CREATE TABLE IF NOT EXISTS "connections" (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     name text NOT NULL DEFAULT "",
     adapter text NOT NULL DEFAULT "",
@@ -26,10 +26,7 @@ CREATE TABLE "connections" (
 	sshAgent  text NOT NULL DEFAULT ""
 );
 
-INSERT INTO connections(name, adapter, type, database, host, options, user, password, port, encrypted)
-      VALUES("localhost", "mysql", "tcp", "", "localhost", "", "", "", 3306, 0);
-
-INSERT INTO config(name, value) VALUES("gui.editor.word_wrap", "word"),
+INSERT OR IGNORE INTO settings(name, value) VALUES("gui.editor.word_wrap", "word"),
     ("gui.page_size", 100),
     ("gui.table_tab_position", "top"),
     ("gui.connection_tab_position", "top"),

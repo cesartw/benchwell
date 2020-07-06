@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
@@ -78,20 +77,14 @@ type Config struct {
 }
 
 func Init(path string) *Config {
-	loadInitial := false
-	if _, err := os.Stat(path); err != nil && !os.IsExist(err) {
-		loadInitial = true
-	}
-
 	db, err := sql.Open("sqlite3", path)
 	if err != nil {
 		panic(err)
 	}
-	if loadInitial {
-		_, err := db.Exec(assets.DEFAULT_CONFIG)
-		if err != nil {
-			panic(err)
-		}
+
+	_, err = db.Exec(assets.DEFAULT_CONFIG)
+	if err != nil {
+		panic(err)
 	}
 
 	c := &Config{
@@ -119,6 +112,10 @@ func Init(path string) *Config {
 	err = c.loadConnections()
 	if err != nil {
 		panic(err)
+	}
+
+	if len(c.Connections) == 0 {
+		c.SaveConnection(&Connection{Name: "New connection", Type: "tcp", Adapter: "mysql", Port: 3306})
 	}
 
 	return c
@@ -233,7 +230,7 @@ func (c *Config) Get(s string) *Setting {
 	}
 	setting = &Setting{}
 
-	row, err := c.db.Query("SELECT * FROM config WHERE name = ? LIMIT 1", s)
+	row, err := c.db.Query("SELECT * FROM settings WHERE name = ? LIMIT 1", s)
 	if err != nil {
 		panic(err)
 	}
