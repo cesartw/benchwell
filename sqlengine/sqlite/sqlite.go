@@ -13,6 +13,7 @@ import (
 	"time"
 
 	// sqlite implementation
+	"github.com/alecthomas/chroma"
 	_ "github.com/mattn/go-sqlite3"
 
 	"bitbucket.org/goreorto/sqlaid/config"
@@ -43,6 +44,63 @@ func init() {
 func (d *sqliteDriver) Connect(ctx context.Context, cfg config.Connection) (driver.Connection, error) {
 	d.cfgCon = cfg
 	return d.connect(ctx)
+}
+func (d *sqliteDriver) CompleteTableMachines() []driver.Machine {
+	table := driver.Machine{}
+	table.
+		Next(&driver.MachineState{
+			TokenType: chroma.Keyword,
+			Value:     "select",
+		}).
+		Next(&driver.MachineState{
+			TokenType: chroma.Text,
+			NoMatch:   true,
+		})
+	return []driver.Machine{table}
+}
+
+func (d *sqliteDriver) CompleteColumnMachines() []driver.Machine {
+	// SELECT *.
+	wildcard := driver.Machine{At: 2}
+	wildcard.
+		Next(&driver.MachineState{
+			TokenType: chroma.Keyword,
+			Value:     "select",
+		}).
+		Next(&driver.MachineState{
+			TokenType: chroma.Text,
+			NoMatch:   true,
+		}).
+		Next(&driver.MachineState{
+			TokenType: chroma.Operator,
+			Value:     "*",
+		}).
+		Next(&driver.MachineState{
+			TokenType: chroma.Punctuation,
+			Value:     ".",
+		})
+
+	// SELECT tickets.
+	named := driver.Machine{At: 2}
+	named.
+		Next(&driver.MachineState{
+			TokenType: chroma.Keyword,
+			Value:     "select",
+		}).
+		Next(&driver.MachineState{
+			TokenType: chroma.Text,
+			NoMatch:   true,
+		}).
+		Next(&driver.MachineState{
+			TokenType: chroma.Name,
+			NoMatch:   true,
+		}).
+		Next(&driver.MachineState{
+			TokenType: chroma.Punctuation,
+			Value:     ".",
+		})
+
+	return []driver.Machine{wildcard}
 }
 
 func (d *sqliteDriver) ValidateConnection(c config.Connection) bool {

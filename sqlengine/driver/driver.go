@@ -171,10 +171,31 @@ func ValidateConnection(conn config.Connection) bool {
 	return driver.ValidateConnection(conn)
 }
 
+func CompleteColumnMachines(conn config.Connection) []Machine {
+	driver, ok := drivers[conn.Adapter]
+	if !ok {
+		panic("unknown driver: " + conn.Adapter)
+	}
+
+	return driver.CompleteColumnMachines()
+}
+
+func CompleteTableMachines(conn config.Connection) []Machine {
+	driver, ok := drivers[conn.Adapter]
+	if !ok {
+		panic("unknown driver: " + conn.Adapter)
+	}
+
+	return driver.CompleteTableMachines()
+}
+
 // Driver is a database implementation for SQLHero
 type Driver interface {
 	Connect(context.Context, config.Connection) (Connection, error)
 	ValidateConnection(config.Connection) bool
+	// State machine which will trigger table or column completion
+	CompleteTableMachines() []Machine
+	CompleteColumnMachines() []Machine
 }
 
 // Connection ...

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	// mysql implementation
+	"github.com/alecthomas/chroma"
 	_ "github.com/go-sql-driver/mysql"
 
 	"bitbucket.org/goreorto/sqlaid/config"
@@ -70,6 +71,64 @@ func (d *mysqlDriver) ValidateConnection(c config.Connection) bool {
 	}
 
 	return true
+}
+
+func (d *mysqlDriver) CompleteTableMachines() []driver.Machine {
+	table := driver.Machine{}
+	table.
+		Next(&driver.MachineState{
+			TokenType: chroma.Keyword,
+			Value:     "select",
+		}).
+		Next(&driver.MachineState{
+			TokenType: chroma.Text,
+			NoMatch:   true,
+		})
+	return []driver.Machine{table}
+}
+
+func (d *mysqlDriver) CompleteColumnMachines() []driver.Machine {
+	// SELECT *.
+	wildcard := driver.Machine{At: 2}
+	wildcard.
+		Next(&driver.MachineState{
+			TokenType: chroma.Keyword,
+			Value:     "select",
+		}).
+		Next(&driver.MachineState{
+			TokenType: chroma.Text,
+			NoMatch:   true,
+		}).
+		Next(&driver.MachineState{
+			TokenType: chroma.Operator,
+			Value:     "*",
+		}).
+		Next(&driver.MachineState{
+			TokenType: chroma.Punctuation,
+			Value:     ".",
+		})
+
+	// SELECT tickets.
+	named := driver.Machine{At: 2}
+	named.
+		Next(&driver.MachineState{
+			TokenType: chroma.Keyword,
+			Value:     "select",
+		}).
+		Next(&driver.MachineState{
+			TokenType: chroma.Text,
+			NoMatch:   true,
+		}).
+		Next(&driver.MachineState{
+			TokenType: chroma.Name,
+			NoMatch:   true,
+		}).
+		Next(&driver.MachineState{
+			TokenType: chroma.Punctuation,
+			Value:     ".",
+		})
+
+	return []driver.Machine{wildcard}
 }
 
 func (d *mysqlDriver) dsn() string {

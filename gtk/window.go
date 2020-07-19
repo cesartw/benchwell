@@ -15,7 +15,7 @@ import (
 
 type Window struct {
 	*gtk.ApplicationWindow
-	nb          *gtk.Notebook
+	tabs        *gtk.Notebook
 	box         *gtk.Box // holds nb and statusbar
 	statusBar   *gtk.Statusbar
 	statusBarID uint
@@ -47,17 +47,17 @@ func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 	w.SetSizeRequest(1024, 768)
 	w.ctrl = ctrl
 
-	w.nb, err = gtk.NotebookNew()
+	w.tabs, err = gtk.NotebookNew()
 	if err != nil {
 		return nil, err
 	}
-	w.nb.SetName("MainNotebook")
+	w.tabs.SetName("MainNotebook")
 
 	switch w.ctrl.Config().GUI.ConnectionTabPosition.String() {
 	case "bottom":
-		w.nb.SetProperty("tab-pos", gtk.POS_BOTTOM)
+		w.tabs.SetProperty("tab-pos", gtk.POS_BOTTOM)
 	default:
-		w.nb.SetProperty("tab-pos", gtk.POS_TOP)
+		w.tabs.SetProperty("tab-pos", gtk.POS_TOP)
 	}
 
 	w.box, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
@@ -72,7 +72,7 @@ func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 		return nil, err
 	}
 
-	w.box.PackStart(w.nb, true, true, 0)
+	w.box.PackStart(w.tabs, true, true, 0)
 	w.box.PackEnd(w.statusBar, false, false, 0)
 
 	w.statusBarID = w.statusBar.GetContextId("main")
@@ -160,13 +160,13 @@ func (w *Window) AddTab(label *gtk.Label, wd gtk.IWidget, removed func()) error 
 	header.PackEnd(btn, false, false, 0)
 	header.ShowAll()
 
-	w.nb.AppendPage(wd, header)
-	w.nb.SetTabReorderable(wd, true)
-	w.nb.SetCurrentPage(w.nb.PageNum(wd))
+	w.tabs.AppendPage(wd, header)
+	w.tabs.SetTabReorderable(wd, true)
+	w.tabs.SetCurrentPage(w.tabs.PageNum(wd))
 
 	btn.Connect("clicked", func() {
-		index := w.nb.PageNum(wd)
-		w.nb.RemovePage(index)
+		index := w.tabs.PageNum(wd)
+		w.tabs.RemovePage(index)
 		removed()
 	})
 
@@ -174,15 +174,15 @@ func (w *Window) AddTab(label *gtk.Label, wd gtk.IWidget, removed func()) error 
 }
 
 func (w *Window) RemoveCurrentPage() {
-	w.nb.RemovePage(w.CurrentPage())
+	w.tabs.RemovePage(w.CurrentPage())
 }
 
 func (w *Window) CurrentPage() int {
-	return w.nb.GetCurrentPage()
+	return w.tabs.GetCurrentPage()
 }
 
 func (w *Window) Remove(wd gtk.IWidget) {
-	w.nb.Remove(wd)
+	w.tabs.Remove(wd)
 }
 
 func (w Window) PushStatus(format string, args ...interface{}) {
@@ -191,11 +191,11 @@ func (w Window) PushStatus(format string, args ...interface{}) {
 }
 
 func (w *Window) OnPageRemoved(f interface{}) {
-	w.nb.Connect("page-removed", f)
+	w.tabs.Connect("page-removed", f)
 }
 
 func (w *Window) PageCount() int {
-	return w.nb.GetNPages()
+	return w.tabs.GetNPages()
 }
 
 func (w *Window) headerMenu() (*gtk.HeaderBar, error) {

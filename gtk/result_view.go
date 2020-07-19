@@ -8,6 +8,7 @@ import (
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
+	"github.com/gotk3/sourceview"
 
 	"bitbucket.org/goreorto/sqlaid/config"
 	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
@@ -19,9 +20,10 @@ type ResultView struct {
 	*CancelOverlay
 	Paned *gtk.Paned
 
-	textView *TextView
-	prevText string
-	offset   int64
+	//textView   *TextView
+	sourceView *SourceView
+	prevText   string
+	offset     int64
 
 	conditions *Conditions
 
@@ -46,17 +48,14 @@ type ResultView struct {
 
 	colFilter *gtk.SearchEntry
 
-	submitCallback func(string)
-
-	//query type
-	isDML, isDDL bool
-	ctrl         resultViewCtrl
+	ctrl resultViewCtrl
 }
 
 type resultViewCtrl interface {
 	OnUpdateRecord([]driver.ColDef, []interface{}) error
 	OnCreateRecord([]driver.ColDef, []interface{}) ([]interface{}, error)
 	OnExecQuery(string)
+	OnTextChange(string, int) //query, cursor position
 	OnRefresh()
 	OnDelete()
 	OnCreate()
@@ -86,15 +85,73 @@ func (v ResultView) Init(
 		return nil, err
 	}
 
-	v.textView, err = TextView{}.Init(v.w, TextViewOptions{true, true}, ctrl)
+	v.sourceView, err = SourceView{}.Init(v.w, SourceViewOptions{true, true}, ctrl)
 	if err != nil {
 		return nil, err
 	}
-	v.textView.SetName("query")
-	v.textView.SetHExpand(true)
-	v.textView.SetVExpand(true)
+	v.sourceView.SetShowLineNumbers(true)
+	v.sourceView.SetShowRightMargin()
+	v.sourceView.SetHExpand(true)
+	v.sourceView.SetVExpand(true)
+	buffer, err := v.sourceView.GetBuffer()
+	if err != nil {
+		return nil, err
+	}
+	lm, _ := sourceview.SourceLanguageManagerNew()
+	lang, err := lm.GetLanguage("sql")
+	if err != nil {
+		panic(err)
+	}
 
-	v.textView.Connect("key-press-event", v.onTextViewKeyPress) // ctrl+enter exec query
+	buffer.SetLanguage(lang)
+
+	//v.textView, err = TextView{}.Init(v.w, TextViewOptions{true, true}, ctrl)
+	//if err != nil {
+	//return nil, err
+	//}
+	//v.textView.SetName("query")
+	//v.textView.SetHExpand(true)
+	//v.textView.SetVExpand(true)
+	//v.textView.buffer.Connect("insert-text", func(_ *gtk.TextBuffer, iter *gtk.TextIter, txt string, _ int) {
+	//if iter.GetOffset() == 0 {
+	//return
+	//}
+
+	//cursorAt := iter.GetOffset() + len(txt)
+
+	//start := v.textView.buffer.GetStartIter()
+	//end := v.textView.buffer.GetEndIter()
+	//query, err := v.textView.buffer.GetText(start, end, false)
+	//if err != nil {
+	//ctrl.Config().Error(err)
+	//return
+	//}
+
+	//ctrl.OnTextChange(query+txt, cursorAt)
+	//})
+	buff, err := v.sourceView.GetBuffer()
+	if err != nil {
+		return nil, err
+	}
+	buff.Connect("insert-text", func(_ *sourceview.SourceBuffer, iter *gtk.TextIter, txt string, _ int) {
+		if iter.GetOffset() == 0 {
+			return
+		}
+
+		cursorAt := iter.GetOffset() + len(txt)
+
+		start := buff.GetStartIter()
+		end := buff.GetEndIter()
+		query, err := buff.GetText(start, end, false)
+		if err != nil {
+			ctrl.Config().Error(err)
+			return
+		}
+
+		ctrl.OnTextChange(query+txt, cursorAt)
+	})
+
+	v.sourceView.Connect("key-press-event", v.onTextViewKeyPress) // ctrl+enter exec query
 
 	var resultSW, textViewSW *gtk.ScrolledWindow
 	resultSW, err = gtk.ScrolledWindowNew(nil, nil)
@@ -195,21 +252,23 @@ func (v ResultView) Init(
 
 	v.result.TreeView.Connect("row-activated", v.onRowActivated)
 
-	v.textView.SetProperty("accepts-tab", true)
-	v.Paned.SetProperty("wide-handle", true)
-	v.textView.SetLeftMargin(10)
-	// this naming mess
-	v.textView.SetProperty("top-margin", 10)
+	v.sourceView.SetProperty("highlight-current-line", false)
+	v.sourceView.SetProperty("show-line-numbers", true)
+	v.sourceView.SetProperty("show-right-margin", true)
+	v.sourceView.SetProperty("show-left-margin", true)
+	//v.sourceView.SetProperty("top-margin", 10)
 
-	v.textView.SetProperty("wrap-mode", map[string]gtk.WrapMode{
-		"none":      gtk.WRAP_NONE,
-		"char":      gtk.WRAP_CHAR,
-		"word":      gtk.WRAP_WORD,
-		"word_char": gtk.WRAP_WORD_CHAR,
-	}[v.ctrl.Config().Editor.WordWrap.String()])
+	//v.sourceView.SetProperty("wrap-mode", map[string]gtk.WrapMode{
+	//"none":      gtk.WRAP_NONE,
+	//"char":      gtk.WRAP_CHAR,
+	//"word":      gtk.WRAP_WORD,
+	//"word_char": gtk.WRAP_WORD_CHAR,
+	//}[v.ctrl.Config().Editor.WordWrap.String()])
+
+	v.Paned.SetProperty("wide-handle", true)
 
 	resultSW.Add(v.result)
-	textViewSW.Add(v.textView)
+	textViewSW.Add(v.sourceView)
 
 	tvBox.PackStart(textViewSW, false, true, 0)
 	tvBox.PackEnd(tvActionBar, false, false, 0)
@@ -220,7 +279,6 @@ func (v ResultView) Init(
 	v.Paned.ShowAll()
 	v.conditions.Hide()
 
-	v.submitCallback = ctrl.OnExecQuery
 	v.btnRsh.Connect("clicked", ctrl.OnRefresh)
 	v.btnPrev.Connect("clicked", ctrl.OnRefresh)
 	v.btnNext.Connect("clicked", ctrl.OnRefresh)
@@ -230,29 +288,23 @@ func (v ResultView) Init(
 	return &v, nil
 }
 
+func (v *ResultView) ShowAutoComplete(words []string) {
+	v.sourceView.ShowAutoComplete(words)
+}
+
 func (v *ResultView) Block(cancel func()) {
 	v.Run(cancel)
 }
 
 func (v *ResultView) SetQuery(query string) {
-	buff, err := v.textView.GetBuffer()
+	buff, err := v.sourceView.GetBuffer()
 	if err != nil {
 		v.ctrl.Config().Error(err)
 		return
 	}
 
-	iter := buff.GetIterAtMark(buff.GetInsert())
-	offset := iter.GetOffset()
-
-	query, err = ChromaHighlight(v.ctrl.Config().EditorTheme(), query)
-	if err != nil {
-		v.ctrl.Config().Error(err)
-		return
-	}
 	buff.Delete(buff.GetStartIter(), buff.GetEndIter())
 	buff.InsertMarkup(buff.GetStartIter(), query)
-
-	buff.PlaceCursor(buff.GetIterAtOffset(offset))
 }
 
 func (v *ResultView) onSaveQuery(
@@ -260,7 +312,7 @@ func (v *ResultView) onSaveQuery(
 	onSaveQuery func(string, string),
 ) func() {
 	return func() {
-		buff, err := v.textView.GetBuffer()
+		buff, err := v.sourceView.GetBuffer()
 		if err != nil {
 			v.ctrl.Config().Error(err)
 			return
@@ -290,7 +342,7 @@ func (v *ResultView) onSaveFav(
 			return
 		}
 
-		buff, err := v.textView.GetBuffer()
+		buff, err := v.sourceView.GetBuffer()
 		if err != nil {
 			v.ctrl.Config().Error(err)
 			return
@@ -495,11 +547,11 @@ func (v *ResultView) newRecordEnable(b bool) {
 	v.btnCreateRow.SetSensitive(b)
 }
 
-func (v *ResultView) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) bool {
+func (v *ResultView) onTextViewKeyPress(_ *sourceview.SourceView, e *gdk.Event) bool {
 	keyEvent := gdk.EventKeyNewFromEvent(e)
 
 	if keyEvent.KeyVal() == gdk.KEY_Return && keyEvent.State()&gdk.CONTROL_MASK > 0 {
-		buff, err := v.textView.GetBuffer()
+		buff, err := v.sourceView.GetBuffer()
 		if err != nil {
 			v.ctrl.Config().Error(err)
 			return true
@@ -508,9 +560,8 @@ func (v *ResultView) onTextViewKeyPress(_ *gtk.TextView, e *gdk.Event) bool {
 		if err != nil {
 			v.ctrl.Config().Error(err)
 		}
-		if v.submitCallback != nil {
-			v.submitCallback(txt)
-		}
+
+		v.ctrl.OnExecQuery(txt)
 		return true
 	}
 

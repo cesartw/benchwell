@@ -67,6 +67,36 @@ func (tc TableCtrl) Init(
 	return &tc, nil
 }
 
+func (tc *TableCtrl) OnTextChange(query string, cursorAt int) {
+	return
+	// TODO: need to implement sourceview completion
+	//columnMachines := driver.CompleteColumnMachines(*tc.conn)
+	//tableMachines := driver.CompleteTableMachines(*tc.conn)
+	//l := lexers.Get("sql")
+	//it, _ := l.Tokenise(nil, string(query[:cursorAt]))
+	//tokens := it.Tokens()
+
+	//for _, m := range tableMachines {
+	//_, ok := m.Match(tokens)
+	//if !ok {
+	//continue
+	//}
+
+	//tables, err := tc.Engine.Tables(tc.ctx)
+	//if err != nil {
+	//tc.Config().Error(err)
+	//return
+	//}
+
+	//words := make([]string, len(tables))
+	//for i, t := range tables {
+	//words[i] = t.String()
+	//}
+
+	//tc.resultView.ShowAutoComplete(words)
+	//}
+}
+
 func (tc *TableCtrl) String() string {
 	return tc.ctx.Database().Name() + "." + tc.tableDef.Name
 }

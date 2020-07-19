@@ -32,6 +32,7 @@ type TextViewOptions struct {
 }
 type textViewCtrl interface {
 	Config() *config.Config
+	OnTextChange(string, int)
 }
 
 func (t TextView) Init(_ *Window, opts TextViewOptions, ctrl textViewCtrl) (*TextView, error) {
@@ -175,6 +176,28 @@ func (t TextBuffer) Init(undoable, highlight bool, ctrl textViewCtrl) (*TextBuff
 		t.undostack = stack{}
 		t.redostack = stack{}
 	}
+
+	t.Connect("insert-text", func(_ *gtk.TextBuffer, iter *gtk.TextIter, txt string, _ int) {
+		if iter.GetOffset() == 0 {
+			return
+		}
+
+		if t.notUndoableAction {
+			return
+		}
+
+		cursorAt := iter.GetOffset() + len(txt)
+
+		start := t.GetStartIter()
+		end := t.GetEndIter()
+		query, err := t.GetText(start, end, false)
+		if err != nil {
+			ctrl.Config().Error(err)
+			return
+		}
+
+		ctrl.OnTextChange(query+txt, cursorAt)
+	})
 
 	if highlight {
 		t.Connect("end-user-action", t.onChanged)

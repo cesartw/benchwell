@@ -7,6 +7,7 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/mock v1.4.3
 	github.com/gotk3/gotk3 v0.4.1-0.20200630165726-104a10c1148f
+	github.com/gotk3/sourceview v0.0.0-20200523170151-58bbfa485ab5
 	github.com/keybase/go-keychain v0.0.0-20200502122510-cda31fe0c86d
 	github.com/keybase/go.dbus v0.0.0-20200324223359-a94be52c0b03
 	github.com/mattn/go-isatty v0.0.12 // indirect
@@ -27,3 +28,4 @@ require (
 )
 
 //replace github.com/gotk3/gotk3 v0.4.1-0.20200606044958-b248c84e8b17 => /home/goreorto/gopath/src/github.com/gotk3/gotk3
+//replace github.com/gotk3/sourceview v0.0.0-20200523170151-58bbfa485ab5 => /home/goreorto/gopath/src/github.com/gotk3/sourceview
