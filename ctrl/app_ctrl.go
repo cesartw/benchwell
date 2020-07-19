@@ -1,9 +1,9 @@
 package ctrl
 
 import (
-	"bitbucket.org/goreorto/sqlaid/config"
-	"bitbucket.org/goreorto/sqlaid/gtk"
-	"bitbucket.org/goreorto/sqlaid/sqlengine"
+	"bitbucket.org/goreorto/benchwell/config"
+	"bitbucket.org/goreorto/benchwell/gtk"
+	"bitbucket.org/goreorto/benchwell/sqlengine"
 )
 
 type AppCtrl struct {

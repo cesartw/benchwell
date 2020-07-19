@@ -10,8 +10,8 @@ import (
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/gotk3/sourceview"
 
-	"bitbucket.org/goreorto/sqlaid/config"
-	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
+	"bitbucket.org/goreorto/benchwell/config"
+	"bitbucket.org/goreorto/benchwell/sqlengine/driver"
 )
 
 // ResultView is a table result tab content

@@ -4,12 +4,12 @@ import (
 	"context"
 
 	// drivers
-	_ "bitbucket.org/goreorto/sqlaid/sqlengine/mysql"
-	_ "bitbucket.org/goreorto/sqlaid/sqlengine/sqlite"
+	_ "bitbucket.org/goreorto/benchwell/sqlengine/mysql"
+	_ "bitbucket.org/goreorto/benchwell/sqlengine/sqlite"
 
-	//_ "bitbucket.org/goreorto/sqlaid/sqlengine/test"
+	//_ "bitbucket.org/goreorto/benchwell/sqlengine/test"
 
-	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
+	"bitbucket.org/goreorto/benchwell/sqlengine/driver"
 )
 
 type contextkey struct {

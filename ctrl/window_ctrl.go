@@ -4,16 +4,33 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/gotk3/gotk3/gdk"
 	ggtk "github.com/gotk3/gotk3/gtk"
 
-	"bitbucket.org/goreorto/sqlaid/gtk"
+	"bitbucket.org/goreorto/benchwell/config"
+	"bitbucket.org/goreorto/benchwell/gtk"
 )
+
+type tab_type int
+
+const (
+	TAB_TYPE_DB tab_type = iota
+	TAB_TYPE_HTTP
+)
+
+type tabCtrl interface {
+	Close() bool
+	Removed()
+	Title() string
+	Content() ggtk.IWidget
+	SetFileText(string)
+	Config() *config.Config
+	AddTab() error
+	OnCloseTab()
+}
 
 type WindowCtrl struct {
 	*AppCtrl
 	window *gtk.Window
-	tabs   []*WindowTabCtrl
 }
 
 func (c WindowCtrl) Init(parent *AppCtrl) (*WindowCtrl, error) {
@@ -25,7 +42,7 @@ func (c WindowCtrl) Init(parent *AppCtrl) (*WindowCtrl, error) {
 		return nil, err
 	}
 
-	return ctrl, ctrl.AddTab()
+	return ctrl, ctrl.AddTab(TAB_TYPE_DB)
 }
 
 func (c *WindowCtrl) OnSaveQuery(query, path string) {
@@ -54,19 +71,8 @@ func (c *WindowCtrl) OnNewSubTab() {
 	c.window.PushStatus("Ready")
 }
 
-func (c *WindowCtrl) OnCloseTab() {
-	if c.currentWindowTab().Close() {
-		return
-	}
-
-	i := c.window.CurrentPage()
-
-	c.tabs = append(c.tabs[i:], c.tabs[:i+1]...)
-	c.window.RemoveCurrentPage()
-}
-
 func (c *WindowCtrl) OnNewTab() {
-	err := c.AddTab()
+	err := c.AddTab(TAB_TYPE_DB)
 	if err != nil {
 		c.Config().Error(err)
 		return
@@ -82,46 +88,60 @@ func (c *WindowCtrl) Hide() {
 	c.window.Hide()
 }
 
-//func (c *WindowCtrl) OnActivate() {
-//err := c.AddTab()
-//if err != nil {
-//c.window.PushStatus(err.Error())
-//} else {
-//c.window.PushStatus("Ready")
-//}
+func (c *WindowCtrl) AddTab(t tab_type) error {
+	var (
+		err  error
+		ctrl tabCtrl
+	)
 
-//c.window.Show()
-//}
+	switch t {
+	case TAB_TYPE_DB:
+		ctrl, err = DbTabCtrl{}.Init(c)
+		if err != nil {
+			return err
+		}
+	}
 
-func (c *WindowCtrl) AddTab() error {
-	tab, err := WindowTabCtrl{}.Init(c)
+	tab, err := gtk.ToolTab{}.Init(c.window)
 	if err != nil {
 		return err
 	}
+	tab.SetContent(gtk.ToolTabOptions{
+		Content: ctrl.Content(),
+		Title:   ctrl.Title(),
+		Ctrl:    ctrl,
+	})
 
-	tab.tab.Show()
-	c.window.AddTab(tab.tabLabel, tab.tab, tab.Removed)
-	c.tabs = append(c.tabs, tab)
+	c.window.AddToolTab(tab)
 
 	return nil
 }
 
-func (c *WindowCtrl) currentWindowTab() *WindowTabCtrl {
-	return c.tabs[c.window.CurrentPage()]
+func (c *WindowCtrl) OnCloseTab() {
+	c.currentWindowTab().Close()
+	c.window.RemoveCurrentPage()
+}
+
+func (c *WindowCtrl) ChangeTitle(title string) {
+	c.currentWindowTab().SetTitle(title)
+}
+
+func (c *WindowCtrl) currentWindowTab() *gtk.ToolTab {
+	return c.window.CurrentTab()
 }
 
 // TODO: not used
-func (c *WindowCtrl) onNotebookDoubleClick(_ *ggtk.ListBox, e *gdk.Event) {
-	keyEvent := gdk.EventButtonNewFromEvent(e)
+//func (c *WindowCtrl) onNotebookDoubleClick(_ *ggtk.ListBox, e *gdk.Event) {
+//keyEvent := gdk.EventButtonNewFromEvent(e)
 
-	if keyEvent.Button() != gdk.BUTTON_PRIMARY {
-		return
-	}
-	if keyEvent.Type() != gdk.EVENT_2BUTTON_PRESS {
-		return
-	}
+//if keyEvent.Button() != gdk.BUTTON_PRIMARY {
+//return
+//}
+//if keyEvent.Type() != gdk.EVENT_2BUTTON_PRESS {
+//return
+//}
 
-	if err := c.AddTab(); err != nil {
-		c.Config().Error(err)
-	}
-}
+//if err := c.AddTab(); err != nil {
+//c.Config().Error(err)
+//}
+//}

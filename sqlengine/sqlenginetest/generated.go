@@ -7,7 +7,7 @@ package sqlenginetest
 import (
 	reflect "reflect"
 
-	driver "bitbucket.org/goreorto/sqlaid/sqlengine/driver"
+	driver "bitbucket.org/goreorto/benchwell/sqlengine/driver"
 	gomock "github.com/golang/mock/gomock"
 )
 

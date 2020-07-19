@@ -4,16 +4,16 @@ NIGHTLY_VERSION="nightly-${DATE}${SHA}"
 
 .PHONY: install clean
 
-LDFLAGS=-ldflags "-X bitbucket.org/goreorto/sqlaid/cmd.version=${NIGHTLY_VERSION}"
+LDFLAGS=-ldflags "-X bitbucket.org/goreorto/benchwell/cmd.version=${NIGHTLY_VERSION}"
 
 build:
-	@go build -mod=vendor ${LDFLAGS} -o sqlaid bitbucket.org/goreorto/sqlaid
+	@go build -mod=vendor ${LDFLAGS} -o benchwell bitbucket.org/goreorto/benchwell
 
 install:
-	@go install -mod=vendor ${LDFLAGS} bitbucket.org/goreorto/sqlaid
+	@go install -mod=vendor ${LDFLAGS} bitbucket.org/goreorto/benchwell
 
 assets: assets/data/*
 	go generate assets/*.go
 
 clean:
-	rm -f sqlaid
+	rm -f benchwell

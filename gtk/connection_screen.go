@@ -7,10 +7,10 @@ import (
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
 
-	"bitbucket.org/goreorto/sqlaid/assets"
-	"bitbucket.org/goreorto/sqlaid/config"
-	"bitbucket.org/goreorto/sqlaid/sqlengine"
-	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
+	"bitbucket.org/goreorto/benchwell/assets"
+	"bitbucket.org/goreorto/benchwell/config"
+	"bitbucket.org/goreorto/benchwell/sqlengine"
+	"bitbucket.org/goreorto/benchwell/sqlengine/driver"
 )
 
 type tab struct {
@@ -248,6 +248,7 @@ func (c ConnectionScreen) Init(
 
 	c.logMenu.clearMenu.Connect("activate", c.onClearLog)
 	//c.logMenu.copyMenu.Connect("activate", ctrl.OnCopyLog)
+	c.ShowAll()
 
 	return &c, nil
 }

@@ -10,26 +10,8 @@ import (
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 
-	"bitbucket.org/goreorto/sqlaid/config"
+	"bitbucket.org/goreorto/benchwell/config"
 )
-
-type Window struct {
-	*gtk.ApplicationWindow
-	tabs        *gtk.Notebook
-	box         *gtk.Box // holds nb and statusbar
-	statusBar   *gtk.Statusbar
-	statusBarID uint
-
-	Menu struct {
-		NewConnection *glib.SimpleAction
-		NewTab        *glib.SimpleAction
-		NewSubTab     *glib.SimpleAction
-		LoadFile      *glib.SimpleAction
-		SaveQuery     *glib.SimpleAction
-		CloseTab      *glib.SimpleAction
-	}
-	ctrl windowCtrl
-}
 
 type windowCtrl interface {
 	OnNewTab()
@@ -40,24 +22,54 @@ type windowCtrl interface {
 	Config() *config.Config
 }
 
+type Window struct {
+	*gtk.ApplicationWindow
+	nb          *gtk.Notebook
+	box         *gtk.Box // holds nb and statusbar
+	statusBar   *gtk.Statusbar
+	statusBarID uint
+
+	Menu struct {
+		NewConnection *glib.SimpleAction
+		NewToolTab    *glib.SimpleAction
+		NewSubToolTab *glib.SimpleAction
+		LoadFile      *glib.SimpleAction
+		SaveQuery     *glib.SimpleAction
+		CloseToolTab  *glib.SimpleAction
+	}
+	ctrl windowCtrl
+
+	tabs     []*ToolTab
+	tabIndex int
+}
+
 func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 	var err error
 	w.ApplicationWindow, err = gtk.ApplicationWindowNew(app)
-	w.SetTitle("SQLaid")
+	w.SetTitle("BenchWell")
 	w.SetSizeRequest(1024, 768)
 	w.ctrl = ctrl
 
-	w.tabs, err = gtk.NotebookNew()
+	w.nb, err = gtk.NotebookNew()
 	if err != nil {
 		return nil, err
 	}
-	w.tabs.SetName("MainNotebook")
+	w.nb.SetName("MainNotebook")
+
+	w.nb.Connect("switch-page", func(_ *gtk.Notebook, _ *gtk.Widget, i int) {
+		w.tabIndex = i
+	})
+	w.nb.Connect("page-removed", func(_ *gtk.Notebook, _ *gtk.Widget, i int) {
+		w.tabs = append(w.tabs[:i], w.tabs[i+1:]...)
+	})
+
+	w.nb.Connect("page-reordered", w.onTabReorder)
 
 	switch w.ctrl.Config().GUI.ConnectionTabPosition.String() {
 	case "bottom":
-		w.tabs.SetProperty("tab-pos", gtk.POS_BOTTOM)
+		w.nb.SetProperty("tab-pos", gtk.POS_BOTTOM)
 	default:
-		w.tabs.SetProperty("tab-pos", gtk.POS_TOP)
+		w.nb.SetProperty("tab-pos", gtk.POS_TOP)
 	}
 
 	w.box, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
@@ -72,7 +84,7 @@ func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 		return nil, err
 	}
 
-	w.box.PackStart(w.tabs, true, true, 0)
+	w.box.PackStart(w.nb, true, true, 0)
 	w.box.PackEnd(w.statusBar, false, false, 0)
 
 	w.statusBarID = w.statusBar.GetContextId("main")
@@ -90,10 +102,10 @@ func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 	//w.HideOnDelete()
 
 	// add main tab
-	w.Menu.NewTab.Connect("activate", ctrl.OnNewTab)
-	// action menu for sub tabs
-	w.Menu.NewSubTab.Connect("activate", ctrl.OnNewSubTab)
-	w.Menu.CloseTab.Connect("activate", ctrl.OnCloseTab)
+	w.Menu.NewToolTab.Connect("activate", ctrl.OnNewTab)
+	// action menu for sub nb
+	w.Menu.NewSubToolTab.Connect("activate", ctrl.OnNewSubTab)
+	w.Menu.CloseToolTab.Connect("activate", ctrl.OnCloseTab)
 	w.Menu.LoadFile.Connect("activate", w.OnOpenFile(ctrl.OnFileSelected))
 	//w.Menu.SaveQuery.Connect("activate", w.OnSaveQuery(ctrl.OnSaveQuery))
 
@@ -138,51 +150,36 @@ func (w *Window) OnSaveQuery(query string, f func(string, string)) {
 	f(query, openfileDialog.GetFilename())
 }
 
-func (w *Window) AddTab(label *gtk.Label, wd gtk.IWidget, removed func()) error {
-	header, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
-	if err != nil {
-		return err
-	}
+func (w *Window) AddToolTab(tab *ToolTab) error {
+	w.nb.AppendPage(tab.Content(), tab.Label())
+	w.nb.SetTabReorderable(tab.Content(), true)
+	w.nb.SetCurrentPage(w.nb.PageNum(tab.Content()))
+	w.tabs = append(w.tabs, tab)
 
-	image, err := gtk.ImageNewFromIconName("window-close", gtk.ICON_SIZE_MENU)
-	if err != nil {
-		return err
-	}
-
-	btn, err := gtk.ButtonNew()
-	if err != nil {
-		return err
-	}
-	btn.SetImage(image)
-	btn.SetRelief(gtk.RELIEF_NONE)
-
-	header.PackStart(label, true, true, 0)
-	header.PackEnd(btn, false, false, 0)
-	header.ShowAll()
-
-	w.tabs.AppendPage(wd, header)
-	w.tabs.SetTabReorderable(wd, true)
-	w.tabs.SetCurrentPage(w.tabs.PageNum(wd))
-
-	btn.Connect("clicked", func() {
-		index := w.tabs.PageNum(wd)
-		w.tabs.RemovePage(index)
-		removed()
-	})
+	// TODO: fix
+	//btn.Connect("clicked", func() {
+	//index := w.nb.PageNum(wd)
+	//w.nb.RemovePage(index)
+	//tab.Removed()
+	//})
 
 	return nil
 }
 
 func (w *Window) RemoveCurrentPage() {
-	w.tabs.RemovePage(w.CurrentPage())
+	w.nb.RemovePage(w.CurrentPage())
 }
 
 func (w *Window) CurrentPage() int {
-	return w.tabs.GetCurrentPage()
+	return w.nb.GetCurrentPage()
+}
+
+func (w *Window) CurrentTab() *ToolTab {
+	return w.tabs[w.CurrentPage()]
 }
 
 func (w *Window) Remove(wd gtk.IWidget) {
-	w.tabs.Remove(wd)
+	w.nb.Remove(wd)
 }
 
 func (w Window) PushStatus(format string, args ...interface{}) {
@@ -191,29 +188,29 @@ func (w Window) PushStatus(format string, args ...interface{}) {
 }
 
 func (w *Window) OnPageRemoved(f interface{}) {
-	w.tabs.Connect("page-removed", f)
+	w.nb.Connect("page-removed", f)
 }
 
 func (w *Window) PageCount() int {
-	return w.tabs.GetNPages()
+	return w.nb.GetNPages()
 }
 
 func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
-	w.Menu.NewTab = glib.SimpleActionNew("new", nil)
-	w.Menu.NewSubTab = glib.SimpleActionNew("tabnew", nil)
+	w.Menu.NewToolTab = glib.SimpleActionNew("new", nil)
+	w.Menu.NewSubToolTab = glib.SimpleActionNew("tabnew", nil)
 	w.Menu.LoadFile = glib.SimpleActionNew("file.load", nil)
-	w.Menu.CloseTab = glib.SimpleActionNew("close", nil)
-	w.AddAction(w.Menu.NewTab)
-	w.AddAction(w.Menu.NewSubTab)
+	w.Menu.CloseToolTab = glib.SimpleActionNew("close", nil)
+	w.AddAction(w.Menu.NewToolTab)
+	w.AddAction(w.Menu.NewSubToolTab)
 	w.AddAction(w.Menu.LoadFile)
-	w.AddAction(w.Menu.CloseTab)
+	w.AddAction(w.Menu.CloseToolTab)
 
 	header, err := gtk.HeaderBarNew()
 	if err != nil {
 		return nil, err
 	}
 	header.SetShowCloseButton(true)
-	header.SetTitle("SQLAID")
+	header.SetTitle("BenchWell")
 	header.SetSubtitle(w.ctrl.Config().Version)
 
 	// Create a new window menu button
@@ -235,7 +232,7 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 	windowMenu.Append("New connection", "win.new")
 	windowMenu.Append("New tab", "win.tabnew")
 	windowMenu.Append("Open File", "win.file.load")
-	//menu.Append("- Table Tab", "win.close")
+	//menu.Append("- ToolTable ToolTab", "win.close")
 
 	// Create a new app menu button
 	appBtnMenu, err := gtk.MenuButtonNew()
@@ -293,4 +290,19 @@ func (w *Window) Go(job func(context.Context) func()) func() {
 		ctxCancel()
 		close(cancel)
 	}
+}
+
+func (w *Window) onTabReorder(_ *gtk.Notebook, _ *gtk.Widget, landing int) {
+	// https://play.golang.com/p/YMfQouxHuvr
+	movingTab := w.tabs[w.tabIndex]
+
+	w.tabs = append(w.tabs[:w.tabIndex], w.tabs[w.tabIndex+1:]...)
+
+	lh := make([]*ToolTab, len(w.tabs[:landing]))
+	rh := make([]*ToolTab, len(w.tabs[landing:]))
+	copy(lh, w.tabs[:landing])
+	copy(rh, w.tabs[landing:])
+
+	w.tabs = append(lh, movingTab)
+	w.tabs = append(w.tabs, rh...)
 }

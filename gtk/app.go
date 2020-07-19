@@ -5,7 +5,7 @@ import (
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 
-	"bitbucket.org/goreorto/sqlaid/config"
+	"bitbucket.org/goreorto/benchwell/config"
 )
 
 type Application struct {

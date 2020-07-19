@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"bitbucket.org/goreorto/sqlaid/config"
-	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
+	"bitbucket.org/goreorto/benchwell/config"
+	"bitbucket.org/goreorto/benchwell/sqlengine/driver"
 )
 
 // Errors

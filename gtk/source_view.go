@@ -13,7 +13,7 @@ type SourceViewOptions struct {
 	Undoable  bool
 }
 
-func (t SourceView) Init(_ *Window, opts SourceViewOptions, ctrl textViewCtrl) (*SourceView, error) {
+func (t SourceView) Init(_ *Window, opts SourceViewOptions, ctrl interface{}) (*SourceView, error) {
 	var err error
 	t.SourceView, err = sourceview.SourceViewNew()
 

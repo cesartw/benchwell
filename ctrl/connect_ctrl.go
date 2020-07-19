@@ -3,17 +3,19 @@ package ctrl
 import (
 	"context"
 
-	"bitbucket.org/goreorto/sqlaid/config"
-	"bitbucket.org/goreorto/sqlaid/gtk"
+	ggtk "github.com/gotk3/gotk3/gtk"
+
+	"bitbucket.org/goreorto/benchwell/config"
+	"bitbucket.org/goreorto/benchwell/gtk"
 )
 
 type ConnectCtrl struct {
-	*WindowTabCtrl
+	*DbTabCtrl
 	scr *gtk.ConnectScreen
 }
 
-func (c ConnectCtrl) Init(p *WindowTabCtrl) (*ConnectCtrl, error) {
-	c.WindowTabCtrl = p
+func (c ConnectCtrl) Init(p *DbTabCtrl) (*ConnectCtrl, error) {
+	c.DbTabCtrl = p
 
 	var err error
 	c.scr, err = gtk.ConnectScreen{}.Init(c.window, &c)
@@ -24,6 +26,14 @@ func (c ConnectCtrl) Init(p *WindowTabCtrl) (*ConnectCtrl, error) {
 	c.scr.SetConnections(c.Config().Connections)
 
 	return &c, nil
+}
+
+func (c *ConnectCtrl) Title() string {
+	return "Connect"
+}
+
+func (c *ConnectCtrl) Content() ggtk.IWidget {
+	return c.scr
 }
 
 func (c *ConnectCtrl) AddEmptyTab() error {
@@ -130,6 +140,9 @@ func (c *ConnectCtrl) Screen() interface{} {
 
 func (c *ConnectCtrl) Close() bool {
 	return false
+}
+
+func (c *ConnectCtrl) FullClose() {
 }
 
 func (c *ConnectCtrl) Connecting(cancel func()) {

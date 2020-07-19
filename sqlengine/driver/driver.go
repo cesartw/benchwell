@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"bitbucket.org/goreorto/sqlaid/config"
+	"bitbucket.org/goreorto/benchwell/config"
 )
 
 const NULL_PATTERN = "<NULL>"

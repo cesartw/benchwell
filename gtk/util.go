@@ -6,8 +6,8 @@ import (
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
 
-	"bitbucket.org/goreorto/sqlaid/clipboard"
-	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
+	"bitbucket.org/goreorto/benchwell/clipboard"
+	"bitbucket.org/goreorto/benchwell/sqlengine/driver"
 )
 
 type Stringer string

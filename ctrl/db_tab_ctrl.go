@@ -3,36 +3,42 @@ package ctrl
 import (
 	"context"
 
-	"bitbucket.org/goreorto/sqlaid/config"
-	"bitbucket.org/goreorto/sqlaid/gtk"
-	"bitbucket.org/goreorto/sqlaid/sqlengine"
 	ggtk "github.com/gotk3/gotk3/gtk"
+
+	"bitbucket.org/goreorto/benchwell/config"
+	"bitbucket.org/goreorto/benchwell/gtk"
+	"bitbucket.org/goreorto/benchwell/sqlengine"
 )
 
-type WindowTabCtrl struct {
+type DbTabCtrl struct {
 	*WindowCtrl
-	tab            *gtk.Tab
-	tabLabel       *ggtk.Label
+	screenHolder   *gtk.DB
 	connectCtrl    *ConnectCtrl
 	connectionCtrl *ConnectionCtrl
 
 	currentCtrl interface {
 		Close() bool
+		FullClose()
 		AddEmptyTab() error
 		SetFileText(string)
+		Content() ggtk.IWidget
+		Title() string
 	}
 }
 
-func (c WindowTabCtrl) Init(p *WindowCtrl) (*WindowTabCtrl, error) {
-	var err error
+func (c *DbTabCtrl) Title() string {
+	return c.currentCtrl.Title()
+}
+
+func (c *DbTabCtrl) Content() ggtk.IWidget {
+	return c.screenHolder
+}
+
+func (c DbTabCtrl) Init(p *WindowCtrl) (*DbTabCtrl, error) {
 	c.WindowCtrl = p
 
-	c.tab, err = gtk.Tab{}.Init(c.window)
-	if err != nil {
-		return nil, err
-	}
-
-	c.tabLabel, err = ggtk.LabelNew("New Connection")
+	var err error
+	c.screenHolder, err = gtk.DB{}.Init(c.window)
 	if err != nil {
 		return nil, err
 	}
@@ -42,19 +48,19 @@ func (c WindowTabCtrl) Init(p *WindowCtrl) (*WindowTabCtrl, error) {
 	return &c, nil
 }
 
-func (c *WindowTabCtrl) AddTab() error {
+func (c *DbTabCtrl) AddTab() error {
 	return c.currentCtrl.AddEmptyTab()
 }
 
-func (c *WindowTabCtrl) SetFileText(s string) {
+func (c *DbTabCtrl) SetFileText(s string) {
 	c.currentCtrl.SetFileText(s)
 }
 
-func (c *WindowTabCtrl) Show() {
-	c.tab.Show()
+func (c *DbTabCtrl) Show() {
+	//c.tab.Show()
 }
 
-func (c *WindowTabCtrl) Removed() {
+func (c *DbTabCtrl) Removed() {
 	if c.connectionCtrl != nil {
 		c.Engine.Disconnect(c.connectionCtrl.mainCtx)
 		c.window.PushStatus("Disconnected")
@@ -62,51 +68,40 @@ func (c *WindowTabCtrl) Removed() {
 }
 
 // Close delegates the close tab action ot connect or connection screen
-func (c *WindowTabCtrl) Close() bool {
+func (c *DbTabCtrl) Close() bool {
 	// TODO: figure out which screen is open
 	return c.currentCtrl.Close()
 }
 
-func (c *WindowTabCtrl) launchConnect() {
+// Close all tabs
+func (c *DbTabCtrl) FullClose() {
+	c.currentCtrl.FullClose()
+}
+
+func (c *DbTabCtrl) launchConnect() {
 	var err error
 	c.connectCtrl, err = ConnectCtrl{}.Init(c)
 	if err != nil {
 		c.Config().Error(err)
 		return
 	}
-	if c.connectionCtrl != nil {
-		c.tab.Remove(c.connectionCtrl.scr)
-	}
-
 	c.currentCtrl = c.connectCtrl
-
-	c.tab.PackStart(c.connectCtrl.scr, true, true, 0)
+	c.screenHolder.SetContent(c.connectCtrl.scr)
 }
 
-func (c *WindowTabCtrl) launchConnection(ctx *sqlengine.Context, conn *config.Connection) {
+func (c *DbTabCtrl) launchConnection(ctx *sqlengine.Context, conn *config.Connection) {
 	var err error
 	c.connectionCtrl, err = ConnectionCtrl{}.Init(ctx, c, conn)
 	if err != nil {
 		c.Config().Error(err)
 		return
 	}
-
-	if conn.Name != "" {
-		c.tabLabel.SetText(conn.Name)
-	} else {
-		c.tabLabel.SetText(conn.Host)
-	}
-
-	if c.connectCtrl != nil {
-		c.tab.Remove(c.connectCtrl.scr)
-	}
-
 	c.currentCtrl = c.connectionCtrl
-
-	c.tab.PackStart(c.connectionCtrl.scr, true, true, 0)
+	c.screenHolder.SetContent(c.connectionCtrl.scr)
+	c.ChangeTitle(c.currentCtrl.Title())
 }
 
-func (c *WindowTabCtrl) OnConnect() {
+func (c *DbTabCtrl) OnConnect() {
 	conn := c.connectCtrl.scr.GetFormConnection()
 
 	cancel := c.window.Go(func(ctx context.Context) func() {

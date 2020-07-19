@@ -16,8 +16,8 @@ import (
 	"github.com/alecthomas/chroma"
 	_ "github.com/mattn/go-sqlite3"
 
-	"bitbucket.org/goreorto/sqlaid/config"
-	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
+	"bitbucket.org/goreorto/benchwell/config"
+	"bitbucket.org/goreorto/benchwell/sqlengine/driver"
 )
 
 type sqliteDriver struct {

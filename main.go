@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bitbucket.org/goreorto/sqlaid/cmd"
+	"bitbucket.org/goreorto/benchwell/cmd"
 )
 
 func main() {

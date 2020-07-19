@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"bitbucket.org/goreorto/sqlaid/gtk"
-	"bitbucket.org/goreorto/sqlaid/sqlengine"
-	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
+	"bitbucket.org/goreorto/benchwell/gtk"
+	"bitbucket.org/goreorto/benchwell/sqlengine"
+	"bitbucket.org/goreorto/benchwell/sqlengine/driver"
 )
 
 // tableCtrl manages table result screen

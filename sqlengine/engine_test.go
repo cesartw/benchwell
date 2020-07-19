@@ -7,10 +7,11 @@ import (
 	"reflect"
 	"testing"
 
-	"bitbucket.org/goreorto/sqlaid/config"
-	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
-	"bitbucket.org/goreorto/sqlaid/sqlengine/sqlenginetest"
 	"github.com/golang/mock/gomock"
+
+	"bitbucket.org/goreorto/benchwell/config"
+	"bitbucket.org/goreorto/benchwell/sqlengine/driver"
+	"bitbucket.org/goreorto/benchwell/sqlengine/sqlenginetest"
 )
 
 func registerDriver(t *testing.T, driverName string) (*sqlenginetest.MockDriver, *gomock.Controller) {

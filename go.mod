@@ -1,4 +1,4 @@
-module bitbucket.org/goreorto/sqlaid
+module bitbucket.org/goreorto/benchwell
 
 go 1.14
 

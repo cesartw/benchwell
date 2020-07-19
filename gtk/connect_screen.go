@@ -4,8 +4,8 @@ import (
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
 
-	"bitbucket.org/goreorto/sqlaid/config"
-	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
+	"bitbucket.org/goreorto/benchwell/config"
+	"bitbucket.org/goreorto/benchwell/sqlengine/driver"
 )
 
 type form interface {
@@ -16,8 +16,8 @@ type form interface {
 }
 
 type ConnectScreen struct {
-	w *Window
 	*gtk.Paned
+	w              *Window
 	ConnectionList *List
 	forms          struct {
 		active form

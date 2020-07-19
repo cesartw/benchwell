@@ -7,11 +7,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"bitbucket.org/goreorto/sqlaid/assets"
-	"bitbucket.org/goreorto/sqlaid/config"
-	"bitbucket.org/goreorto/sqlaid/ctrl"
-	"bitbucket.org/goreorto/sqlaid/gtk"
-	"bitbucket.org/goreorto/sqlaid/sqlengine"
+	"bitbucket.org/goreorto/benchwell/assets"
+	"bitbucket.org/goreorto/benchwell/config"
+	"bitbucket.org/goreorto/benchwell/ctrl"
+	"bitbucket.org/goreorto/benchwell/gtk"
+	"bitbucket.org/goreorto/benchwell/sqlengine"
 )
 
 var version = "nightly"

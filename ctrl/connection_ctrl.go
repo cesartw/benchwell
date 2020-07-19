@@ -1,14 +1,15 @@
 package ctrl
 
 import (
-	"bitbucket.org/goreorto/sqlaid/config"
-	"bitbucket.org/goreorto/sqlaid/gtk"
-	"bitbucket.org/goreorto/sqlaid/sqlengine"
-	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
+	"bitbucket.org/goreorto/benchwell/config"
+	"bitbucket.org/goreorto/benchwell/gtk"
+	"bitbucket.org/goreorto/benchwell/sqlengine"
+	"bitbucket.org/goreorto/benchwell/sqlengine/driver"
+	ggtk "github.com/gotk3/gotk3/gtk"
 )
 
 type ConnectionCtrl struct {
-	*WindowTabCtrl
+	*DbTabCtrl
 
 	// db-less connection
 	mainCtx *sqlengine.Context
@@ -23,11 +24,11 @@ type ConnectionCtrl struct {
 
 func (c ConnectionCtrl) Init(
 	ctx *sqlengine.Context,
-	p *WindowTabCtrl,
+	p *DbTabCtrl,
 	conn *config.Connection,
 ) (*ConnectionCtrl, error) {
 	c.dbCtx = map[string]*sqlengine.Context{}
-	c.WindowTabCtrl = p
+	c.DbTabCtrl = p
 	c.mainCtx = ctx
 	c.conn = conn
 
@@ -53,11 +54,26 @@ func (c ConnectionCtrl) Init(
 	return &c, nil
 }
 
+func (c *ConnectionCtrl) Title() string {
+	if c.conn.Name != "" {
+		return c.conn.Name
+	}
+
+	return c.conn.Host
+}
+
+func (c *ConnectionCtrl) Content() ggtk.IWidget {
+	return c.scr
+}
+
 func (c *ConnectionCtrl) OnCopyLog() {
 }
 
 func (c *ConnectionCtrl) Close() bool {
 	return c.scr.Close()
+}
+
+func (c *ConnectionCtrl) FullClose() {
 }
 
 func (c *ConnectionCtrl) AddEmptyTab() error {

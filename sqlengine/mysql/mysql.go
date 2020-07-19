@@ -15,8 +15,8 @@ import (
 	"github.com/alecthomas/chroma"
 	_ "github.com/go-sql-driver/mysql"
 
-	"bitbucket.org/goreorto/sqlaid/config"
-	"bitbucket.org/goreorto/sqlaid/sqlengine/driver"
+	"bitbucket.org/goreorto/benchwell/config"
+	"bitbucket.org/goreorto/benchwell/sqlengine/driver"
 )
 
 type mysqlDriver struct {
