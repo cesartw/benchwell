@@ -15,7 +15,7 @@ install:
 
 release:
 	@go build -mod=vendor ${RELEASELDFLAGS} -o benchwell bitbucket.org/goreorto/benchwell
-	@upx --brute benchwell
+	@upx benchwell
 
 assets: assets/data/*
 	go generate assets/*.go
