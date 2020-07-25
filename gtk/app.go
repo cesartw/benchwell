@@ -4,6 +4,7 @@ import (
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
+	"github.com/gotk3/sourceview"
 
 	"bitbucket.org/goreorto/benchwell/config"
 )
@@ -74,6 +75,21 @@ func (a Application) Init(ctrl applicationCtrl) (*Application, error) {
 
 	// Connect function to application shutdown event, this is not required.
 	a.Application.Connect("shutdown", ctrl.OnShutdown)
+
+	// initialize sourceview extern deps
+	benchwellHome := ctrl.Config().Home
+	sm, err := sourceview.SourceStyleSchemeManagerGetDefault()
+	if err != nil {
+		return nil, err
+	}
+	lm, err := sourceview.SourceLanguageManagerGetDefault()
+	if err != nil {
+		return nil, err
+	}
+
+	sm.SetSearchPath([]string{benchwellHome + "/style"})
+	sm.ForceRescan()
+	lm.SetSearchPath([]string{benchwellHome + "/language"})
 
 	return &a, nil
 }

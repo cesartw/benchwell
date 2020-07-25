@@ -28,4 +28,4 @@ require (
 )
 
 //replace github.com/gotk3/gotk3 v0.4.1-0.20200606044958-b248c84e8b17 => /home/goreorto/gopath/src/github.com/gotk3/gotk3
-//replace github.com/gotk3/sourceview v0.0.0-20200523170151-58bbfa485ab5 => /home/goreorto/gopath/src/github.com/gotk3/sourceview
+replace github.com/gotk3/sourceview v0.0.0-20200523170151-58bbfa485ab5 => /home/goreorto/gopath/src/github.com/gotk3/sourceview

@@ -63,7 +63,13 @@ func (c *WindowCtrl) OnFileSelected(filepath string) {
 }
 
 func (c *WindowCtrl) OnNewSubTab() {
-	err := c.currentWindowTab().AddTab()
+	ctab := c.currentWindowTab()
+	if ctab == nil {
+		c.AddTab(TAB_TYPE_DB)
+		return
+	}
+
+	err := ctab.AddTab()
 	if err != nil {
 		c.Config().Error(err)
 		return
@@ -118,7 +124,9 @@ func (c *WindowCtrl) AddTab(t tab_type) error {
 }
 
 func (c *WindowCtrl) OnCloseTab() {
-	c.currentWindowTab().Close()
+	if c.currentWindowTab().Close() {
+		return
+	}
 	c.window.RemoveCurrentPage()
 }
 

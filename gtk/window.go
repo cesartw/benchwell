@@ -175,6 +175,9 @@ func (w *Window) CurrentPage() int {
 }
 
 func (w *Window) CurrentTab() *ToolTab {
+	if len(w.tabs) == 0 {
+		return nil
+	}
 	return w.tabs[w.CurrentPage()]
 }
 

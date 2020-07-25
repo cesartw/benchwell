@@ -52,7 +52,9 @@ func (s Setting) Int64() int64 {
 type Config struct {
 	db *sql.DB
 	*logrus.Logger
+
 	Version     string
+	Home        string
 	Connections []*Connection
 
 	loadedSettings map[string]*Setting
@@ -77,7 +79,7 @@ type Config struct {
 }
 
 func Init(path string) *Config {
-	db, err := sql.Open("sqlite3", path)
+	db, err := sql.Open("sqlite3", path+"/config.db")
 	if err != nil {
 		panic(err)
 	}
@@ -89,6 +91,7 @@ func Init(path string) *Config {
 
 	c := &Config{
 		Logger:         logrus.New(),
+		Home:           path,
 		db:             db,
 		loadedSettings: map[string]*Setting{},
 	}

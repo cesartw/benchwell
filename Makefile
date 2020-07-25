@@ -5,12 +5,17 @@ NIGHTLY_VERSION="nightly-${DATE}${SHA}"
 .PHONY: install clean
 
 LDFLAGS=-ldflags "-X bitbucket.org/goreorto/benchwell/cmd.version=${NIGHTLY_VERSION}"
+RELEASELDFLAGS=-ldflags "-X bitbucket.org/goreorto/benchwell/cmd.version=${VERSION} -s -w"
 
 build:
 	@go build -mod=vendor ${LDFLAGS} -o benchwell bitbucket.org/goreorto/benchwell
 
 install:
 	@go install -mod=vendor ${LDFLAGS} bitbucket.org/goreorto/benchwell
+
+release:
+	@go build -mod=vendor ${RELEASELDFLAGS} -o benchwell bitbucket.org/goreorto/benchwell
+	@upx --brute benchwell
 
 assets: assets/data/*
 	go generate assets/*.go

@@ -85,7 +85,7 @@ func (v ResultView) Init(
 		return nil, err
 	}
 
-	v.sourceView, err = SourceView{}.Init(v.w, SourceViewOptions{true, true}, ctrl)
+	v.sourceView, err = SourceView{}.Init(v.w, SourceViewOptions{true, true, "sql"}, ctrl)
 	if err != nil {
 		return nil, err
 	}
@@ -93,17 +93,6 @@ func (v ResultView) Init(
 	v.sourceView.SetShowRightMargin()
 	v.sourceView.SetHExpand(true)
 	v.sourceView.SetVExpand(true)
-	buffer, err := v.sourceView.GetBuffer()
-	if err != nil {
-		return nil, err
-	}
-	lm, _ := sourceview.SourceLanguageManagerNew()
-	lang, err := lm.GetLanguage("sql")
-	if err != nil {
-		panic(err)
-	}
-
-	buffer.SetLanguage(lang)
 
 	//v.textView, err = TextView{}.Init(v.w, TextViewOptions{true, true}, ctrl)
 	//if err != nil {

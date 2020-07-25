@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/sirupsen/logrus"
@@ -24,12 +23,10 @@ var rootCmd = &cobra.Command{
 	Short: "SQLaid: Database",
 	Long:  `Visit https://sqlaid.com for more details`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if cfgFile == "" {
-			xdgHome, _ := os.UserConfigDir()
-			cfgFile = xdgHome + "/sqlaid/config.db"
-		}
+		userHome, _ := os.UserConfigDir()
+		benchwellHome := userHome + "/benchwell"
 
-		cfg := config.Init(cfgFile)
+		cfg := config.Init(benchwellHome)
 		cfg.Version = version
 
 		if verbose {
@@ -100,14 +97,7 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-var cfgFile string
-var xdgHome string
-
 func init() {
-	xdgHome, _ = os.UserConfigDir()
-
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "",
-		fmt.Sprintf("config file (default is %s/config.json)", xdgHome+"/sqlaid/config.json"))
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
 	rootCmd.PersistentFlags().StringVarP(&logfile, "logfile", "f", "", "log out file")
 }
