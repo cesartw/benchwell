@@ -203,11 +203,7 @@ func (c *Config) loadConnections() error {
 		c.Connections = append(c.Connections, conn)
 	}
 
-	for _, conn := range c.Connections {
-		conn.Decrypt(nil)
-	}
-
-	return c.loadQueries()
+	return nil // c.loadQueries()
 }
 
 func (c *Config) loadQueries() error {
@@ -229,10 +225,6 @@ func (c *Config) loadQueries() error {
 		}
 
 		connMap[query.ConnectionID].Queries = append(connMap[query.ConnectionID].Queries, query)
-	}
-
-	for _, conn := range c.Connections {
-		conn.Decrypt(nil)
 	}
 
 	return nil
@@ -415,6 +407,7 @@ func (c Connection) mysqlDSN() string {
 	}
 
 	if c.Password != "" && c.User != "" {
+		c.Decrypt(nil)
 		b.WriteString(":" + c.Password)
 	}
 
@@ -501,7 +494,7 @@ func (c *Connection) Decrypt(w *gtk.ApplicationWindow) error {
 		return nil
 	}
 
-	pass, err := Keychain.Get(nil, c.Password)
+	pass, err := Keychain.Get(&w.Window, c.Password)
 	if err != nil {
 		return err
 	}

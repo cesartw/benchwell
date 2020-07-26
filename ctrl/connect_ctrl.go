@@ -126,7 +126,7 @@ func (c *ConnectCtrl) OnConnectionSelected() {
 
 	err := c.Config().Connections[row.GetIndex()].Decrypt(c.window.ApplicationWindow)
 	if err != nil {
-		c.window.PushStatus("Fail to decrypt password")
+		c.window.PushStatus("Fail to decrypt password: %s", err.Error())
 		c.scr.ConnectionList.ClearSelection()
 		return
 	}
