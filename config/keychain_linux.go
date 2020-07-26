@@ -103,7 +103,7 @@ func (p *providerdbus) Set(_ *gtk.Window, keys map[string]string, pass string) (
 
 	item, err := p.srv.CreateItem(
 		secretservice.DefaultCollection,
-		secretservice.NewSecretProperties("sqlaid", keys),
+		secretservice.NewSecretProperties("benchwell", keys),
 		secret,
 		secretservice.ReplaceBehaviorReplace,
 	)

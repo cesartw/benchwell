@@ -166,7 +166,17 @@ func (c ConnectionScreen) Init(
 		return nil, err
 	}
 
-	switch c.ctrl.Config().GUI.TableTabPosition.String() {
+	tabPositionSetting := c.ctrl.Config().GUI.TableTabPosition
+	tabPositionSetting.Subscribe(asyncSettingChange(func(_ interface{}) {
+		switch tabPositionSetting.String() {
+		case "bottom":
+			c.tabber.SetProperty("tab-pos", gtk.POS_BOTTOM)
+		default:
+			c.tabber.SetProperty("tab-pos", gtk.POS_TOP)
+		}
+	}))
+
+	switch tabPositionSetting.String() {
 	case "bottom":
 		c.tabber.SetProperty("tab-pos", gtk.POS_BOTTOM)
 	default:

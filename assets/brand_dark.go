@@ -1,9 +1,6 @@
 package assets
 
-const BRAND_DARK = `textview text, .view text {
-	background-color: #3d3d3d;
-}
-
+const BRAND_DARK = `
 entry, text {
 	background-color: #3d3d3d;
 }

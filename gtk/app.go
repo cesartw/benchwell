@@ -1,6 +1,8 @@
 package gtk
 
 import (
+	"log"
+
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
@@ -146,4 +148,13 @@ func (a *Application) loadSettingsCSS() {
 	}
 
 	gtk.AddProviderForScreen(screen, css, gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+}
+
+func asyncSettingChange(f func(interface{})) func(interface{}) {
+	return func(v interface{}) {
+		_, err := glib.IdleAdd(f, v)
+		if err != nil {
+			log.Fatal("IdleAdd() failed:", err)
+		}
+	}
 }
