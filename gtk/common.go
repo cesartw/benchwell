@@ -8,10 +8,23 @@ import (
 	"io"
 	"sync"
 
+	"bitbucket.org/goreorto/benchwell/assets"
 	"github.com/alecthomas/chroma"
 	"github.com/alecthomas/chroma/formatters"
 	"github.com/alecthomas/chroma/quick"
+	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
+)
+
+// GTK_* consts
+const (
+	ICON_SIZE_TAB           = 10
+	ICON_SIZE_MENU          = 16
+	ICON_SIZE_SMALL_TOOLBAR = 16
+	ICON_SIZE_LARGE_TOOLBAR = 24
+	ICON_SIZE_BUTTON        = 16
+	ICON_SIZE_DND           = 32
+	ICON_SIZE_DIALOG        = 48
 )
 
 func init() {
@@ -66,6 +79,82 @@ func menuItemWithImage(txt string, stockImage string) (*gtk.MenuItem, error) {
 	item.Add(box)
 
 	return item, nil
+}
+
+func BWMenuItemWithImage(txt string, asset string) (*gtk.MenuItem, error) {
+	item, err := gtk.MenuItemNew()
+	if err != nil {
+		return nil, err
+	}
+
+	box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	icon, err := BWImageNewFromFile(asset, ICON_SIZE_MENU)
+	if err != nil {
+		return nil, err
+	}
+
+	label, err := gtk.LabelNew(txt)
+	if err != nil {
+		return nil, err
+	}
+	label.SetUseUnderline(true)
+	label.SetXAlign(0.0)
+
+	box.PackStart(icon, false, false, 0)
+	box.PackEnd(label, true, true, 5)
+	item.Add(box)
+
+	return item, nil
+}
+
+var loader *gdk.PixbufLoader
+
+func BWImageNewFromFile(asset string, size int) (*gtk.Image, error) {
+	loader, err := gdk.PixbufLoaderNewWithType("png")
+	if err != nil {
+		return nil, err
+	}
+
+	data, ok := assets.Iconset48[asset]
+	if !ok {
+		return nil, fmt.Errorf("`%s` icon not found", asset)
+	}
+
+	pixbuf, err := loader.WriteAndReturnPixbuf(data)
+	if err != nil {
+		return nil, err
+	}
+
+	pixbuf, err = pixbuf.ScaleSimple(size, size, gdk.INTERP_BILINEAR)
+	if err != nil {
+		return nil, err
+	}
+
+	img, err := gtk.ImageNewFromPixbuf(pixbuf)
+	if err != nil {
+		return nil, err
+	}
+
+	return img, nil
+}
+
+func BWButtonNewFromIconName(asset string, size int) (*gtk.Button, error) {
+	btn, err := gtk.ButtonNew()
+	if err != nil {
+		return nil, err
+	}
+
+	img, err := BWImageNewFromFile(asset, size)
+	if err != nil {
+		return nil, err
+	}
+	btn.SetImage(img)
+
+	return btn, nil
 }
 
 func ChromaHighlight(theme string, inputString string) (out string, err error) {

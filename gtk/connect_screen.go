@@ -1,6 +1,8 @@
 package gtk
 
 import (
+	"fmt"
+
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
 
@@ -80,7 +82,12 @@ func (c ConnectScreen) Init(w *Window, ctrl connectScreenCtrl) (*ConnectScreen, 
 	frame1.SetShadowType(gtk.SHADOW_IN)
 	frame2.SetShadowType(gtk.SHADOW_IN)
 
-	c.ConnectionList, err = List{}.Init(c.w, &ListOptions{SelectOnRightClick: true, StockIcon: "gtk-connect"}, ctrl)
+	c.ConnectionList, err = List{}.Init(c.w, &ListOptions{
+		SelectOnRightClick: true,
+		IconFunc: func(name fmt.Stringer) (string, int) {
+			return "connection", ICON_SIZE_BUTTON
+		},
+	}, ctrl)
 	if err != nil {
 		return nil, err
 	}

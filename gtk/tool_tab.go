@@ -59,7 +59,7 @@ func (t ToolTab) Init(w *Window) (*ToolTab, error) {
 		return nil, err
 	}
 
-	image, err := gtk.ImageNewFromIconName("window-close", gtk.ICON_SIZE_MENU)
+	image, err := BWImageNewFromFile("close", ICON_SIZE_TAB)
 	if err != nil {
 		return nil, err
 	}

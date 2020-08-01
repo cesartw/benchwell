@@ -221,7 +221,11 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 	if err != nil {
 		return nil, err
 	}
-	addImg, _ := gtk.ImageNewFromIconName("gtk-add", gtk.ICON_SIZE_MENU)
+	addImg, err := BWImageNewFromFile("add-tab", ICON_SIZE_MENU)
+	if err != nil {
+		return nil, err
+	}
+
 	windowBtnMenu.SetImage(addImg)
 
 	// Set up the menu model for the button
@@ -242,7 +246,7 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 	if err != nil {
 		return nil, err
 	}
-	prefImg, _ := gtk.ImageNewFromIconName("gtk-preferences", gtk.ICON_SIZE_MENU)
+	prefImg, _ := BWImageNewFromFile("config", ICON_SIZE_MENU)
 	appBtnMenu.SetImage(prefImg)
 
 	// Set up the menu model for the button

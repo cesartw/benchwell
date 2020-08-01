@@ -201,7 +201,10 @@ func (v ResultView) Init(
 		return nil, err
 	}
 
-	img, _ := gtk.ImageNewFromIconName("gtk-save", gtk.ICON_SIZE_BUTTON)
+	img, err := BWImageNewFromFile("save", ICON_SIZE_BUTTON)
+	if err != nil {
+		return nil, err
+	}
 	v.btnSaveMenu, err = gtk.MenuButtonNew()
 	v.btnSaveMenu.SetImage(img)
 	menu := glib.MenuNew()
@@ -218,7 +221,7 @@ func (v ResultView) Init(
 	v.actionSaveFav.Connect("activate", v.onSaveFav(ctrl.OnSaveFav))
 	v.btnSaveMenu.SetMenuModel(&menu.MenuModel)
 
-	v.btnLoadQuery, err = gtk.ButtonNewFromIconName("gtk-open", gtk.ICON_SIZE_BUTTON)
+	v.btnLoadQuery, err = BWButtonNewFromIconName("open", ICON_SIZE_BUTTON)
 	if err != nil {
 		return nil, err
 	}
@@ -443,21 +446,21 @@ func (v *ResultView) actionbar() (*gtk.ActionBar, error) {
 
 	// new-add-delete
 	{
-		v.btnAddRow, err = gtk.ButtonNewFromIconName("gtk-add", gtk.ICON_SIZE_BUTTON)
+		v.btnAddRow, err = BWButtonNewFromIconName("add-record", ICON_SIZE_BUTTON)
 		if err != nil {
 			return nil, err
 		}
-		v.btnDeleteRow, err = gtk.ButtonNewFromIconName("gtk-delete", gtk.ICON_SIZE_BUTTON)
-		if err != nil {
-			return nil, err
-		}
-
-		v.btnCreateRow, err = gtk.ButtonNewFromIconName("gtk-apply", gtk.ICON_SIZE_BUTTON)
+		v.btnDeleteRow, err = BWButtonNewFromIconName("delete-record", ICON_SIZE_BUTTON)
 		if err != nil {
 			return nil, err
 		}
 
-		v.btnShowFilters, err = gtk.ButtonNewFromIconName("gtk-find", gtk.ICON_SIZE_BUTTON)
+		v.btnCreateRow, err = BWButtonNewFromIconName("save-record", ICON_SIZE_BUTTON)
+		if err != nil {
+			return nil, err
+		}
+
+		v.btnShowFilters, err = BWButtonNewFromIconName("filter", ICON_SIZE_BUTTON)
 		if err != nil {
 			return nil, err
 		}
@@ -490,17 +493,17 @@ func (v *ResultView) actionbar() (*gtk.ActionBar, error) {
 
 	// pagination
 	{
-		v.btnPrev, err = gtk.ButtonNewFromIconName("gtk-go-back", gtk.ICON_SIZE_BUTTON)
+		v.btnPrev, err = BWButtonNewFromIconName("back", ICON_SIZE_BUTTON)
 		if err != nil {
 			return nil, err
 		}
 
-		v.btnNext, err = gtk.ButtonNewFromIconName("gtk-go-forward", gtk.ICON_SIZE_BUTTON)
+		v.btnNext, err = BWButtonNewFromIconName("next", ICON_SIZE_BUTTON)
 		if err != nil {
 			return nil, err
 		}
 
-		v.btnRsh, err = gtk.ButtonNewFromIconName("gtk-refresh", gtk.ICON_SIZE_BUTTON)
+		v.btnRsh, err = BWButtonNewFromIconName("refresh", ICON_SIZE_BUTTON)
 		if err != nil {
 			return nil, err
 		}

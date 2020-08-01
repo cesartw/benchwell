@@ -80,6 +80,8 @@ github.com/gotk3/gotk3 v0.4.1-0.20200606044958-b248c84e8b17 h1:S/6tEpm+QKmOFS//Y
 github.com/gotk3/gotk3 v0.4.1-0.20200606044958-b248c84e8b17/go.mod h1:/hqFpkNa9T3JgNAE2fLvCdov7c5bw//FHNZrZ3Uv9/Q=
 github.com/gotk3/gotk3 v0.4.1-0.20200630165726-104a10c1148f h1:gVEgtNE3Wxggi9cCv6Z08OUAAXkh6H5oTT86av0sipk=
 github.com/gotk3/gotk3 v0.4.1-0.20200630165726-104a10c1148f/go.mod h1:/hqFpkNa9T3JgNAE2fLvCdov7c5bw//FHNZrZ3Uv9/Q=
+github.com/gotk3/gotk3 v0.4.1-0.20200722150342-c076f80955ab h1:fx4lSh2Yd+jv6xCqvyj1mWBLBT1cw/nOtM1vpreakOU=
+github.com/gotk3/gotk3 v0.4.1-0.20200722150342-c076f80955ab/go.mod h1:/hqFpkNa9T3JgNAE2fLvCdov7c5bw//FHNZrZ3Uv9/Q=
 github.com/gotk3/sourceview v0.0.0-20200523170151-58bbfa485ab5 h1:gli8o5zdjYDnCnSIgUZwS3TUnwWSax4V2gGxxe+k7ts=
 github.com/gotk3/sourceview v0.0.0-20200523170151-58bbfa485ab5/go.mod h1:zHpY35dOWdQHFcttshX3aZxV7qRDlR9L6pEUxojcOg4=
 github.com/grpc-ecosystem/go-grpc-middleware v1.0.0/go.mod h1:FiyG127CGDf3tlThmgyCl78X/SZQqEOJBCDaAfeWzPs=

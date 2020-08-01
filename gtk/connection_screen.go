@@ -7,7 +7,6 @@ import (
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
 
-	"bitbucket.org/goreorto/benchwell/assets"
 	"bitbucket.org/goreorto/benchwell/config"
 	"bitbucket.org/goreorto/benchwell/sqlengine"
 	"bitbucket.org/goreorto/benchwell/sqlengine/driver"
@@ -129,16 +128,16 @@ func (c ConnectionScreen) Init(
 
 	c.tableList, err = List{}.Init(c.w, &ListOptions{
 		SelectOnRightClick: true,
-		IconFunc: func(name fmt.Stringer) *gdk.Pixbuf {
+		IconFunc: func(name fmt.Stringer) (string, int) {
 			def, ok := name.(driver.TableDef)
 			if ok {
 				if def.Type == driver.TableTypeRegular {
-					return assets.Table
+					return "table", ICON_SIZE_BUTTON
 				} else {
-					return assets.TableCustom
+					return "table-v", ICON_SIZE_BUTTON
 				}
 			}
-			return assets.Table
+			return "table", ICON_SIZE_BUTTON
 		},
 	}, ctrl)
 	if err != nil {
@@ -469,42 +468,42 @@ func (c *ConnectionScreen) initTableMenu() error {
 		return err
 	}
 
-	c.tablesMenu.editMenu, err = menuItemWithImage("Edit", "gtk-edit")
+	c.tablesMenu.editMenu, err = BWMenuItemWithImage("Edit", "edit-table")
 	if err != nil {
 		return err
 	}
 
-	c.tablesMenu.newTabMenu, err = menuItemWithImage("New tab", "gtk-new")
+	c.tablesMenu.newTabMenu, err = BWMenuItemWithImage("New tab", "add-tab")
 	if err != nil {
 		return err
 	}
 
-	c.tablesMenu.schemaMenu, err = menuItemWithImage("Schema", "gtk-info")
+	c.tablesMenu.schemaMenu, err = BWMenuItemWithImage("Schema", "config")
 	if err != nil {
 		return err
 	}
 
-	c.tablesMenu.truncateMenu, err = menuItemWithImage("Truncate", "gtk-clear")
+	c.tablesMenu.truncateMenu, err = BWMenuItemWithImage("Truncate", "truncate")
 	if err != nil {
 		return err
 	}
 
-	c.tablesMenu.deleteMenu, err = menuItemWithImage("Delete", "gtk-delete")
+	c.tablesMenu.deleteMenu, err = BWMenuItemWithImage("Delete", "delete-table")
 	if err != nil {
 		return err
 	}
 
-	c.tablesMenu.refreshMenu, err = menuItemWithImage("Refresh", "gtk-refresh")
+	c.tablesMenu.refreshMenu, err = BWMenuItemWithImage("Refresh", "refresh")
 	if err != nil {
 		return err
 	}
 
-	c.tablesMenu.copySelectMenu, err = menuItemWithImage("Copy SELECT", "gtk-copy")
+	c.tablesMenu.copySelectMenu, err = BWMenuItemWithImage("Copy SELECT", "copy")
 	if err != nil {
 		return err
 	}
 
-	cowboy, err := menuItemWithImage("Cowboy", "gtk-delete")
+	cowboy, err := BWMenuItemWithImage("Cowboy", "cowboy")
 	if err != nil {
 		return err
 	}
@@ -535,7 +534,7 @@ func (c *ConnectionScreen) initLogMenu() error {
 		return err
 	}
 
-	c.logMenu.clearMenu, err = menuItemWithImage("Clear", "gtk-clear")
+	c.logMenu.clearMenu, err = BWMenuItemWithImage("Clear", "truncate")
 	if err != nil {
 		return err
 	}
@@ -613,17 +612,10 @@ func (c ConnectionTab) Init(opts ConnectionTabOpts) (*ConnectionTab, error) {
 		return nil, err
 	}
 
-	image, err := gtk.ImageNewFromIconName("window-close", gtk.ICON_SIZE_MENU)
+	c.btn, err = BWButtonNewFromIconName("close", ICON_SIZE_TAB)
 	if err != nil {
 		return nil, err
 	}
-
-	c.btn, err = gtk.ButtonNew()
-	if err != nil {
-		return nil, err
-	}
-
-	c.btn.SetImage(image)
 	c.btn.SetRelief(gtk.RELIEF_NONE)
 
 	c.header.PackStart(c.label, true, true, 0)

@@ -14,7 +14,7 @@ type ListOptions struct {
 	Names              []fmt.Stringer
 	SelectOnRightClick bool
 	FilterRegex        *regexp.Regexp
-	IconFunc           func(fmt.Stringer) *gdk.Pixbuf
+	IconFunc           func(fmt.Stringer) (string, int)
 	StockIcon          string
 }
 
@@ -195,7 +195,8 @@ func (u *List) buildItem(name fmt.Stringer, appendToStore bool) (*gtk.ListBoxRow
 
 	switch {
 	case u.options.IconFunc != nil:
-		image, err := gtk.ImageNewFromPixbuf(u.options.IconFunc(name))
+		fileName, size := u.options.IconFunc(name)
+		image, err := BWImageNewFromFile(fileName, size)
 		if err != nil {
 			return nil, err
 		}
