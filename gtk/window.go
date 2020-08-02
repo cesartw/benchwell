@@ -7,11 +7,22 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 
 	"bitbucket.org/goreorto/benchwell/config"
 )
+
+// keeps track of tabs on all windows
+var tabs = map[string][]*ToolTab{}
+
+// hold the tab being moved from one window to another.
+// it really doesn't know whether it was just removed or if it's being moved to another window
+var transit = struct {
+	tab *ToolTab
+	src *gtk.Notebook
+}{}
 
 type windowCtrl interface {
 	OnNewTab()
@@ -24,6 +35,7 @@ type windowCtrl interface {
 
 type Window struct {
 	*gtk.ApplicationWindow
+	id          string
 	nb          *gtk.Notebook
 	box         *gtk.Box // holds nb and statusbar
 	statusBar   *gtk.Statusbar
@@ -39,12 +51,13 @@ type Window struct {
 	}
 	ctrl windowCtrl
 
-	tabs     []*ToolTab
 	tabIndex int
 }
 
 func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 	var err error
+
+	w.id = uuid.New().String()
 	w.ApplicationWindow, err = gtk.ApplicationWindowNew(app)
 	w.SetTitle("BenchWell")
 	w.SetSizeRequest(1024, 768)
@@ -55,12 +68,33 @@ func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 		return nil, err
 	}
 	w.nb.SetName("MainNotebook")
+	w.nb.SetGroupName("MainWindow")
 
 	w.nb.Connect("switch-page", func(_ *gtk.Notebook, _ *gtk.Widget, i int) {
 		w.tabIndex = i
 	})
 	w.nb.Connect("page-removed", func(_ *gtk.Notebook, _ *gtk.Widget, i int) {
-		w.tabs = append(w.tabs[:i], w.tabs[i+1:]...)
+		transit.tab = tabs[w.id][i]
+		transit.src = w.nb
+		tabs[w.id] = append(tabs[w.id][:i], tabs[w.id][i+1:]...)
+	})
+	w.nb.Connect("page-added", func(_ *gtk.Notebook, c *gtk.Widget, i int) {
+		if transit.tab == nil {
+			return
+		}
+
+		if i > len(tabs[w.id]) {
+			tabs[w.id] = append(tabs[w.id], transit.tab)
+		} else {
+			rest := make([]*ToolTab, len(tabs[w.id][i:]))
+			copy(rest, tabs[w.id][i:])
+			tabs[w.id] = append(tabs[w.id][:i], transit.tab)
+			tabs[w.id] = append(tabs[w.id], rest...)
+		}
+
+		transit.tab.SetWindowCtrl(ctrl)
+		transit.tab = nil
+		transit.src = nil
 	})
 
 	w.nb.Connect("page-reordered", w.onTabReorder)
@@ -109,6 +143,8 @@ func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 	w.Menu.LoadFile.Connect("activate", w.OnOpenFile(ctrl.OnFileSelected))
 	//w.Menu.SaveQuery.Connect("activate", w.OnSaveQuery(ctrl.OnSaveQuery))
 
+	tabs[w.id] = []*ToolTab{}
+
 	return &w, nil
 }
 
@@ -154,14 +190,8 @@ func (w *Window) AddToolTab(tab *ToolTab) error {
 	w.nb.AppendPage(tab.Content(), tab.Label())
 	w.nb.SetTabReorderable(tab.Content(), true)
 	w.nb.SetCurrentPage(w.nb.PageNum(tab.Content()))
-	w.tabs = append(w.tabs, tab)
-
-	// TODO: fix
-	//btn.Connect("clicked", func() {
-	//index := w.nb.PageNum(wd)
-	//w.nb.RemovePage(index)
-	//tab.Removed()
-	//})
+	tabs[w.id] = append(tabs[w.id], tab)
+	w.nb.SetTabDetachable(tab.Content(), true)
 
 	return nil
 }
@@ -175,10 +205,10 @@ func (w *Window) CurrentPage() int {
 }
 
 func (w *Window) CurrentTab() *ToolTab {
-	if len(w.tabs) == 0 {
+	if len(tabs[w.id]) == 0 {
 		return nil
 	}
-	return w.tabs[w.CurrentPage()]
+	return tabs[w.id][w.CurrentPage()]
 }
 
 func (w *Window) Remove(wd gtk.IWidget) {
@@ -235,10 +265,10 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 	}
 	windowBtnMenu.SetMenuModel(&windowMenu.MenuModel)
 
-	windowMenu.Append("New window", "app.new")
-	windowMenu.Append("New connection", "win.new")
-	windowMenu.Append("New tab", "win.tabnew")
-	windowMenu.Append("Open File", "win.file.load")
+	windowMenu.Append("Window", "app.new")
+	windowMenu.Append("Connection", "win.new")
+	windowMenu.Append("Tab", "win.tabnew")
+	//windowMenu.Append("Open File", "win.file.load")
 	//menu.Append("- ToolTable ToolTab", "win.close")
 
 	// Create a new app menu button
@@ -301,15 +331,15 @@ func (w *Window) Go(job func(context.Context) func()) func() {
 
 func (w *Window) onTabReorder(_ *gtk.Notebook, _ *gtk.Widget, landing int) {
 	// https://play.golang.com/p/YMfQouxHuvr
-	movingTab := w.tabs[w.tabIndex]
+	movingTab := tabs[w.id][w.tabIndex]
 
-	w.tabs = append(w.tabs[:w.tabIndex], w.tabs[w.tabIndex+1:]...)
+	tabs[w.id] = append(tabs[w.id][:w.tabIndex], tabs[w.id][w.tabIndex+1:]...)
 
-	lh := make([]*ToolTab, len(w.tabs[:landing]))
-	rh := make([]*ToolTab, len(w.tabs[landing:]))
-	copy(lh, w.tabs[:landing])
-	copy(rh, w.tabs[landing:])
+	lh := make([]*ToolTab, len(tabs[w.id][:landing]))
+	rh := make([]*ToolTab, len(tabs[w.id][landing:]))
+	copy(lh, tabs[w.id][:landing])
+	copy(rh, tabs[w.id][landing:])
 
-	w.tabs = append(lh, movingTab)
-	w.tabs = append(w.tabs, rh...)
+	tabs[w.id] = append(lh, movingTab)
+	tabs[w.id] = append(tabs[w.id], rh...)
 }

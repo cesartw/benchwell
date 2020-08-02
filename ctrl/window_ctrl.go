@@ -26,6 +26,7 @@ type tabCtrl interface {
 	Config() *config.Config
 	AddTab() error
 	OnCloseTab()
+	SetWindowCtrl(interface{})
 }
 
 type WindowCtrl struct {

@@ -697,7 +697,13 @@ func (u *Result) createColumn(title string, id int, useEditModal bool) (*gtk.Tre
 	})
 
 	column.SetClickable(true)
-	column.Connect("clicked", func() {
+	column.Connect("clicked", u.onSort(column))
+
+	return column, nil
+}
+
+func (u *Result) onSort(column *gtk.TreeViewColumn) func() {
+	return func() {
 		if !column.GetSortIndicator() {
 			column.SetSortIndicator(true)
 			column.SetSortOrder(gtk.SORT_ASCENDING)
@@ -709,9 +715,7 @@ func (u *Result) createColumn(title string, id int, useEditModal bool) (*gtk.Tre
 		} else {
 			column.SetSortIndicator(false)
 		}
-	})
-
-	return column, nil
+	}
 }
 
 func (u *Result) editDialog(data string, done func(string)) {

@@ -248,13 +248,13 @@ func (c *ConnectScreen) initMenu() error {
 	return nil
 }
 
-func (c *ConnectScreen) buildTcpForm() (*gtk.Label, *tcpForm, error) {
+func (c *ConnectScreen) buildTcpForm(cfg *config.Config) (*gtk.Label, *tcpForm, error) {
 	label, err := gtk.LabelNew("TCP/IP")
 	if err != nil {
 		return nil, nil, err
 	}
 
-	frm, err := tcpForm{}.Init(c.w)
+	frm, err := tcpForm{}.Init(c.w, cfg)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -265,13 +265,13 @@ func (c *ConnectScreen) buildTcpForm() (*gtk.Label, *tcpForm, error) {
 	return label, frm, nil
 }
 
-func (c *ConnectScreen) buildSocketForm() (*gtk.Label, *socketForm, error) {
+func (c *ConnectScreen) buildSocketForm(cfg *config.Config) (*gtk.Label, *socketForm, error) {
 	label, err := gtk.LabelNew("Socket")
 	if err != nil {
 		return nil, nil, err
 	}
 
-	frm, err := socketForm{}.Init(c.w)
+	frm, err := socketForm{}.Init(c.w, cfg)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -282,13 +282,13 @@ func (c *ConnectScreen) buildSocketForm() (*gtk.Label, *socketForm, error) {
 	return label, frm, nil
 }
 
-func (c *ConnectScreen) buildSshForm() (*gtk.Label, *sshForm, error) {
+func (c *ConnectScreen) buildSshForm(cfg *config.Config) (*gtk.Label, *sshForm, error) {
 	label, err := gtk.LabelNew("SSH")
 	if err != nil {
 		return nil, nil, err
 	}
 
-	frm, err := sshForm{}.Init(c.w)
+	frm, err := sshForm{}.Init(c.w, cfg)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -397,7 +397,7 @@ func (c *ConnectScreen) buildMysqlForms() (*gtk.Box, error) {
 
 	// TCP
 	{
-		label, frm, err := c.buildTcpForm()
+		label, frm, err := c.buildTcpForm(c.ctrl.Config())
 		if err != nil {
 			return nil, err
 		}
@@ -409,7 +409,7 @@ func (c *ConnectScreen) buildMysqlForms() (*gtk.Box, error) {
 
 	// SOCKET
 	{
-		label, frm, err := c.buildSocketForm()
+		label, frm, err := c.buildSocketForm(c.ctrl.Config())
 		if err != nil {
 			return nil, err
 		}
@@ -421,7 +421,7 @@ func (c *ConnectScreen) buildMysqlForms() (*gtk.Box, error) {
 
 	// SSH
 	{
-		label, frm, err := c.buildSshForm()
+		label, frm, err := c.buildSshForm(c.ctrl.Config())
 		if err != nil {
 			return nil, err
 		}
@@ -439,7 +439,7 @@ func (c *ConnectScreen) buildMysqlForms() (*gtk.Box, error) {
 }
 
 func (c *ConnectScreen) buildSqliteForms() (*sqliteForm, error) {
-	frm, err := sqliteForm{}.Init(c.w)
+	frm, err := sqliteForm{}.Init(c.w, c.ctrl.Config())
 	if err != nil {
 		return nil, err
 	}
@@ -451,7 +451,6 @@ func (c *ConnectScreen) buildSqliteForms() (*sqliteForm, error) {
 
 func (c *ConnectScreen) GetFormConnection() *config.Connection {
 	conn, _ := c.forms.active.GetConnection()
-	//conn.Queries = c.activeForm.queries
 	return conn
 }
 

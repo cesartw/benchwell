@@ -141,6 +141,10 @@ func (c *ConnectionCtrl) OnDatabaseSelected() {
 		c.window.PushStatus("Error getting tables: `%s`", err.Error())
 		return
 	}
+	err = c.conn.LoadQueries()
+	if err != nil {
+		c.window.PushStatus("Error loading fake tables: `%s`", err.Error())
+	}
 
 	for _, q := range c.conn.Queries {
 		tables = append(tables, driver.TableDef{
@@ -215,7 +219,11 @@ func (c *ConnectionCtrl) OnDeleteTable() {
 		return
 	}
 
-	c.Engine.DeleteTable(c.dbCtx[c.dbName], tableDef)
+	err := c.Engine.DeleteTable(c.dbCtx[c.dbName], tableDef)
+	if err != nil {
+		c.window.PushStatus(err.Error())
+	}
+	c.OnDatabaseSelected()
 }
 
 func (c *ConnectionCtrl) OnCopySelect() {

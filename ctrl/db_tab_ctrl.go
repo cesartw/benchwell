@@ -48,6 +48,10 @@ func (c DbTabCtrl) Init(p *WindowCtrl) (*DbTabCtrl, error) {
 	return &c, nil
 }
 
+func (c *DbTabCtrl) SetWindowCtrl(i interface{}) {
+	c.WindowCtrl = i.(*WindowCtrl)
+}
+
 func (c *DbTabCtrl) AddTab() error {
 	return c.currentCtrl.AddEmptyTab()
 }

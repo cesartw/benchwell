@@ -7,14 +7,15 @@ import (
 )
 
 type tabCtrl interface {
-	Close() bool
-	Removed()
-	Title() string
-	Content() gtk.IWidget
-	SetFileText(string)
-	Config() *config.Config
-	AddTab() error
+	Close() bool          //tab
+	Removed()             //tab
+	Title() string        //tab
+	Content() gtk.IWidget //tab
+	SetFileText(string)   //tab
+	AddTab() error        //tab
 	OnCloseTab()
+	Config() *config.Config
+	SetWindowCtrl(interface{}) // tab
 }
 
 type ToolTab struct {
@@ -79,21 +80,41 @@ func (t ToolTab) Init(w *Window) (*ToolTab, error) {
 	return &t, nil
 }
 
+func (t *ToolTab) SetWindowCtrl(
+	ctrl interface {
+		OnCloseTab()
+		Config() *config.Config
+	},
+) {
+	t.tabCtrl.SetWindowCtrl(ctrl)
+}
+
 func (t *ToolTab) SetContent(opts ToolTabOptions) {
-	t.tabCtrl = opts.Ctrl
-	t.SetTitle(opts.Title)
-	if t.mainW != nil {
-		t.content.Remove(t.mainW)
-	}
-	if t.btnHandle > 0 {
-		t.btn.HandlerDisconnect(t.btnHandle)
+	if opts.Ctrl != nil {
+		t.tabCtrl = opts.Ctrl
 	}
 
-	t.content.PackStart(opts.Content, true, true, 0)
-	t.mainW = opts.Content
-	t.content.Show()
+	if opts.Title != "" {
+		t.SetTitle(opts.Title)
+	}
 
-	t.btnHandle, _ = t.btn.Connect("clicked", t.OnCloseTab)
+	if opts.Content != nil {
+		if t.mainW != nil {
+			t.content.Remove(t.mainW)
+		}
+
+		if t.btnHandle > 0 {
+			t.btn.HandlerDisconnect(t.btnHandle)
+		}
+
+		t.content.PackStart(opts.Content, true, true, 0)
+		t.mainW = opts.Content
+		t.content.Show()
+	}
+
+	if opts.Ctrl != nil {
+		t.btnHandle, _ = t.btn.Connect("clicked", t.OnCloseTab)
+	}
 }
 
 func (t *ToolTab) SetTitle(title string) {

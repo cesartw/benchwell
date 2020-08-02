@@ -65,7 +65,7 @@ func (c *ConnectCtrl) OnTest() {
 
 func (c *ConnectCtrl) OnSave() {
 	conn := c.scr.GetFormConnection()
-	err := c.Config().SaveConnection(conn)
+	err := c.Config().SaveConnection(c.window.ApplicationWindow, conn)
 	if err != nil {
 		c.window.PushStatus(err.Error())
 		return
@@ -109,7 +109,7 @@ func (c *ConnectCtrl) OnNewConnection() {
 	c.scr.ConnectionList.SelectRow(row)
 	c.scr.ClearForm()
 	c.scr.FocusForm()
-	c.scr.SetConnection(&config.Connection{Name: "New Connection", Port: 3306})
+	c.scr.SetConnection(&config.Connection{Name: "New Connection", Port: 3306, Config: c.Config()})
 }
 
 func (c *ConnectCtrl) OnConnectionSelected() {
@@ -123,17 +123,16 @@ func (c *ConnectCtrl) OnConnectionSelected() {
 		c.scr.FocusForm()
 		return
 	}
+
 	conn := c.Config().Connections[row.GetIndex()]
-
-	c.scr.SetConnection(conn)
-
 	err := conn.Decrypt(c.window.ApplicationWindow)
 	if err != nil {
 		conn.Encrypted = false
 		c.window.PushStatus("Fail to decrypt password: %s", err.Error())
-		//c.scr.ConnectionList.ClearSelection()
-		//return
+		c.scr.ConnectionList.ClearSelection()
+		return
 	}
+	c.scr.SetConnection(conn)
 }
 
 func (c *ConnectCtrl) Screen() interface{} {

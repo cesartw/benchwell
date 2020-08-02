@@ -386,7 +386,7 @@ func (c *ConnectionScreen) ActiveTable() (driver.TableDef, bool) {
 }
 
 func (c *ConnectionScreen) ShowTableSchemaModal(tableName, schema string) {
-	modal, err := gtk.DialogNewWithButtons(fmt.Sprintf("Table %s", tableName), nil,
+	modal, err := gtk.DialogNewWithButtons(fmt.Sprintf("Table %s", tableName), c.w,
 		gtk.DIALOG_DESTROY_WITH_PARENT|gtk.DIALOG_MODAL,
 		[]interface{}{"Ok", gtk.RESPONSE_ACCEPT},
 	)
@@ -400,27 +400,26 @@ func (c *ConnectionScreen) ShowTableSchemaModal(tableName, schema string) {
 		return
 	}
 
-	textView, err := gtk.TextViewNew()
+	sourceView, err := SourceView{}.Init(c.w, SourceViewOptions{
+		Highlight: true,
+		Undoable:  true,
+		Language:  "sql",
+	}, c.ctrl)
 	if err != nil {
 		return
 	}
-	textView.SetVExpand(true)
-	textView.SetHExpand(true)
+	sourceView.SetVExpand(true)
+	sourceView.SetHExpand(true)
 
-	schema, err = ChromaHighlight(c.ctrl.Config().EditorTheme(), schema)
-	if err != nil {
-		c.ctrl.Config().Error(err)
-		return
-	}
-	buff, err := textView.GetBuffer()
+	buff, err := sourceView.GetBuffer()
 	if err != nil {
 		return
 	}
 
 	buff.InsertMarkup(buff.GetStartIter(), schema)
 
-	textView.Show()
-	content.Add(textView)
+	sourceView.Show()
+	content.Add(sourceView)
 
 	modal.Run()
 	modal.Destroy()

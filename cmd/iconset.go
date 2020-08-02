@@ -18,6 +18,11 @@ var (
 		"blue":   "#14d0f0",
 		"red":    "#bb070e",
 	}
+	offColorIcons = map[string]string{
+		"table-v":       "blue",
+		"cowboy":        "red",
+		"delete-record": "red",
+	}
 	size = "48"
 	tpl  = "\t\"%s\": %s,\n"
 	pkg  = `
@@ -49,12 +54,11 @@ var iconsetCmd = &cobra.Command{
 				panic(err)
 			}
 
-			color := colors["orange"]
-			switch {
-			case strings.Contains(info.Name(), "table-v"):
-				color = colors["blue"]
-			case strings.Contains(info.Name(), "cowboy"):
-				color = colors["red"]
+			name := strings.TrimSuffix(info.Name(), ".svg")
+
+			color, ok := offColorIcons[name]
+			if !ok {
+				color = colors["orange"]
 			}
 
 			replacer := strings.NewReplacer(

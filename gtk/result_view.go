@@ -94,30 +94,6 @@ func (v ResultView) Init(
 	v.sourceView.SetHExpand(true)
 	v.sourceView.SetVExpand(true)
 
-	//v.textView, err = TextView{}.Init(v.w, TextViewOptions{true, true}, ctrl)
-	//if err != nil {
-	//return nil, err
-	//}
-	//v.textView.SetName("query")
-	//v.textView.SetHExpand(true)
-	//v.textView.SetVExpand(true)
-	//v.textView.buffer.Connect("insert-text", func(_ *gtk.TextBuffer, iter *gtk.TextIter, txt string, _ int) {
-	//if iter.GetOffset() == 0 {
-	//return
-	//}
-
-	//cursorAt := iter.GetOffset() + len(txt)
-
-	//start := v.textView.buffer.GetStartIter()
-	//end := v.textView.buffer.GetEndIter()
-	//query, err := v.textView.buffer.GetText(start, end, false)
-	//if err != nil {
-	//ctrl.Config().Error(err)
-	//return
-	//}
-
-	//ctrl.OnTextChange(query+txt, cursorAt)
-	//})
 	buff, err := v.sourceView.GetBuffer()
 	if err != nil {
 		return nil, err
@@ -247,7 +223,7 @@ func (v ResultView) Init(
 	v.sourceView.SetProperty("highlight-current-line", false)
 	v.sourceView.SetProperty("show-line-numbers", true)
 	v.sourceView.SetProperty("show-right-margin", true)
-	v.sourceView.SetProperty("show-left-margin", true)
+	//v.sourceView.SetProperty("show-left-margin", true)
 	//v.sourceView.SetProperty("top-margin", 10)
 
 	//v.sourceView.SetProperty("wrap-mode", map[string]gtk.WrapMode{
@@ -386,6 +362,7 @@ func (v *ResultView) UpdateData(data [][]interface{}) error {
 
 	v.pagerEnable(true)
 	v.btnAddRow.SetSensitive(true)
+	v.btnShowFilters.SetSensitive(true)
 
 	return v.result.UpdateData(data)
 }
@@ -531,6 +508,7 @@ func (v *ResultView) disableAll() {
 	v.btnNext.SetSensitive(false)
 	v.btnRsh.SetSensitive(false)
 	v.btnAddRow.SetSensitive(false)
+	v.btnShowFilters.SetSensitive(false)
 	v.btnDeleteRow.SetSensitive(false)
 	v.btnCreateRow.SetSensitive(false)
 }

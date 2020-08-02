@@ -16,7 +16,7 @@ type providerdbus struct {
 }
 
 func (p *providerdbus) Get(_ *gtk.Window, path string) (string, error) {
-	t := time.NewTimer(5 * time.Second)
+	t := time.NewTimer(3 * time.Second)
 
 	c := make(chan error, 1)
 
@@ -34,6 +34,7 @@ func (p *providerdbus) Get(_ *gtk.Window, path string) (string, error) {
 			c <- err
 			return
 		}
+		c <- nil
 	}()
 
 	select {
@@ -42,7 +43,6 @@ func (p *providerdbus) Get(_ *gtk.Window, path string) (string, error) {
 			return "", err
 		}
 	case <-t.C:
-		close(c)
 		return "", errors.New("DBUS timeout")
 	}
 

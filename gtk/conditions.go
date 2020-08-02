@@ -54,7 +54,7 @@ func (c Conditions) Init(w *Window, ctrl conditionsCtrl) (*Conditions, error) {
 	c.grid.SetRowSpacing(5)
 	c.grid.SetColumnSpacing(5)
 
-	c.btnAdd, err = gtk.ButtonNewFromIconName("gtk-add", gtk.ICON_SIZE_BUTTON)
+	c.btnAdd, err = BWButtonNewFromIconName("add", ICON_SIZE_BUTTON)
 	if err != nil {
 		return nil, err
 	}

@@ -32,8 +32,9 @@ type mysqlConn struct {
 }
 
 type mysqlDb struct {
-	db   *sql.DB
-	name string
+	db     *sql.DB
+	cfgCon config.Connection
+	name   string
 }
 
 func init() {
@@ -221,7 +222,7 @@ func (c *mysqlConn) UseDatabase(ctx context.Context, db string) (driver.Database
 		return nil, err
 	}
 
-	return &mysqlDb{db: sqldb, name: db}, nil
+	return &mysqlDb{cfgCon: c.cfgCon, db: sqldb, name: db}, nil
 }
 
 // Disconnect ...
@@ -920,7 +921,7 @@ func (d *mysqlDb) DeleteTable(
 ) error {
 	switch table.Type {
 	case driver.TableTypeDummy:
-		return nil
+		return d.cfgCon.DeleteQuery(table.Name)
 	default:
 		query := fmt.Sprintf(`DROP TABLE %s`, table.Name)
 

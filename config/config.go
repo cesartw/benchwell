@@ -178,7 +178,7 @@ func Init(path string) *Config {
 	}
 
 	if len(c.Connections) == 0 {
-		c.SaveConnection(&Connection{Name: "New connection", Type: "tcp", Adapter: "mysql", Port: 3306})
+		c.SaveConnection(nil, &Connection{Name: "New connection", Type: "tcp", Adapter: "mysql", Port: 3306, Config: c})
 	}
 
 	return c
@@ -206,7 +206,7 @@ func (c *Config) loadConnections() error {
 	return nil // c.loadQueries()
 }
 
-func (c *Config) loadQueries() error {
+func (c *Config) LoadQueries() error {
 	rows, err := c.db.Query("SELECT * FROM queries")
 	if err != nil {
 		return err
@@ -253,9 +253,9 @@ func (c *Config) Get(s string) *Setting {
 }
 
 func (c *Config) EditorTheme() string {
-	theme := "sqlaid-dark"
+	theme := "benchwell-dark"
 	if !c.GUI.DarkMode.Bool() {
-		theme = "sqlaid-light"
+		theme = "benchwell-light"
 	}
 	return theme
 }
@@ -264,7 +264,7 @@ func (c *Config) SaveSetting(s *Setting) error {
 	return nil
 }
 
-func (c *Config) SaveConnection(conn *Connection) error {
+func (c *Config) SaveConnection(w *gtk.ApplicationWindow, conn *Connection) error {
 	err := conn.Encrypt(nil)
 	if err != nil {
 		return err
@@ -300,6 +300,7 @@ func (c *Config) SaveConnection(conn *Connection) error {
 			return err
 		}
 	}
+	conn.Decrypt(w)
 
 	return nil
 }
@@ -377,6 +378,8 @@ type Connection struct {
 	Options   string
 	Encrypted bool
 	Queries   []*Query
+
+	Config *Config
 }
 
 type Query struct {
@@ -458,6 +461,43 @@ func (c Connection) sqliteDSN() string {
 	}
 
 	return b.String()
+}
+
+func (c *Connection) LoadQueries() error {
+	rows, err := c.Config.db.Query("SELECT * FROM queries WHERE connections_id = ?", c.ID)
+	if err != nil {
+		return err
+	}
+
+	c.Queries = nil
+	for rows.Next() {
+		query := &Query{}
+		err := rows.Scan(&query.ID, &query.Name, &query.Query, &query.ConnectionID)
+		if err != nil {
+			return err
+		}
+
+		c.Queries = append(c.Queries, query)
+	}
+
+	return nil
+}
+
+func (c *Connection) DeleteQuery(name string) error {
+	_, err := c.Config.db.Exec("DELETE FROM queries WHERE connections_id = ? AND name = ?", c.ID, name)
+	if err != nil {
+		return err
+	}
+
+	for i, q := range c.Queries {
+		if q.Name != name {
+			continue
+		}
+
+		c.Queries = append(c.Queries[:i], c.Queries[i+1:]...)
+	}
+
+	return nil
 }
 
 func (c *Config) CSS() string {

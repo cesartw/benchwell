@@ -13,6 +13,7 @@ type tcpForm struct {
 	*gtk.Grid
 	fields []string
 	conn   *config.Connection
+	config *config.Config
 
 	entryName     *gtk.Entry
 	entryHost     *gtk.Entry
@@ -29,7 +30,7 @@ type tcpForm struct {
 	labelDatabase *gtk.Label
 }
 
-func (f tcpForm) Init(_ *Window) (*tcpForm, error) {
+func (f tcpForm) Init(_ *Window, cfg *config.Config) (*tcpForm, error) {
 	var err error
 
 	f.Grid, err = gtk.GridNew()
@@ -39,6 +40,7 @@ func (f tcpForm) Init(_ *Window) (*tcpForm, error) {
 	f.SetName("form")
 	f.SetColumnHomogeneous(true)
 	f.SetRowSpacing(5)
+	f.config = cfg
 
 	f.labelName, err = gtk.LabelNew("Name")
 	if err != nil {
@@ -175,6 +177,7 @@ func (f *tcpForm) GetConnection() (*config.Connection, bool) {
 	conn.User, _ = f.entryUser.GetText()
 	conn.Password, _ = f.entryPassword.GetText()
 	conn.Database, _ = f.entryDatabase.GetText()
+	conn.Config = f.config
 
 	return conn, newConn
 }
