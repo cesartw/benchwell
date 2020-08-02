@@ -3,6 +3,9 @@
 package config
 
 import (
+	"errors"
+	"time"
+
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/keybase/go-keychain/secretservice"
 	dbus "github.com/keybase/go.dbus"
@@ -13,15 +16,34 @@ type providerdbus struct {
 }
 
 func (p *providerdbus) Get(_ *gtk.Window, path string) (string, error) {
-	session, err := p.srv.OpenSession(secretservice.AuthenticationDHAES)
-	if err != nil {
-		return "", err
-	}
-	//defer srv.CloseSession(session)
+	t := time.NewTimer(5 * time.Second)
 
-	secret, err := p.srv.GetSecret(dbus.ObjectPath(path), *session)
-	if err != nil {
-		return "", err
+	c := make(chan error, 1)
+
+	var secret []byte
+	go func() {
+		var err error
+		session, err := p.srv.OpenSession(secretservice.AuthenticationDHAES)
+		if err != nil {
+			c <- err
+			return
+		}
+
+		secret, err = p.srv.GetSecret(dbus.ObjectPath(path), *session)
+		if err != nil {
+			c <- err
+			return
+		}
+	}()
+
+	select {
+	case err := <-c:
+		if err != nil {
+			return "", err
+		}
+	case <-t.C:
+		close(c)
+		return "", errors.New("DBUS timeout")
 	}
 
 	return string(secret), nil

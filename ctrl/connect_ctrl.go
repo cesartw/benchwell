@@ -123,15 +123,17 @@ func (c *ConnectCtrl) OnConnectionSelected() {
 		c.scr.FocusForm()
 		return
 	}
+	conn := c.Config().Connections[row.GetIndex()]
 
-	err := c.Config().Connections[row.GetIndex()].Decrypt(c.window.ApplicationWindow)
+	c.scr.SetConnection(conn)
+
+	err := conn.Decrypt(c.window.ApplicationWindow)
 	if err != nil {
+		conn.Encrypted = false
 		c.window.PushStatus("Fail to decrypt password: %s", err.Error())
-		c.scr.ConnectionList.ClearSelection()
-		return
+		//c.scr.ConnectionList.ClearSelection()
+		//return
 	}
-
-	c.scr.SetConnection(c.Config().Connections[row.GetIndex()])
 }
 
 func (c *ConnectCtrl) Screen() interface{} {

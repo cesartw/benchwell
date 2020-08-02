@@ -13,28 +13,26 @@ import (
 )
 
 var (
-	color string
-	size  string
-	tpl   = "\t\"%s\": %s,\n"
-	pkg   = `
+	colors = map[string]string{
+		"orange": "#ff7305",
+		"blue":   "#14d0f0",
+		"red":    "#bb070e",
+	}
+	size = "48"
+	tpl  = "\t\"%s\": %s,\n"
+	pkg  = `
 package assets
 var Iconset%s = map[string][]byte{
 `
 )
 
 func init() {
-	iconsetCmd.Flags().StringVarP(&color, "color", "c", "", "")
-	iconsetCmd.Flags().StringVarP(&size, "size", "s", "48", "")
 	rootCmd.AddCommand(iconsetCmd)
 }
 
 var iconsetCmd = &cobra.Command{
 	Use: "iconset",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if color == "" {
-			return nil
-		}
-
 		// export PNG
 		err := filepath.Walk("assets/data/iconset", func(path string, info os.FileInfo, err error) error {
 			if path == "assets/data/iconset" {
@@ -49,6 +47,14 @@ var iconsetCmd = &cobra.Command{
 			b, err := ioutil.ReadAll(f)
 			if err != nil {
 				panic(err)
+			}
+
+			color := colors["orange"]
+			switch {
+			case strings.Contains(info.Name(), "table-v"):
+				color = colors["blue"]
+			case strings.Contains(info.Name(), "cowboy"):
+				color = colors["red"]
 			}
 
 			replacer := strings.NewReplacer(

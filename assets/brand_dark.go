@@ -1,7 +1,6 @@
 package assets
 
-const BRAND_DARK = `
-entry, text {
+const BRAND_DARK = `entry, text {
 	background-color: #3d3d3d;
 }
 
