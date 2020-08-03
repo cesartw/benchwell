@@ -7,12 +7,11 @@ import (
 )
 
 type tabCtrl interface {
-	Close() bool          //tab
+	Close()               //tab
 	Removed()             //tab
 	Title() string        //tab
 	Content() gtk.IWidget //tab
 	SetFileText(string)   //tab
-	AddTab() error        //tab
 	OnCloseTab()
 	Config() *config.Config
 	SetWindowCtrl(interface{}) // tab
@@ -60,17 +59,10 @@ func (t ToolTab) Init(w *Window) (*ToolTab, error) {
 		return nil, err
 	}
 
-	image, err := BWImageNewFromFile("close", ICON_SIZE_TAB)
+	t.btn, err = BWButtonNewFromIconName("close", ICON_SIZE_TAB)
 	if err != nil {
 		return nil, err
 	}
-
-	t.btn, err = gtk.ButtonNew()
-	if err != nil {
-		return nil, err
-	}
-
-	t.btn.SetImage(image)
 	t.btn.SetRelief(gtk.RELIEF_NONE)
 
 	t.header.PackStart(t.label, true, true, 0)

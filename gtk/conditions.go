@@ -13,7 +13,6 @@ type Conditions struct {
 	w *Window
 	*gtk.Frame
 	grid       *gtk.Grid
-	btnAdd     *gtk.Button
 	conditions []*Condition
 	cols       []driver.ColDef
 
@@ -24,6 +23,7 @@ type conditionsCtrl interface {
 	OnApplyConditions()
 	Config() *config.Config
 }
+
 type Condition struct {
 	cols       []driver.ColDef
 	activeCb   *gtk.CheckButton
@@ -54,14 +54,6 @@ func (c Conditions) Init(w *Window, ctrl conditionsCtrl) (*Conditions, error) {
 	c.grid.SetRowSpacing(5)
 	c.grid.SetColumnSpacing(5)
 
-	c.btnAdd, err = BWButtonNewFromIconName("add", ICON_SIZE_BUTTON)
-	if err != nil {
-		return nil, err
-	}
-	c.btnAdd.Connect("clicked", c.Add)
-
-	c.grid.Attach(c.btnAdd, 6, 0, 1, 1)
-
 	c.grid.Show()
 
 	c.Frame.Add(c.grid)
@@ -76,36 +68,48 @@ func (c *Conditions) Add() error {
 	}
 	cond.valueEntry.Connect("activate", c.ctrl.OnApplyConditions)
 
-	c.grid.Remove(c.btnAdd)
+	focused := func() {
+		if c.conditions[len(c.conditions)-1] != cond {
+			return
+		}
+		c.Add()
+	}
 
 	y := len(c.conditions)
 	c.grid.Attach(cond.activeCb, 0, y, 2, 1)
 	c.grid.Attach(cond.fieldCb, 2, y, 2, 1)
-	c.grid.Attach(cond.fieldCb, 3, y, 2, 1)
 	c.grid.Attach(cond.opCb, 4, y, 1, 1)
 	c.grid.Attach(cond.valueEntry, 5, y, 2, 1)
-	c.grid.Attach(c.btnAdd, 8, y, 1, 1)
-	c.conditions = append(c.conditions, cond)
+	c.grid.Attach(cond.btnRm, 8, y, 1, 1)
 
-	if y >= 1 {
-		c.grid.Attach(c.conditions[y-1].btnRm, 8, y-1, 1, 1)
+	entry, err := cond.fieldCb.GetEntry()
+	if err != nil {
+		return err
 	}
+	entry.Connect("grab-focus", focused)
+	cond.activeCb.Connect("grab-focus", focused)
+	cond.fieldCb.Connect("grab-focus", focused)
+	cond.opCb.Connect("grab-focus", focused)
+	cond.valueEntry.Connect("grab-focus", focused)
 
 	cond.btnRm.Connect("clicked", func() {
 		for i, con := range c.conditions {
-			if con == cond {
-				c.grid.RemoveRow(i)
-				c.conditions = append(c.conditions[:i], c.conditions[i+1:]...)
-				break
+			if con != cond {
+				continue
 			}
+
+			c.grid.RemoveRow(i)
+			c.conditions = append(c.conditions[:i], c.conditions[i+1:]...)
+			if len(c.conditions) == 0 {
+				c.Add()
+			}
+			break
 		}
 	})
 
-	c.btnAdd.Show()
+	cond.btnRm.Show()
 
-	if len(c.conditions) >= 2 {
-		c.conditions[len(c.conditions)-2].btnRm.Show()
-	}
+	c.conditions = append(c.conditions, cond)
 
 	return nil
 }
@@ -271,7 +275,7 @@ func (c Condition) Init(_ *Window, cols []driver.ColDef, ctrl conditionsCtrl) (*
 		return nil, err
 	}
 
-	c.btnRm, err = gtk.ButtonNewFromIconName("gtk-remove", gtk.ICON_SIZE_BUTTON)
+	c.btnRm, err = BWButtonNewFromIconName("close", ICON_SIZE_BUTTON)
 	if err != nil {
 		return nil, err
 	}

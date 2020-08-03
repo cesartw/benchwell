@@ -2,11 +2,11 @@
 Type=Application
 Categories=Network;Application;
 GenericName=Database Manager
-Exec=/usr/bin/sqlaid
+Exec=/usr/bin/benchwell
 Version=1.0
-Name=SQLaid
-Comment=SQLaid database browser
-Icon=sqlaid
+Name=Benchwell
+Comment=Benchwell - Tool kit
+Icon=benchwell
 Terminal=false
 Encoding=UTF-8
-StartupWMClass=SQLaid
+StartupWMClass=Benchwell

@@ -68,6 +68,7 @@ func (c ConnectScreen) Init(w *Window, ctrl connectScreenCtrl) (*ConnectScreen, 
 	}
 	c.Paned.SetHExpand(true)
 	c.Paned.SetVExpand(true)
+	c.Paned.SetWideHandle(true)
 
 	frame1, err := gtk.FrameNew("")
 	if err != nil {

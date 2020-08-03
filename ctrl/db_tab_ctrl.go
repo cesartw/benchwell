@@ -72,9 +72,9 @@ func (c *DbTabCtrl) Removed() {
 }
 
 // Close delegates the close tab action ot connect or connection screen
-func (c *DbTabCtrl) Close() bool {
+func (c *DbTabCtrl) Close() {
 	// TODO: figure out which screen is open
-	return c.currentCtrl.Close()
+	c.currentCtrl.FullClose()
 }
 
 // Close all tabs

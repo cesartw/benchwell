@@ -89,7 +89,7 @@ func (v ResultView) Init(
 	if err != nil {
 		return nil, err
 	}
-	v.sourceView.SetShowLineNumbers(true)
+	v.sourceView.SetShowLineNumbers(false)
 	v.sourceView.SetShowRightMargin()
 	v.sourceView.SetHExpand(true)
 	v.sourceView.SetVExpand(true)

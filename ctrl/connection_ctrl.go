@@ -74,6 +74,7 @@ func (c *ConnectionCtrl) Close() bool {
 }
 
 func (c *ConnectionCtrl) FullClose() {
+	c.scr.CloseAll()
 }
 
 func (c *ConnectionCtrl) AddEmptyTab() error {

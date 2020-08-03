@@ -346,6 +346,12 @@ func (c *ConnectionScreen) Close() bool {
 	return true
 }
 
+func (c *ConnectionScreen) CloseAll() {
+	for _, tab := range c.tabs {
+		tab.btn.Emit("clicked")
+	}
+}
+
 func (c *ConnectionScreen) SetDatabases(dbs []string) {
 	c.databaseNames = dbs
 

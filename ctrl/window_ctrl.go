@@ -18,13 +18,12 @@ const (
 )
 
 type tabCtrl interface {
-	Close() bool
+	Close()
 	Removed()
 	Title() string
 	Content() ggtk.IWidget
 	SetFileText(string)
 	Config() *config.Config
-	AddTab() error
 	OnCloseTab()
 	SetWindowCtrl(interface{})
 }
@@ -43,7 +42,7 @@ func (c WindowCtrl) Init(parent *AppCtrl) (*WindowCtrl, error) {
 		return nil, err
 	}
 
-	return ctrl, ctrl.AddTab(TAB_TYPE_DB)
+	return ctrl, ctrl.AddTab(TAB_TYPE_HTTP)
 }
 
 func (c *WindowCtrl) OnSaveQuery(query, path string) {
@@ -63,14 +62,8 @@ func (c *WindowCtrl) OnFileSelected(filepath string) {
 	c.currentWindowTab().SetFileText(string(bytes))
 }
 
-func (c *WindowCtrl) OnNewSubTab() {
-	ctab := c.currentWindowTab()
-	if ctab == nil {
-		c.AddTab(TAB_TYPE_DB)
-		return
-	}
-
-	err := ctab.AddTab()
+func (c *WindowCtrl) OnNewDatabaseTab() {
+	err := c.AddTab(TAB_TYPE_DB)
 	if err != nil {
 		c.Config().Error(err)
 		return
@@ -78,8 +71,8 @@ func (c *WindowCtrl) OnNewSubTab() {
 	c.window.PushStatus("Ready")
 }
 
-func (c *WindowCtrl) OnNewTab() {
-	err := c.AddTab(TAB_TYPE_DB)
+func (c *WindowCtrl) OnNewHTTPTab() {
+	err := c.AddTab(TAB_TYPE_HTTP)
 	if err != nil {
 		c.Config().Error(err)
 		return
@@ -107,6 +100,11 @@ func (c *WindowCtrl) AddTab(t tab_type) error {
 		if err != nil {
 			return err
 		}
+	case TAB_TYPE_HTTP:
+		ctrl, err = HTTPTabCtrl{}.Init(c)
+		if err != nil {
+			return err
+		}
 	}
 
 	tab, err := gtk.ToolTab{}.Init(c.window)
@@ -124,10 +122,10 @@ func (c *WindowCtrl) AddTab(t tab_type) error {
 	return nil
 }
 
+// click on main tab close
 func (c *WindowCtrl) OnCloseTab() {
-	if c.currentWindowTab().Close() {
-		return
-	}
+	// tell the tool tab that we closing it
+	c.currentWindowTab().Close()
 	c.window.RemoveCurrentPage()
 }
 
@@ -138,19 +136,3 @@ func (c *WindowCtrl) ChangeTitle(title string) {
 func (c *WindowCtrl) currentWindowTab() *gtk.ToolTab {
 	return c.window.CurrentTab()
 }
-
-// TODO: not used
-//func (c *WindowCtrl) onNotebookDoubleClick(_ *ggtk.ListBox, e *gdk.Event) {
-//keyEvent := gdk.EventButtonNewFromEvent(e)
-
-//if keyEvent.Button() != gdk.BUTTON_PRIMARY {
-//return
-//}
-//if keyEvent.Type() != gdk.EVENT_2BUTTON_PRESS {
-//return
-//}
-
-//if err := c.AddTab(); err != nil {
-//c.Config().Error(err)
-//}
-//}

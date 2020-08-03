@@ -25,8 +25,8 @@ var transit = struct {
 }{}
 
 type windowCtrl interface {
-	OnNewTab()
-	OnNewSubTab()
+	OnNewDatabaseTab()
+	OnNewHTTPTab()
 	OnCloseTab()
 	OnFileSelected(string)
 	OnSaveQuery(string, string)
@@ -42,12 +42,11 @@ type Window struct {
 	statusBarID uint
 
 	Menu struct {
-		NewConnection *glib.SimpleAction
-		NewToolTab    *glib.SimpleAction
-		NewSubToolTab *glib.SimpleAction
-		LoadFile      *glib.SimpleAction
-		SaveQuery     *glib.SimpleAction
-		CloseToolTab  *glib.SimpleAction
+		NewConnection  *glib.SimpleAction
+		NewDatabaseTab *glib.SimpleAction
+		NewHTTPTab     *glib.SimpleAction
+		LoadFile       *glib.SimpleAction
+		SaveQuery      *glib.SimpleAction
 	}
 	ctrl windowCtrl
 
@@ -136,10 +135,10 @@ func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 	//w.HideOnDelete()
 
 	// add main tab
-	w.Menu.NewToolTab.Connect("activate", ctrl.OnNewTab)
+	w.Menu.NewDatabaseTab.Connect("activate", ctrl.OnNewDatabaseTab)
+	w.Menu.NewHTTPTab.Connect("activate", ctrl.OnNewHTTPTab)
 	// action menu for sub nb
-	w.Menu.NewSubToolTab.Connect("activate", ctrl.OnNewSubTab)
-	w.Menu.CloseToolTab.Connect("activate", ctrl.OnCloseTab)
+	//w.Menu.NewSubToolTab.Connect("activate", ctrl.OnNewSubTab)
 	w.Menu.LoadFile.Connect("activate", w.OnOpenFile(ctrl.OnFileSelected))
 	//w.Menu.SaveQuery.Connect("activate", w.OnSaveQuery(ctrl.OnSaveQuery))
 
@@ -229,14 +228,12 @@ func (w *Window) PageCount() int {
 }
 
 func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
-	w.Menu.NewToolTab = glib.SimpleActionNew("new", nil)
-	w.Menu.NewSubToolTab = glib.SimpleActionNew("tabnew", nil)
+	w.Menu.NewDatabaseTab = glib.SimpleActionNew("new.db", nil)
+	w.Menu.NewHTTPTab = glib.SimpleActionNew("new.http", nil)
 	w.Menu.LoadFile = glib.SimpleActionNew("file.load", nil)
-	w.Menu.CloseToolTab = glib.SimpleActionNew("close", nil)
-	w.AddAction(w.Menu.NewToolTab)
-	w.AddAction(w.Menu.NewSubToolTab)
+	w.AddAction(w.Menu.NewDatabaseTab)
+	w.AddAction(w.Menu.NewHTTPTab)
 	w.AddAction(w.Menu.LoadFile)
-	w.AddAction(w.Menu.CloseToolTab)
 
 	header, err := gtk.HeaderBarNew()
 	if err != nil {
@@ -266,10 +263,8 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 	windowBtnMenu.SetMenuModel(&windowMenu.MenuModel)
 
 	windowMenu.Append("Window", "app.new")
-	windowMenu.Append("Connection", "win.new")
-	windowMenu.Append("Tab", "win.tabnew")
-	//windowMenu.Append("Open File", "win.file.load")
-	//menu.Append("- ToolTable ToolTab", "win.close")
+	windowMenu.Append("Database", "win.new.db")
+	windowMenu.Append("HTTP", "win.new.http")
 
 	// Create a new app menu button
 	appBtnMenu, err := gtk.MenuButtonNew()
