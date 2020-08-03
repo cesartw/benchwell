@@ -29,7 +29,7 @@ func (c KeyValue) Init() (*KeyValue, error) {
 	if err != nil {
 		return nil, err
 	}
-	c.key.SetPlaceholderText("Key")
+	c.key.SetPlaceholderText("Name")
 
 	c.value, err = gtk.EntryNew()
 	if err != nil {
@@ -137,17 +137,17 @@ type httpScreenCtrl interface {
 	Config() *config.Config
 }
 
-func (c HTTPScreen) Init(w *Window, ctrl httpScreenCtrl) (*HTTPScreen, error) {
+func (h HTTPScreen) Init(w *Window, ctrl httpScreenCtrl) (*HTTPScreen, error) {
 	var err error
 
-	c.w = w
-	c.ctrl = ctrl
-	c.Paned, err = gtk.PanedNew(gtk.ORIENTATION_HORIZONTAL)
+	h.w = w
+	h.ctrl = ctrl
+	h.Paned, err = gtk.PanedNew(gtk.ORIENTATION_HORIZONTAL)
 	if err != nil {
 		return nil, err
 	}
-	c.Paned.SetWideHandle(true)
-	c.collection, err = HTTPCollection{}.Init(w)
+	h.Paned.SetWideHandle(true)
+	h.collection, err = HTTPCollection{}.Init(w, ctrl)
 	if err != nil {
 		return nil, err
 	}
@@ -157,80 +157,93 @@ func (c HTTPScreen) Init(w *Window, ctrl httpScreenCtrl) (*HTTPScreen, error) {
 		return nil, err
 	}
 
-	addressBar, err := c.buildAddressBar()
+	addressBar, err := h.buildAddressBar()
 	if err != nil {
 		return nil, err
 	}
 
-	frameParams, err := gtk.FrameNew("Params")
+	h.body, err = SourceView{}.Init(h.w, SourceViewOptions{true, true, "json"}, ctrl)
 	if err != nil {
 		return nil, err
 	}
 
-	frameHeaders, err := gtk.FrameNew("Headers")
+	options, err := h.buildOptions()
 	if err != nil {
 		return nil, err
 	}
-
-	c.body, err = SourceView{}.Init(c.w, SourceViewOptions{true, true, "json"}, ctrl)
-	if err != nil {
-		return nil, err
-	}
-
-	c.headers, err = KeyValues{}.Init()
-	if err != nil {
-		return nil, err
-	}
-	frameParams.Add(c.headers)
-
-	c.params, err = KeyValues{}.Init()
-	if err != nil {
-		return nil, err
-	}
-	frameHeaders.Add(c.params)
 
 	main.PackStart(addressBar, false, false, 0)
-	main.PackStart(frameParams, false, false, 5)
-	main.PackStart(frameHeaders, false, false, 5)
-	main.PackStart(c.body, true, true, 0)
+	main.PackStart(options, false, false, 5)
+	main.PackStart(h.body, true, true, 0)
 
-	c.Paned.Add1(c.collection)
-	c.Paned.Add2(main)
-	c.Paned.ShowAll()
+	h.Paned.Add1(h.collection)
+	h.Paned.Add2(main)
+	h.Paned.ShowAll()
 
-	return &c, nil
+	return &h, nil
 }
 
-func (c *HTTPScreen) buildAddressBar() (*gtk.Box, error) {
+func (h *HTTPScreen) buildAddressBar() (*gtk.Box, error) {
 	box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 5)
 	if err != nil {
 		return nil, err
 	}
 
-	c.method, err = gtk.ComboBoxTextNew()
+	h.method, err = gtk.ComboBoxTextNew()
 	if err != nil {
 		return nil, err
 	}
 	for _, m := range methods {
-		c.method.AppendText(m)
+		h.method.AppendText(m)
 	}
-	c.method.SetActive(0)
+	h.method.SetActive(0)
 
-	c.address, err = gtk.EntryNew()
+	h.address, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
-	c.address.SetPlaceholderText("http://localhost/path.json")
+	h.address.SetPlaceholderText("http://localhost/path.json")
 
-	c.send, err = gtk.ButtonNewWithLabel("SEND")
+	h.send, err = gtk.ButtonNewWithLabel("SEND")
 	if err != nil {
 		return nil, err
 	}
 
 	// PackStart(child IWidget, expand, fill bool, padding uint) {
-	box.PackStart(c.method, false, false, 5)
-	box.PackStart(c.address, true, true, 0)
-	box.PackEnd(c.send, false, false, 5)
+	box.PackStart(h.method, false, false, 5)
+	box.PackStart(h.address, true, true, 0)
+	box.PackEnd(h.send, false, false, 5)
 
 	return box, nil
+}
+
+func (h *HTTPScreen) buildOptions() (*gtk.Notebook, error) {
+	nb, err := gtk.NotebookNew()
+	if err != nil {
+		return nil, err
+	}
+
+	h.headers, err = KeyValues{}.Init()
+	if err != nil {
+		return nil, err
+	}
+
+	h.params, err = KeyValues{}.Init()
+	if err != nil {
+		return nil, err
+	}
+
+	paramsLabel, err := gtk.LabelNew("Params")
+	if err != nil {
+		return nil, err
+	}
+	headersLabel, err := gtk.LabelNew("Headers")
+	if err != nil {
+		return nil, err
+	}
+
+	nb.AppendPage(h.params, paramsLabel)
+	nb.AppendPage(h.headers, headersLabel)
+
+	return nb, nil
 }

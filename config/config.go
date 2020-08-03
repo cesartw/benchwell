@@ -127,6 +127,7 @@ type Config struct {
 	Version     string
 	Home        string
 	Connections []*Connection
+	Collections []*HTTPCollection
 
 	loadedSettings map[string]*Setting
 
@@ -181,6 +182,8 @@ func Init(path string) *Config {
 		c.SaveConnection(nil, &Connection{Name: "New connection", Type: "tcp", Adapter: "mysql", Port: 3306, Config: c})
 	}
 
+	err = c.loadCollections()
+
 	return c
 }
 
@@ -203,7 +206,87 @@ func (c *Config) loadConnections() error {
 		c.Connections = append(c.Connections, conn)
 	}
 
-	return nil // c.loadQueries()
+	return nil
+}
+
+func (c *Config) loadCollections() error {
+	c.Collections = []*HTTPCollection{
+		{
+			ID:   1,
+			Name: "benchwell",
+			Items: []*HTTPItem{
+				{
+					ID:       2,
+					Name:     "/login.json",
+					IsFolder: false,
+				},
+				{
+					ID:       3,
+					Name:     "tickets",
+					IsFolder: true,
+					Items: []*HTTPItem{
+						{
+							ID:       4,
+							ParentID: 3,
+							Name:     "tickets/{id}.json",
+							IsFolder: false,
+						},
+					},
+				},
+				{
+					ID:       6,
+					Name:     "customers",
+					IsFolder: true,
+					Items: []*HTTPItem{
+						{
+							ID:       10,
+							ParentID: 30,
+							Name:     "customers/{id}.json",
+							IsFolder: false,
+						},
+					},
+				},
+			},
+		},
+		{
+			ID:   2,
+			Name: "tw",
+			Items: []*HTTPItem{
+				{
+					ID:       6,
+					Name:     "customers",
+					IsFolder: true,
+					Items: []*HTTPItem{
+						{
+							ID:       10,
+							ParentID: 30,
+							Name:     "customers/{id}.json",
+							IsFolder: false,
+						},
+					},
+				},
+				{
+					ID:       3,
+					Name:     "tickets",
+					IsFolder: true,
+					Items: []*HTTPItem{
+						{
+							ID:       4,
+							ParentID: 3,
+							Name:     "tickets/{id}.json",
+							IsFolder: false,
+						},
+					},
+				},
+				{
+					ID:       2,
+					Name:     "/login.json",
+					IsFolder: false,
+				},
+			},
+		},
+	}
+	return nil
 }
 
 func (c *Config) LoadQueries() error {
@@ -546,29 +629,47 @@ func (c *Connection) Decrypt(w *gtk.ApplicationWindow) error {
 }
 
 type HTTPEnvironment struct {
-	ID        int
+	ID        int64
 	Variables []*HTTPVariable
 }
 
 type HTTPVariable struct {
-	ID    int
+	ID    int64
 	Name  string
 	Value string
 }
 
 type HTTPCollection struct {
-	ID   int
-	Name string
+	ID    int64
+	Name  string
+	Items []*HTTPItem
 }
 
-type HTTPFolder struct {
-	ID   int
-	Name string
+type HTTPItem struct {
+	ID       int64
+	ParentID int64
+	Name     string
+	// Not pretty but makes little sense
+	// to separate them just for normalization sake
+	IsFolder bool
+
+	Items []*HTTPItem
+	Order int
 }
 
 type HTTPRequest struct {
-	ID      int
+	Method  string
 	URL     string
-	Headers map[string][]string
-	Params  map[string][]string
+	Body    string
+	Headers []*HTTPKV
+	Params  []*HTTPKV
+}
+
+type HTTPKV struct {
+	ID    int64
+	Key   string
+	Value string
+	Type  string // header | param
+
+	HTTPItemID int64
 }
