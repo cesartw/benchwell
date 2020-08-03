@@ -1,8 +1,6 @@
 package gtk
 
 import (
-	"fmt"
-
 	"bitbucket.org/goreorto/benchwell/config"
 	"github.com/gotk3/gotk3/gtk"
 )
@@ -130,7 +128,7 @@ type HTTPScreen struct {
 	params  *KeyValues
 
 	// side panel
-	requestList *List
+	collection *HTTPCollection
 
 	ctrl httpScreenCtrl
 }
@@ -149,14 +147,10 @@ func (c HTTPScreen) Init(w *Window, ctrl httpScreenCtrl) (*HTTPScreen, error) {
 		return nil, err
 	}
 	c.Paned.SetWideHandle(true)
-
-	c.requestList, err = List{}.Init(c.w, &ListOptions{
-		SelectOnRightClick: true,
-		IconFunc: func(name fmt.Stringer) (string, int) {
-			return "connection", ICON_SIZE_BUTTON
-		},
-	}, ctrl)
-	c.requestList.UpdateItems(StringSliceToStringers([]string{"a", "b", "c"}))
+	c.collection, err = HTTPCollection{}.Init(w)
+	if err != nil {
+		return nil, err
+	}
 
 	main, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
 	if err != nil {
@@ -200,7 +194,7 @@ func (c HTTPScreen) Init(w *Window, ctrl httpScreenCtrl) (*HTTPScreen, error) {
 	main.PackStart(frameHeaders, false, false, 5)
 	main.PackStart(c.body, true, true, 0)
 
-	c.Paned.Add1(c.requestList)
+	c.Paned.Add1(c.collection)
 	c.Paned.Add2(main)
 	c.Paned.ShowAll()
 

@@ -544,3 +544,31 @@ func (c *Connection) Decrypt(w *gtk.ApplicationWindow) error {
 
 	return nil
 }
+
+type HTTPEnvironment struct {
+	ID        int
+	Variables []*HTTPVariable
+}
+
+type HTTPVariable struct {
+	ID    int
+	Name  string
+	Value string
+}
+
+type HTTPCollection struct {
+	ID   int
+	Name string
+}
+
+type HTTPFolder struct {
+	ID   int
+	Name string
+}
+
+type HTTPRequest struct {
+	ID      int
+	URL     string
+	Headers map[string][]string
+	Params  map[string][]string
+}

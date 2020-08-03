@@ -114,6 +114,20 @@ func BWMenuItemWithImage(txt string, asset string) (*gtk.MenuItem, error) {
 var loader *gdk.PixbufLoader
 
 func BWImageNewFromFile(asset string, size int) (*gtk.Image, error) {
+	pixbuf, err := BWPixbufFromFile(asset, size)
+	if err != nil {
+		return nil, err
+	}
+
+	img, err := gtk.ImageNewFromPixbuf(pixbuf)
+	if err != nil {
+		return nil, err
+	}
+
+	return img, nil
+}
+
+func BWPixbufFromFile(asset string, size int) (*gdk.Pixbuf, error) {
 	loader, err := gdk.PixbufLoaderNewWithType("png")
 	if err != nil {
 		return nil, err
@@ -134,12 +148,7 @@ func BWImageNewFromFile(asset string, size int) (*gtk.Image, error) {
 		return nil, err
 	}
 
-	img, err := gtk.ImageNewFromPixbuf(pixbuf)
-	if err != nil {
-		return nil, err
-	}
-
-	return img, nil
+	return pixbuf, nil
 }
 
 func BWButtonNewFromIconName(asset string, size int) (*gtk.Button, error) {
