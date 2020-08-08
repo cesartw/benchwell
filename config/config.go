@@ -1,12 +1,7 @@
 package config
 
 import (
-	"bytes"
 	"database/sql"
-	"fmt"
-	"strconv"
-	"strings"
-	"sync"
 
 	"github.com/gotk3/gotk3/gtk"
 	_ "github.com/mattn/go-sqlite3"
@@ -16,108 +11,6 @@ import (
 )
 
 const AppID = "io.benchwell"
-
-type Setting struct {
-	id    int64
-	name  string
-	value string
-
-	m    sync.Mutex
-	l    uint
-	subs map[uint]*SettingUpdater
-}
-
-type SettingUpdater struct {
-	p *Setting
-	l uint
-	f func(interface{})
-	c chan interface{}
-}
-
-func (s *Setting) notify() {
-	for _, updater := range s.subs {
-		go func(c chan interface{}) {
-			c <- s.value
-		}(updater.c)
-	}
-}
-
-func (s *SettingUpdater) Unsubscribe() {
-	close(s.c)
-	s.p.unsubscribe(s.l)
-}
-
-func (s *Setting) SetBool(b bool) {
-	if b {
-		s.value = "1"
-	} else {
-		s.value = "0"
-	}
-	s.notify()
-}
-
-func (s *Setting) SetString(v string) {
-	s.value = v
-	s.notify()
-}
-
-func (s *Setting) Bool() bool {
-	return s.value == "1" || strings.EqualFold(s.value, "1")
-}
-
-func (s *Setting) String() string {
-	return s.value
-}
-
-func (s *Setting) Int() int {
-	i, _ := strconv.ParseInt(s.value, 10, 64)
-	return int(i)
-}
-
-func (s *Setting) Int64() int64 {
-	i, _ := strconv.ParseInt(s.value, 10, 64)
-	return i
-}
-
-func (s *Setting) unsubscribe(l uint) {
-	s.m.Lock()
-	defer s.m.Unlock()
-
-	delete(s.subs, l)
-}
-
-func (s *Setting) Subscribe(f func(interface{})) *SettingUpdater {
-	s.m.Lock()
-	defer s.m.Unlock()
-
-	s.l++
-	u := &SettingUpdater{
-		l: s.l,
-		f: f,
-		c: make(chan interface{}, 1),
-	}
-
-	go func() {
-		for {
-			select {
-			case v := <-u.c:
-				f(v)
-			}
-		}
-	}()
-
-	s.subs[s.l] = u
-	return u
-}
-
-func (p *Setting) Settinglisher(v interface{}) {
-	p.m.Lock()
-	defer p.m.Unlock()
-
-	for _, s := range p.subs {
-		s.c <- v
-	}
-}
 
 // Config ...
 type Config struct {
@@ -190,7 +83,7 @@ func Init(path string) *Config {
 // name, adapter, type, database, host, options, user, password, port, encrypted
 func (c *Config) loadConnections() error {
 	c.Connections = nil
-	rows, err := c.db.Query("SELECT * FROM connections")
+	rows, err := c.db.Query("SELECT * FROM db_connections")
 	if err != nil {
 		return err
 	}
@@ -210,87 +103,104 @@ func (c *Config) loadConnections() error {
 }
 
 func (c *Config) loadCollections() error {
-	c.Collections = []*HTTPCollection{
-		{
-			ID:   1,
-			Name: "benchwell",
-			Items: []*HTTPItem{
-				{
-					ID:       2,
-					Name:     "/login.json",
-					IsFolder: false,
-				},
-				{
-					ID:       3,
-					Name:     "tickets",
-					IsFolder: true,
-					Items: []*HTTPItem{
-						{
-							ID:       4,
-							ParentID: 3,
-							Name:     "tickets/{id}.json",
-							IsFolder: false,
-						},
-					},
-				},
-				{
-					ID:       6,
-					Name:     "customers",
-					IsFolder: true,
-					Items: []*HTTPItem{
-						{
-							ID:       10,
-							ParentID: 30,
-							Name:     "customers/{id}.json",
-							IsFolder: false,
-						},
-					},
-				},
-			},
-		},
-		{
-			ID:   2,
-			Name: "tw",
-			Items: []*HTTPItem{
-				{
-					ID:       6,
-					Name:     "customers",
-					IsFolder: true,
-					Items: []*HTTPItem{
-						{
-							ID:       10,
-							ParentID: 30,
-							Name:     "customers/{id}.json",
-							IsFolder: false,
-						},
-					},
-				},
-				{
-					ID:       3,
-					Name:     "tickets",
-					IsFolder: true,
-					Items: []*HTTPItem{
-						{
-							ID:       4,
-							ParentID: 3,
-							Name:     "tickets/{id}.json",
-							IsFolder: false,
-						},
-					},
-				},
-				{
-					ID:       2,
-					Name:     "/login.json",
-					IsFolder: false,
-				},
-			},
-		},
+	c.Collections = nil
+	rows, err := c.db.Query("SELECT * FROM http_collections")
+	if err != nil {
+		return err
 	}
+
+	for rows.Next() {
+		collection := &HTTPCollection{Config: c}
+		err := rows.Scan(&collection.ID, &collection.Name)
+		if err != nil {
+			return err
+		}
+		c.Collections = append(c.Collections, collection)
+	}
+
+	return nil
+
+	//c.Collections = []*HTTPCollection{
+	//{
+	//ID:   1,
+	//Name: "benchwell",
+	//Items: []*HTTPItem{
+	//{
+	//ID:       2,
+	//Name:     "/login.json",
+	//IsFolder: false,
+	//},
+	//{
+	//ID:       3,
+	//Name:     "tickets",
+	//IsFolder: true,
+	//Items: []*HTTPItem{
+	//{
+	//ID:       4,
+	//ParentID: 3,
+	//Name:     "tickets/{id}.json",
+	//IsFolder: false,
+	//},
+	//},
+	//},
+	//{
+	//ID:       6,
+	//Name:     "customers",
+	//IsFolder: true,
+	//Items: []*HTTPItem{
+	//{
+	//ID:       10,
+	//ParentID: 30,
+	//Name:     "customers/{id}.json",
+	//IsFolder: false,
+	//},
+	//},
+	//},
+	//},
+	//},
+	//{
+	//ID:   2,
+	//Name: "tw",
+	//Items: []*HTTPItem{
+	//{
+	//ID:       6,
+	//Name:     "customers",
+	//IsFolder: true,
+	//Items: []*HTTPItem{
+	//{
+	//ID:       10,
+	//ParentID: 30,
+	//Name:     "customers/{id}.json",
+	//IsFolder: false,
+	//},
+	//},
+	//},
+	//{
+	//ID:       3,
+	//Name:     "tickets",
+	//IsFolder: true,
+	//Items: []*HTTPItem{
+	//{
+	//ID:       4,
+	//ParentID: 3,
+	//Name:     "tickets/{id}.json",
+	//IsFolder: false,
+	//},
+	//},
+	//},
+	//{
+	//ID:       2,
+	//Name:     "/login.json",
+	//IsFolder: false,
+	//},
+	//},
+	//},
+	//}
 	return nil
 }
 
 func (c *Config) LoadQueries() error {
-	rows, err := c.db.Query("SELECT * FROM queries")
+	rows, err := c.db.Query("SELECT * FROM db_queries")
 	if err != nil {
 		return err
 	}
@@ -443,146 +353,6 @@ func (c *Config) DeleteConnection(conn *Connection) error {
 	return nil
 }
 
-// Connection ...
-type Connection struct {
-	ID        int64
-	Adapter   string
-	Type      string
-	Name      string
-	Socket    string
-	File      string
-	Host      string
-	Port      int
-	User      string
-	Password  string
-	Database  string
-	SshHost   string
-	SshAgent  string
-	Options   string
-	Encrypted bool
-	Queries   []*Query
-
-	Config *Config
-}
-
-type Query struct {
-	ID           int64
-	Name         string
-	Query        string
-	ConnectionID int64
-}
-
-// GetDSN ...
-func (c Connection) GetDSN() string {
-	switch c.Adapter {
-	case "mysql":
-		return c.mysqlDSN()
-	case "sqlite":
-		return c.sqliteDSN()
-	}
-
-	return ""
-}
-
-func (c Connection) mysqlDSN() string {
-	b := bytes.NewBuffer([]byte{})
-	b.WriteString("mysql://")
-
-	if c.User != "" {
-		b.WriteString(c.User)
-	}
-
-	if c.Password != "" && c.User != "" {
-		c.Decrypt(nil)
-		b.WriteString(":" + c.Password)
-	}
-
-	if c.User != "" {
-		b.WriteString("@")
-	}
-
-	switch c.Type {
-	case "tcp":
-		b.WriteString("tcp(" + c.Host)
-		if c.Port != 0 {
-			b.WriteString(fmt.Sprintf(":%d", c.Port))
-		}
-	case "socket":
-		b.WriteString("unix(" + c.Socket)
-	case "ssh":
-		b.WriteString("ssh(" + c.Host)
-
-		if c.Port != 0 {
-			b.WriteString(fmt.Sprintf(":%d", c.Port))
-		}
-		b.WriteString("," + c.SshHost + ";" + c.SshAgent)
-	default:
-		return ""
-	}
-
-	b.WriteString(")")
-
-	b.WriteString("/" + c.Database)
-
-	if c.Options != "" {
-		b.WriteString("?")
-		b.WriteString(c.Options)
-	}
-
-	return b.String()
-}
-
-func (c Connection) sqliteDSN() string {
-	b := bytes.NewBuffer([]byte{})
-	b.WriteString("file:")
-
-	b.WriteString(c.File)
-
-	if c.Options != "" {
-		b.WriteString("?")
-		b.WriteString(c.Options)
-	}
-
-	return b.String()
-}
-
-func (c *Connection) LoadQueries() error {
-	rows, err := c.Config.db.Query("SELECT * FROM queries WHERE connections_id = ?", c.ID)
-	if err != nil {
-		return err
-	}
-
-	c.Queries = nil
-	for rows.Next() {
-		query := &Query{}
-		err := rows.Scan(&query.ID, &query.Name, &query.Query, &query.ConnectionID)
-		if err != nil {
-			return err
-		}
-
-		c.Queries = append(c.Queries, query)
-	}
-
-	return nil
-}
-
-func (c *Connection) DeleteQuery(name string) error {
-	_, err := c.Config.db.Exec("DELETE FROM queries WHERE connections_id = ? AND name = ?", c.ID, name)
-	if err != nil {
-		return err
-	}
-
-	for i, q := range c.Queries {
-		if q.Name != name {
-			continue
-		}
-
-		c.Queries = append(c.Queries[:i], c.Queries[i+1:]...)
-	}
-
-	return nil
-}
-
 func (c *Config) CSS() string {
 	style := ""
 	if c.GUI.DarkMode.Bool() {
@@ -591,85 +361,4 @@ func (c *Config) CSS() string {
 		style = assets.THEME_LIGHT + assets.BRAND + assets.BRAND_LIGHT
 	}
 	return style
-}
-
-func (c *Connection) Encrypt(w *gtk.ApplicationWindow) error {
-	if c.Encrypted {
-		return nil
-	}
-
-	keys := map[string]string{
-		"id": fmt.Sprintf("%d", c.ID),
-	}
-
-	path, err := Keychain.Set(nil, keys, c.Password)
-	if err != nil {
-		return err
-	}
-	c.Password = path
-	c.Encrypted = true
-
-	return nil
-}
-
-func (c *Connection) Decrypt(w *gtk.ApplicationWindow) error {
-	if !c.Encrypted {
-		return nil
-	}
-
-	pass, err := Keychain.Get(&w.Window, c.Password)
-	if err != nil {
-		return err
-	}
-
-	c.Password = pass
-	c.Encrypted = false
-
-	return nil
-}
-
-type HTTPEnvironment struct {
-	ID        int64
-	Variables []*HTTPVariable
-}
-
-type HTTPVariable struct {
-	ID    int64
-	Name  string
-	Value string
-}
-
-type HTTPCollection struct {
-	ID    int64
-	Name  string
-	Items []*HTTPItem
-}
-
-type HTTPItem struct {
-	ID       int64
-	ParentID int64
-	Name     string
-	// Not pretty but makes little sense
-	// to separate them just for normalization sake
-	IsFolder bool
-
-	Items []*HTTPItem
-	Order int
-}
-
-type HTTPRequest struct {
-	Method  string
-	URL     string
-	Body    string
-	Headers []*HTTPKV
-	Params  []*HTTPKV
-}
-
-type HTTPKV struct {
-	ID    int64
-	Key   string
-	Value string
-	Type  string // header | param
-
-	HTTPItemID int64
 }

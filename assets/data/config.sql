@@ -4,7 +4,7 @@ CREATE TABLE "config" (
     value NVARCHAR(300) NOT NULL
 );
 
-CREATE TABLE "connections" (
+CREATE TABLE "db_connections" (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     name text NOT NULL,
     adapter text NOT NULL,
@@ -21,6 +21,41 @@ CREATE TABLE "connections" (
 	File      text NULL,
 	SshHost   text NULL,
 	SshAgent  text NULL
+);
+
+CREATE TABLE "db_queries" (
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    name text NOT NULL,
+    query text NOT NULL,
+	connections_id integer NOT NULL
+);
+
+CREATE TABLE "http_collections" (
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    name text NOT NULL
+);
+
+CREATE TABLE "http_items" (
+	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+	name text NOT NULL,
+	parent_id integer,
+	is_folder integer,
+	sort integer NOT NULL,
+	http_collections_id integer NOT NULL,
+
+	method text DEFAULT "",
+	url    text DEFAULT "",
+	body   text DEFAULT "",
+	mime   text DEFAULT "json"
+);
+
+CREATE TABLE "http_kvs" (
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    key text NOT NULL,
+    value text NOT NULL,
+    type text NOT NULL,
+	http_items_id integer NOT NULL,
+	sort integer NOT NULL
 );
 
 INSERT INTO connections(name, adapter, type, database, host, options, user, password, port, encrypted)
