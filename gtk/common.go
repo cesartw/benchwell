@@ -13,6 +13,7 @@ import (
 	"github.com/alecthomas/chroma/formatters"
 	"github.com/alecthomas/chroma/quick"
 	"github.com/gotk3/gotk3/gdk"
+	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 )
 
@@ -51,6 +52,28 @@ func (mv *MVar) Get() interface{} {
 	return mv.value
 }
 
+func BWAddClass(i interface {
+	GetStyleContext() (*gtk.StyleContext, error)
+}, class string) error {
+	style, err := i.GetStyleContext()
+	if err != nil {
+		return err
+	}
+	style.AddClass(class)
+	return nil
+}
+
+func BWRemoveClass(i interface {
+	GetStyleContext() (*gtk.StyleContext, error)
+}, class string) error {
+	style, err := i.GetStyleContext()
+	if err != nil {
+		return err
+	}
+	style.RemoveClass(class)
+	return nil
+}
+
 func menuItemWithImage(txt string, stockImage string) (*gtk.MenuItem, error) {
 	item, err := gtk.MenuItemNew()
 	if err != nil {
@@ -79,6 +102,21 @@ func menuItemWithImage(txt string, stockImage string) (*gtk.MenuItem, error) {
 	item.Add(box)
 
 	return item, nil
+}
+
+func BWLabelNewWithClass(title, class string) (*gtk.Label, error) {
+	label, err := gtk.LabelNew(title)
+	if err != nil {
+		return nil, err
+	}
+
+	style, err := label.GetStyleContext()
+	if err != nil {
+		return nil, err
+	}
+	style.AddClass(class)
+
+	return label, nil
 }
 
 func BWMenuItemWithImage(txt string, asset string) (*gtk.MenuItem, error) {
@@ -164,6 +202,23 @@ func BWButtonNewFromIconName(asset string, size int) (*gtk.Button, error) {
 	btn.SetImage(img)
 
 	return btn, nil
+}
+
+func BWRadioButtonNew(label string, l *glib.SList) (*gtk.RadioButton, *glib.SList, error) {
+	if l == nil {
+		l = &glib.SList{}
+	}
+
+	radio, err := gtk.RadioButtonNewWithLabel(l, label)
+	if err != nil {
+		return nil, nil, err
+	}
+	l, err = radio.GetGroup()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return radio, l, nil
 }
 
 func ChromaHighlight(theme string, inputString string) (out string, err error) {

@@ -7,6 +7,29 @@ const BRAND = `* {
 	-GtkScrollbar-has-forward-stepper: true;
 }
 
+label.tag {
+	background-color: #a3a3a3;
+	color: #000;
+	padding: 2px 10px;
+	border-radius: 5px;
+}
+
+label.tag.success {
+	background-color: #449944;
+}
+
+label.tag.error {
+   background-color: #aa4444;
+}
+
+#Duration{
+	margin-left:20px;
+}
+
+#BodyMimeOpts, #ResponseDetails, #AddressBar {
+	padding: 10px;
+}
+
 notebook > header.top > tabs > tab {
 	border-radius: 0.5em 0.5em 0em 0.0em;
 	border-bottom: none;

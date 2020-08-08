@@ -66,3 +66,26 @@ overlay > box {
 #form {
 	padding: 10px;
 }
+
+#BodyMimeOpts, #ResponseDetails, #AddressBar {
+	padding: 10px;
+}
+
+label.tag {
+	background-color: #a3a3a3;
+	color: #000;
+	padding: 2px 10px;
+	border-radius: 5px;
+}
+
+label.tag.success {
+	background-color: #449944;
+}
+
+label.tag.error {
+   background-color: #aa4444;
+}
+
+#Duration{
+	margin-left:20px;
+}

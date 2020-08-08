@@ -24,24 +24,42 @@ func (t SourceView) Init(_ *Window, opts SourceViewOptions, ctrl interface{ Conf
 		return nil, err
 	}
 
+	err = t.SetLanguage(opts.Language)
+	if err != nil {
+		return nil, err
+	}
+
 	style, err := sourceview.SourceStyleSchemeManagerGetDefault()
 	if err != nil {
 		return nil, err
 	}
-	language, err := sourceview.SourceLanguageManagerGetDefault()
-	if err != nil {
-		return nil, err
-	}
-
-	lang, err := language.GetLanguage(opts.Language)
-	if err != nil {
-		return nil, err
-	}
-
 	buff.SetStyleScheme(style.GetScheme("benchwell_dark"))
-	buff.SetLanguage(lang)
 
 	return &t, err
+}
+
+func (t *SourceView) SetLanguage(lang string) error {
+	buff, err := t.SourceView.GetBuffer()
+	if err != nil {
+		return err
+	}
+	if lang == "" {
+		buff.SetLanguage(nil)
+		return nil
+	}
+
+	language, err := sourceview.SourceLanguageManagerGetDefault()
+	if err != nil {
+		return err
+	}
+
+	l, err := language.GetLanguage(lang)
+	if err != nil {
+		return err
+	}
+
+	buff.SetLanguage(l)
+	return nil
 }
 
 func (t *SourceView) ShowAutoComplete(words []string) {

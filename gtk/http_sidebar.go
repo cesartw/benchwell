@@ -80,6 +80,8 @@ func (h HTTPCollection) Init(
 	h.Box.PackStart(h.colBox, false, false, 0)
 	h.Box.PackStart(h.tree, true, true, 0)
 
+	h.colBox.SetActive(0)
+
 	return &h, nil
 }
 
@@ -87,7 +89,7 @@ func (h *HTTPCollection) buildTree(iter *gtk.TreeIter, items []*config.HTTPItem)
 	for _, item := range items {
 		switch item.IsFolder {
 		case true:
-			imageOK, err := BWPixbufFromFile("open", 16)
+			imageOK, err := BWPixbufFromFile("directory", 16)
 			if err != nil {
 				return err
 			}
