@@ -90,10 +90,9 @@ func (h HTTPCollection) Init(
 					return
 				}
 
-				h.tree.ExpandRow(path, true)
+				h.tree.ExpandRow(path, false)
 			}
 		}
-
 	})
 
 	h.colBox, err = gtk.ComboBoxTextNew()

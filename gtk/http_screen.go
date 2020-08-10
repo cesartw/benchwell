@@ -1,7 +1,11 @@
 package gtk
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"net/url"
+	"sort"
 	"strings"
 
 	"bitbucket.org/goreorto/benchwell/config"
@@ -26,13 +30,15 @@ type HTTPScreen struct {
 	method  *gtk.ComboBoxText
 	address *gtk.Entry
 	send    *gtk.Button
+	save    *OptionButton
 
 	// request body
-	body     *SourceView
-	bodySize *gtk.Label
-	headers  *KeyValues
-	params   *KeyValues
-	bodyMime string
+	body         *SourceView
+	bodySize     *gtk.Label
+	headers      *KeyValues
+	params       *KeyValues
+	bodyMime     string
+	buildingAddr bool
 
 	// response
 	response *SourceView
@@ -48,6 +54,9 @@ type HTTPScreen struct {
 
 type httpScreenCtrl interface {
 	Config() *config.Config
+	Save()
+	SaveAs()
+	Send()
 }
 
 func (h HTTPScreen) Init(w *Window, ctrl httpScreenCtrl) (*HTTPScreen, error) {
@@ -128,15 +137,24 @@ func (h *HTTPScreen) buildAddressBar() (*gtk.Box, error) {
 		return nil, err
 	}
 	h.address.SetPlaceholderText("http://localhost/path.json")
+	h.address.Connect("key-release-event", h.onAddressChange)
 
 	h.send, err = gtk.ButtonNewWithLabel("SEND")
 	if err != nil {
 		return nil, err
 	}
+	h.send.Connect("clicked", h.ctrl.Send)
 
-	// PackStart(child IWidget, expand, fill bool, padding uint) {
+	h.save, err = BWOptionButtonNew("SAVE", h.w, []string{"Save as", "win.saveas"})
+	if err != nil {
+		return nil, err
+	}
+	h.save.ConnectAction("win.saveas", h.ctrl.SaveAs)
+	h.save.btn.Connect("activate", h.ctrl.Save)
+
 	box.PackStart(h.method, false, false, 0)
 	box.PackStart(h.address, true, true, 0)
+	box.PackEnd(h.save, false, false, 0)
 	box.PackEnd(h.send, false, false, 0)
 
 	return box, nil
@@ -185,12 +203,25 @@ func (h *HTTPScreen) buildRequest() (*gtk.Notebook, error) {
 		return nil, err
 	}
 
-	h.headers, err = KeyValues{}.Init()
+	h.headers, err = KeyValues{}.Init(func() {})
 	if err != nil {
 		return nil, err
 	}
 
-	h.params, err = KeyValues{}.Init()
+	h.params, err = KeyValues{}.Init(func() {
+		if h.buildingAddr {
+			return
+		}
+		h.buildingAddr = true
+		defer func() { h.buildingAddr = false }()
+
+		params, _ := h.params.Collect()
+		address, _ := h.address.GetText()
+		u, _ := url.Parse(address)
+		u.RawQuery = url.Values(params).Encode()
+
+		h.address.SetText(u.String())
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -319,6 +350,91 @@ func (h *HTTPScreen) buildResponse() (*gtk.Box, error) {
 	return box, nil
 }
 
+func (h *HTTPScreen) onAddressChange() {
+	if h.buildingAddr {
+		return
+	}
+	h.buildingAddr = true
+	defer func() { h.buildingAddr = false }()
+
+	address, err := h.address.GetText()
+	if err != nil {
+		h.w.PushStatus("getting address: " + err.Error())
+		return
+	}
+
+	u, err := url.Parse(address)
+	if err != nil {
+		h.w.PushStatus("parsing address: " + err.Error())
+		return
+	}
+
+	h.params.Clear()
+
+	keys := []string{}
+	params := u.Query()
+	for key, _ := range params {
+		keys = append(keys, key)
+	}
+
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		for _, value := range params[key] {
+			h.params.AddWithValues(key, value)
+		}
+	}
+}
+
+type Request struct {
+	Method  string
+	URL     string
+	Body    io.Reader
+	Headers map[string][]string
+}
+
+func (h *HTTPScreen) GetRequest() (*Request, error) {
+	address, err := h.address.GetText()
+	if err != nil {
+		return nil, err
+	}
+
+	req := &Request{
+		Method:  h.method.GetActiveText(),
+		URL:     address,
+		Headers: map[string][]string{},
+	}
+
+	headers, err := h.headers.Collect()
+	if err != nil {
+		return nil, err
+	}
+
+	params, err := h.params.Collect()
+	if err != nil {
+		return nil, err
+	}
+
+	req.URL = "?" + url.Values(params).Encode()
+
+	buff, err := h.body.GetBuffer()
+	if err != nil {
+		return nil, err
+	}
+	start := buff.GetStartIter()
+	end := buff.GetStartIter()
+
+	txt, err := buff.GetText(start, end, false)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Body = bytes.NewReader([]byte(txt))
+	req.Headers = headers
+
+	return req, nil
+}
+
 type KeyValue struct {
 	*gtk.Box
 	enabled *gtk.CheckButton
@@ -355,6 +471,7 @@ func (c KeyValue) Init() (*KeyValue, error) {
 	if err != nil {
 		return nil, err
 	}
+	c.enabled.SetActive(true)
 
 	c.Box.PackStart(c.enabled, false, false, 5)
 	c.Box.PackStart(c.key, true, true, 0)
@@ -364,28 +481,98 @@ func (c KeyValue) Init() (*KeyValue, error) {
 	return &c, nil
 }
 
+func (c *KeyValue) Get() (string, string, error) {
+	key, err := c.key.GetText()
+	if err != nil {
+		return "", "", err
+	}
+	value, err := c.value.GetText()
+	if err != nil {
+		return "", "", err
+	}
+
+	return key, value, nil
+}
+
 type KeyValues struct {
 	*gtk.Box
 	keyvalues []*KeyValue
+	onChange  func()
 }
 
-func (c KeyValues) Init() (*KeyValues, error) {
+func (c KeyValues) Init(onChange func()) (*KeyValues, error) {
 	var err error
+	c.onChange = onChange
 	c.Box, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
 	if err != nil {
 		return nil, err
 	}
 
-	return &c, c.Add()
+	return &c, c.AddEmpty()
 }
 
-func (c *KeyValues) Add() error {
-	kv, err := KeyValue{}.Init()
+func (c *KeyValues) AddEmpty() error {
+	_, err := c.add()
 	if err != nil {
 		return err
 	}
 
-	kv.remove.Connect("clicked", func() {
+	return nil
+}
+
+func (c *KeyValues) AddWithValues(key, value string) error {
+	for _, kv := range c.keyvalues {
+		s, _ := kv.key.GetText()
+		if s != "" {
+			continue
+		}
+		kv.key.SetText(key)
+		kv.value.SetText(value)
+		return nil
+	}
+
+	kv, err := c.add()
+	if err != nil {
+		return err
+	}
+
+	kv.key.SetText(key)
+	kv.value.SetText(value)
+
+	return nil
+}
+
+func (c *KeyValues) add() (*KeyValue, error) {
+	kv, err := KeyValue{}.Init()
+	if err != nil {
+		return kv, err
+	}
+
+	kv.remove.Connect("clicked", c.onBlur(kv))
+
+	focused := func() {
+		if c.keyvalues[len(c.keyvalues)-1] != kv {
+			return
+		}
+
+		c.AddEmpty()
+	}
+	kv.key.Connect("grab-focus", focused)
+	kv.value.Connect("grab-focus", focused)
+	kv.key.Connect("key-release-event", c.onChange)
+	kv.value.Connect("key-release-event", c.onChange)
+	kv.enabled.Connect("toggled", c.onChange)
+	kv.remove.Connect("clicked", c.onChange)
+
+	c.Box.PackStart(kv, false, false, 0)
+	c.keyvalues = append(c.keyvalues, kv)
+	kv.ShowAll()
+
+	return kv, nil
+}
+
+func (c *KeyValues) onBlur(kv *KeyValue) func() {
+	return func() {
 		c.Box.Remove(kv)
 
 		for i, v := range c.keyvalues {
@@ -396,23 +583,38 @@ func (c *KeyValues) Add() error {
 		}
 
 		if len(c.keyvalues) == 0 {
-			c.Add()
+			c.AddEmpty()
 		}
-	})
-
-	focused := func() {
-		if c.keyvalues[len(c.keyvalues)-1] != kv {
-			return
-		}
-
-		c.Add()
 	}
-	kv.key.Connect("grab-focus", focused)
-	kv.value.Connect("grab-focus", focused)
+}
 
-	c.Box.PackStart(kv, false, false, 0)
-	c.keyvalues = append(c.keyvalues, kv)
-	kv.ShowAll()
+func (c *KeyValues) Clear() {
+	for _, kv := range c.keyvalues {
+		c.Remove(kv)
+	}
+	c.keyvalues = nil
+	c.AddEmpty()
+}
 
-	return nil
+func (c KeyValues) Collect() (map[string][]string, error) {
+	keyvalues := map[string][]string{}
+
+	for _, kv := range c.keyvalues {
+		if !kv.enabled.GetActive() {
+			continue
+		}
+
+		key, value, err := kv.Get()
+		if err != nil {
+			return nil, err
+		}
+
+		if key == "" {
+			continue
+		}
+
+		keyvalues[key] = append(keyvalues[key], value)
+	}
+
+	return keyvalues, nil
 }

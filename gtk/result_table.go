@@ -100,21 +100,21 @@ func (u Result) Init(_ *Window, ctrl resultCtrl, parser parser) (*Result, error)
 		return nil, err
 	}
 
-	u.ddMenu.clone, err = menuItemWithImage("Clone Row", "gtk-convert")
+	u.ddMenu.clone, err = BWMenuItemWithImage("Clone Row", "gtk-convert")
 	if err != nil {
 		return nil, err
 	}
 	u.ddMenu.clone.Connect("activate", u.onCloneRow)
 	u.ddMenu.Add(u.ddMenu.clone)
 
-	u.ddMenu.cpInsert, err = menuItemWithImage("Copy Insert", "gtk-page-setup")
+	u.ddMenu.cpInsert, err = BWMenuItemWithImage("Copy Insert", "gtk-page-setup")
 	if err != nil {
 		return nil, err
 	}
 	u.ddMenu.cpInsert.Connect("activate", u.onCopyInsert)
 	u.ddMenu.Add(u.ddMenu.cpInsert)
 
-	u.ddMenu.cp, err = menuItemWithImage("Copy Field", "gtk-copy")
+	u.ddMenu.cp, err = BWMenuItemWithImage("Copy Field", "gtk-copy")
 	if err != nil {
 		return nil, err
 	}

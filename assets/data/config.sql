@@ -17,21 +17,22 @@ CREATE TABLE "db_connections" (
     port integer NULL,
     encrypted BOOLEAN NOT NULL DEFAULT 0 CHECK (encrypted IN (0,1))
 
-	Socket    text NULL,
-	File      text NULL,
-	SshHost   text NULL,
-	SshAgent  text NULL
+    Socket    text NULL,
+    File      text NULL,
+    SshHost   text NULL,
+    SshAgent  text NULL
 );
 
 CREATE TABLE "db_queries" (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     name text NOT NULL,
     query text NOT NULL,
-	connections_id integer NOT NULL
+    connections_id integer NOT NULL
 );
 
 CREATE TABLE "http_collections" (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    count integer default 0,
     name text NOT NULL
 );
 
@@ -40,6 +41,7 @@ CREATE TABLE "http_items" (
 	name text NOT NULL,
 	parent_id integer,
 	is_folder integer,
+	count integer default 0,
 	sort integer NOT NULL,
 	http_collections_id integer NOT NULL,
 
@@ -49,13 +51,23 @@ CREATE TABLE "http_items" (
 	mime   text DEFAULT "json"
 );
 
+CREATE TRIGGER increment_http_collections_count AFTER INSERT ON http_items
+    BEGIN
+        UPDATE http_collections SET count = count + 1 WHERE http_collections.id = new.http_collections_id;
+    END;
+
+CREATE TRIGGER decrement_http_collections_count AFTER DELETE ON http_items
+    BEGIN
+        UPDATE http_collections SET count = count - 1 WHERE http_collections.id = new.http_collections_id;
+    END;
+
 CREATE TABLE "http_kvs" (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     key text NOT NULL,
     value text NOT NULL,
     type text NOT NULL,
-	http_items_id integer NOT NULL,
-	sort integer NOT NULL
+    http_items_id integer NOT NULL,
+    sort integer NOT NULL
 );
 
 INSERT INTO connections(name, adapter, type, database, host, options, user, password, port, encrypted)

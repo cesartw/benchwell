@@ -216,13 +216,13 @@ func (c *ConnectScreen) initMenu() error {
 		return err
 	}
 
-	c.menuNew, err = menuItemWithImage("New", "gtk-new")
+	c.menuNew, err = BWMenuItemWithImage("New", "connection")
 	if err != nil {
 		return err
 	}
 	c.contextMenu.Add(c.menuNew)
 
-	c.menuConnect, err = menuItemWithImage("Connect", "gtk-connect")
+	c.menuConnect, err = BWMenuItemWithImage("Connect", "next")
 	if err != nil {
 		return err
 	}
@@ -231,7 +231,7 @@ func (c *ConnectScreen) initMenu() error {
 	})
 	c.contextMenu.Add(c.menuConnect)
 
-	c.menuTest, err = menuItemWithImage("Test", "gtk-play")
+	c.menuTest, err = BWMenuItemWithImage("Test", "refresh")
 	if err != nil {
 		return err
 	}
@@ -240,7 +240,7 @@ func (c *ConnectScreen) initMenu() error {
 	})
 	c.contextMenu.Add(c.menuTest)
 
-	c.menuDel, err = menuItemWithImage("Delete", "gtk-delete")
+	c.menuDel, err = BWMenuItemWithImage("Delete", "close")
 	if err != nil {
 		return err
 	}

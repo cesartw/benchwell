@@ -1,17 +1,12 @@
 package gtk
 
 import (
-	"bufio"
-	"bytes"
+	"errors"
 	"fmt"
-	"html"
-	"io"
+	"strings"
 	"sync"
 
 	"bitbucket.org/goreorto/benchwell/assets"
-	"github.com/alecthomas/chroma"
-	"github.com/alecthomas/chroma/formatters"
-	"github.com/alecthomas/chroma/quick"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
@@ -27,11 +22,6 @@ const (
 	ICON_SIZE_DND           = 32
 	ICON_SIZE_DIALOG        = 48
 )
-
-func init() {
-	// Registrering pango formatter
-	formatters.Register("pango", chroma.FormatterFunc(pangoFormatter))
-}
 
 type MVar struct {
 	value interface{}
@@ -74,36 +64,6 @@ func BWRemoveClass(i interface {
 	return nil
 }
 
-func menuItemWithImage(txt string, stockImage string) (*gtk.MenuItem, error) {
-	item, err := gtk.MenuItemNew()
-	if err != nil {
-		return nil, err
-	}
-
-	box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	icon, err := gtk.ImageNewFromIconName(stockImage, gtk.ICON_SIZE_MENU)
-	if err != nil {
-		return nil, err
-	}
-
-	label, err := gtk.LabelNew(txt)
-	if err != nil {
-		return nil, err
-	}
-	label.SetUseUnderline(true)
-	label.SetXAlign(0.0)
-
-	box.PackStart(icon, false, false, 0)
-	box.PackEnd(label, true, true, 5)
-	item.Add(box)
-
-	return item, nil
-}
-
 func BWLabelNewWithClass(title, class string) (*gtk.Label, error) {
 	label, err := gtk.LabelNew(title)
 	if err != nil {
@@ -130,9 +90,17 @@ func BWMenuItemWithImage(txt string, asset string) (*gtk.MenuItem, error) {
 		return nil, err
 	}
 
-	icon, err := BWImageNewFromFile(asset, ICON_SIZE_MENU)
-	if err != nil {
-		return nil, err
+	var icon *gtk.Image
+	if strings.HasPrefix(asset, "gtk-") {
+		icon, err = gtk.ImageNewFromIconName(asset, gtk.ICON_SIZE_MENU)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		icon, err = BWImageNewFromFile(asset, ICON_SIZE_MENU)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	label, err := gtk.LabelNew(txt)
@@ -148,8 +116,6 @@ func BWMenuItemWithImage(txt string, asset string) (*gtk.MenuItem, error) {
 
 	return item, nil
 }
-
-var loader *gdk.PixbufLoader
 
 func BWImageNewFromFile(asset string, size int) (*gtk.Image, error) {
 	pixbuf, err := BWPixbufFromFile(asset, size)
@@ -221,64 +187,57 @@ func BWRadioButtonNew(label string, l *glib.SList) (*gtk.RadioButton, *glib.SLis
 	return radio, l, nil
 }
 
-func ChromaHighlight(theme string, inputString string) (out string, err error) {
-	buff := new(bytes.Buffer)
-	writer := bufio.NewWriter(buff)
-
-	// Doing the job (io.Writer, SourceText, language(go), Lexer(pango), style(pygments))
-	if err = quick.Highlight(writer, inputString, "sql", "pango", theme); err != nil {
-		return
-	}
-	writer.Flush()
-	return string(buff.Bytes()), err
+type OptionButton struct {
+	*gtk.Grid
+	menubtn *gtk.MenuButton
+	menu    *glib.Menu
+	btn     *gtk.Button
+	actions map[string]*glib.SimpleAction
 }
 
-func pangoFormatter(w io.Writer, style *chroma.Style, it chroma.Iterator) error {
-	var r, g, b uint8
-	var closer, out string
+func (o *OptionButton) ConnectAction(action string, v interface{}) {
+	o.actions[action].Connect("activate", v)
+}
 
-	var getColour = func(color chroma.Colour) string {
-		r, g, b = color.Red(), color.Green(), color.Blue()
-		return fmt.Sprintf("#%02X%02X%02X", r, g, b)
+func BWOptionButtonNew(label string, w *Window, options []string) (*OptionButton, error) {
+	var err error
+
+	if len(options)%2 != 0 {
+		return nil, errors.New("options must be pair slice")
 	}
 
-	for tkn := it(); tkn != chroma.EOF; tkn = it() {
-
-		entry := style.Get(tkn.Type)
-		if !entry.IsZero() {
-			if entry.Bold == chroma.Yes {
-				out = `<b>`
-				closer = `</b>`
-			}
-			if entry.Underline == chroma.Yes {
-				out += `<u>`
-				closer = `</u>` + closer
-			}
-			if entry.Italic == chroma.Yes {
-				out += `<i>`
-				closer = `</i>` + closer
-			}
-			if entry.Colour.IsSet() {
-				out += `<span foreground="` + getColour(entry.Colour) + `">`
-				closer = `</span>` + closer
-			}
-			if entry.Background.IsSet() {
-				out += `<span background="` + getColour(entry.Background) + `">`
-				closer = `</span>` + closer
-			}
-			if entry.Border.IsSet() {
-				out += `<span background="` + getColour(entry.Border) + `">`
-				closer = `</span>` + closer
-			}
-			fmt.Fprint(w, out)
-		}
-		fmt.Fprint(w, html.EscapeString(tkn.Value))
-		if !entry.IsZero() {
-			fmt.Fprint(w, closer)
-		}
-		closer, out = "", ""
+	ob := &OptionButton{actions: map[string]*glib.SimpleAction{}}
+	ob.menubtn, err = gtk.MenuButtonNew()
+	if err != nil {
+		return nil, err
 	}
-	return nil
+
+	ob.menu = glib.MenuNew()
+	for i := 0; i < len(options)-1; i = i + 2 {
+		actionName := options[i+1]
+		actionLabel := options[i]
+
+		ob.actions[actionName] = glib.SimpleActionNew(strings.TrimPrefix(actionName, "win."), nil)
+		w.AddAction(ob.actions[actionName])
+		ob.menu.Append(actionLabel, actionName)
+	}
+
+	ob.menubtn.SetMenuModel(&ob.menu.MenuModel)
+
+	ob.btn, err = gtk.ButtonNewWithLabel(label)
+	if err != nil {
+		return nil, err
+	}
+
+	ob.Grid, err = gtk.GridNew()
+	if err != nil {
+		return nil, err
+	}
+	ob.Grid.Attach(ob.btn, 0, 0, 2, 1)
+	ob.Grid.Attach(ob.menubtn, 2, 0, 1, 1)
+	BWAddClass(ob.Grid, "linked")
+
+	return ob, nil
 }
 
 type CancelOverlay struct {
