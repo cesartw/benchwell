@@ -19,6 +19,7 @@ type HTTPCollection struct {
 	ID    int64
 	Name  string
 	Items []*HTTPItem
+	Count int64
 
 	Config *Config
 }
@@ -71,7 +72,7 @@ func (i *HTTPItem) LoadFull() error {
 		return nil
 	}
 
-	query := `SELECT method, url, body, mime
+	query := `SELECT ifnull(method,""), ifnull(url,""), ifnull(body, ""), ifnull(mime,"")
 				FROM http_items
 				WHERE id = ?`
 	rows, err := i.Config.db.Query(query, i.ID)
@@ -89,7 +90,7 @@ func (i *HTTPItem) LoadFull() error {
 
 	i.Params = nil
 	i.Headers = nil
-	query = `SELECT *
+	query = `SELECT id, ifnull(key,""), ifnull(value,""), type, sort
 				FROM http_kvs
 				WHERE http_items_id = ?
 				ORDER BY sort ASC`
@@ -109,6 +110,20 @@ func (i *HTTPItem) LoadFull() error {
 		}
 		if kv.Type == "header" {
 			i.Headers = append(i.Headers, kv)
+		}
+	}
+
+	return nil
+}
+
+func (i *HTTPItem) SearchID(id int64) *HTTPItem {
+	if i.ID == id {
+		return i
+	}
+
+	for _, ii := range i.Items {
+		if ii.ID == id {
+			return ii
 		}
 	}
 

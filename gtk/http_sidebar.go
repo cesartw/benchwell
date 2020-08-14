@@ -20,6 +20,7 @@ const (
 type HTTPCollection struct {
 	*gtk.Box
 	w     *Window
+	h     *HTTPScreen
 	tree  *gtk.TreeView
 	store *gtk.TreeStore
 
@@ -32,16 +33,20 @@ type HTTPCollection struct {
 
 type ctrlHTTPCollection interface {
 	Config() *config.Config
+	OnLoadItem()
+	OnCollectionSelected()
 }
 
 func (h HTTPCollection) Init(
 	w *Window,
+	hs *HTTPScreen,
 	ctrl ctrlHTTPCollection,
 ) (*HTTPCollection, error) {
 	var err error
 
 	h.ctrl = ctrl
 	h.w = w
+	h.h = hs
 
 	h.Box, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if err != nil {
@@ -53,54 +58,15 @@ func (h HTTPCollection) Init(
 		return nil, err
 	}
 	h.tree.SetHeadersVisible(false)
-	h.tree.Connect("row-activated", func(_ *gtk.TreeView, path *gtk.TreePath, col *gtk.TreeViewColumn) {
-		iter, err := h.store.GetIter(path)
-		if err != nil {
-			h.w.PushStatus("getting iter: " + err.Error())
-			return
-		}
-
-		storeValue, err := h.store.GetValue(iter, COLUMN_ID)
-		if err != nil {
-			h.w.PushStatus("getting value: " + err.Error())
-			return
-		}
-
-		goval, err := storeValue.GoValue()
-		if err != nil {
-			h.w.PushStatus("getting go value: " + err.Error())
-			return
-		}
-		itemID := goval.(int64)
-		for _, item := range h.selectedCollection.Items {
-			if item.ID != itemID {
-				continue
-			}
-
-			err = item.LoadFull()
-			if err != nil {
-				h.w.PushStatus("loading item: " + err.Error())
-				return
-			}
-
-			if item.IsFolder {
-				err = h.buildTree(iter, item.Items)
-				if err != nil {
-					h.w.PushStatus("add item: " + err.Error())
-					return
-				}
-
-				h.tree.ExpandRow(path, false)
-			}
-		}
-	})
+	h.tree.Connect("row-activated", ctrl.OnLoadItem)
 
 	h.colBox, err = gtk.ComboBoxTextNew()
 	if err != nil {
 		return nil, err
 	}
-	h.colBox.Connect("changed", h.onCollectionSelected)
+	h.colBox.Connect("changed", ctrl.OnCollectionSelected)
 
+	h.colBox.Append("", "")
 	for _, collection := range h.ctrl.Config().Collections {
 		h.colBox.Append(fmt.Sprintf("%d", collection.ID), collection.Name)
 	}
@@ -126,11 +92,68 @@ func (h HTTPCollection) Init(
 	h.Box.PackStart(h.colBox, false, false, 0)
 	h.Box.PackStart(h.tree, true, true, 0)
 
-	if len(h.ctrl.Config().Collections) > 0 {
-		h.colBox.SetActive(0)
+	return &h, nil
+}
+
+func (h *HTTPCollection) GetSelectedCollectionID() (int64, error) {
+	if h.colBox.GetActiveID() == "" {
+		return 0, nil
 	}
 
-	return &h, nil
+	return strconv.ParseInt(h.colBox.GetActiveID(), 10, 64)
+}
+
+func (h *HTTPCollection) GetSelectedItemID() (int64, string, error) {
+	sel, _ := h.tree.GetSelection()
+	_, iter, _ := sel.GetSelected()
+
+	//iter, err := h.store.GetIter(path)
+	//if err != nil {
+	//return nil, err
+	//}
+
+	storeValue, err := h.store.GetValue(iter, COLUMN_ID)
+	if err != nil {
+		return 0, "", err
+	}
+
+	goval, err := storeValue.GoValue()
+	if err != nil {
+		return 0, "", err
+	}
+
+	path, err := h.store.GetPath(iter)
+	if err != nil {
+		return 0, "", err
+	}
+
+	return goval.(int64), path.String(), nil
+}
+
+func (h *HTTPCollection) LoadCollection(items []*config.HTTPItem) error {
+	h.store.Clear()
+	return h.buildTree(nil, items)
+}
+
+func (h *HTTPCollection) LoadFolder(at string, item *config.HTTPItem) error {
+	path, err := gtk.TreePathNewFromString(at)
+	if err != nil {
+		return err
+	}
+
+	iter, err := h.store.GetIter(path)
+	if err != nil {
+		return err
+	}
+
+	err = h.buildTree(iter, item.Items)
+	if err != nil {
+		return err
+	}
+
+	h.tree.ExpandRow(path, false)
+
+	return nil
 }
 
 func (h *HTTPCollection) buildTree(iter *gtk.TreeIter, items []*config.HTTPItem) error {
@@ -224,34 +247,4 @@ func (h *HTTPCollection) addRow(
 		return nil, err
 	}
 	return iter, nil
-}
-
-func (h *HTTPCollection) onCollectionSelected() {
-	if h.colBox.GetActiveID() == "" {
-		return
-	}
-
-	id, _ := strconv.ParseInt(h.colBox.GetActiveID(), 10, 64)
-
-	h.store.Clear()
-
-	for _, c := range h.ctrl.Config().Collections {
-		if c.ID != id {
-			continue
-		}
-		h.selectedCollection = c
-		break
-	}
-	if h.selectedCollection == nil {
-		h.w.PushStatus("collection not found")
-		return
-	}
-
-	err := h.selectedCollection.LoadRootItems()
-	if err != nil {
-		h.w.PushStatus("Error loading collection: " + err.Error())
-		return
-	}
-
-	h.buildTree(nil, h.selectedCollection.Items)
 }

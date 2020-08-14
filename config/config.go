@@ -76,6 +76,9 @@ func Init(path string) *Config {
 	}
 
 	err = c.loadCollections()
+	if err != nil {
+		c.Error(err)
+	}
 
 	return c
 }
@@ -111,91 +114,13 @@ func (c *Config) loadCollections() error {
 
 	for rows.Next() {
 		collection := &HTTPCollection{Config: c}
-		err := rows.Scan(&collection.ID, &collection.Name)
+		err := rows.Scan(&collection.ID, &collection.Count, &collection.Name)
 		if err != nil {
 			return err
 		}
 		c.Collections = append(c.Collections, collection)
 	}
 
-	return nil
-
-	//c.Collections = []*HTTPCollection{
-	//{
-	//ID:   1,
-	//Name: "benchwell",
-	//Items: []*HTTPItem{
-	//{
-	//ID:       2,
-	//Name:     "/login.json",
-	//IsFolder: false,
-	//},
-	//{
-	//ID:       3,
-	//Name:     "tickets",
-	//IsFolder: true,
-	//Items: []*HTTPItem{
-	//{
-	//ID:       4,
-	//ParentID: 3,
-	//Name:     "tickets/{id}.json",
-	//IsFolder: false,
-	//},
-	//},
-	//},
-	//{
-	//ID:       6,
-	//Name:     "customers",
-	//IsFolder: true,
-	//Items: []*HTTPItem{
-	//{
-	//ID:       10,
-	//ParentID: 30,
-	//Name:     "customers/{id}.json",
-	//IsFolder: false,
-	//},
-	//},
-	//},
-	//},
-	//},
-	//{
-	//ID:   2,
-	//Name: "tw",
-	//Items: []*HTTPItem{
-	//{
-	//ID:       6,
-	//Name:     "customers",
-	//IsFolder: true,
-	//Items: []*HTTPItem{
-	//{
-	//ID:       10,
-	//ParentID: 30,
-	//Name:     "customers/{id}.json",
-	//IsFolder: false,
-	//},
-	//},
-	//},
-	//{
-	//ID:       3,
-	//Name:     "tickets",
-	//IsFolder: true,
-	//Items: []*HTTPItem{
-	//{
-	//ID:       4,
-	//ParentID: 3,
-	//Name:     "tickets/{id}.json",
-	//IsFolder: false,
-	//},
-	//},
-	//},
-	//{
-	//ID:       2,
-	//Name:     "/login.json",
-	//IsFolder: false,
-	//},
-	//},
-	//},
-	//}
 	return nil
 }
 

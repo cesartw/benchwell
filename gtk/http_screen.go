@@ -2,11 +2,14 @@ package gtk
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"sort"
 	"strings"
+	"time"
 
 	"bitbucket.org/goreorto/benchwell/config"
 	"github.com/gotk3/gotk3/gtk"
@@ -34,10 +37,10 @@ type HTTPScreen struct {
 
 	// request body
 	body         *SourceView
+	mime         *gtk.ComboBoxText
 	bodySize     *gtk.Label
 	headers      *KeyValues
 	params       *KeyValues
-	bodyMime     string
 	buildingAddr bool
 
 	// response
@@ -57,6 +60,8 @@ type httpScreenCtrl interface {
 	Save()
 	SaveAs()
 	Send()
+	OnLoadItem()
+	OnCollectionSelected()
 }
 
 func (h HTTPScreen) Init(w *Window, ctrl httpScreenCtrl) (*HTTPScreen, error) {
@@ -69,7 +74,7 @@ func (h HTTPScreen) Init(w *Window, ctrl httpScreenCtrl) (*HTTPScreen, error) {
 		return nil, err
 	}
 	h.Paned.SetWideHandle(true)
-	h.collection, err = HTTPCollection{}.Init(w, ctrl)
+	h.collection, err = HTTPCollection{}.Init(w, &h, ctrl)
 	if err != nil {
 		return nil, err
 	}
@@ -116,6 +121,22 @@ func (h HTTPScreen) Init(w *Window, ctrl httpScreenCtrl) (*HTTPScreen, error) {
 	return &h, nil
 }
 
+func (h *HTTPScreen) GetSelectedItemID() (int64, string, error) {
+	return h.collection.GetSelectedItemID()
+}
+
+func (h *HTTPScreen) GetSelectedCollectionID() (int64, error) {
+	return h.collection.GetSelectedCollectionID()
+}
+
+func (h *HTTPScreen) LoadCollection(items []*config.HTTPItem) error {
+	return h.collection.LoadCollection(items)
+}
+
+func (h *HTTPScreen) LoadFolder(at string, item *config.HTTPItem) error {
+	return h.collection.LoadFolder(at, item)
+}
+
 func (h *HTTPScreen) buildAddressBar() (*gtk.Box, error) {
 	box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 5)
 	if err != nil {
@@ -128,7 +149,7 @@ func (h *HTTPScreen) buildAddressBar() (*gtk.Box, error) {
 		return nil, err
 	}
 	for _, m := range methods {
-		h.method.AppendText(m)
+		h.method.Append(strings.ToLower(m), m)
 	}
 	h.method.SetActive(0)
 
@@ -255,32 +276,32 @@ func (h *HTTPScreen) buildRequest() (*gtk.Notebook, error) {
 	bodyBox.PackStart(mimeOptions, false, false, 0)
 	bodyBox.PackStart(bodySW, true, true, 0)
 
-	cbMime, err := gtk.ComboBoxTextNew()
+	h.mime, err = gtk.ComboBoxTextNew()
 	if err != nil {
 		return nil, err
 	}
-	cbMime.AppendText("JSON")
-	cbMime.AppendText("PLAIN")
-	cbMime.AppendText("HTML")
-	cbMime.AppendText("XML")
-	cbMime.AppendText("YAML")
-	cbMime.Connect("changed", func() {
-		h.bodyMime = strings.ToLower(cbMime.GetActiveText())
+	h.mime.Append("json", "JSON")
+	h.mime.Append("plain", "PLAIN")
+	h.mime.Append("html", "HTML")
+	h.mime.Append("xml", "XML")
+	h.mime.Append("yaml", "YAML")
+	h.mime.Connect("changed", func() {
+		mime := h.mime.GetActiveID()
 
-		if h.bodyMime == "plain" {
-			err = h.body.SetLanguage("")
+		if mime == "plain" {
+			h.body.SetLanguage("")
 			return
 		}
 
-		err := h.body.SetLanguage(h.bodyMime)
+		err := h.body.SetLanguage(mime)
 		if err != nil {
 			h.ctrl.Config().Error(err, "setting language")
 		}
 	})
 
-	cbMime.SetActive(0)
+	h.mime.SetActive(0)
 
-	mimeOptions.PackStart(cbMime, false, false, 0)
+	mimeOptions.PackStart(h.mime, false, false, 0)
 	mimeOptions.PackEnd(h.bodySize, false, false, 0)
 
 	nb.AppendPage(bodyBox, bodyLabel)
@@ -339,13 +360,18 @@ func (h *HTTPScreen) buildResponse() (*gtk.Box, error) {
 	if err != nil {
 		return nil, err
 	}
+	responseSW, err := gtk.ScrolledWindowNew(nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	responseSW.Add(h.response)
 
 	details.PackStart(h.status, false, false, 0)
 	details.PackStart(h.duration, false, false, 0)
 	details.PackEnd(h.respSize, false, false, 0)
 
 	box.PackStart(details, false, false, 0)
-	box.PackStart(h.response, true, true, 0)
+	box.PackStart(responseSW, true, true, 0)
 
 	return box, nil
 }
@@ -415,7 +441,7 @@ func (h *HTTPScreen) GetRequest() (*Request, error) {
 		return nil, err
 	}
 
-	req.URL = "?" + url.Values(params).Encode()
+	req.URL = req.URL + "?" + url.Values(params).Encode()
 
 	buff, err := h.body.GetBuffer()
 	if err != nil {
@@ -433,6 +459,55 @@ func (h *HTTPScreen) GetRequest() (*Request, error) {
 	req.Headers = headers
 
 	return req, nil
+}
+
+func (h *HTTPScreen) SetResponse(body string, headers http.Header, duration time.Duration) {
+	switch strings.Split(headers.Get("Content-Type"), ";")[0] {
+	case "application/json", "text/json":
+		err := h.response.SetLanguage("json")
+		if err != nil {
+			h.ctrl.Config().Error(err, "setting language")
+		}
+
+		var out bytes.Buffer
+		json.Indent(&out, []byte(body), "", "\t")
+		body = out.String()
+	case "text/html":
+		err := h.response.SetLanguage("html")
+		if err != nil {
+			h.ctrl.Config().Error(err, "setting language")
+		}
+	case "text/yaml", "application/x-yaml":
+		err := h.response.SetLanguage("yaml")
+		if err != nil {
+			h.ctrl.Config().Error(err, "setting language")
+		}
+	case "text/xml", "application/xml":
+		err := h.response.SetLanguage("xml")
+		if err != nil {
+			h.ctrl.Config().Error(err, "setting language")
+		}
+	}
+
+	h.respSize.SetText(fmt.Sprintf("%dKB", len([]byte(body))/1024))
+	h.duration.SetText(duration.String())
+
+	buff, _ := h.response.GetBuffer()
+	buff.SetText(body)
+}
+
+func (h *HTTPScreen) SetRequest(req *config.HTTPItem) {
+	h.address.SetText(req.URL)
+	h.method.SetActiveID(strings.ToLower(req.Method))
+	h.headers.Clear()
+	for _, kv := range req.Headers {
+		h.headers.AddWithValues(kv.Key, kv.Value)
+	}
+	for _, kv := range req.Params {
+		h.params.AddWithValues(kv.Key, kv.Value)
+	}
+
+	h.mime.SetActiveID(req.Mime)
 }
 
 type KeyValue struct {

@@ -1,16 +1,20 @@
 package ctrl
 
 import (
+	"io/ioutil"
 	"net/http"
+	"time"
 
+	"bitbucket.org/goreorto/benchwell/config"
 	"bitbucket.org/goreorto/benchwell/gtk"
 	ggtk "github.com/gotk3/gotk3/gtk"
 )
 
 type HTTPTabCtrl struct {
 	*WindowCtrl
-	scr    *gtk.HTTPScreen
-	client *http.Client
+	scr                *gtk.HTTPScreen
+	client             *http.Client
+	selectedCollection *config.HTTPCollection
 }
 
 func (c HTTPTabCtrl) Init(p *WindowCtrl) (*HTTPTabCtrl, error) {
@@ -26,6 +30,76 @@ func (c HTTPTabCtrl) Init(p *WindowCtrl) (*HTTPTabCtrl, error) {
 	return &c, nil
 }
 
+func (c *HTTPTabCtrl) OnCollectionSelected() {
+	id, err := c.scr.GetSelectedCollectionID()
+	if err != nil {
+		c.window.PushStatus("getting collection: " + err.Error())
+		return
+	}
+
+	if id == 0 {
+		return
+	}
+
+	for _, collection := range c.config.Collections {
+		if collection.ID != id {
+			continue
+		}
+		c.selectedCollection = collection
+		break
+	}
+
+	if c.selectedCollection == nil {
+		c.window.PushStatus("collection not found")
+		return
+	}
+
+	err = c.selectedCollection.LoadRootItems()
+	if err != nil {
+		c.window.PushStatus("Error loading collection: " + err.Error())
+		return
+	}
+
+	err = c.scr.LoadCollection(c.selectedCollection.Items)
+	if err != nil {
+		c.window.PushStatus("Error loading item: " + err.Error())
+	}
+}
+
+func (c *HTTPTabCtrl) OnLoadItem() {
+	itemID, path, err := c.scr.GetSelectedItemID()
+	if err != nil {
+		c.window.PushStatus("getting iter: " + err.Error())
+		return
+	}
+
+	var item *config.HTTPItem
+	items := c.selectedCollection.Items
+
+	for _, i := range items {
+		if found := i.SearchID(itemID); found != nil {
+			item = found
+			break
+		}
+	}
+	if item == nil {
+		c.window.PushStatus("no item found")
+		return
+	}
+
+	err = item.LoadFull()
+	if err != nil {
+		c.window.PushStatus("loading item: " + err.Error())
+		return
+	}
+
+	if item.IsFolder {
+		c.scr.LoadFolder(path, item)
+	} else {
+		c.scr.SetRequest(item)
+	}
+}
+
 func (c *HTTPTabCtrl) Save()   {}
 func (c *HTTPTabCtrl) SaveAs() {}
 func (c *HTTPTabCtrl) Send() {
@@ -35,7 +109,6 @@ func (c *HTTPTabCtrl) Send() {
 		return
 	}
 
-	//func NewRequest(method, url string, body io.Reader) (*Request, error) {
 	httpreq, err := http.NewRequest(req.Method, req.URL, req.Body)
 	if err != nil {
 		c.window.PushStatus("building request: ", err.Error())
@@ -48,6 +121,22 @@ func (c *HTTPTabCtrl) Send() {
 		}
 	}
 
+	now := time.Now()
+	resp, err := c.client.Do(httpreq)
+	if err != nil {
+		c.window.PushStatus("failed: ", err.Error())
+		return
+	}
+	duration := time.Since(now)
+	defer resp.Body.Close()
+
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		c.window.PushStatus("reading body: ", err.Error())
+		return
+	}
+
+	c.scr.SetResponse(string(b), resp.Header, duration)
 }
 
 func (c *HTTPTabCtrl) Close()                    {}
