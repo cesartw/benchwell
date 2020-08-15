@@ -13,8 +13,6 @@ import (
 	"bitbucket.org/goreorto/benchwell/sqlengine"
 )
 
-var version = "dev"
-
 var verbose bool
 var logfile string
 
@@ -23,16 +21,7 @@ var rootCmd = &cobra.Command{
 	Short: "Benchwell",
 	Long:  `Visit https://benchwell.io for more details`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		userHome, _ := os.UserConfigDir()
-		benchwellHome := userHome + "/benchwell"
-
-		if version == "dev" {
-			userHome = "./assets/data/"
-			benchwellHome = userHome
-		}
-
-		cfg := config.Init(benchwellHome)
-		cfg.Version = version
+		cfg := config.Init()
 
 		if verbose {
 			cfg.SetLevel(logrus.DebugLevel)

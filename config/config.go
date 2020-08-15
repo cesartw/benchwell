@@ -2,6 +2,7 @@ package config
 
 import (
 	"database/sql"
+	"os"
 
 	"github.com/gotk3/gotk3/gtk"
 	_ "github.com/mattn/go-sqlite3"
@@ -9,6 +10,8 @@ import (
 
 	"bitbucket.org/goreorto/benchwell/assets"
 )
+
+var version = "dev"
 
 const AppID = "io.benchwell"
 
@@ -39,8 +42,16 @@ type Config struct {
 	logFile string
 }
 
-func Init(path string) *Config {
-	db, err := sql.Open("sqlite3", path+"/config.db")
+func Init() *Config {
+	userHome, _ := os.UserConfigDir()
+	benchwellHome := userHome + "/benchwell"
+
+	if version == "dev" {
+		userHome = "./assets/data/"
+		benchwellHome = userHome
+	}
+
+	db, err := sql.Open("sqlite3", benchwellHome+"/config.db")
 	if err != nil {
 		panic(err)
 	}
@@ -52,7 +63,7 @@ func Init(path string) *Config {
 
 	c := &Config{
 		Logger:         logrus.New(),
-		Home:           path,
+		Home:           benchwellHome,
 		db:             db,
 		loadedSettings: map[string]*Setting{},
 	}
@@ -273,6 +284,105 @@ func (c *Config) DeleteConnection(conn *Connection) error {
 			c.Connections = append(c.Connections[:i], c.Connections[i+1:]...)
 			break
 		}
+	}
+
+	return nil
+}
+
+func (c *Config) SaveHTTPItem(item *HTTPItem) error {
+	if item.ID == 0 {
+		sql := `INSERT INTO http_items(name, description, parent_id, is_folder, sort, http_collections_id, external_data, method, url, body, mime)
+				VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		result, err := c.db.Exec(sql, item.Name,
+			item.Description, item.ParentID, item.IsFolder,
+			item.Sort, item.HTTPCollectionID, "", item.Method,
+			item.URL, item.Body, item.Mime)
+		if err != nil {
+			return err
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			return err
+		}
+		item.ID = id
+	} else {
+		sql := `UPDATE http_items
+					SET name = ?, description = ?, parent_id = ?, is_folder = ?,
+					sort = ?, http_collections_id = ?, external_data = ?,
+					method = ?, url = ?, body = ?, mime = ?)
+				WHERE ID = ?`
+		_, err := c.db.Exec(sql,
+			item.Name, item.Description, item.ParentID,
+			item.IsFolder, item.Sort, item.HTTPCollectionID,
+			"", item.Method, item.URL, item.Body, item.Mime,
+			item.ID)
+		return err
+	}
+
+	for _, kv := range item.Params {
+		kv.Config = c
+		kv.HTTPItemID = item.ID
+		err := kv.Save()
+		if err != nil {
+			return err
+		}
+	}
+	for _, kv := range item.Headers {
+		kv.Config = c
+		kv.HTTPItemID = item.ID
+		err := kv.Save()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Config) SaveHTTPKV(kv *HTTPKV) error {
+	if kv.ID == 0 {
+		sql := `INSERT INTO http_kvs(key, value,  type, sort, enabled, http_items_id)
+				VALUES(?, ?, ?, ?, ?, ?)`
+		result, err := c.db.Exec(sql, kv.Key, kv.Value, kv.Type, kv.Sort, kv.Enabled, kv.HTTPItemID)
+		if err != nil {
+			return err
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			return err
+		}
+		kv.ID = id
+	} else {
+		sql := `update http_kvs(key, value,  type, sort, enabled, http_items_id)
+				VALUES(?, ?, ?, ?, ?, ?)
+				where id = ?`
+		_, err := c.db.Exec(sql, kv.Key, kv.Value, kv.Type, kv.Sort, kv.Enabled, kv.HTTPItemID, kv.ID)
+		return err
+	}
+
+	return nil
+}
+
+func (c *Config) SaveHTTPCollection(collection *HTTPCollection) error {
+	if collection.ID == 0 {
+		sql := `INSERT INTO http_collections(name)
+				VALUES(?)`
+		result, err := c.db.Exec(sql, collection.Name)
+		if err != nil {
+			return err
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			return err
+		}
+		collection.ID = id
+	} else {
+		sql := `UPDATE http_collections
+					SET name = ?)
+				WHERE ID = ?`
+		_, err := c.db.Exec(sql,
+			collection.Name, collection.ID)
+		return err
 	}
 
 	return nil

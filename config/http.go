@@ -24,11 +24,15 @@ type HTTPCollection struct {
 	Config *Config
 }
 
+func (i *HTTPCollection) Save() error {
+	return i.Config.SaveHTTPCollection(i)
+}
+
 func (c *HTTPCollection) LoadRootItems() error {
 	c.Items = nil
 	query := `SELECT id, name, is_folder, sort, http_collections_id, method
 			FROM http_items
-			WHERE http_collections_id = ? AND parent_id IS NULL
+			WHERE http_collections_id = ? AND (parent_id IS NULL OR parent_id = 0)
 			ORDER BY sort ASC`
 	rows, err := c.Config.db.Query(query, c.ID)
 	if err != nil {
@@ -100,7 +104,7 @@ func (i *HTTPItem) LoadFull() error {
 	}
 
 	for rows.Next() {
-		kv := &HTTPKV{Config: i.Config}
+		kv := &HTTPKV{Config: i.Config, HTTPItemID: i.ID}
 		err := rows.Scan(&kv.ID, &kv.Key, &kv.Value, &kv.Type, &kv.Sort)
 		if err != nil {
 			return err
@@ -114,6 +118,23 @@ func (i *HTTPItem) LoadFull() error {
 	}
 
 	return nil
+}
+
+type HTTPItem struct {
+	ID          int64
+	ParentID    int64
+	Name        string
+	Description string
+	// Not pretty but makes little sense
+	// to separate them just for normalization sake
+	IsFolder         bool
+	HTTPCollectionID int64
+
+	Items []*HTTPItem
+	Sort  int
+	HTTPRequest
+
+	Config *Config
 }
 
 func (i *HTTPItem) SearchID(id int64) *HTTPItem {
@@ -130,20 +151,8 @@ func (i *HTTPItem) SearchID(id int64) *HTTPItem {
 	return nil
 }
 
-type HTTPItem struct {
-	ID       int64
-	ParentID int64
-	Name     string
-	// Not pretty but makes little sense
-	// to separate them just for normalization sake
-	IsFolder         bool
-	HTTPCollectionID int64
-
-	Items []*HTTPItem
-	Sort  int
-	HTTPRequest
-
-	Config *Config
+func (i *HTTPItem) Save() error {
+	return i.Config.SaveHTTPItem(i)
 }
 
 type HTTPRequest struct {
@@ -158,13 +167,18 @@ type HTTPRequest struct {
 }
 
 type HTTPKV struct {
-	ID    int64
-	Key   string
-	Value string
-	Type  string // header | param
-	Sort  int
+	ID      int64
+	Key     string
+	Value   string
+	Type    string // header | param
+	Sort    int
+	Enabled bool
 
 	HTTPItemID int64
 
 	Config *Config
+}
+
+func (i *HTTPKV) Save() error {
+	return i.Config.SaveHTTPKV(i)
 }

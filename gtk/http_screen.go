@@ -238,7 +238,11 @@ func (h *HTTPScreen) buildRequest() (*gtk.Notebook, error) {
 
 		params, _ := h.params.Collect()
 		address, _ := h.address.GetText()
-		u, _ := url.Parse(address)
+		u, err := url.Parse(address)
+		if err != nil {
+			u = &url.URL{}
+			u.Host = address
+		}
 		u.RawQuery = url.Values(params).Encode()
 
 		h.address.SetText(u.String())
@@ -407,7 +411,7 @@ func (h *HTTPScreen) onAddressChange() {
 
 	for _, key := range keys {
 		for _, value := range params[key] {
-			h.params.AddWithValues(key, value)
+			h.params.AddWithValues(key, value, true)
 		}
 	}
 }
@@ -501,10 +505,10 @@ func (h *HTTPScreen) SetRequest(req *config.HTTPItem) {
 	h.method.SetActiveID(strings.ToLower(req.Method))
 	h.headers.Clear()
 	for _, kv := range req.Headers {
-		h.headers.AddWithValues(kv.Key, kv.Value)
+		h.headers.AddWithValues(kv.Key, kv.Value, true)
 	}
 	for _, kv := range req.Params {
-		h.params.AddWithValues(kv.Key, kv.Value)
+		h.params.AddWithValues(kv.Key, kv.Value, kv.Enabled)
 	}
 
 	h.mime.SetActiveID(req.Mime)
@@ -595,7 +599,7 @@ func (c *KeyValues) AddEmpty() error {
 	return nil
 }
 
-func (c *KeyValues) AddWithValues(key, value string) error {
+func (c *KeyValues) AddWithValues(key, value string, enabled bool) error {
 	for _, kv := range c.keyvalues {
 		s, _ := kv.key.GetText()
 		if s != "" {
@@ -610,6 +614,7 @@ func (c *KeyValues) AddWithValues(key, value string) error {
 	if err != nil {
 		return err
 	}
+	kv.enabled.SetActive(enabled)
 
 	kv.key.SetText(key)
 	kv.value.SetText(value)

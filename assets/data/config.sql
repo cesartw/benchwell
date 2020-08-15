@@ -39,11 +39,13 @@ CREATE TABLE "http_collections" (
 CREATE TABLE "http_items" (
 	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
 	name text NOT NULL,
+	description text NOT NULL DEFAULT "",
 	parent_id integer,
 	is_folder integer,
 	count integer default 0,
 	sort integer NOT NULL,
 	http_collections_id integer NOT NULL,
+	external_data text NOT NULL DEFAULT "",
 
 	method text DEFAULT "",
 	url    text DEFAULT "",
@@ -67,7 +69,8 @@ CREATE TABLE "http_kvs" (
     value text NOT NULL,
     type text NOT NULL,
     http_items_id integer NOT NULL,
-    sort integer NOT NULL
+    sort integer NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT 1 CHECK (enabled IN (0,1))
 );
 
 INSERT INTO connections(name, adapter, type, database, host, options, user, password, port, encrypted)

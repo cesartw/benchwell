@@ -11,8 +11,8 @@ import (
 
 var testCmd = &cobra.Command{
 	Use:   "test",
-	Short: "SQLHero: Database",
-	Long:  `Visit http://sqlhero.com for more details`,
+	Short: "Benchwell",
+	Long:  `Visit http://benchwell.io for more details`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		//err := config.Keychain.Set("dev", "password")
 		//if err != nil {
