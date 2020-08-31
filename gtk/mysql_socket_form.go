@@ -10,7 +10,6 @@ type socketForm struct {
 	*gtk.Grid
 	fields []string
 	conn   *config.Connection
-	config *config.Config
 
 	entryName     *gtk.Entry
 	entrySocket   *gtk.Entry
@@ -25,7 +24,7 @@ type socketForm struct {
 	labelDatabase *gtk.Label
 }
 
-func (f socketForm) Init(_ *Window, cfg *config.Config) (*socketForm, error) {
+func (f socketForm) Init(_ *Window) (*socketForm, error) {
 	var err error
 
 	f.Grid, err = gtk.GridNew()
@@ -35,7 +34,6 @@ func (f socketForm) Init(_ *Window, cfg *config.Config) (*socketForm, error) {
 	f.SetName("form")
 	f.SetColumnHomogeneous(true)
 	f.SetRowSpacing(5)
-	f.config = cfg
 
 	f.labelName, err = gtk.LabelNew("Name")
 	if err != nil {
@@ -148,7 +146,6 @@ func (f *socketForm) GetConnection() (*config.Connection, bool) {
 	conn.User, _ = f.entryUser.GetText()
 	conn.Password, _ = f.entryPassword.GetText()
 	conn.Database, _ = f.entryDatabase.GetText()
-	conn.Config = f.config
 
 	return conn, newConn
 }

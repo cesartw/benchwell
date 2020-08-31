@@ -30,7 +30,6 @@ type windowCtrl interface {
 	OnCloseTab()
 	OnFileSelected(string)
 	OnSaveQuery(string, string)
-	Config() *config.Config
 }
 
 type Window struct {
@@ -98,7 +97,7 @@ func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 
 	w.nb.Connect("page-reordered", w.onTabReorder)
 
-	switch w.ctrl.Config().GUI.ConnectionTabPosition.String() {
+	switch config.GUI.ConnectionTabPosition.String() {
 	case "bottom":
 		w.nb.SetProperty("tab-pos", gtk.POS_BOTTOM)
 	default:
@@ -154,7 +153,7 @@ func (w *Window) OnOpenFile(f func(string)) func() {
 			"Cancel", gtk.RESPONSE_CANCEL,
 		)
 		if err != nil {
-			w.ctrl.Config().Error("open file dialog", err)
+			config.Error("open file dialog", err)
 			return
 		}
 		defer openfileDialog.Destroy()
@@ -172,7 +171,7 @@ func (w *Window) OnSaveQuery(query string, f func(string, string)) {
 		"Cancel", gtk.RESPONSE_CANCEL,
 	)
 	if err != nil {
-		w.ctrl.Config().Error("save file dialog", err)
+		config.Error("save file dialog", err)
 		return
 	}
 	defer openfileDialog.Destroy()
@@ -241,7 +240,7 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 	}
 	header.SetShowCloseButton(true)
 	header.SetTitle("BenchWell")
-	header.SetSubtitle(w.ctrl.Config().Version)
+	header.SetSubtitle(config.Version)
 
 	// Create a new window menu button
 	windowBtnMenu, err := gtk.MenuButtonNew()

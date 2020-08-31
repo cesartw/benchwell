@@ -86,7 +86,7 @@ func (c *DbTabCtrl) launchConnect() {
 	var err error
 	c.connectCtrl, err = ConnectCtrl{}.Init(c)
 	if err != nil {
-		c.Config().Error(err)
+		config.Error(err)
 		return
 	}
 	c.currentCtrl = c.connectCtrl
@@ -97,7 +97,7 @@ func (c *DbTabCtrl) launchConnection(ctx *sqlengine.Context, conn *config.Connec
 	var err error
 	c.connectionCtrl, err = ConnectionCtrl{}.Init(ctx, c, conn)
 	if err != nil {
-		c.Config().Error(err)
+		config.Error(err)
 		return
 	}
 	c.currentCtrl = c.connectionCtrl
@@ -112,7 +112,7 @@ func (c *DbTabCtrl) OnConnect() {
 		engineCtx, err := c.Engine.Connect(ctx, *conn)
 		if err != nil {
 			return func() {
-				c.Config().Error(err)
+				config.Error(err)
 				c.window.PushStatus("Failed connect to `%s`(%s): %s", conn.Name, conn.Host, err.Error())
 				c.connectCtrl.CancelConnecting()
 			}

@@ -89,7 +89,7 @@ var importCmd = &cobra.Command{
 		if file == "" {
 			return errors.New("file is required")
 		}
-		cfg := config.Init()
+		config.Init()
 
 		f, err := os.Open(file)
 		if err != nil {
@@ -115,12 +115,12 @@ var importCmd = &cobra.Command{
 				continue
 			}
 
-			collection := &config.HTTPCollection{Config: cfg}
+			collection := &config.HTTPCollection{}
 			collection.Name = res.Name
 			collections[res.ID] = collection
 			collection.Save()
 
-			createTree(res.ID, 0, collection.ID, v.Items, cfg)
+			createTree(res.ID, 0, collection.ID, v.Items)
 		}
 
 		return nil
@@ -133,14 +133,13 @@ func init() {
 	rootCmd.AddCommand(importCmd)
 }
 
-func createTree(extid string, parentId int64, collectionID int64, resources []*insomnia, cfg *config.Config) {
+func createTree(extid string, parentId int64, collectionID int64, resources []*insomnia) {
 	for _, res := range resources {
 		if res.ParentID != extid {
 			continue
 		}
 
 		item := res.ToHTTPItem()
-		item.Config = cfg
 		item.HTTPCollectionID = collectionID
 		item.ParentID = parentId
 
@@ -151,7 +150,7 @@ func createTree(extid string, parentId int64, collectionID int64, resources []*i
 		}
 
 		if item.IsFolder {
-			createTree(res.ID, item.ID, collectionID, resources, cfg)
+			createTree(res.ID, item.ID, collectionID, resources)
 		}
 	}
 }

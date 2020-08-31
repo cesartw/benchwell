@@ -21,7 +21,6 @@ type Conditions struct {
 
 type conditionsCtrl interface {
 	OnApplyConditions()
-	Config() *config.Config
 }
 
 type Condition struct {
@@ -315,19 +314,19 @@ func (c *Condition) Field() (string, error) {
 func (c *Condition) onFocusOut() {
 	entry, err := c.fieldCb.GetEntry()
 	if err != nil {
-		c.ctrl.Config().Error(err)
+		config.Error(err)
 		return
 	}
 
 	field, err := entry.GetText()
 	if err != nil {
-		c.ctrl.Config().Error(err)
+		config.Error(err)
 		return
 	}
 
 	selectedText, err := c.Field()
 	if err != nil {
-		c.ctrl.Config().Error(err)
+		config.Error(err)
 		return
 
 	}

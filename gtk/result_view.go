@@ -64,7 +64,6 @@ type resultViewCtrl interface {
 	OnSaveQuery(string, string)
 	OnSaveFav(string, string)
 	OnApplyConditions()
-	Config() *config.Config
 }
 
 func (v ResultView) Init(
@@ -109,7 +108,7 @@ func (v ResultView) Init(
 		end := buff.GetEndIter()
 		query, err := buff.GetText(start, end, false)
 		if err != nil {
-			ctrl.Config().Error(err)
+			config.Error(err)
 			return
 		}
 
@@ -267,7 +266,7 @@ func (v *ResultView) Block(cancel func()) {
 func (v *ResultView) SetQuery(query string) {
 	buff, err := v.sourceView.GetBuffer()
 	if err != nil {
-		v.ctrl.Config().Error(err)
+		config.Error(err)
 		return
 	}
 
@@ -282,13 +281,13 @@ func (v *ResultView) onSaveQuery(
 	return func() {
 		buff, err := v.sourceView.GetBuffer()
 		if err != nil {
-			v.ctrl.Config().Error(err)
+			config.Error(err)
 			return
 		}
 
 		txt, err := buff.GetText(buff.GetStartIter(), buff.GetEndIter(), false)
 		if err != nil {
-			v.ctrl.Config().Error(err)
+			config.Error(err)
 			return
 		}
 
@@ -302,7 +301,7 @@ func (v *ResultView) onSaveFav(
 	return func() {
 		name, err := v.askFavName()
 		if err != nil {
-			v.ctrl.Config().Error(err)
+			config.Error(err)
 			return
 		}
 
@@ -312,13 +311,13 @@ func (v *ResultView) onSaveFav(
 
 		buff, err := v.sourceView.GetBuffer()
 		if err != nil {
-			v.ctrl.Config().Error(err)
+			config.Error(err)
 			return
 		}
 
 		query, err := buff.GetText(buff.GetStartIter(), buff.GetEndIter(), false)
 		if err != nil {
-			v.ctrl.Config().Error(err)
+			config.Error(err)
 			return
 		}
 
@@ -523,12 +522,12 @@ func (v *ResultView) onTextViewKeyPress(_ *sourceview.SourceView, e *gdk.Event) 
 	if keyEvent.KeyVal() == gdk.KEY_Return && keyEvent.State()&gdk.CONTROL_MASK > 0 {
 		buff, err := v.sourceView.GetBuffer()
 		if err != nil {
-			v.ctrl.Config().Error(err)
+			config.Error(err)
 			return true
 		}
 		txt, err := buff.GetText(buff.GetStartIter(), buff.GetEndIter(), false)
 		if err != nil {
-			v.ctrl.Config().Error(err)
+			config.Error(err)
 		}
 
 		v.ctrl.OnExecQuery(txt)
@@ -541,7 +540,7 @@ func (v *ResultView) onTextViewKeyPress(_ *sourceview.SourceView, e *gdk.Event) 
 func (v *ResultView) onColFilterSearchChanged() {
 	txt, err := v.colFilter.GetText()
 	if err != nil {
-		v.ctrl.Config().Error(err, "colFilter.GetText")
+		config.Error(err, "colFilter.GetText")
 		return
 	}
 
@@ -564,18 +563,18 @@ func (v *ResultView) onRowActivated(_ *gtk.TreeView, path *gtk.TreePath, col *gt
 
 	iter, err := v.result.store.GetIter(path)
 	if err != nil {
-		v.ctrl.Config().Error(err)
+		config.Error(err)
 		return
 	}
 
 	s, err := v.result.store.GetValue(iter, len(v.result.cols))
 	if err != nil {
-		v.ctrl.Config().Error(err)
+		config.Error(err)
 		return
 	}
 	status, err := s.GoValue()
 	if err != nil {
-		v.ctrl.Config().Error(err)
+		config.Error(err)
 		return
 	}
 

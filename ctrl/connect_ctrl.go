@@ -15,6 +15,8 @@ type ConnectCtrl struct {
 }
 
 func (c ConnectCtrl) Init(p *DbTabCtrl) (*ConnectCtrl, error) {
+	defer config.LogStart("ConnectCtrl.Init", nil)()
+
 	c.DbTabCtrl = p
 
 	var err error
@@ -23,38 +25,46 @@ func (c ConnectCtrl) Init(p *DbTabCtrl) (*ConnectCtrl, error) {
 		return nil, err
 	}
 
-	c.scr.SetConnections(c.Config().Connections)
+	c.scr.SetConnections(config.Connections)
 
 	return &c, nil
 }
 
 func (c *ConnectCtrl) Title() string {
+	defer config.LogStart("ConnectCtrl.Title", nil)()
+
 	return "Connect"
 }
 
 func (c *ConnectCtrl) Content() ggtk.IWidget {
+	defer config.LogStart("ConnectCtrl.Content", nil)()
+
 	return c.scr
 }
 
 func (c *ConnectCtrl) AddEmptyTab() error {
+	defer config.LogStart("ConnectCtrl.AddEmptyTab", nil)()
+
 	return nil
 }
 
 func (c *ConnectCtrl) SetFileText(s string) {
+	defer config.LogStart("ConnectCtrl.SetFileText", nil)()
 }
 
 func (c *ConnectCtrl) OnTest() {
+	defer config.LogStart("ConnectCtrl.OnTest", nil)()
 	var conn *config.Connection
 	index := c.scr.ActiveConnectionIndex()
 	if index > 0 {
-		conn = c.Config().Connections[index]
+		conn = config.Connections[index]
 	} else {
 		conn = c.scr.GetFormConnection()
 	}
 
 	ctx, err := c.Engine.Connect(context.Background(), *conn)
 	if err != nil {
-		c.Config().Error(err)
+		config.Error(err)
 		c.window.PushStatus("Fail connection `%s`(%s): %s", conn.Name, conn.Host, err.Error())
 		return
 	}
@@ -64,15 +74,17 @@ func (c *ConnectCtrl) OnTest() {
 }
 
 func (c *ConnectCtrl) OnSave() {
+	defer config.LogStart("ConnectCtrl.OnSave", nil)()
+
 	conn := c.scr.GetFormConnection()
-	err := c.Config().SaveConnection(c.window.ApplicationWindow, conn)
+	err := config.SaveConnection(c.window.ApplicationWindow, conn)
 	if err != nil {
 		c.window.PushStatus(err.Error())
 		return
 	}
 
-	c.scr.SetConnections(c.Config().Connections)
-	for i, co := range c.Config().Connections {
+	c.scr.SetConnections(config.Connections)
+	for i, co := range config.Connections {
 		if co.ID == conn.ID {
 			c.scr.ConnectionList.SelectRow(c.scr.ConnectionList.GetRowAtIndex(i))
 			break
@@ -83,48 +95,51 @@ func (c *ConnectCtrl) OnSave() {
 }
 
 func (c *ConnectCtrl) OnDeleteConnection() {
+	defer config.LogStart("ConnectCtrl.OnDeleteConnection", nil)()
 	index := c.scr.ActiveConnectionIndex()
 	if index == -1 {
 		return
 	}
 
-	err := c.Config().DeleteConnection(c.Config().Connections[index])
+	err := config.DeleteConnection(config.Connections[index])
 	if err != nil {
 		c.window.PushStatus(err.Error())
 		return
 	}
 
-	//c.Config().Save(c.window.ApplicationWindow)
-	c.scr.SetConnections(c.Config().Connections)
+	//config.Save(c.window.ApplicationWindow)
+	c.scr.SetConnections(config.Connections)
 	c.scr.ClearForm()
 
 	c.window.PushStatus("Deleted")
 }
 
 func (c *ConnectCtrl) OnNewConnection() {
+	defer config.LogStart("ConnectCtrl.OnNewConnection", nil)()
 	row, err := c.scr.ConnectionList.AppendItem(gtk.Stringer("New Connection"))
 	if err != nil {
-		c.Config().Error(err)
+		config.Error(err)
 	}
 	c.scr.ConnectionList.SelectRow(row)
 	c.scr.ClearForm()
 	c.scr.FocusForm()
-	c.scr.SetConnection(&config.Connection{Name: "New Connection", Port: 3306, Config: c.Config()})
+	c.scr.SetConnection(&config.Connection{Name: "New Connection", Port: 3306})
 }
 
 func (c *ConnectCtrl) OnConnectionSelected() {
+	defer config.LogStart("ConnectCtrl.OnConnectionSelected", nil)()
 	row := c.scr.ConnectionList.GetSelectedRow()
 	if row.GetIndex() == -1 {
 		return
 	}
 
-	if row.GetIndex() >= len(c.Config().Connections) {
+	if row.GetIndex() >= len(config.Connections) {
 		c.scr.ClearForm()
 		c.scr.FocusForm()
 		return
 	}
 
-	conn := c.Config().Connections[row.GetIndex()]
+	conn := config.Connections[row.GetIndex()]
 	err := conn.Decrypt(c.window.ApplicationWindow)
 	if err != nil {
 		conn.Encrypted = false
@@ -136,20 +151,25 @@ func (c *ConnectCtrl) OnConnectionSelected() {
 }
 
 func (c *ConnectCtrl) Screen() interface{} {
+	defer config.LogStart("ConnectCtrl.Screen", nil)()
 	return c.scr
 }
 
 func (c *ConnectCtrl) Close() bool {
+	defer config.LogStart("ConnectCtrl.Close", nil)()
 	return false
 }
 
 func (c *ConnectCtrl) FullClose() {
+	defer config.LogStart("ConnectCtrl.FullClose", nil)()
 }
 
 func (c *ConnectCtrl) Connecting(cancel func()) {
+	defer config.LogStart("ConnectCtrl.Connecting", nil)()
 	c.scr.Connecting(cancel)
 }
 
 func (c *ConnectCtrl) CancelConnecting() {
+	defer config.LogStart("ConnectCtrl.CancelConnecting", nil)()
 	c.scr.CancelConnecting()
 }

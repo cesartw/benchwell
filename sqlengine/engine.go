@@ -18,16 +18,13 @@ var (
 
 // Engine orchestrate multiple Connection
 type Engine struct {
-	config *config.Config
-
 	connections []driver.Connection
 	Logger      func(string)
 }
 
 // New return a new Engine
-func New(conf *config.Config) *Engine {
+func New() *Engine {
 	return &Engine{
-		config:      conf,
 		connections: make([]driver.Connection, 0),
 	}
 }

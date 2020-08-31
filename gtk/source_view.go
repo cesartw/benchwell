@@ -1,7 +1,6 @@
 package gtk
 
 import (
-	"bitbucket.org/goreorto/benchwell/config"
 	"github.com/gotk3/sourceview"
 )
 
@@ -15,7 +14,7 @@ type SourceViewOptions struct {
 	Language  string
 }
 
-func (t SourceView) Init(_ *Window, opts SourceViewOptions, ctrl interface{ Config() *config.Config }) (*SourceView, error) {
+func (t SourceView) Init(_ *Window, opts SourceViewOptions, ctrl interface{}) (*SourceView, error) {
 	var err error
 	t.SourceView, err = sourceview.SourceViewNew()
 

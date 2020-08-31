@@ -25,8 +25,6 @@ type Connection struct {
 	Options   string
 	Encrypted bool
 	Queries   []*Query
-
-	Config *Config
 }
 
 type Query struct {
@@ -111,7 +109,7 @@ func (c Connection) sqliteDSN() string {
 }
 
 func (c *Connection) LoadQueries() error {
-	rows, err := c.Config.db.Query("SELECT * FROM db_queries WHERE connections_id = ?", c.ID)
+	rows, err := db.Query("SELECT * FROM db_queries WHERE connections_id = ?", c.ID)
 	if err != nil {
 		return err
 	}
@@ -131,7 +129,7 @@ func (c *Connection) LoadQueries() error {
 }
 
 func (c *Connection) DeleteQuery(name string) error {
-	_, err := c.Config.db.Exec("DELETE FROM db_queries WHERE connections_id = ? AND name = ?", c.ID, name)
+	_, err := db.Exec("DELETE FROM db_queries WHERE connections_id = ? AND name = ?", c.ID, name)
 	if err != nil {
 		return err
 	}

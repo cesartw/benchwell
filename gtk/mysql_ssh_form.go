@@ -13,7 +13,6 @@ type sshForm struct {
 	*gtk.Grid
 	fields []string
 	conn   *config.Connection
-	config *config.Config
 
 	entryName     *gtk.Entry
 	entryDbHost   *gtk.Entry
@@ -36,7 +35,7 @@ type sshForm struct {
 	labelSshAgent *gtk.Label
 }
 
-func (f sshForm) Init(_ *Window, cfg *config.Config) (*sshForm, error) {
+func (f sshForm) Init(_ *Window) (*sshForm, error) {
 	var err error
 	f.Grid, err = gtk.GridNew()
 	if err != nil {
@@ -45,7 +44,6 @@ func (f sshForm) Init(_ *Window, cfg *config.Config) (*sshForm, error) {
 	f.SetName("form")
 	f.Grid.SetColumnHomogeneous(true)
 	f.Grid.SetRowSpacing(5)
-	f.config = cfg
 
 	f.labelName, err = gtk.LabelNew("Name")
 	if err != nil {
@@ -248,7 +246,6 @@ func (f *sshForm) GetConnection() (*config.Connection, bool) {
 	conn.Database, _ = f.entryDatabase.GetText()
 	conn.SshHost, _ = f.entrySshHost.GetText()
 	conn.SshAgent, _ = f.entrySshAgent.GetText()
-	conn.Config = f.config
 
 	return conn, newConn
 }

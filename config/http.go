@@ -3,16 +3,12 @@ package config
 type HTTPEnvironment struct {
 	ID        int64
 	Variables []*HTTPVariable
-
-	Config *Config
 }
 
 type HTTPVariable struct {
 	ID    int64
 	Name  string
 	Value string
-
-	Config *Config
 }
 
 type HTTPCollection struct {
@@ -20,12 +16,10 @@ type HTTPCollection struct {
 	Name  string
 	Items []*HTTPItem
 	Count int64
-
-	Config *Config
 }
 
 func (i *HTTPCollection) Save() error {
-	return i.Config.SaveHTTPCollection(i)
+	return SaveHTTPCollection(i)
 }
 
 func (c *HTTPCollection) LoadRootItems() error {
@@ -34,13 +28,13 @@ func (c *HTTPCollection) LoadRootItems() error {
 			FROM http_items
 			WHERE http_collections_id = ? AND (parent_id IS NULL OR parent_id = 0)
 			ORDER BY sort ASC`
-	rows, err := c.Config.db.Query(query, c.ID)
+	rows, err := db.Query(query, c.ID)
 	if err != nil {
 		return err
 	}
 
 	for rows.Next() {
-		item := &HTTPItem{Config: c.Config}
+		item := &HTTPItem{}
 		err := rows.Scan(&item.ID, &item.Name, &item.IsFolder, &item.Sort, &item.HTTPCollectionID, &item.Method)
 		if err != nil {
 			return err
@@ -52,19 +46,23 @@ func (c *HTTPCollection) LoadRootItems() error {
 }
 
 func (i *HTTPItem) LoadFull() error {
+	if i.Loaded {
+		return nil
+	}
+
 	if i.IsFolder {
 		i.Items = nil
 		query := `SELECT id, name, parent_id, is_folder, sort, http_collections_id, method
 				FROM http_items
 				WHERE http_collections_id = ? AND parent_id = ?
 				ORDER BY sort ASC`
-		rows, err := i.Config.db.Query(query, i.HTTPCollectionID, i.ID)
+		rows, err := db.Query(query, i.HTTPCollectionID, i.ID)
 		if err != nil {
 			return err
 		}
 
 		for rows.Next() {
-			item := &HTTPItem{Config: i.Config}
+			item := &HTTPItem{}
 			err := rows.Scan(&item.ID, &item.Name, &item.ParentID,
 				&item.IsFolder, &item.Sort, &item.HTTPCollectionID, &item.Method)
 			if err != nil {
@@ -79,7 +77,7 @@ func (i *HTTPItem) LoadFull() error {
 	query := `SELECT ifnull(method,""), ifnull(url,""), ifnull(body, ""), ifnull(mime,"")
 				FROM http_items
 				WHERE id = ?`
-	rows, err := i.Config.db.Query(query, i.ID)
+	rows, err := db.Query(query, i.ID)
 	if err != nil {
 		return err
 	}
@@ -98,13 +96,13 @@ func (i *HTTPItem) LoadFull() error {
 				FROM http_kvs
 				WHERE http_items_id = ?
 				ORDER BY sort ASC`
-	rows, err = i.Config.db.Query(query, i.ID)
+	rows, err = db.Query(query, i.ID)
 	if err != nil {
 		return err
 	}
 
 	for rows.Next() {
-		kv := &HTTPKV{Config: i.Config, HTTPItemID: i.ID}
+		kv := &HTTPKV{HTTPItemID: i.ID}
 		err := rows.Scan(&kv.ID, &kv.Key, &kv.Value, &kv.Type, &kv.Sort)
 		if err != nil {
 			return err
@@ -134,7 +132,7 @@ type HTTPItem struct {
 	Sort  int
 	HTTPRequest
 
-	Config *Config
+	Loaded bool
 }
 
 func (i *HTTPItem) SearchID(id int64) *HTTPItem {
@@ -152,7 +150,7 @@ func (i *HTTPItem) SearchID(id int64) *HTTPItem {
 }
 
 func (i *HTTPItem) Save() error {
-	return i.Config.SaveHTTPItem(i)
+	return SaveHTTPItem(i)
 }
 
 type HTTPRequest struct {
@@ -162,8 +160,6 @@ type HTTPRequest struct {
 	Mime    string
 	Headers []*HTTPKV
 	Params  []*HTTPKV
-
-	Config *Config
 }
 
 type HTTPKV struct {
@@ -175,10 +171,8 @@ type HTTPKV struct {
 	Enabled bool
 
 	HTTPItemID int64
-
-	Config *Config
 }
 
 func (i *HTTPKV) Save() error {
-	return i.Config.SaveHTTPKV(i)
+	return SaveHTTPKV(i)
 }

@@ -12,7 +12,6 @@ type sqliteForm struct {
 	*gtk.Grid
 	fields []string
 	conn   *config.Connection
-	config *config.Config
 
 	entryName   *gtk.Entry
 	btnFile     *gtk.FileChooserButton
@@ -24,7 +23,7 @@ type sqliteForm struct {
 	queries   []config.Query
 }
 
-func (f sqliteForm) Init(w *Window, cfg *config.Config) (*sqliteForm, error) {
+func (f sqliteForm) Init(w *Window) (*sqliteForm, error) {
 	var err error
 
 	f.Grid, err = gtk.GridNew()
@@ -34,7 +33,6 @@ func (f sqliteForm) Init(w *Window, cfg *config.Config) (*sqliteForm, error) {
 	f.SetName("form")
 	f.SetColumnHomogeneous(true)
 	f.SetRowSpacing(5)
-	f.config = cfg
 
 	f.labelName, err = gtk.LabelNew("Name")
 	if err != nil {
@@ -102,7 +100,6 @@ func (f *sqliteForm) GetConnection() (*config.Connection, bool) {
 	conn.Database = filepath.Base(f.filename)
 	conn.Name, _ = f.entryName.GetText()
 	conn.File = f.filename
-	conn.Config = f.config
 
 	return conn, newConn
 }

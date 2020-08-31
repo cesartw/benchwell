@@ -32,7 +32,6 @@ type connectionScreenCtrl interface {
 	OnDeleteTable()
 	OnCopySelect()
 	OnCopyLog()
-	Config() *config.Config
 }
 
 type ConnectionScreen struct {
@@ -165,7 +164,7 @@ func (c ConnectionScreen) Init(
 		return nil, err
 	}
 
-	tabPositionSetting := c.ctrl.Config().GUI.TableTabPosition
+	tabPositionSetting := config.GUI.TableTabPosition
 	tabPositionSetting.Subscribe(asyncSettingChange(func(_ interface{}) {
 		switch tabPositionSetting.String() {
 		case "bottom":

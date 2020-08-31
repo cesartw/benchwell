@@ -2,7 +2,9 @@ package config
 
 import (
 	"database/sql"
+	"io"
 	"os"
+	"time"
 
 	"github.com/gotk3/gotk3/gtk"
 	_ "github.com/mattn/go-sqlite3"
@@ -11,47 +13,42 @@ import (
 	"bitbucket.org/goreorto/benchwell/assets"
 )
 
-var version = "dev"
-
 const AppID = "io.benchwell"
 
-// Config ...
-type Config struct {
-	db *sql.DB
-	*logrus.Logger
-
-	Version     string
-	Home        string
-	Connections []*Connection
-	Collections []*HTTPCollection
-
-	loadedSettings map[string]*Setting
-
-	GUI struct {
+var (
+	Version        = "dev"
+	EncryptionMode = &Setting{}
+	Editor         = struct {
+		WordWrap *Setting
+	}{}
+	GUI = struct {
 		CellWidth             *Setting
 		ConnectionTabPosition *Setting
 		TableTabPosition      *Setting
 		PageSize              *Setting
 		DarkMode              *Setting
-	}
-	Editor struct {
-		WordWrap *Setting
-	}
-	EncryptionMode *Setting
+	}{}
+	Home        string
+	Connections []*Connection
+	Collections []*HTTPCollection
 
-	logFile string
-}
+	loadedSettings map[string]*Setting
+	logFile        string
+	db             *sql.DB
+	logger         *logrus.Logger
+)
 
-func Init() *Config {
+func Init() {
+	var err error
 	userHome, _ := os.UserConfigDir()
 	benchwellHome := userHome + "/benchwell"
 
-	if version == "dev" {
+	if Version == "dev" {
 		userHome = "./assets/data/"
 		benchwellHome = userHome
 	}
 
-	db, err := sql.Open("sqlite3", benchwellHome+"/config.db")
+	db, err = sql.Open("sqlite3", benchwellHome+"/config.db")
 	if err != nil {
 		panic(err)
 	}
@@ -61,43 +58,61 @@ func Init() *Config {
 		panic(err)
 	}
 
-	c := &Config{
-		Logger:         logrus.New(),
-		Home:           benchwellHome,
-		db:             db,
-		loadedSettings: map[string]*Setting{},
-	}
+	logger = logrus.New()
+	Home = benchwellHome
+	loadedSettings = map[string]*Setting{}
 
-	c.Editor.WordWrap = c.Get("gui.editor.word_wrap")
-	c.GUI.CellWidth = c.Get("gui.cell_width")
-	c.GUI.ConnectionTabPosition = c.Get("gui.connection_tab_position")
-	c.GUI.TableTabPosition = c.Get("gui.table_tab_position")
-	c.GUI.PageSize = c.Get("gui.page_size")
-	c.GUI.DarkMode = c.Get("gui.dark_mode")
-	c.EncryptionMode = c.Get("encryption_mode")
+	Editor.WordWrap = getSetting("gui.editor.word_wrap")
+	GUI.CellWidth = getSetting("gui.cell_width")
+	GUI.ConnectionTabPosition = getSetting("gui.connection_tab_position")
+	GUI.TableTabPosition = getSetting("gui.table_tab_position")
+	GUI.PageSize = getSetting("gui.page_size")
+	GUI.DarkMode = getSetting("gui.dark_mode")
+	EncryptionMode = getSetting("encryption_mode")
 
-	initKeyChain(c.EncryptionMode.String())
-	err = c.loadConnections()
+	initKeyChain(EncryptionMode.String())
+	err = loadConnections()
 	if err != nil {
 		panic(err)
 	}
 
-	if len(c.Connections) == 0 {
-		c.SaveConnection(nil, &Connection{Name: "New connection", Type: "tcp", Adapter: "mysql", Port: 3306, Config: c})
+	if len(Connections) == 0 {
+		SaveConnection(nil, &Connection{Name: "New connection", Type: "tcp", Adapter: "mysql", Port: 3306})
 	}
 
-	err = c.loadCollections()
+	err = loadCollections()
 	if err != nil {
-		c.Error(err)
+		logger.Error(err)
 	}
 
-	return c
+}
+
+func getSetting(s string) *Setting {
+	setting, ok := loadedSettings[s]
+	if ok {
+		return setting
+	}
+	setting = &Setting{subs: map[uint]*SettingUpdater{}}
+
+	row, err := db.Query("SELECT * FROM settings WHERE name = ? LIMIT 1", s)
+	if err != nil {
+		panic(err)
+	}
+
+	for row.Next() {
+		if err := row.Scan(&setting.id, &setting.name, &setting.value); err != nil {
+			panic(err)
+		}
+	}
+	loadedSettings[s] = setting
+
+	return setting
 }
 
 // name, adapter, type, database, host, options, user, password, port, encrypted
-func (c *Config) loadConnections() error {
-	c.Connections = nil
-	rows, err := c.db.Query("SELECT * FROM db_connections")
+func loadConnections() error {
+	Connections = nil
+	rows, err := db.Query("SELECT * FROM db_connections")
 	if err != nil {
 		return err
 	}
@@ -110,39 +125,39 @@ func (c *Config) loadConnections() error {
 		if err != nil {
 			return err
 		}
-		c.Connections = append(c.Connections, conn)
+		Connections = append(Connections, conn)
 	}
 
 	return nil
 }
 
-func (c *Config) loadCollections() error {
-	c.Collections = nil
-	rows, err := c.db.Query("SELECT * FROM http_collections")
+func loadCollections() error {
+	Collections = nil
+	rows, err := db.Query("SELECT * FROM http_collections")
 	if err != nil {
 		return err
 	}
 
 	for rows.Next() {
-		collection := &HTTPCollection{Config: c}
+		collection := &HTTPCollection{}
 		err := rows.Scan(&collection.ID, &collection.Count, &collection.Name)
 		if err != nil {
 			return err
 		}
-		c.Collections = append(c.Collections, collection)
+		Collections = append(Collections, collection)
 	}
 
 	return nil
 }
 
-func (c *Config) LoadQueries() error {
-	rows, err := c.db.Query("SELECT * FROM db_queries")
+func LoadQueries() error {
+	rows, err := db.Query("SELECT * FROM db_queries")
 	if err != nil {
 		return err
 	}
 
 	connMap := map[int64]*Connection{}
-	for _, conn := range c.Connections {
+	for _, conn := range Connections {
 		connMap[conn.ID] = conn
 	}
 
@@ -159,86 +174,23 @@ func (c *Config) LoadQueries() error {
 	return nil
 }
 
-func (c *Config) Get(s string) *Setting {
-	setting, ok := c.loadedSettings[s]
-	if ok {
-		return setting
-	}
-	setting = &Setting{subs: map[uint]*SettingUpdater{}}
-
-	row, err := c.db.Query("SELECT * FROM settings WHERE name = ? LIMIT 1", s)
-	if err != nil {
-		panic(err)
-	}
-
-	for row.Next() {
-		if err := row.Scan(&setting.id, &setting.name, &setting.value); err != nil {
-			panic(err)
-		}
-	}
-	c.loadedSettings[s] = setting
-
-	return setting
-}
-
-func (c *Config) EditorTheme() string {
+func EditorTheme() string {
 	theme := "benchwell-dark"
-	if !c.GUI.DarkMode.Bool() {
+	if !GUI.DarkMode.Bool() {
 		theme = "benchwell-light"
 	}
 	return theme
 }
 
-func (c *Config) SaveSetting(s *Setting) error {
+func SaveSetting(s *Setting) error {
 	return nil
 }
 
-func (c *Config) SaveConnection(w *gtk.ApplicationWindow, conn *Connection) error {
-	err := conn.Encrypt(nil)
-	if err != nil {
-		return err
-	}
-
-	if conn.ID == 0 {
-		sql := `INSERT INTO connections(adapter, type, name, socket, file, host, port,
-					user, password, database, sshhost, sshagent, options, encrypted)
-				VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-		result, err := c.db.Exec(sql,
-			conn.Adapter, conn.Type, conn.Name, conn.Socket, conn.File,
-			conn.Host, conn.Port, conn.User, conn.Password, conn.Database,
-			conn.SshHost, conn.SshAgent, conn.Options, conn.Encrypted)
-		if err != nil {
-			return err
-		}
-		id, err := result.LastInsertId()
-		if err != nil {
-			return err
-		}
-		conn.ID = id
-		c.Connections = append(c.Connections, conn)
-	} else {
-		sql := `UPDATE connections
-					SET adapter = ?, type = ?, name = ?, socket = ?, file = ?, host = ?, port = ?,
-					user = ?, password = ?, database = ?, sshhost = ?, sshagent = ?, options = ?, encrypted = ?
-				WHERE ID = ?`
-		_, err := c.db.Exec(sql,
-			conn.Adapter, conn.Type, conn.Name, conn.Socket, conn.File,
-			conn.Host, conn.Port, conn.User, conn.Password, conn.Database,
-			conn.SshHost, conn.SshAgent, conn.Options, conn.Encrypted, conn.ID)
-		if err != nil {
-			return err
-		}
-	}
-	conn.Decrypt(w)
-
-	return nil
-}
-
-func (c *Config) SaveQuery(query *Query) error {
+func SaveQuery(query *Query) error {
 	if query.ID == 0 {
 		sql := `INSERT INTO queries(name, query, connections_id)
 				VALUES(?, ?, ?)`
-		result, err := c.db.Exec(sql, query.Name, query.Query, query.ConnectionID)
+		result, err := db.Exec(sql, query.Name, query.Query, query.ConnectionID)
 		if err != nil {
 			return err
 		}
@@ -248,7 +200,7 @@ func (c *Config) SaveQuery(query *Query) error {
 		}
 		query.ID = id
 
-		for _, conn := range c.Connections {
+		for _, conn := range Connections {
 			if conn.ID == query.ConnectionID {
 				conn.Queries = append(conn.Queries, query)
 				break
@@ -258,7 +210,7 @@ func (c *Config) SaveQuery(query *Query) error {
 		sql := `UPDATE queries
 					SET name = ?, query = ?
 				WHERE ID = ?`
-		_, err := c.db.Exec(sql,
+		_, err := db.Exec(sql,
 			query.Name, query.Query, query.ID)
 		if err != nil {
 			return err
@@ -268,20 +220,20 @@ func (c *Config) SaveQuery(query *Query) error {
 	return nil
 }
 
-func (c *Config) DeleteConnection(conn *Connection) error {
+func DeleteConnection(conn *Connection) error {
 	if conn.ID != 0 {
 		sql := `DELETE FROM connections WHERE id = ?`
-		_, err := c.db.Exec(sql, conn.ID)
+		_, err := db.Exec(sql, conn.ID)
 		if err != nil {
 			return err
 		}
 
-		for i, co := range c.Connections {
+		for i, co := range Connections {
 			if co.ID != conn.ID {
 				continue
 			}
 
-			c.Connections = append(c.Connections[:i], c.Connections[i+1:]...)
+			Connections = append(Connections[:i], Connections[i+1:]...)
 			break
 		}
 	}
@@ -289,11 +241,11 @@ func (c *Config) DeleteConnection(conn *Connection) error {
 	return nil
 }
 
-func (c *Config) SaveHTTPItem(item *HTTPItem) error {
+func SaveHTTPItem(item *HTTPItem) error {
 	if item.ID == 0 {
 		sql := `INSERT INTO http_items(name, description, parent_id, is_folder, sort, http_collections_id, external_data, method, url, body, mime)
 				VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-		result, err := c.db.Exec(sql, item.Name,
+		result, err := db.Exec(sql, item.Name,
 			item.Description, item.ParentID, item.IsFolder,
 			item.Sort, item.HTTPCollectionID, "", item.Method,
 			item.URL, item.Body, item.Mime)
@@ -311,7 +263,7 @@ func (c *Config) SaveHTTPItem(item *HTTPItem) error {
 					sort = ?, http_collections_id = ?, external_data = ?,
 					method = ?, url = ?, body = ?, mime = ?)
 				WHERE ID = ?`
-		_, err := c.db.Exec(sql,
+		_, err := db.Exec(sql,
 			item.Name, item.Description, item.ParentID,
 			item.IsFolder, item.Sort, item.HTTPCollectionID,
 			"", item.Method, item.URL, item.Body, item.Mime,
@@ -320,7 +272,6 @@ func (c *Config) SaveHTTPItem(item *HTTPItem) error {
 	}
 
 	for _, kv := range item.Params {
-		kv.Config = c
 		kv.HTTPItemID = item.ID
 		err := kv.Save()
 		if err != nil {
@@ -328,7 +279,6 @@ func (c *Config) SaveHTTPItem(item *HTTPItem) error {
 		}
 	}
 	for _, kv := range item.Headers {
-		kv.Config = c
 		kv.HTTPItemID = item.ID
 		err := kv.Save()
 		if err != nil {
@@ -339,11 +289,11 @@ func (c *Config) SaveHTTPItem(item *HTTPItem) error {
 	return nil
 }
 
-func (c *Config) SaveHTTPKV(kv *HTTPKV) error {
+func SaveHTTPKV(kv *HTTPKV) error {
 	if kv.ID == 0 {
 		sql := `INSERT INTO http_kvs(key, value,  type, sort, enabled, http_items_id)
 				VALUES(?, ?, ?, ?, ?, ?)`
-		result, err := c.db.Exec(sql, kv.Key, kv.Value, kv.Type, kv.Sort, kv.Enabled, kv.HTTPItemID)
+		result, err := db.Exec(sql, kv.Key, kv.Value, kv.Type, kv.Sort, kv.Enabled, kv.HTTPItemID)
 		if err != nil {
 			return err
 		}
@@ -356,18 +306,18 @@ func (c *Config) SaveHTTPKV(kv *HTTPKV) error {
 		sql := `update http_kvs(key, value,  type, sort, enabled, http_items_id)
 				VALUES(?, ?, ?, ?, ?, ?)
 				where id = ?`
-		_, err := c.db.Exec(sql, kv.Key, kv.Value, kv.Type, kv.Sort, kv.Enabled, kv.HTTPItemID, kv.ID)
+		_, err := db.Exec(sql, kv.Key, kv.Value, kv.Type, kv.Sort, kv.Enabled, kv.HTTPItemID, kv.ID)
 		return err
 	}
 
 	return nil
 }
 
-func (c *Config) SaveHTTPCollection(collection *HTTPCollection) error {
+func SaveHTTPCollection(collection *HTTPCollection) error {
 	if collection.ID == 0 {
 		sql := `INSERT INTO http_collections(name)
 				VALUES(?)`
-		result, err := c.db.Exec(sql, collection.Name)
+		result, err := db.Exec(sql, collection.Name)
 		if err != nil {
 			return err
 		}
@@ -380,7 +330,7 @@ func (c *Config) SaveHTTPCollection(collection *HTTPCollection) error {
 		sql := `UPDATE http_collections
 					SET name = ?)
 				WHERE ID = ?`
-		_, err := c.db.Exec(sql,
+		_, err := db.Exec(sql,
 			collection.Name, collection.ID)
 		return err
 	}
@@ -388,12 +338,101 @@ func (c *Config) SaveHTTPCollection(collection *HTTPCollection) error {
 	return nil
 }
 
-func (c *Config) CSS() string {
+func CSS() string {
 	style := ""
-	if c.GUI.DarkMode.Bool() {
+	if GUI.DarkMode.Bool() {
 		style = assets.THEME_DARK + assets.BRAND + assets.BRAND_DARK
 	} else {
 		style = assets.THEME_LIGHT + assets.BRAND + assets.BRAND_LIGHT
 	}
 	return style
+}
+
+type ctxlogger struct {
+	*logrus.Entry
+	start time.Time
+}
+
+func (c ctxlogger) Done() {
+	c.WithField("duration", time.Since(c.start)).Debug("END")
+}
+
+func LogStart(fname string, args map[string]interface{}) func() {
+	fields := logrus.Fields{"func": fname}
+	for k, v := range args {
+		fields[k] = v
+	}
+
+	e := logger.WithFields(fields)
+	e.Debug("START", fields)
+
+	return ctxlogger{start: time.Now(), Entry: e}.Done
+}
+
+func LogEnd(fname string, args ...interface{}) {
+}
+
+func SaveConnection(w *gtk.ApplicationWindow, conn *Connection) error {
+	err := conn.Encrypt(nil)
+	if err != nil {
+		return err
+	}
+
+	if conn.ID == 0 {
+		sql := `INSERT INTO connections(adapter, type, name, socket, file, host, port,
+					user, password, database, sshhost, sshagent, options, encrypted)
+				VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		result, err := db.Exec(sql,
+			conn.Adapter, conn.Type, conn.Name, conn.Socket, conn.File,
+			conn.Host, conn.Port, conn.User, conn.Password, conn.Database,
+			conn.SshHost, conn.SshAgent, conn.Options, conn.Encrypted)
+		if err != nil {
+			return err
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			return err
+		}
+		conn.ID = id
+		Connections = append(Connections, conn)
+	} else {
+		sql := `UPDATE connections
+					SET adapter = ?, type = ?, name = ?, socket = ?, file = ?, host = ?, port = ?,
+					user = ?, password = ?, database = ?, sshhost = ?, sshagent = ?, options = ?, encrypted = ?
+				WHERE ID = ?`
+		_, err := db.Exec(sql,
+			conn.Adapter, conn.Type, conn.Name, conn.Socket, conn.File,
+			conn.Host, conn.Port, conn.User, conn.Password, conn.Database,
+			conn.SshHost, conn.SshAgent, conn.Options, conn.Encrypted, conn.ID)
+		if err != nil {
+			return err
+		}
+	}
+	conn.Decrypt(w)
+
+	return nil
+}
+
+func Errorf(format string, args ...interface{}) {
+	logger.Errorf(format, args...)
+}
+
+func Error(args ...interface{}) {
+	logger.Error(args...)
+}
+
+func Debugf(format string, args ...interface{}) {
+	logger.Debugf(format, args...)
+}
+
+func Debug(args ...interface{}) {
+	logger.Debug(args...)
+}
+
+func SetLevel(l logrus.Level) {
+	logger.SetLevel(l)
+}
+
+func SetOutput(output io.Writer) {
+	logger.SetOutput(output)
 }

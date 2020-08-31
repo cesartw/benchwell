@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"bitbucket.org/goreorto/benchwell/config"
 	"bitbucket.org/goreorto/benchwell/gtk"
 	"bitbucket.org/goreorto/benchwell/sqlengine"
 	"bitbucket.org/goreorto/benchwell/sqlengine/driver"
@@ -84,7 +85,7 @@ func (tc *TableCtrl) OnTextChange(query string, cursorAt int) {
 
 	//tables, err := tc.Engine.Tables(tc.ctx)
 	//if err != nil {
-	//tc.Config().Error(err)
+	//config.Error(err)
 	//return
 	//}
 
@@ -108,7 +109,7 @@ func (tc *TableCtrl) OnCopyInsert(cols []driver.ColDef, values []interface{}) {
 	}
 
 	gtk.ClipboardCopy(sql)
-	tc.Config().Debugf("insert copied: %s", sql)
+	config.Debugf("insert copied: %s", sql)
 }
 
 func (tc *TableCtrl) OnUpdateRecord(cols []driver.ColDef, values []interface{}) error {
@@ -145,7 +146,7 @@ func (tc *TableCtrl) OnExecQuery(value string) {
 	for _, query := range dml {
 		columns, data, err := tc.Engine.Query(tc.ctx, query)
 		if err != nil {
-			tc.Config().Error(err)
+			config.Error(err)
 			tc.window.PushStatus("Error: %s", err.Error())
 			return
 		}
@@ -156,7 +157,7 @@ func (tc *TableCtrl) OnExecQuery(value string) {
 	for _, query := range ddl {
 		id, affected, err := tc.Engine.Execute(tc.ctx, query)
 		if err != nil {
-			tc.Config().Error(err)
+			config.Error(err)
 			tc.window.PushStatus("Error: %s", err.Error())
 			return
 		}
@@ -178,7 +179,7 @@ func (tc *TableCtrl) OnDelete() {
 		tc.resultView.ForEachSelected(func(cols []driver.ColDef, values []interface{}) {
 			err = tc.Engine.DeleteRecord(tc.ctx, tc.tableDef.Name, cols, values)
 			if err != nil {
-				tc.Config().Error(err, "deleting record")
+				config.Error(err, "deleting record")
 				return
 			}
 			tc.resultView.RemoveSelected()
@@ -211,13 +212,13 @@ func (tc *TableCtrl) OnLoadTable() {
 				return func() {
 					err = tc.resultView.UpdateColumns(def)
 					if err != nil {
-						tc.Config().Error(err)
+						config.Error(err)
 						return
 					}
 
 					err = tc.resultView.UpdateData(data)
 					if err != nil {
-						tc.Config().Error(err)
+						config.Error(err)
 					}
 				}
 			} else {
@@ -229,7 +230,7 @@ func (tc *TableCtrl) OnLoadTable() {
 				return func() {
 					tc.resultView.UpdateRawData(columns, data)
 					if err != nil {
-						tc.Config().Error(err)
+						config.Error(err)
 					}
 				}
 			}
@@ -242,7 +243,7 @@ func (tc *TableCtrl) OnLoadTable() {
 func (tc *TableCtrl) OnRefresh() {
 	conditions, err := tc.resultView.Conditions()
 	if err != nil {
-		tc.Config().Error(err)
+		config.Error(err)
 		return
 	}
 
@@ -330,7 +331,7 @@ func (tc *TableCtrl) parseQuery(src string) (dml []string, ddl []string) {
 
 	stmtNodes, _, err := p.Parse(src, "", "")
 	if err != nil {
-		tc.Config().Error(err)
+		config.Error(err)
 	}
 
 	for _, node := range stmtNodes {

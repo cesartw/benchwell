@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"regexp"
 
+	"bitbucket.org/goreorto/benchwell/config"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
-
-	"bitbucket.org/goreorto/benchwell/config"
 )
 
 type ListOptions struct {
@@ -32,8 +31,8 @@ type List struct {
 	selectedItemIndex MVar
 	ctrl              listCtrl
 }
+
 type listCtrl interface {
-	Config() *config.Config
 }
 
 func (list List) Init(_ *Window, opts *ListOptions, ctrl listCtrl) (*List, error) {
@@ -73,7 +72,7 @@ func (list List) Init(_ *Window, opts *ListOptions, ctrl listCtrl) (*List, error
 			return true
 		}
 		if row.GetIndex() >= len(list.options.Names) {
-			list.ctrl.Config().Debug("mmh, list is larger than the model(fake model)")
+			config.Debug("mmh, list is larger than the model(fake model)")
 			return true
 		}
 

@@ -3,12 +3,11 @@ package gtk
 import (
 	"log"
 
+	"bitbucket.org/goreorto/benchwell/config"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 	"github.com/gotk3/sourceview"
-
-	"bitbucket.org/goreorto/benchwell/config"
 )
 
 type Application struct {
@@ -32,7 +31,6 @@ type applicationCtrl interface {
 	OnShutdown()
 	OnNewWindow()
 	OnPreferences()
-	Config() *config.Config
 }
 
 func (a Application) Init(ctrl applicationCtrl) (*Application, error) {
@@ -43,7 +41,7 @@ func (a Application) Init(ctrl applicationCtrl) (*Application, error) {
 	if err != nil {
 		return nil, err
 	}
-	a.DarkMode = ctrl.Config().GUI.DarkMode.Bool()
+	a.DarkMode = config.GUI.DarkMode.Bool()
 
 	a.Connect("startup", func() {
 		a.Menu.Application.NewWindow = glib.SimpleActionNew("new", nil)
@@ -80,7 +78,7 @@ func (a Application) Init(ctrl applicationCtrl) (*Application, error) {
 	a.Application.Connect("shutdown", ctrl.OnShutdown)
 
 	// initialize sourceview extern deps
-	benchwellHome := ctrl.Config().Home
+	benchwellHome := config.Home
 	sm, err := sourceview.SourceStyleSchemeManagerGetDefault()
 	if err != nil {
 		return nil, err
@@ -98,7 +96,7 @@ func (a Application) Init(ctrl applicationCtrl) (*Application, error) {
 }
 
 func (a *Application) ToggleMode() {
-	a.ctrl.Config().GUI.DarkMode.SetBool(!a.ctrl.Config().GUI.DarkMode.Bool())
+	config.GUI.DarkMode.SetBool(!config.GUI.DarkMode.Bool())
 	a.loadSettingsCSS()
 }
 
@@ -108,7 +106,7 @@ func (a *Application) OnShowPreferences() {
 		[]interface{}{"Done", gtk.RESPONSE_OK},
 	)
 	if err != nil {
-		a.ctrl.Config().Error(err)
+		config.Error(err)
 		return
 	}
 
@@ -138,7 +136,7 @@ func (a *Application) loadSettingsCSS() {
 	// TODO: works, need to check vendoring
 	//css.LoadFromResource("/org/gtk/libgtk/theme/Adwaita/gtk-contained-dark.css")
 
-	err = css.LoadFromData(a.ctrl.Config().CSS())
+	err = css.LoadFromData(config.CSS())
 	if err != nil {
 		panic(err)
 	}

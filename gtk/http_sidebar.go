@@ -32,7 +32,6 @@ type HTTPCollection struct {
 }
 
 type ctrlHTTPCollection interface {
-	Config() *config.Config
 	OnLoadItem()
 	OnCollectionSelected()
 }
@@ -58,24 +57,15 @@ func (h HTTPCollection) Init(
 		return nil, err
 	}
 	h.tree.SetHeadersVisible(false)
+	h.tree.SetProperty("show-expanders", false)
 	h.tree.Connect("row-activated", ctrl.OnLoadItem)
-
-	h.colBox, err = gtk.ComboBoxTextNew()
-	if err != nil {
-		return nil, err
-	}
-	h.colBox.Connect("changed", ctrl.OnCollectionSelected)
-
-	h.colBox.Append("", "")
-	for _, collection := range h.ctrl.Config().Collections {
-		h.colBox.Append(fmt.Sprintf("%d", collection.ID), collection.Name)
-	}
 
 	col, err := h.createImageColumn("", COLUMN_ICON)
 	if err != nil {
 		return nil, err
 	}
 	h.tree.AppendColumn(col)
+	h.tree.SetExpanderColumn(col)
 
 	col, err = h.createTextColumn("", COLUMN_TEXT)
 	if err != nil {
@@ -89,8 +79,25 @@ func (h HTTPCollection) Init(
 	}
 	h.tree.SetModel(h.store)
 
+	collectionSW, err := gtk.ScrolledWindowNew(nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	collectionSW.Add(h.tree)
+
+	h.colBox, err = gtk.ComboBoxTextNew()
+	if err != nil {
+		return nil, err
+	}
+	h.colBox.Connect("changed", ctrl.OnCollectionSelected)
+
+	h.colBox.Append("", "")
+	for _, collection := range config.Collections {
+		h.colBox.Append(fmt.Sprintf("%d", collection.ID), collection.Name)
+	}
+
 	h.Box.PackStart(h.colBox, false, false, 0)
-	h.Box.PackStart(h.tree, true, true, 0)
+	h.Box.PackStart(collectionSW, true, true, 0)
 
 	return &h, nil
 }

@@ -1,7 +1,6 @@
 package gtk
 
 import (
-	"bitbucket.org/goreorto/benchwell/config"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 )
@@ -13,7 +12,6 @@ type tabCtrl interface {
 	Content() gtk.IWidget //tab
 	SetFileText(string)   //tab
 	OnCloseTab()
-	Config() *config.Config
 	SetWindowCtrl(interface{}) // tab
 }
 
@@ -75,7 +73,6 @@ func (t ToolTab) Init(w *Window) (*ToolTab, error) {
 func (t *ToolTab) SetWindowCtrl(
 	ctrl interface {
 		OnCloseTab()
-		Config() *config.Config
 	},
 ) {
 	t.tabCtrl.SetWindowCtrl(ctrl)

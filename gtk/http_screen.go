@@ -56,7 +56,6 @@ type HTTPScreen struct {
 }
 
 type httpScreenCtrl interface {
-	Config() *config.Config
 	Save()
 	SaveAs()
 	Send()
@@ -299,7 +298,7 @@ func (h *HTTPScreen) buildRequest() (*gtk.Notebook, error) {
 
 		err := h.body.SetLanguage(mime)
 		if err != nil {
-			h.ctrl.Config().Error(err, "setting language")
+			config.Error(err, "setting language")
 		}
 	})
 
@@ -470,7 +469,7 @@ func (h *HTTPScreen) SetResponse(body string, headers http.Header, duration time
 	case "application/json", "text/json":
 		err := h.response.SetLanguage("json")
 		if err != nil {
-			h.ctrl.Config().Error(err, "setting language")
+			config.Error(err, "setting language")
 		}
 
 		var out bytes.Buffer
@@ -479,17 +478,17 @@ func (h *HTTPScreen) SetResponse(body string, headers http.Header, duration time
 	case "text/html":
 		err := h.response.SetLanguage("html")
 		if err != nil {
-			h.ctrl.Config().Error(err, "setting language")
+			config.Error(err, "setting language")
 		}
 	case "text/yaml", "application/x-yaml":
 		err := h.response.SetLanguage("yaml")
 		if err != nil {
-			h.ctrl.Config().Error(err, "setting language")
+			config.Error(err, "setting language")
 		}
 	case "text/xml", "application/xml":
 		err := h.response.SetLanguage("xml")
 		if err != nil {
-			h.ctrl.Config().Error(err, "setting language")
+			config.Error(err, "setting language")
 		}
 	}
 

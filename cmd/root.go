@@ -21,10 +21,10 @@ var rootCmd = &cobra.Command{
 	Short: "Benchwell",
 	Long:  `Visit https://benchwell.io for more details`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := config.Init()
+		config.Init()
 
 		if verbose {
-			cfg.SetLevel(logrus.DebugLevel)
+			config.SetLevel(logrus.DebugLevel)
 		}
 
 		if logfile != "" {
@@ -32,19 +32,19 @@ var rootCmd = &cobra.Command{
 			if err != nil {
 				panic(err)
 			}
-			cfg.SetOutput(f)
+			config.SetOutput(f)
 		}
 
-		cfg.Debug("application startup")
+		config.Debug("application startup")
 		err := assets.Load()
 		if err != nil {
 			panic(err)
 		}
 
-		eng := sqlengine.New(cfg)
+		eng := sqlengine.New()
 		defer eng.Dispose()
 
-		ctr := ctrl.AppCtrl{}.Init(cfg, eng)
+		ctr := ctrl.AppCtrl{}.Init(eng)
 
 		// Create a new application.
 		ctr.App, err = gtk.Application{}.Init(ctr)

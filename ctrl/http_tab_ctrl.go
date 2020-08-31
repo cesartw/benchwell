@@ -41,7 +41,7 @@ func (c *HTTPTabCtrl) OnCollectionSelected() {
 		return
 	}
 
-	for _, collection := range c.config.Collections {
+	for _, collection := range config.Collections {
 		if collection.ID != id {
 			continue
 		}
@@ -94,6 +94,10 @@ func (c *HTTPTabCtrl) OnLoadItem() {
 	}
 
 	if item.IsFolder {
+		if item.Loaded {
+			return
+		}
+		item.Loaded = true
 		c.scr.LoadFolder(path, item)
 	} else {
 		c.scr.SetRequest(item)

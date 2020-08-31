@@ -23,7 +23,6 @@ type tabCtrl interface {
 	Title() string
 	Content() ggtk.IWidget
 	SetFileText(string)
-	Config() *config.Config
 	OnCloseTab()
 	SetWindowCtrl(interface{})
 }
@@ -41,8 +40,12 @@ func (c WindowCtrl) Init(parent *AppCtrl) (*WindowCtrl, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = ctrl.AddTab(TAB_TYPE_HTTP)
+	if err != nil {
+		return nil, err
+	}
 
-	return ctrl, ctrl.AddTab(TAB_TYPE_HTTP)
+	return ctrl, ctrl.AddTab(TAB_TYPE_DB)
 }
 
 func (c *WindowCtrl) OnSaveQuery(query, path string) {
@@ -55,7 +58,7 @@ func (c *WindowCtrl) OnSaveQuery(query, path string) {
 func (c *WindowCtrl) OnFileSelected(filepath string) {
 	bytes, err := ioutil.ReadFile(filepath)
 	if err != nil {
-		c.Config().Error("reading file", err)
+		config.Error("reading file", err)
 		return
 	}
 
@@ -65,7 +68,7 @@ func (c *WindowCtrl) OnFileSelected(filepath string) {
 func (c *WindowCtrl) OnNewDatabaseTab() {
 	err := c.AddTab(TAB_TYPE_DB)
 	if err != nil {
-		c.Config().Error(err)
+		config.Error(err)
 		return
 	}
 	c.window.PushStatus("Ready")
@@ -74,7 +77,7 @@ func (c *WindowCtrl) OnNewDatabaseTab() {
 func (c *WindowCtrl) OnNewHTTPTab() {
 	err := c.AddTab(TAB_TYPE_HTTP)
 	if err != nil {
-		c.Config().Error(err)
+		config.Error(err)
 		return
 	}
 	c.window.PushStatus("Ready")
