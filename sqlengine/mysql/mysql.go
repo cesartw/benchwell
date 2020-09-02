@@ -216,13 +216,20 @@ func (c *mysqlConn) Reconnect(ctx context.Context) error {
 }
 
 func (c *mysqlConn) UseDatabase(ctx context.Context, db string) (driver.Database, error) {
-	sqldb, err := c.driver.useDatabase(ctx, db)
+	query := fmt.Sprintf("USE %s", db)
+	_, err := c.db.ExecContext(ctx, query)
 	if err != nil {
 		driver.LogError(ctx, err)
 		return nil, err
 	}
+	driver.Log(ctx, query)
 
-	return &mysqlDb{cfgCon: c.cfgCon, db: sqldb, name: db}, nil
+	//sqldb, err := c.driver.useDatabase(ctx, db)
+	//if err != nil {
+	//driver.LogError(ctx, err)
+	//return nil, err
+	//}
+	return &mysqlDb{cfgCon: c.cfgCon, db: c.db, name: db}, nil
 }
 
 // Disconnect ...

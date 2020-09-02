@@ -1,6 +1,9 @@
 package ctrl
 
 import (
+	"context"
+	"fmt"
+
 	"bitbucket.org/goreorto/benchwell/config"
 	"bitbucket.org/goreorto/benchwell/gtk"
 	"bitbucket.org/goreorto/benchwell/sqlengine"
@@ -11,15 +14,12 @@ import (
 type ConnectionCtrl struct {
 	*DbTabCtrl
 
-	// db-less connection
-	mainCtx *sqlengine.Context
+	ctx      *sqlengine.Context
+	tableDef driver.TableDef
 
-	dbCtx  map[string]*sqlengine.Context
 	scr    *gtk.ConnectionScreen
 	conn   *config.Connection
 	dbName string
-
-	tabs []*TableCtrl
 }
 
 func (c ConnectionCtrl) Init(
@@ -29,12 +29,11 @@ func (c ConnectionCtrl) Init(
 ) (*ConnectionCtrl, error) {
 	defer config.LogStart("ConnectionCtrl.Init", nil)()
 
-	c.dbCtx = map[string]*sqlengine.Context{}
 	c.DbTabCtrl = p
-	c.mainCtx = ctx
+	c.ctx = ctx
 	c.conn = conn
 
-	dbNames, err := c.Engine.Databases(c.mainCtx)
+	dbNames, err := c.Engine.Databases(c.ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -50,8 +49,9 @@ func (c ConnectionCtrl) Init(
 
 	if c.conn.Database != "" {
 		c.scr.SetActiveDatabase(c.conn.Database)
-		return &c, c.AddEmptyTab()
+		c.dbName = c.conn.Database
 	}
+	c.updateTitle()
 
 	return &c, nil
 }
@@ -76,69 +76,6 @@ func (c *ConnectionCtrl) OnCopyLog() {
 	defer config.LogStart("ConnectionCtrl.OnCopyLog", nil)()
 }
 
-func (c *ConnectionCtrl) Close() bool {
-	defer config.LogStart("ConnectionCtrl.Close", nil)()
-
-	return c.scr.Close()
-}
-
-func (c *ConnectionCtrl) FullClose() {
-	defer config.LogStart("ConnectionCtrl.FullClose", nil)()
-
-	c.scr.CloseAll()
-}
-
-func (c *ConnectionCtrl) AddEmptyTab() error {
-	defer config.LogStart("ConnectionCtrl.AddEmptyTab", nil)()
-
-	if _, ok := c.scr.ActiveDatabase(); ok {
-		return c.AddTab(driver.TableDef{})
-	}
-	return nil
-}
-
-func (c *ConnectionCtrl) SetFileText(s string) {
-	defer config.LogStart("ConnectionCtrl.SetFileText", nil)()
-
-	if len(c.tabs) == 0 {
-		return
-	}
-	tabCtrl := c.tabs[c.scr.CurrentTabIndex()]
-	tabCtrl.SetQuery(tabCtrl.ctx, s)
-}
-
-func (c *ConnectionCtrl) AddTab(tableDef driver.TableDef) error {
-	defer config.LogStart("ConnectionCtrl.AddTab", nil)()
-
-	// TODO: control doesn't know it's a tab. good or bad?
-	tab, err := TableCtrl{}.Init(c.dbCtx[c.dbName], TableCtrlOpts{
-		Parent:   c,
-		TableDef: tableDef,
-		//OnTabRemoved: c.onTabRemove, // change to c.OnTabRemoved
-	})
-	if err != nil {
-		return err
-	}
-
-	c.tabs = append(c.tabs, tab)
-	return c.scr.AddTab(tab.connectionTab, tab, true)
-}
-
-func (c *ConnectionCtrl) UpdateOrAddTab(tableDef driver.TableDef) error {
-	defer config.LogStart("ConnectionCtrl.UpdateOrAddTab", nil)()
-
-	ok, err := c.scr.SetTableDef(c.dbCtx[c.dbName], tableDef)
-	if err != nil {
-		return err
-	}
-
-	if !ok {
-		return c.AddTab(tableDef)
-	}
-
-	return nil
-}
-
 func (c *ConnectionCtrl) OnDatabaseSelected() {
 	defer config.LogStart("ConnectionCtrl.OnDatabaseSelected", nil)()
 
@@ -148,19 +85,15 @@ func (c *ConnectionCtrl) OnDatabaseSelected() {
 		c.window.PushStatus("Database `%s` not found", c.conn.Database)
 		return
 	}
-	config.Debug("dbName", dbName)
-	config.Debug("dbs", c.dbCtx)
 
-	if c.dbCtx[dbName] == nil {
-		c.dbCtx[dbName], err = c.Engine.UseDatabase(c.mainCtx, dbName)
-		if err != nil {
-			c.window.PushStatus("Error selecting database: `%s`", err.Error())
-			return
-		}
-		c.dbCtx[dbName].Logger = c.scr.Log
+	c.ctx, err = c.Engine.UseDatabase(c.ctx, dbName)
+	if err != nil {
+		c.window.PushStatus("Error selecting database: `%s`", err.Error())
+		return
 	}
+	c.ctx.Logger = c.scr.Log
 
-	tables, err := c.Engine.Tables(c.dbCtx[dbName])
+	tables, err := c.Engine.Tables(c.ctx)
 	if err != nil {
 		c.window.PushStatus("Error getting tables: `%s`", err.Error())
 		return
@@ -180,24 +113,26 @@ func (c *ConnectionCtrl) OnDatabaseSelected() {
 
 	c.scr.SetTables(tables)
 	c.dbName = dbName
+	c.tableDef = driver.TableDef{}
+	c.updateTitle()
 }
 
 func (c *ConnectionCtrl) OnTableSelected() {
 	defer config.LogStart("ConnectionCtrl.OnTableSelected", nil)()
-
-	defer c.disconnect()
 
 	tableDef, ok := c.scr.ActiveTable()
 	if !ok {
 		config.Debug("no table selected. odd!")
 		return
 	}
+	c.tableDef = tableDef
 
-	if c.scr.CtrlMod() {
-		c.AddTab(tableDef)
-	} else {
-		c.UpdateOrAddTab(tableDef)
-	}
+	c.OnLoadTable()
+	//if c.scr.CtrlMod() {
+	//c.AddTab(tableDef)
+	//} else {
+	//c.UpdateOrAddTab(tableDef)
+	//}
 }
 
 func (c *ConnectionCtrl) OnEditTable() {
@@ -209,7 +144,7 @@ func (c *ConnectionCtrl) OnEditTable() {
 	}
 
 	if tableDef.Type == driver.TableTypeDummy {
-		ok, err := c.scr.SetQuery(c.dbCtx[c.dbName], tableDef.Query)
+		ok, err := c.scr.SetQuery(c.ctx, tableDef.Query)
 		if err != nil {
 			config.Error(err)
 			return
@@ -219,14 +154,7 @@ func (c *ConnectionCtrl) OnEditTable() {
 			return
 		}
 
-		// add tab for connection and try again
-		err = c.AddTab(tableDef)
-		if err != nil {
-			config.Error(err)
-			return
-		}
-
-		c.scr.SetQuery(c.dbCtx[c.dbName], tableDef.Query)
+		c.scr.SetQuery(c.ctx, tableDef.Query)
 	}
 }
 
@@ -239,7 +167,7 @@ func (c *ConnectionCtrl) OnTruncateTable() {
 		return
 	}
 
-	c.Engine.TruncateTable(c.dbCtx[c.dbName], tableDef)
+	c.Engine.TruncateTable(c.ctx, tableDef)
 }
 
 func (c *ConnectionCtrl) OnDeleteTable() {
@@ -251,7 +179,7 @@ func (c *ConnectionCtrl) OnDeleteTable() {
 		return
 	}
 
-	err := c.Engine.DeleteTable(c.dbCtx[c.dbName], tableDef)
+	err := c.Engine.DeleteTable(c.ctx, tableDef)
 	if err != nil {
 		c.window.PushStatus(err.Error())
 	}
@@ -267,7 +195,7 @@ func (c *ConnectionCtrl) OnCopySelect() {
 		return
 	}
 
-	sql, err := c.Engine.GetSelectStatement(c.dbCtx[c.dbName], tableDef)
+	sql, err := c.Engine.GetSelectStatement(c.ctx, tableDef)
 	if err != nil {
 		c.window.PushStatus(err.Error())
 		return
@@ -285,7 +213,7 @@ func (c *ConnectionCtrl) OnSchemaMenu() {
 		return
 	}
 
-	schema, err := c.Engine.GetCreateTable(c.dbCtx[c.dbName], tableName)
+	schema, err := c.Engine.GetCreateTable(c.ctx, tableName)
 	if err != nil {
 		config.Error(err, "getting table schema")
 	}
@@ -296,23 +224,9 @@ func (c *ConnectionCtrl) OnSchemaMenu() {
 func (c *ConnectionCtrl) OnRefreshMenu() {
 	defer config.LogStart("ConnectionCtrl.OnRefreshMenu", nil)()
 
-	if dbName, ok := c.scr.ActiveDatabase(); ok {
-		c.dbCtx[dbName].CacheTable = nil
-	}
+	c.ctx.CacheTable = nil
 
 	c.OnDatabaseSelected()
-}
-
-func (c *ConnectionCtrl) OnNewTabMenu() {
-	defer config.LogStart("ConnectionCtrl.OnNewTabMenu", nil)()
-
-	tableDef, ok := c.scr.ActiveTable()
-	if !ok {
-		config.Debug("no table selected. odd!")
-		return
-	}
-
-	c.AddTab(tableDef)
 }
 
 func (c *ConnectionCtrl) OnSaveFav(name, query string) {
@@ -331,44 +245,321 @@ func (c *ConnectionCtrl) Screen() interface{} {
 	return c.scr
 }
 
-func (c *ConnectionCtrl) OnTabRemove(ctrl *TableCtrl) {
-	defer config.LogStart("ConnectionCtrl.OnTabRemove", nil)()
+func (c *ConnectionCtrl) OnTextChange(query string, cursorAt int) {
+	defer config.LogStart("ConnectionCtrl.OnTextChange", nil)()
 
-	defer c.disconnect()
+	return
+	// TODO: need to implement sourceview completion
+	//columnMachines := driver.CompleteColumnMachines(*c.conn)
+	//tableMachines := driver.CompleteTableMachines(*c.conn)
+	//l := lexers.Get("sql")
+	//it, _ := l.Tokenise(nil, string(query[:cursorAt]))
+	//tokens := it.Tokens()
 
-	for i, tabCtrl := range c.tabs {
-		if tabCtrl == ctrl {
-			c.tabs = append(c.tabs[:i], c.tabs[i+1:]...)
-			break
-		}
-	}
+	//for _, m := range tableMachines {
+	//_, ok := m.Match(tokens)
+	//if !ok {
+	//continue
+	//}
+
+	//tables, err := c.Engine.Tables(c.ctx)
+	//if err != nil {
+	//config.Error(err)
+	//return
+	//}
+
+	//words := make([]string, len(tables))
+	//for i, t := range tables {
+	//words[i] = t.String()
+	//}
+
+	//c.scr.ShowAutoComplete(words)
+	//}
 }
 
-func (c *ConnectionCtrl) disconnect() {
-	return
-	defer config.LogStart("ConnectionCtrl.disconnect", nil)()
+func (c *ConnectionCtrl) String() string {
+	defer config.LogStart("ConnectionCtrl.String", nil)()
 
-	if len(c.tabs) == 0 {
+	return c.ctx.Database().Name() + "." + c.tableDef.Name
+}
+
+func (c *ConnectionCtrl) OnCopyInsert(cols []driver.ColDef, values []interface{}) {
+	defer config.LogStart("ConnectionCtrl.OnCopyInsert", nil)()
+
+	sql, err := c.Engine.GetInsertStatement(c.ctx, c.tableDef.Name, cols, values)
+	if err != nil {
+		c.window.PushStatus(err.Error())
+	}
+
+	gtk.ClipboardCopy(sql)
+	config.Debugf("insert copied: %s", sql)
+}
+
+func (c *ConnectionCtrl) OnUpdateRecord(cols []driver.ColDef, values []interface{}) error {
+	defer config.LogStart("ConnectionCtrl.OnUpdateRecord", nil)()
+
+	_, err := c.Engine.UpdateField(c.ctx, c.tableDef.Name, cols, values)
+	if err != nil {
+		return err
+	}
+
+	c.window.PushStatus("Saved")
+	return nil
+}
+
+func (c *ConnectionCtrl) OnCreateRecord(cols []driver.ColDef, values []interface{}) ([]interface{}, error) {
+	defer config.LogStart("ConnectionCtrl.OnCreateRecord", nil)()
+
+	data, err := c.Engine.InsertRecord(c.ctx, c.tableDef.Name, cols, values)
+	if err != nil {
+		return nil, err
+	} else {
+		c.window.PushStatus("Inserted")
+	}
+
+	return data, nil
+}
+
+func (c *ConnectionCtrl) OnExecQuery(value string) {
+	defer config.LogStart("ConnectionCtrl.OnExecQuery", nil)()
+
+	columns, data, err := c.Engine.Query(c.ctx, value)
+	if err != nil {
 		return
 	}
-NEXT:
-	for dbName, ctx := range c.dbCtx {
-		for _, tab := range c.tabs {
-			if tab.ctx == ctx {
-				continue NEXT
+	c.scr.UpdateRawData(columns, data)
+	c.window.PushStatus("%d rows loaded", len(data))
+
+	/*dml, ddl := c.parseQuery(value)
+
+	for _, query := range dml {
+		columns, data, err := c.Engine.Query(c.ctx, query)
+		if err != nil {
+			config.Error(err)
+			c.window.PushStatus("Error: %s", err.Error())
+			return
+		}
+		c.scr.UpdateRawData(columns, data)
+		c.window.PushStatus("%d rows loaded", len(data))
+	}
+
+	for _, query := range ddl {
+		id, affected, err := c.Engine.Execute(c.ctx, query)
+		if err != nil {
+			config.Error(err)
+			c.window.PushStatus("Error: %s", err.Error())
+			return
+		}
+		c.window.PushStatus("Last inserted id: %s Affected rows: %d", id, affected)
+	}
+	*/
+}
+
+func (c *ConnectionCtrl) OnDelete() {
+	defer config.LogStart("ConnectionCtrl.OnDelete", nil)()
+
+	newRecord, err := c.scr.SelectedIsNewRecord()
+	if err != nil {
+		return
+	}
+
+	if newRecord {
+		c.scr.RemoveSelected()
+		c.window.PushStatus("Record removed")
+	} else {
+		c.scr.ForEachSelected(func(cols []driver.ColDef, values []interface{}) {
+			err = c.Engine.DeleteRecord(c.ctx, c.tableDef.Name, cols, values)
+			if err != nil {
+				config.Error(err, "deleting record")
+				return
 			}
-		}
-
-		// db dropdown is showing the tables
-		selectedDB, _ := c.scr.ActiveDatabase()
-		if dbName == selectedDB {
-			continue
-		}
-
-		config.Debug("disconnecting: ", c.Engine.Database(ctx).Name())
-
-		c.Engine.Disconnect(ctx)
-		delete(c.dbCtx, dbName)
-		config.Debug("dbCtx ", c.dbCtx)
+			c.scr.RemoveSelected()
+			c.window.PushStatus("Record deleted")
+		})
 	}
 }
+
+func (c *ConnectionCtrl) ParseValue(col driver.ColDef, value string) (interface{}, error) {
+	return c.Engine.ParseValue(c.ctx, col, value)
+}
+
+func (c *ConnectionCtrl) OnLoadTable() {
+	defer config.LogStart("ConnectionCtrl.OnLoadTable", nil)()
+
+	cancel := c.window.Go(func(ctx context.Context) func() {
+		switch c.tableDef.Type {
+		case driver.TableTypeDummy:
+			// TODO: query is done on the background
+			return func() {
+				c.OnExecQuery(c.tableDef.Query)
+			}
+		default:
+			def, data, err := c.Engine.FetchTable(
+				c.ctx.WithContext(ctx), c.tableDef,
+				driver.FetchTableOptions{
+					Offset: c.scr.Offset(),
+					Limit:  c.scr.PageSize(),
+				},
+			)
+			if err != nil {
+				return func() {}
+			}
+
+			if c.tableDef.Type == driver.TableTypeRegular {
+				return func() {
+					err = c.scr.UpdateColumns(def)
+					if err != nil {
+						config.Error(err)
+						return
+					}
+
+					err = c.scr.UpdateData(data)
+					if err != nil {
+						config.Error(err)
+					}
+				}
+			} else {
+				columns := []string{}
+				for _, d := range def {
+					columns = append(columns, d.Name)
+				}
+
+				return func() {
+					c.scr.UpdateRawData(columns, data)
+					if err != nil {
+						config.Error(err)
+					}
+				}
+			}
+		}
+	})
+
+	c.scr.Block(cancel)
+	c.updateTitle()
+}
+
+func (c *ConnectionCtrl) OnRefresh() {
+	defer config.LogStart("ConnectionCtrl.OnRefresh", nil)()
+
+	conditions, err := c.scr.Conditions()
+	if err != nil {
+		config.Error(err)
+		return
+	}
+
+	_, data, err := c.Engine.FetchTable(
+		c.ctx, c.tableDef,
+		driver.FetchTableOptions{
+			Offset:     c.scr.Offset(),
+			Limit:      c.scr.PageSize(),
+			Sort:       c.scr.SortOptions(),
+			Conditions: conditions,
+		},
+	)
+	if err != nil {
+		return
+	}
+
+	err = c.scr.UpdateData(data)
+	if err != nil {
+		return
+	}
+
+	c.window.PushStatus("Table reloaded")
+}
+
+func (c *ConnectionCtrl) OnApplyConditions() {
+	defer config.LogStart("ConnectionCtrl.OnApplyConditions", nil)()
+
+	c.OnRefresh()
+}
+
+func (c *ConnectionCtrl) OnCreate() {
+	defer config.LogStart("ConnectionCtrl.OnCreate", nil)()
+
+	newRecord, err := c.scr.SelectedIsNewRecord()
+	if err != nil {
+		return
+	}
+	if !newRecord {
+		return
+	}
+
+	cols, values, err := c.scr.GetRow()
+	if err != nil {
+		return
+	}
+
+	values, err = c.Engine.InsertRecord(c.ctx, c.tableDef.Name, cols, values)
+	if err != nil {
+		return
+	}
+
+	err = c.scr.UpdateRow(values)
+	if err != nil {
+		c.window.PushStatus(err.Error())
+		return
+	}
+
+	c.window.PushStatus("Record saved")
+}
+
+func (c *ConnectionCtrl) SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDef) (bool, error) {
+	defer config.LogStart("ConnectionCtrl.SetTableDef", nil)()
+
+	if c.ctx != nil && c.ctx != ctx {
+		return false, nil
+	}
+
+	c.tableDef = tableDef
+	//c.SetTitle(fmt.Sprintf("%s.%s", c.dbName, tableDef.Name))
+	c.OnLoadTable()
+
+	return true, nil
+}
+
+func (c *ConnectionCtrl) SetQuery(ctx *sqlengine.Context, query string) (bool, error) {
+	defer config.LogStart("ConnectionCtrl.SetQuery", nil)()
+
+	if c.ctx != nil && c.ctx != ctx {
+		return false, nil
+	}
+
+	return c.scr.SetQuery(ctx, query)
+}
+
+func (c *ConnectionCtrl) updateTitle() {
+	switch {
+	case c.tableDef.Name != "":
+		c.ChangeTitle(fmt.Sprintf("%s.%s.%s", c.conn.Name, c.dbName, c.tableDef.Name))
+	case c.dbName != "":
+		c.ChangeTitle(fmt.Sprintf("%s.%s", c.conn.Name, c.dbName))
+	default:
+		c.ChangeTitle(fmt.Sprintf("%s", c.conn.Name))
+	}
+}
+
+/*
+func (c *ConnectionCtrl) parseQuery(src string) (dml []string, ddl []string) {
+	p := parser.New()
+
+	stmtNodes, _, err := p.Parse(src, "", "")
+	if err != nil {
+		config.Error(err)
+	}
+
+	for _, node := range stmtNodes {
+		_, isSelect := node.(*ast.SelectStmt)
+		_, isShow := node.(*ast.ShowStmt)
+		_, isExplain := node.(*ast.ExplainStmt)
+
+		if isShow || isSelect || isExplain {
+			dml = append(dml, node.Text())
+		} else {
+			ddl = append(ddl, node.Text())
+		}
+	}
+
+	return
+}
+*/

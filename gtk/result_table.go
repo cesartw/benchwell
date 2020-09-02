@@ -33,7 +33,6 @@ const (
 	STATUS_PRISTINE
 )
 
-type parser func(driver.ColDef, string) (interface{}, error)
 type Result struct {
 	*gtk.TreeView
 	cols           []fmt.Stringer
@@ -42,8 +41,7 @@ type Result struct {
 	updateCallback func([]driver.ColDef, []interface{}) error
 	createCallback func([]driver.ColDef, []interface{}) ([]interface{}, error)
 
-	mode   MODE
-	parser parser
+	mode MODE
 
 	ddMenu struct {
 		*gtk.Menu
@@ -63,13 +61,13 @@ type resultCtrl interface {
 	OnUpdateRecord([]driver.ColDef, []interface{}) error
 	OnCreateRecord([]driver.ColDef, []interface{}) ([]interface{}, error)
 	OnCopyInsert([]driver.ColDef, []interface{})
+	ParseValue(driver.ColDef, string) (interface{}, error)
 }
 
-func (u Result) Init(_ *Window, ctrl resultCtrl, parser parser) (*Result, error) {
+func (u Result) Init(_ *Window, ctrl resultCtrl) (*Result, error) {
 	defer config.LogStart("Result.Init", nil)()
 
 	var err error
-	u.parser = parser
 	u.ctrl = ctrl
 
 	u.TreeView, err = gtk.TreeViewNew()
@@ -293,7 +291,7 @@ func (u *Result) AddEmptyRow() (err error) {
 		def := col.(driver.ColDef)
 		columns[i] = i
 
-		row[i], err = u.parser(def, driver.NULL_PATTERN)
+		row[i], err = u.ctrl.ParseValue(def, driver.NULL_PATTERN)
 		if err != nil || row[i] == nil {
 			row[i] = driver.NULL_PATTERN
 		}
@@ -658,7 +656,7 @@ func (u *Result) onSaveCell(row, column int, newValue string) {
 
 	affectedCol := u.cols[column].(driver.ColDef)
 	pkCols = append(pkCols, affectedCol)
-	parsedValue, err := u.parser(affectedCol, newValue)
+	parsedValue, err := u.ctrl.ParseValue(affectedCol, newValue)
 	if err != nil {
 		config.Error(err)
 		return
@@ -672,7 +670,7 @@ func (u *Result) onSaveCell(row, column int, newValue string) {
 		return
 	}
 
-	u.data[row][column], _ = u.parser(affectedCol, newValue)
+	u.data[row][column], _ = u.ctrl.ParseValue(affectedCol, newValue)
 }
 
 func (u *Result) createColumn(title string, id int, useEditModal bool) (*gtk.TreeViewColumn, error) {

@@ -17,9 +17,6 @@ type DbTabCtrl struct {
 	connectionCtrl *ConnectionCtrl
 
 	currentCtrl interface {
-		Close() bool
-		FullClose()
-		AddEmptyTab() error
 		SetFileText(string)
 		Content() ggtk.IWidget
 		Title() string
@@ -42,6 +39,9 @@ func (c DbTabCtrl) Init(p *WindowCtrl) (*DbTabCtrl, error) {
 	return &c, nil
 }
 
+func (c *DbTabCtrl) Close() {
+}
+
 func (c *DbTabCtrl) Title() string {
 	defer config.LogStart("DbTabCtrl.Title", nil)()
 
@@ -60,12 +60,6 @@ func (c *DbTabCtrl) SetWindowCtrl(i interface{}) {
 	c.WindowCtrl = i.(*WindowCtrl)
 }
 
-func (c *DbTabCtrl) AddTab() error {
-	defer config.LogStart("DbTabCtrl.AddTab", nil)()
-
-	return c.currentCtrl.AddEmptyTab()
-}
-
 func (c *DbTabCtrl) SetFileText(s string) {
 	defer config.LogStart("DbTabCtrl.SetFileText", nil)()
 
@@ -82,24 +76,9 @@ func (c *DbTabCtrl) Removed() {
 	defer config.LogStart("DbTabCtrl.Removed", nil)()
 
 	if c.connectionCtrl != nil {
-		c.Engine.Disconnect(c.connectionCtrl.mainCtx)
+		c.Engine.Disconnect(c.connectionCtrl.ctx)
 		c.window.PushStatus("Disconnected")
 	}
-}
-
-// Close delegates the close tab action ot connect or connection screen
-func (c *DbTabCtrl) Close() {
-	defer config.LogStart("DbTabCtrl.Close", nil)()
-
-	// TODO: figure out which screen is open
-	c.currentCtrl.FullClose()
-}
-
-// Close all tabs
-func (c *DbTabCtrl) FullClose() {
-	defer config.LogStart("DbTabCtrl.FullClose", nil)()
-
-	c.currentCtrl.FullClose()
 }
 
 func (c *DbTabCtrl) launchConnect() {
@@ -126,7 +105,6 @@ func (c *DbTabCtrl) launchConnection(ctx *sqlengine.Context, conn *config.Connec
 	}
 	c.currentCtrl = c.connectionCtrl
 	c.screenHolder.SetContent(c.connectionCtrl.scr)
-	c.ChangeTitle(c.currentCtrl.Title())
 }
 
 func (c *DbTabCtrl) OnConnect() {

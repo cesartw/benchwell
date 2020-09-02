@@ -64,12 +64,12 @@ type resultViewCtrl interface {
 	OnSaveQuery(string, string)
 	OnSaveFav(string, string)
 	OnApplyConditions()
+	ParseValue(driver.ColDef, string) (interface{}, error)
 }
 
 func (v ResultView) Init(
 	w *Window,
 	ctrl resultViewCtrl,
-	parser parser,
 ) (*ResultView, error) {
 	defer config.LogStart("ResultView.Init", nil)()
 
@@ -214,7 +214,7 @@ func (v ResultView) Init(
 		return nil, err
 	}
 
-	v.result, err = Result{}.Init(v.w, ctrl, parser)
+	v.result, err = Result{}.Init(v.w, ctrl)
 	if err != nil {
 		return nil, err
 	}

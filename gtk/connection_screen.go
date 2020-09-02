@@ -12,30 +12,38 @@ import (
 	"bitbucket.org/goreorto/benchwell/sqlengine/driver"
 )
 
-type tab struct {
-	*ConnectionTab
-	ctrl interface {
-		OnTabRemove()
-		SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDef) (bool, error)
-		SetQuery(ctx *sqlengine.Context, query string) (bool, error)
-		String() string
-	}
-}
 type connectionScreenCtrl interface {
 	OnDatabaseSelected()
 	OnTableSelected()
 	OnSchemaMenu()
 	OnRefreshMenu()
-	OnNewTabMenu()
 	OnEditTable()
 	OnTruncateTable()
 	OnDeleteTable()
 	OnCopySelect()
 	OnCopyLog()
+	OnUpdateRecord([]driver.ColDef, []interface{}) error
+	OnCreateRecord([]driver.ColDef, []interface{}) ([]interface{}, error)
+	OnExecQuery(string)
+	OnTextChange(string, int) //query, cursor position
+	OnRefresh()
+	OnDelete()
+	OnCreate()
+	OnCopyInsert([]driver.ColDef, []interface{})
+	OnFileSelected(string)
+	OnSaveQuery(string, string)
+	OnSaveFav(string, string)
+	ParseValue(driver.ColDef, string) (interface{}, error)
+
+	SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDef) (bool, error)
+	SetQuery(ctx *sqlengine.Context, query string) (bool, error)
+	String() string
+	OnApplyConditions()
 }
 
 type ConnectionScreen struct {
 	*gtk.Paned
+	*ResultView
 	ctrl connectionScreenCtrl
 
 	w           *Window
@@ -43,8 +51,6 @@ type ConnectionScreen struct {
 	dbCombo     *gtk.ComboBoxText
 	tableFilter *gtk.SearchEntry
 	tableList   *List
-	tabber      *gtk.Notebook
-	tabs        []tab
 	logview     *List
 
 	databaseNames []string
@@ -67,9 +73,6 @@ type ConnectionScreen struct {
 		clearMenu *gtk.MenuItem
 		copyMenu  *gtk.MenuItem
 	}
-
-	// tab switching
-	tabIndex int
 }
 
 func (c ConnectionScreen) Init(
@@ -161,50 +164,17 @@ func (c ConnectionScreen) Init(
 		return nil, err
 	}
 
-	c.tabber, err = gtk.NotebookNew()
+	c.ResultView, err = ResultView{}.Init(
+		c.w,
+		ctrl,
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	tabPositionSetting := config.GUI.TableTabPosition
-	tabPositionSetting.Subscribe(asyncSettingChange(func(_ interface{}) {
-		switch tabPositionSetting.String() {
-		case "bottom":
-			c.tabber.SetProperty("tab-pos", gtk.POS_BOTTOM)
-		default:
-			c.tabber.SetProperty("tab-pos", gtk.POS_TOP)
-		}
-	}))
+	c.ResultView.Show()
 
-	switch tabPositionSetting.String() {
-	case "bottom":
-		c.tabber.SetProperty("tab-pos", gtk.POS_BOTTOM)
-	default:
-		c.tabber.SetProperty("tab-pos", gtk.POS_TOP)
-	}
-
-	c.tabber.SetVExpand(true)
-	c.tabber.SetHExpand(true)
-	// TODO: move to config
-	//c.tabber.SetProperty("tab-pos", gtk.POS_BOTTOM)
-	c.tabber.SetProperty("scrollable", true)
-	c.tabber.SetProperty("enable-popup", false)
-	c.tabber.Connect("switch-page", func(_ *gtk.Notebook, _ *gtk.Widget, i int) {
-		c.tabIndex = i
-		if i >= len(c.tabs) {
-			return
-		}
-
-		c.dbCombo.SetActiveID(c.tabs[i].database)
-	})
-
-	c.tabber.Connect("page-removed", func(_ *gtk.Notebook, _ *gtk.Widget, i int) {
-		c.tabs = append(c.tabs[:i], c.tabs[i+1:]...)
-	})
-
-	c.tabber.Connect("page-reordered", c.onTabReorder)
-
-	mainSection.Add(c.tabber)
+	mainSection.Add(c.ResultView)
 	mainSection.SetVExpand(true)
 	mainSection.SetHExpand(true)
 
@@ -250,7 +220,7 @@ func (c ConnectionScreen) Init(
 	c.tableList.Connect("row-activated", ctrl.OnTableSelected)
 	c.tablesMenu.schemaMenu.Connect("activate", ctrl.OnSchemaMenu)
 	c.tablesMenu.refreshMenu.Connect("activate", ctrl.OnRefreshMenu)
-	c.tablesMenu.newTabMenu.Connect("activate", ctrl.OnNewTabMenu)
+	//c.tablesMenu.newTabMenu.Connect("activate", ctrl.OnNewTabMenu)
 	c.tablesMenu.editMenu.Connect("activate", ctrl.OnEditTable)
 	c.tablesMenu.truncateMenu.Connect("activate", ctrl.OnTruncateTable)
 	c.tablesMenu.deleteMenu.Connect("activate", ctrl.OnDeleteTable)
@@ -263,112 +233,22 @@ func (c ConnectionScreen) Init(
 	return &c, nil
 }
 
-func (c *ConnectionScreen) onTabReorder(_ *gtk.Notebook, _ *gtk.Widget, landing int) {
-	defer config.LogStart("ConnectionScreen.onTabReorder", nil)()
-
-	// https://play.golang.com/p/YMfQouxHuvr
-	movingTab := c.tabs[c.tabIndex]
-
-	c.tabs = append(c.tabs[:c.tabIndex], c.tabs[c.tabIndex+1:]...)
-
-	lh := make([]tab, len(c.tabs[:landing]))
-	rh := make([]tab, len(c.tabs[landing:]))
-	copy(lh, c.tabs[:landing])
-	copy(rh, c.tabs[landing:])
-
-	c.tabs = append(lh, movingTab)
-	c.tabs = append(c.tabs, rh...)
-}
-
 func (c *ConnectionScreen) Log(s string) {
 	defer config.LogStart("ConnectionScreen.Log", nil)()
 
 	c.logview.PrependItem(Stringer(s))
 }
 
-// TODO: This sucks
-func (c *ConnectionScreen) CtrlMod() bool {
-	defer config.LogStart("ConnectionScreen.CtrlMod", nil)()
-
-	return c.tableList.CtrlMod()
-}
-
-func (c *ConnectionScreen) CurrentTabIndex() int {
-	defer config.LogStart("ConnectionScreen.CurrentTabIndex", nil)()
-
-	return c.tabber.GetCurrentPage()
-}
-
 func (c *ConnectionScreen) SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDef) (bool, error) {
 	defer config.LogStart("ConnectionScreen.SetTableDef", nil)()
 
-	if c.tabber.GetCurrentPage() == -1 {
-		return false, nil
-	}
-
-	return c.tabs[c.tabber.GetCurrentPage()].ctrl.SetTableDef(ctx, tableDef)
+	return c.ctrl.SetTableDef(ctx, tableDef)
 }
 
 func (c *ConnectionScreen) SetQuery(ctx *sqlengine.Context, query string) (bool, error) {
 	defer config.LogStart("ConnectionScreen.SetQuery", nil)()
 
-	if c.tabber.GetCurrentPage() == -1 {
-		return false, nil
-	}
-	return c.tabs[c.tabber.GetCurrentPage()].ctrl.SetQuery(ctx, query)
-}
-
-func (c *ConnectionScreen) AddTab(
-	ctab *ConnectionTab,
-	ctrl interface {
-		OnTabRemove()
-		SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDef) (bool, error)
-		SetQuery(ctx *sqlengine.Context, query string) (bool, error)
-		String() string
-	},
-	switchNow bool,
-) error {
-	defer config.LogStart("ConnectionScreen.AddTab", nil)()
-
-	c.tabber.AppendPage(ctab.content, ctab.header)
-	c.tabber.SetTabReorderable(ctab.content, true)
-
-	ctab.btn.Connect("clicked", func() {
-		index := c.tabber.PageNum(ctab.content)
-		if index == -1 {
-			return
-		}
-
-		c.tabber.RemovePage(index)
-		ctrl.OnTabRemove()
-	})
-
-	if switchNow {
-		c.tabber.SetCurrentPage(c.tabber.GetNPages() - 1)
-	}
-
-	c.tabs = append(c.tabs, tab{ConnectionTab: ctab, ctrl: ctrl})
-
-	return nil
-}
-
-func (c *ConnectionScreen) Close() bool {
-	defer config.LogStart("ConnectionScreen.Close", nil)()
-
-	if c.tabber.GetCurrentPage() == -1 {
-		return false
-	}
-
-	c.tabs[c.tabber.GetCurrentPage()].btn.Emit("clicked")
-	return true
-}
-
-func (c *ConnectionScreen) CloseAll() {
-	defer config.LogStart("ConnectionScreen.CloseAll", nil)()
-
-	for _, tab := range c.tabs {
-		tab.btn.Emit("clicked")
-	}
+	return c.ctrl.SetQuery(ctx, query)
 }
 
 func (c *ConnectionScreen) SetDatabases(dbs []string) {
@@ -622,65 +502,4 @@ func (c *ConnectionScreen) onClearLog() {
 	defer config.LogStart("ConnectionScreen.onClearLog", nil)()
 
 	c.logview.Clear()
-}
-
-type ConnectionTab struct {
-	label   *gtk.Label
-	btn     *gtk.Button
-	content *gtk.Box
-	header  *gtk.Box
-
-	//index    int
-	database string
-}
-
-type ConnectionTabOpts struct {
-	Database string
-	Title    string
-	Content  gtk.IWidget
-}
-
-func (c ConnectionTab) Init(opts ConnectionTabOpts) (*ConnectionTab, error) {
-	defer config.LogStart("ConnectionTab.Init", nil)()
-
-	var err error
-
-	c.database = opts.Database
-	c.content, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	c.content.PackStart(opts.Content, true, true, 0)
-	c.content.SetVExpand(true)
-	c.content.SetHExpand(true)
-	c.content.Show()
-
-	c.header, err = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	c.label, err = gtk.LabelNew(opts.Title)
-	if err != nil {
-		return nil, err
-	}
-
-	c.btn, err = BWButtonNewFromIconName("close", ICON_SIZE_TAB)
-	if err != nil {
-		return nil, err
-	}
-	c.btn.SetRelief(gtk.RELIEF_NONE)
-
-	c.header.PackStart(c.label, true, true, 0)
-	c.header.PackEnd(c.btn, false, false, 0)
-	c.header.ShowAll()
-
-	return &c, nil
-}
-
-func (c *ConnectionTab) SetTitle(title string) {
-	defer config.LogStart("ConnectionTab.SetTitle", nil)()
-
-	c.label.SetText(title)
 }
