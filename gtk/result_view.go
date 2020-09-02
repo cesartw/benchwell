@@ -71,6 +71,8 @@ func (v ResultView) Init(
 	ctrl resultViewCtrl,
 	parser parser,
 ) (*ResultView, error) {
+	defer config.LogStart("ResultView.Init", nil)()
+
 	v.w = w
 	v.ctrl = ctrl
 	var err error
@@ -256,14 +258,20 @@ func (v ResultView) Init(
 }
 
 func (v *ResultView) ShowAutoComplete(words []string) {
+	defer config.LogStart("ResultView.ShowAutoComplete", nil)()
+
 	v.sourceView.ShowAutoComplete(words)
 }
 
 func (v *ResultView) Block(cancel func()) {
+	defer config.LogStart("ResultView.Block", nil)()
+
 	v.Run(cancel)
 }
 
 func (v *ResultView) SetQuery(query string) {
+	defer config.LogStart("ResultView.SetQuery", nil)()
+
 	buff, err := v.sourceView.GetBuffer()
 	if err != nil {
 		config.Error(err)
@@ -278,6 +286,8 @@ func (v *ResultView) onSaveQuery(
 	openDialog func(string, func(string, string)),
 	onSaveQuery func(string, string),
 ) func() {
+	defer config.LogStart("ResultView.onSaveQuery", nil)()
+
 	return func() {
 		buff, err := v.sourceView.GetBuffer()
 		if err != nil {
@@ -298,6 +308,8 @@ func (v *ResultView) onSaveQuery(
 func (v *ResultView) onSaveFav(
 	onSaveQuery func(string, string),
 ) func() {
+	defer config.LogStart("ResultView.onSaveFac", nil)()
+
 	return func() {
 		name, err := v.askFavName()
 		if err != nil {
@@ -326,6 +338,8 @@ func (v *ResultView) onSaveFav(
 }
 
 func (v *ResultView) PageSize() int64 {
+	defer config.LogStart("ResultView.PageSize", nil)()
+
 	return 100
 	//s, err := v.perPage.GetText()
 	//if err != nil {
@@ -340,14 +354,20 @@ func (v *ResultView) PageSize() int64 {
 	//return size
 }
 func (v *ResultView) Offset() int64 {
+	defer config.LogStart("ResultView.Offset", nil)()
+
 	return v.offset
 }
 
 func (v *ResultView) Conditions() ([]driver.CondStmt, error) {
+	defer config.LogStart("ResultView.Conditions", nil)()
+
 	return v.conditions.Statements()
 }
 
 func (v *ResultView) UpdateColumns(cols []driver.ColDef) error {
+	defer config.LogStart("ResultView.UpdateColumns", nil)()
+
 	defer v.Stop()
 
 	v.colFilter.SetText("")
@@ -357,6 +377,8 @@ func (v *ResultView) UpdateColumns(cols []driver.ColDef) error {
 }
 
 func (v *ResultView) UpdateData(data [][]interface{}) error {
+	defer config.LogStart("ResultView.UpdateData", nil)()
+
 	defer v.Stop()
 
 	v.pagerEnable(true)
@@ -367,6 +389,8 @@ func (v *ResultView) UpdateData(data [][]interface{}) error {
 }
 
 func (v *ResultView) UpdateRawData(cols []string, data [][]interface{}) error {
+	defer config.LogStart("ResultView.UpdateRawData", nil)()
+
 	defer v.Stop()
 
 	v.pagerEnable(false)
@@ -376,10 +400,14 @@ func (v *ResultView) UpdateRawData(cols []string, data [][]interface{}) error {
 }
 
 func (v *ResultView) SelectedIsNewRecord() (bool, error) {
+	defer config.LogStart("ResultView.SelectedIsNewRecord", nil)()
+
 	return v.result.SelectedIsNewRecord()
 }
 
 func (v *ResultView) RemoveSelected() error {
+	defer config.LogStart("ResultView.RemoveSelected", nil)()
+
 	err := v.result.RemoveSelected()
 	if err != nil {
 		return err
@@ -391,18 +419,26 @@ func (v *ResultView) RemoveSelected() error {
 }
 
 func (v *ResultView) ForEachSelected(f func([]driver.ColDef, []interface{})) error {
+	defer config.LogStart("ResultView.ForEachSelected", nil)()
+
 	return v.result.ForEachSelected(f)
 }
 
 func (v *ResultView) GetRowID() ([]driver.ColDef, []interface{}, error) {
+	defer config.LogStart("ResultView.GetRowID", nil)()
+
 	return v.result.GetRowID()
 }
 
 func (u *ResultView) GetRow() ([]driver.ColDef, []interface{}, error) {
+	defer config.LogStart("ResultView.GetRow", nil)()
+
 	return u.result.GetRow()
 }
 
 func (u *ResultView) UpdateRow(values []interface{}) error {
+	defer config.LogStart("ResultView.UpdateRow", nil)()
+
 	err := u.result.UpdateRow(values)
 	if err == nil {
 		u.newRecordEnable(false)
@@ -411,10 +447,14 @@ func (u *ResultView) UpdateRow(values []interface{}) error {
 }
 
 func (u *ResultView) SortOptions() []driver.SortOption {
+	defer config.LogStart("ResultView.SortOptions", nil)()
+
 	return u.result.SortOptions()
 }
 
 func (v *ResultView) actionbar() (*gtk.ActionBar, error) {
+	defer config.LogStart("ResultView.actionbar", nil)()
+
 	actionbar, err := gtk.ActionBarNew()
 	if err != nil {
 		return nil, err
@@ -493,6 +533,8 @@ func (v *ResultView) actionbar() (*gtk.ActionBar, error) {
 }
 
 func (v *ResultView) pagerEnable(b bool) {
+	defer config.LogStart("ResultView.pagerEnable", nil)()
+
 	v.btnPrev.SetSensitive(b)
 	v.btnNext.SetSensitive(b)
 	v.btnRsh.SetSensitive(b)
@@ -503,6 +545,8 @@ func (v *ResultView) pagerEnable(b bool) {
 }
 
 func (v *ResultView) disableAll() {
+	defer config.LogStart("ResultView.disableAll", nil)()
+
 	v.btnPrev.SetSensitive(false)
 	v.btnNext.SetSensitive(false)
 	v.btnRsh.SetSensitive(false)
@@ -513,10 +557,14 @@ func (v *ResultView) disableAll() {
 }
 
 func (v *ResultView) newRecordEnable(b bool) {
+	defer config.LogStart("ResultView.newRecordEnable", nil)()
+
 	v.btnCreateRow.SetSensitive(b)
 }
 
 func (v *ResultView) onTextViewKeyPress(_ *sourceview.SourceView, e *gdk.Event) bool {
+	defer config.LogStart("ResultView.onTextViewKeyPress", nil)()
+
 	keyEvent := gdk.EventKeyNewFromEvent(e)
 
 	if keyEvent.KeyVal() == gdk.KEY_Return && keyEvent.State()&gdk.CONTROL_MASK > 0 {
@@ -538,6 +586,8 @@ func (v *ResultView) onTextViewKeyPress(_ *sourceview.SourceView, e *gdk.Event) 
 }
 
 func (v *ResultView) onColFilterSearchChanged() {
+	defer config.LogStart("ResultView.onColFilterSearchChanged", nil)()
+
 	txt, err := v.colFilter.GetText()
 	if err != nil {
 		config.Error(err, "colFilter.GetText")
@@ -557,6 +607,8 @@ func (v *ResultView) onColFilterSearchChanged() {
 }
 
 func (v *ResultView) onRowActivated(_ *gtk.TreeView, path *gtk.TreePath, col *gtk.TreeViewColumn) {
+	defer config.LogStart("ResultView.onRowActivated", nil)()
+
 	if v.result.mode == MODE_RAW {
 		return
 	}
@@ -583,6 +635,8 @@ func (v *ResultView) onRowActivated(_ *gtk.TreeView, path *gtk.TreePath, col *gt
 }
 
 func (v *ResultView) askFavName() (string, error) {
+	defer config.LogStart("ResultView.askFavName", nil)()
+
 	modal, err := gtk.DialogNewWithButtons(
 		"Favorite Name",
 		v.w,

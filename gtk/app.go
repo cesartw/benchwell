@@ -34,6 +34,8 @@ type applicationCtrl interface {
 }
 
 func (a Application) Init(ctrl applicationCtrl) (*Application, error) {
+	defer config.LogStart("Application.Init", nil)()
+
 	var err error
 	a.ctrl = ctrl
 
@@ -96,11 +98,15 @@ func (a Application) Init(ctrl applicationCtrl) (*Application, error) {
 }
 
 func (a *Application) ToggleMode() {
+	defer config.LogStart("Application.ToggleMode", nil)()
+
 	config.GUI.DarkMode.SetBool(!config.GUI.DarkMode.Bool())
 	a.loadSettingsCSS()
 }
 
 func (a *Application) OnShowPreferences() {
+	defer config.LogStart("Application.OnShowPreferences", nil)()
+
 	modal, err := gtk.DialogNewWithButtons("Preferences", nil,
 		gtk.DIALOG_DESTROY_WITH_PARENT|gtk.DIALOG_MODAL,
 		[]interface{}{"Done", gtk.RESPONSE_OK},
@@ -128,6 +134,8 @@ func (a *Application) OnShowPreferences() {
 }
 
 func (a *Application) loadSettingsCSS() {
+	defer config.LogStart("Application.loadSettingsCSS", nil)()
+
 	css, err := gtk.CssProviderNew()
 	if err != nil {
 		panic(err)

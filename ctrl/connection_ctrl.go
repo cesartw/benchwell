@@ -27,6 +27,8 @@ func (c ConnectionCtrl) Init(
 	p *DbTabCtrl,
 	conn *config.Connection,
 ) (*ConnectionCtrl, error) {
+	defer config.LogStart("ConnectionCtrl.Init", nil)()
+
 	c.dbCtx = map[string]*sqlengine.Context{}
 	c.DbTabCtrl = p
 	c.mainCtx = ctx
@@ -55,6 +57,8 @@ func (c ConnectionCtrl) Init(
 }
 
 func (c *ConnectionCtrl) Title() string {
+	defer config.LogStart("ConnectionCtrl.Title", nil)()
+
 	if c.conn.Name != "" {
 		return c.conn.Name
 	}
@@ -63,21 +67,30 @@ func (c *ConnectionCtrl) Title() string {
 }
 
 func (c *ConnectionCtrl) Content() ggtk.IWidget {
+	defer config.LogStart("ConnectionCtrl.Content", nil)()
+
 	return c.scr
 }
 
 func (c *ConnectionCtrl) OnCopyLog() {
+	defer config.LogStart("ConnectionCtrl.OnCopyLog", nil)()
 }
 
 func (c *ConnectionCtrl) Close() bool {
+	defer config.LogStart("ConnectionCtrl.Close", nil)()
+
 	return c.scr.Close()
 }
 
 func (c *ConnectionCtrl) FullClose() {
+	defer config.LogStart("ConnectionCtrl.FullClose", nil)()
+
 	c.scr.CloseAll()
 }
 
 func (c *ConnectionCtrl) AddEmptyTab() error {
+	defer config.LogStart("ConnectionCtrl.AddEmptyTab", nil)()
+
 	if _, ok := c.scr.ActiveDatabase(); ok {
 		return c.AddTab(driver.TableDef{})
 	}
@@ -85,6 +98,8 @@ func (c *ConnectionCtrl) AddEmptyTab() error {
 }
 
 func (c *ConnectionCtrl) SetFileText(s string) {
+	defer config.LogStart("ConnectionCtrl.SetFileText", nil)()
+
 	if len(c.tabs) == 0 {
 		return
 	}
@@ -93,6 +108,8 @@ func (c *ConnectionCtrl) SetFileText(s string) {
 }
 
 func (c *ConnectionCtrl) AddTab(tableDef driver.TableDef) error {
+	defer config.LogStart("ConnectionCtrl.AddTab", nil)()
+
 	// TODO: control doesn't know it's a tab. good or bad?
 	tab, err := TableCtrl{}.Init(c.dbCtx[c.dbName], TableCtrlOpts{
 		Parent:   c,
@@ -108,6 +125,8 @@ func (c *ConnectionCtrl) AddTab(tableDef driver.TableDef) error {
 }
 
 func (c *ConnectionCtrl) UpdateOrAddTab(tableDef driver.TableDef) error {
+	defer config.LogStart("ConnectionCtrl.UpdateOrAddTab", nil)()
+
 	ok, err := c.scr.SetTableDef(c.dbCtx[c.dbName], tableDef)
 	if err != nil {
 		return err
@@ -121,12 +140,16 @@ func (c *ConnectionCtrl) UpdateOrAddTab(tableDef driver.TableDef) error {
 }
 
 func (c *ConnectionCtrl) OnDatabaseSelected() {
+	defer config.LogStart("ConnectionCtrl.OnDatabaseSelected", nil)()
+
 	var err error
 	dbName, ok := c.scr.ActiveDatabase()
 	if !ok {
 		c.window.PushStatus("Database `%s` not found", c.conn.Database)
 		return
 	}
+	config.Debug("dbName", dbName)
+	config.Debug("dbs", c.dbCtx)
 
 	if c.dbCtx[dbName] == nil {
 		c.dbCtx[dbName], err = c.Engine.UseDatabase(c.mainCtx, dbName)
@@ -160,6 +183,8 @@ func (c *ConnectionCtrl) OnDatabaseSelected() {
 }
 
 func (c *ConnectionCtrl) OnTableSelected() {
+	defer config.LogStart("ConnectionCtrl.OnTableSelected", nil)()
+
 	defer c.disconnect()
 
 	tableDef, ok := c.scr.ActiveTable()
@@ -176,6 +201,8 @@ func (c *ConnectionCtrl) OnTableSelected() {
 }
 
 func (c *ConnectionCtrl) OnEditTable() {
+	defer config.LogStart("ConnectionCtrl.OnEditTable", nil)()
+
 	tableDef, ok := c.scr.ActiveTable()
 	if !ok {
 		return
@@ -204,6 +231,8 @@ func (c *ConnectionCtrl) OnEditTable() {
 }
 
 func (c *ConnectionCtrl) OnTruncateTable() {
+	defer config.LogStart("ConnectionCtrl.OnTruncateTable", nil)()
+
 	tableDef, ok := c.scr.ActiveTable()
 	if !ok {
 		config.Debug("no table selected. odd!")
@@ -214,6 +243,8 @@ func (c *ConnectionCtrl) OnTruncateTable() {
 }
 
 func (c *ConnectionCtrl) OnDeleteTable() {
+	defer config.LogStart("ConnectionCtrl.OnDeleteTable", nil)()
+
 	tableDef, ok := c.scr.ActiveTable()
 	if !ok {
 		config.Debug("no table selected. odd!")
@@ -228,6 +259,8 @@ func (c *ConnectionCtrl) OnDeleteTable() {
 }
 
 func (c *ConnectionCtrl) OnCopySelect() {
+	defer config.LogStart("ConnectionCtrl.OnCopySelect", nil)()
+
 	tableDef, ok := c.scr.ActiveTable()
 	if !ok {
 		config.Debug("no table selected. odd!")
@@ -245,6 +278,8 @@ func (c *ConnectionCtrl) OnCopySelect() {
 }
 
 func (c *ConnectionCtrl) OnSchemaMenu() {
+	defer config.LogStart("ConnectionCtrl.OnSchemaMenu", nil)()
+
 	tableName, ok := c.scr.SelectedTable()
 	if !ok {
 		return
@@ -259,6 +294,8 @@ func (c *ConnectionCtrl) OnSchemaMenu() {
 }
 
 func (c *ConnectionCtrl) OnRefreshMenu() {
+	defer config.LogStart("ConnectionCtrl.OnRefreshMenu", nil)()
+
 	if dbName, ok := c.scr.ActiveDatabase(); ok {
 		c.dbCtx[dbName].CacheTable = nil
 	}
@@ -267,6 +304,8 @@ func (c *ConnectionCtrl) OnRefreshMenu() {
 }
 
 func (c *ConnectionCtrl) OnNewTabMenu() {
+	defer config.LogStart("ConnectionCtrl.OnNewTabMenu", nil)()
+
 	tableDef, ok := c.scr.ActiveTable()
 	if !ok {
 		config.Debug("no table selected. odd!")
@@ -277,6 +316,8 @@ func (c *ConnectionCtrl) OnNewTabMenu() {
 }
 
 func (c *ConnectionCtrl) OnSaveFav(name, query string) {
+	defer config.LogStart("ConnectionCtrl.OnSaveFav", nil)()
+
 	config.SaveQuery(&config.Query{
 		Name:         name,
 		Query:        query,
@@ -285,10 +326,14 @@ func (c *ConnectionCtrl) OnSaveFav(name, query string) {
 }
 
 func (c *ConnectionCtrl) Screen() interface{} {
+	defer config.LogStart("ConnectionCtrl.Screen", nil)()
+
 	return c.scr
 }
 
 func (c *ConnectionCtrl) OnTabRemove(ctrl *TableCtrl) {
+	defer config.LogStart("ConnectionCtrl.OnTabRemove", nil)()
+
 	defer c.disconnect()
 
 	for i, tabCtrl := range c.tabs {
@@ -300,6 +345,9 @@ func (c *ConnectionCtrl) OnTabRemove(ctrl *TableCtrl) {
 }
 
 func (c *ConnectionCtrl) disconnect() {
+	return
+	defer config.LogStart("ConnectionCtrl.disconnect", nil)()
+
 	if len(c.tabs) == 0 {
 		return
 	}
@@ -321,5 +369,6 @@ NEXT:
 
 		c.Engine.Disconnect(ctx)
 		delete(c.dbCtx, dbName)
+		config.Debug("dbCtx ", c.dbCtx)
 	}
 }

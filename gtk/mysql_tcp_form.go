@@ -30,6 +30,8 @@ type tcpForm struct {
 }
 
 func (f tcpForm) Init(_ *Window) (*tcpForm, error) {
+	defer config.LogStart("tcpForm.Init", nil)()
+
 	var err error
 
 	f.Grid, err = gtk.GridNew()
@@ -131,6 +133,8 @@ func (f tcpForm) Init(_ *Window) (*tcpForm, error) {
 }
 
 func (f *tcpForm) Clear() {
+	defer config.LogStart("tcpForm.Clear", nil)()
+
 	f.conn = nil
 	f.entryName.SetText("")
 	f.entryHost.SetText("")
@@ -141,10 +145,14 @@ func (f *tcpForm) Clear() {
 }
 
 func (f *tcpForm) GrabFocus() {
+	defer config.LogStart("tcpForm.GrabFocus", nil)()
+
 	f.entryName.GrabFocus()
 }
 
 func (f *tcpForm) SetConnection(conn *config.Connection) {
+	defer config.LogStart("tcpForm.SetConnection", nil)()
+
 	f.conn = conn
 	f.entryName.SetText(conn.Name)
 	f.entryHost.SetText(conn.Host)
@@ -155,6 +163,8 @@ func (f *tcpForm) SetConnection(conn *config.Connection) {
 }
 
 func (f *tcpForm) GetConnection() (*config.Connection, bool) {
+	defer config.LogStart("tcpForm.GetConnection", nil)()
+
 	var newConn bool
 	conn := f.conn
 	if conn == nil {
@@ -180,6 +190,8 @@ func (f *tcpForm) GetConnection() (*config.Connection, bool) {
 }
 
 func (f *tcpForm) onChange(fn func(form)) {
+	defer config.LogStart("tcpForm.onChange", nil)()
+
 	ff := func() { fn(f) }
 	f.entryName.Connect("key-release-event", ff)
 	f.entryHost.Connect("key-release-event", ff)

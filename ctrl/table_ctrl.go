@@ -31,6 +31,8 @@ func (tc TableCtrl) Init(
 	ctx *sqlengine.Context,
 	opts TableCtrlOpts,
 ) (*TableCtrl, error) {
+	defer config.LogStart("TableCtrl.Init", nil)()
+
 	var err error
 	tc.ctx = ctx
 	tc.ConnectionCtrl = opts.Parent
@@ -69,6 +71,8 @@ func (tc TableCtrl) Init(
 }
 
 func (tc *TableCtrl) OnTextChange(query string, cursorAt int) {
+	defer config.LogStart("TableCtrl.OnTextChange", nil)()
+
 	return
 	// TODO: need to implement sourceview completion
 	//columnMachines := driver.CompleteColumnMachines(*tc.conn)
@@ -99,10 +103,14 @@ func (tc *TableCtrl) OnTextChange(query string, cursorAt int) {
 }
 
 func (tc *TableCtrl) String() string {
+	defer config.LogStart("TableCtrl.String", nil)()
+
 	return tc.ctx.Database().Name() + "." + tc.tableDef.Name
 }
 
 func (tc *TableCtrl) OnCopyInsert(cols []driver.ColDef, values []interface{}) {
+	defer config.LogStart("TableCtrl.OnCopyInsert", nil)()
+
 	sql, err := tc.Engine.GetInsertStatement(tc.ctx, tc.tableDef.Name, cols, values)
 	if err != nil {
 		tc.window.PushStatus(err.Error())
@@ -113,6 +121,8 @@ func (tc *TableCtrl) OnCopyInsert(cols []driver.ColDef, values []interface{}) {
 }
 
 func (tc *TableCtrl) OnUpdateRecord(cols []driver.ColDef, values []interface{}) error {
+	defer config.LogStart("TableCtrl.OnUpdateRecord", nil)()
+
 	_, err := tc.Engine.UpdateField(tc.ctx, tc.tableDef.Name, cols, values)
 	if err != nil {
 		return err
@@ -123,6 +133,8 @@ func (tc *TableCtrl) OnUpdateRecord(cols []driver.ColDef, values []interface{}) 
 }
 
 func (tc *TableCtrl) OnCreateRecord(cols []driver.ColDef, values []interface{}) ([]interface{}, error) {
+	defer config.LogStart("TableCtrl.OnCreateRecord", nil)()
+
 	data, err := tc.Engine.InsertRecord(tc.ctx, tc.tableDef.Name, cols, values)
 	if err != nil {
 		return nil, err
@@ -134,6 +146,8 @@ func (tc *TableCtrl) OnCreateRecord(cols []driver.ColDef, values []interface{}) 
 }
 
 func (tc *TableCtrl) OnExecQuery(value string) {
+	defer config.LogStart("TableCtrl.OnExecQuery", nil)()
+
 	columns, data, err := tc.Engine.Query(tc.ctx, value)
 	if err != nil {
 		return
@@ -167,6 +181,8 @@ func (tc *TableCtrl) OnExecQuery(value string) {
 }
 
 func (tc *TableCtrl) OnDelete() {
+	defer config.LogStart("TableCtrl.OnDelete", nil)()
+
 	newRecord, err := tc.resultView.SelectedIsNewRecord()
 	if err != nil {
 		return
@@ -189,6 +205,8 @@ func (tc *TableCtrl) OnDelete() {
 }
 
 func (tc *TableCtrl) OnLoadTable() {
+	defer config.LogStart("TableCtrl.OnLoadTable", nil)()
+
 	cancel := tc.window.Go(func(ctx context.Context) func() {
 		switch tc.tableDef.Type {
 		case driver.TableTypeDummy:
@@ -241,6 +259,8 @@ func (tc *TableCtrl) OnLoadTable() {
 }
 
 func (tc *TableCtrl) OnRefresh() {
+	defer config.LogStart("TableCtrl.OnRefresh", nil)()
+
 	conditions, err := tc.resultView.Conditions()
 	if err != nil {
 		config.Error(err)
@@ -269,10 +289,14 @@ func (tc *TableCtrl) OnRefresh() {
 }
 
 func (tc *TableCtrl) OnApplyConditions() {
+	defer config.LogStart("TableCtrl.OnApplyConditions", nil)()
+
 	tc.OnRefresh()
 }
 
 func (tc *TableCtrl) OnCreate() {
+	defer config.LogStart("TableCtrl.OnCreate", nil)()
+
 	newRecord, err := tc.resultView.SelectedIsNewRecord()
 	if err != nil {
 		return
@@ -301,6 +325,8 @@ func (tc *TableCtrl) OnCreate() {
 }
 
 func (tc *TableCtrl) SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDef) (bool, error) {
+	defer config.LogStart("TableCtrl.SetTableDef", nil)()
+
 	if tc.ctx != nil && tc.ctx != ctx {
 		return false, nil
 	}
@@ -313,6 +339,8 @@ func (tc *TableCtrl) SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDe
 }
 
 func (tc *TableCtrl) SetQuery(ctx *sqlengine.Context, query string) (bool, error) {
+	defer config.LogStart("TableCtrl.SetQuery", nil)()
+
 	if tc.ctx != nil && tc.ctx != ctx {
 		return false, nil
 	}
@@ -322,6 +350,8 @@ func (tc *TableCtrl) SetQuery(ctx *sqlengine.Context, query string) (bool, error
 }
 
 func (tc *TableCtrl) OnTabRemove() {
+	defer config.LogStart("TableCtrl.OnTabRemove", nil)()
+
 	tc.ConnectionCtrl.OnTabRemove(tc)
 }
 

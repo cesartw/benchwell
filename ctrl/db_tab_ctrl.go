@@ -26,15 +26,9 @@ type DbTabCtrl struct {
 	}
 }
 
-func (c *DbTabCtrl) Title() string {
-	return c.currentCtrl.Title()
-}
-
-func (c *DbTabCtrl) Content() ggtk.IWidget {
-	return c.screenHolder
-}
-
 func (c DbTabCtrl) Init(p *WindowCtrl) (*DbTabCtrl, error) {
+	defer config.LogStart("DbTabCtrl.Init", nil)()
+
 	c.WindowCtrl = p
 
 	var err error
@@ -48,23 +42,45 @@ func (c DbTabCtrl) Init(p *WindowCtrl) (*DbTabCtrl, error) {
 	return &c, nil
 }
 
+func (c *DbTabCtrl) Title() string {
+	defer config.LogStart("DbTabCtrl.Title", nil)()
+
+	return c.currentCtrl.Title()
+}
+
+func (c *DbTabCtrl) Content() ggtk.IWidget {
+	defer config.LogStart("DbTabCtrl.Content", nil)()
+
+	return c.screenHolder
+}
+
 func (c *DbTabCtrl) SetWindowCtrl(i interface{}) {
+	defer config.LogStart("DbTabCtrl.SetWindowCtrl", nil)()
+
 	c.WindowCtrl = i.(*WindowCtrl)
 }
 
 func (c *DbTabCtrl) AddTab() error {
+	defer config.LogStart("DbTabCtrl.AddTab", nil)()
+
 	return c.currentCtrl.AddEmptyTab()
 }
 
 func (c *DbTabCtrl) SetFileText(s string) {
+	defer config.LogStart("DbTabCtrl.SetFileText", nil)()
+
 	c.currentCtrl.SetFileText(s)
 }
 
 func (c *DbTabCtrl) Show() {
+	defer config.LogStart("DbTabCtrl.Show", nil)()
+
 	//c.tab.Show()
 }
 
 func (c *DbTabCtrl) Removed() {
+	defer config.LogStart("DbTabCtrl.Removed", nil)()
+
 	if c.connectionCtrl != nil {
 		c.Engine.Disconnect(c.connectionCtrl.mainCtx)
 		c.window.PushStatus("Disconnected")
@@ -73,16 +89,22 @@ func (c *DbTabCtrl) Removed() {
 
 // Close delegates the close tab action ot connect or connection screen
 func (c *DbTabCtrl) Close() {
+	defer config.LogStart("DbTabCtrl.Close", nil)()
+
 	// TODO: figure out which screen is open
 	c.currentCtrl.FullClose()
 }
 
 // Close all tabs
 func (c *DbTabCtrl) FullClose() {
+	defer config.LogStart("DbTabCtrl.FullClose", nil)()
+
 	c.currentCtrl.FullClose()
 }
 
 func (c *DbTabCtrl) launchConnect() {
+	defer config.LogStart("DbTabCtrl.launchConnect", nil)()
+
 	var err error
 	c.connectCtrl, err = ConnectCtrl{}.Init(c)
 	if err != nil {
@@ -94,6 +116,8 @@ func (c *DbTabCtrl) launchConnect() {
 }
 
 func (c *DbTabCtrl) launchConnection(ctx *sqlengine.Context, conn *config.Connection) {
+	defer config.LogStart("DbTabCtrl.launchConnection", nil)()
+
 	var err error
 	c.connectionCtrl, err = ConnectionCtrl{}.Init(ctx, c, conn)
 	if err != nil {
@@ -106,6 +130,8 @@ func (c *DbTabCtrl) launchConnection(ctx *sqlengine.Context, conn *config.Connec
 }
 
 func (c *DbTabCtrl) OnConnect() {
+	defer config.LogStart("DbTabCtrl.OnConnect", nil)()
+
 	conn := c.connectCtrl.scr.GetFormConnection()
 
 	cancel := c.window.Go(func(ctx context.Context) func() {

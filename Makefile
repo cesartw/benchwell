@@ -4,8 +4,8 @@ NIGHTLY_VERSION="nightly-${DATE}${SHA}"
 
 .PHONY: install clean
 
-LDFLAGS=-ldflags "-X bitbucket.org/goreorto/benchwell/config.version=${NIGHTLY_VERSION}"
-RELEASELDFLAGS=-ldflags "-X bitbucket.org/goreorto/benchwell/config.version=${VERSION} -s -w"
+LDFLAGS=-ldflags "-X bitbucket.org/goreorto/benchwell/config.Version=${NIGHTLY_VERSION}"
+RELEASELDFLAGS=-ldflags "-X bitbucket.org/goreorto/benchwell/config.Version=${VERSION} -s -w"
 
 build:
 	@go build -mod=vendor ${LDFLAGS} -o benchwell bitbucket.org/goreorto/benchwell

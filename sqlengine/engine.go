@@ -30,6 +30,8 @@ func New() *Engine {
 }
 
 func (e *Engine) runWithTimeout(timeout time.Duration, f func(context.Context)) error {
+	defer config.LogStart("Engine.runWithTimeout", nil)()
+
 	tmctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
@@ -49,6 +51,8 @@ func (e *Engine) runWithTimeout(timeout time.Duration, f func(context.Context)) 
 
 // Connect to a database
 func (e *Engine) ConnectWithTimeout(cfg config.Connection) (*Context, error) {
+	defer config.LogStart("Engine.ConnectWithTimeout", nil)()
+
 	timeout := 2 * time.Second
 
 	var (
@@ -72,6 +76,8 @@ func (e *Engine) ConnectWithTimeout(cfg config.Connection) (*Context, error) {
 
 // Connect to a database
 func (e *Engine) Connect(ctx context.Context, cfg config.Connection) (*Context, error) {
+	defer config.LogStart("Engine.Connect", nil)()
+
 	timeout := 2 * time.Second
 	tmctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -87,6 +93,8 @@ func (e *Engine) Connect(ctx context.Context, cfg config.Connection) (*Context, 
 
 // Databases returns a list databases
 func (e *Engine) Databases(c *Context) ([]string, error) {
+	defer config.LogStart("Engine.Databases", nil)()
+
 	conn := c.Connection()
 	if conn == nil {
 		return nil, errors.New("no connection available")
@@ -102,6 +110,8 @@ func (e *Engine) Databases(c *Context) ([]string, error) {
 
 // UseDatabase ...
 func (e *Engine) UseDatabase(c *Context, dbName string) (*Context, error) {
+	defer config.LogStart("Engine.UseDatabase", nil)()
+
 	conn := c.Connection()
 	if conn == nil {
 		return c, ErrNoConnection
@@ -134,6 +144,8 @@ func (e *Engine) UseDatabase(c *Context, dbName string) (*Context, error) {
 
 // Tables ...
 func (e *Engine) Tables(c *Context) ([]driver.TableDef, error) {
+	defer config.LogStart("Engine.Tables", nil)()
+
 	if c.CacheTable != nil {
 		return c.CacheTable, nil
 	}
@@ -165,6 +177,8 @@ func (e *Engine) FetchTable(
 ) (
 	[]driver.ColDef, [][]interface{}, error,
 ) {
+	defer config.LogStart("Engine.FetchTable", nil)()
+
 	if table.Type == driver.TableTypeDummy {
 		return nil, nil, errors.New("not a table")
 	}
@@ -184,6 +198,8 @@ func (e *Engine) FetchTable(
 
 // DeleteRecord ...
 func (e *Engine) DeleteRecord(c *Context, tableName string, defs []driver.ColDef, values []interface{}) error {
+	defer config.LogStart("Engine.DeleteRecord", nil)()
+
 	conn := c.Connection()
 	if conn == nil {
 		return ErrNoConnection
@@ -205,6 +221,8 @@ func (e *Engine) UpdateFields(
 	values []interface{},
 	keycount int,
 ) (string, error) {
+	defer config.LogStart("Engine.UpdateFields", nil)()
+
 	conn := c.Connection()
 	if conn == nil {
 		return "", ErrNoConnection
@@ -225,6 +243,8 @@ func (e *Engine) UpdateField(
 	defs []driver.ColDef,
 	values []interface{},
 ) (string, error) {
+	defer config.LogStart("Engine.UpdateField", nil)()
+
 	conn := c.Connection()
 	if conn == nil {
 		return "", ErrNoConnection
@@ -244,6 +264,8 @@ func (e *Engine) ParseValue(
 	def driver.ColDef,
 	v string,
 ) (interface{}, error) {
+	defer config.LogStart("Engine.ParseValue", nil)()
+
 	conn := c.Connection()
 	if conn == nil {
 		return "", ErrNoConnection
@@ -264,6 +286,8 @@ func (e *Engine) UpdateRecord(
 	defs []driver.ColDef,
 	values, oldValues []interface{},
 ) (string, error) {
+	defer config.LogStart("Engine.UpdateRecord", nil)()
+
 	conn := c.Connection()
 	if conn == nil {
 		return "", ErrNoConnection
@@ -284,6 +308,8 @@ func (e *Engine) InsertRecord(
 	defs []driver.ColDef,
 	values []interface{},
 ) ([]interface{}, error) {
+	defer config.LogStart("Engine.InsertRecord", nil)()
+
 	conn := c.Connection()
 	if conn == nil {
 		return nil, ErrNoConnection
@@ -299,6 +325,8 @@ func (e *Engine) InsertRecord(
 
 // Disconnect ...
 func (e *Engine) Disconnect(c *Context) error {
+	defer config.LogStart("Engine.Disconnect", nil)()
+
 	conn := c.Connection()
 	if conn == nil {
 		return ErrNoConnection
@@ -308,6 +336,8 @@ func (e *Engine) Disconnect(c *Context) error {
 }
 
 func (e *Engine) Query(c *Context, query string) ([]string, [][]interface{}, error) {
+	defer config.LogStart("Engine.Query", nil)()
+
 	db := c.Database()
 	if db == nil {
 		return nil, nil, ErrNoDatabase
@@ -317,6 +347,8 @@ func (e *Engine) Query(c *Context, query string) ([]string, [][]interface{}, err
 }
 
 func (e *Engine) Execute(c *Context, query string) (string, int64, error) {
+	defer config.LogStart("Engine.Execute", nil)()
+
 	db := c.Database()
 	if db == nil {
 		return "", 0, ErrNoDatabase
@@ -326,6 +358,8 @@ func (e *Engine) Execute(c *Context, query string) (string, int64, error) {
 }
 
 func (e *Engine) GetCreateTable(c *Context, tableName string) (string, error) {
+	defer config.LogStart("Engine.GetCreateTable", nil)()
+
 	db := c.Database()
 	if db == nil {
 		return "", ErrNoDatabase
@@ -340,6 +374,8 @@ func (e *Engine) GetInsertStatement(
 	cols []driver.ColDef,
 	values []interface{},
 ) (string, error) {
+	defer config.LogStart("Engine.GetInsertStatement", nil)()
+
 	db := c.Database()
 	if db == nil {
 		return "", ErrNoDatabase
@@ -352,6 +388,8 @@ func (e *Engine) GetSelectStatement(
 	c *Context,
 	table driver.TableDef,
 ) (string, error) {
+	defer config.LogStart("Engine.GetSelectStatement", nil)()
+
 	db := c.Database()
 	if db == nil {
 		return "", ErrNoDatabase
@@ -364,6 +402,8 @@ func (e *Engine) TruncateTable(
 	c *Context,
 	table driver.TableDef,
 ) error {
+	defer config.LogStart("Engine.TruncateTable", nil)()
+
 	db := c.Database()
 	if db == nil {
 		return ErrNoDatabase
@@ -376,6 +416,8 @@ func (e *Engine) DeleteTable(
 	c *Context,
 	table driver.TableDef,
 ) error {
+	defer config.LogStart("Engine.DeleteTable", nil)()
+
 	db := c.Database()
 	if db == nil {
 		return ErrNoDatabase
@@ -386,6 +428,8 @@ func (e *Engine) DeleteTable(
 
 // Dispose ...
 func (e *Engine) Dispose() {
+	defer config.LogStart("Engine.Dispose", nil)()
+
 	for _, c := range e.connections {
 		c.Disconnect(context.Background())
 	}
@@ -394,10 +438,14 @@ func (e *Engine) Dispose() {
 // GETTERS
 
 func (e *Engine) Database(c *Context) driver.Database {
+	defer config.LogStart("Engine.Database", nil)()
+
 	return c.Database()
 }
 
 func (e *Engine) timeoutErr(err error, timeout time.Duration) error {
+	defer config.LogStart("Engine.timeoutErr", nil)()
+
 	if err == nil {
 		return nil
 	}

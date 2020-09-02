@@ -76,6 +76,8 @@ func (c ConnectionScreen) Init(
 	w *Window,
 	ctrl connectionScreenCtrl,
 ) (*ConnectionScreen, error) {
+	defer config.LogStart("ConnectionScreen.Init", nil)()
+
 	var err error
 	c.w = w
 	c.ctrl = ctrl
@@ -262,6 +264,8 @@ func (c ConnectionScreen) Init(
 }
 
 func (c *ConnectionScreen) onTabReorder(_ *gtk.Notebook, _ *gtk.Widget, landing int) {
+	defer config.LogStart("ConnectionScreen.onTabReorder", nil)()
+
 	// https://play.golang.com/p/YMfQouxHuvr
 	movingTab := c.tabs[c.tabIndex]
 
@@ -277,19 +281,27 @@ func (c *ConnectionScreen) onTabReorder(_ *gtk.Notebook, _ *gtk.Widget, landing 
 }
 
 func (c *ConnectionScreen) Log(s string) {
+	defer config.LogStart("ConnectionScreen.Log", nil)()
+
 	c.logview.PrependItem(Stringer(s))
 }
 
 // TODO: This sucks
 func (c *ConnectionScreen) CtrlMod() bool {
+	defer config.LogStart("ConnectionScreen.CtrlMod", nil)()
+
 	return c.tableList.CtrlMod()
 }
 
 func (c *ConnectionScreen) CurrentTabIndex() int {
+	defer config.LogStart("ConnectionScreen.CurrentTabIndex", nil)()
+
 	return c.tabber.GetCurrentPage()
 }
 
 func (c *ConnectionScreen) SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDef) (bool, error) {
+	defer config.LogStart("ConnectionScreen.SetTableDef", nil)()
+
 	if c.tabber.GetCurrentPage() == -1 {
 		return false, nil
 	}
@@ -298,6 +310,8 @@ func (c *ConnectionScreen) SetTableDef(ctx *sqlengine.Context, tableDef driver.T
 }
 
 func (c *ConnectionScreen) SetQuery(ctx *sqlengine.Context, query string) (bool, error) {
+	defer config.LogStart("ConnectionScreen.SetQuery", nil)()
+
 	if c.tabber.GetCurrentPage() == -1 {
 		return false, nil
 	}
@@ -314,6 +328,8 @@ func (c *ConnectionScreen) AddTab(
 	},
 	switchNow bool,
 ) error {
+	defer config.LogStart("ConnectionScreen.AddTab", nil)()
+
 	c.tabber.AppendPage(ctab.content, ctab.header)
 	c.tabber.SetTabReorderable(ctab.content, true)
 
@@ -337,6 +353,8 @@ func (c *ConnectionScreen) AddTab(
 }
 
 func (c *ConnectionScreen) Close() bool {
+	defer config.LogStart("ConnectionScreen.Close", nil)()
+
 	if c.tabber.GetCurrentPage() == -1 {
 		return false
 	}
@@ -346,12 +364,16 @@ func (c *ConnectionScreen) Close() bool {
 }
 
 func (c *ConnectionScreen) CloseAll() {
+	defer config.LogStart("ConnectionScreen.CloseAll", nil)()
+
 	for _, tab := range c.tabs {
 		tab.btn.Emit("clicked")
 	}
 }
 
 func (c *ConnectionScreen) SetDatabases(dbs []string) {
+	defer config.LogStart("ConnectionScreen.SetDatabases", nil)()
+
 	c.databaseNames = dbs
 
 	for _, name := range dbs {
@@ -361,10 +383,14 @@ func (c *ConnectionScreen) SetDatabases(dbs []string) {
 }
 
 func (c *ConnectionScreen) SetTables(tables driver.TableDefs) {
+	defer config.LogStart("ConnectionScreen.SetTables", nil)()
+
 	c.tableList.UpdateItems(tables.ToStringer())
 }
 
 func (c *ConnectionScreen) SetActiveDatabase(dbName string) {
+	defer config.LogStart("ConnectionScreen.SetActiveDatabase", nil)()
+
 	for i, db := range c.databaseNames {
 		if db == dbName {
 			c.activeDatabase.Set(dbName)
@@ -375,6 +401,8 @@ func (c *ConnectionScreen) SetActiveDatabase(dbName string) {
 }
 
 func (c *ConnectionScreen) ActiveDatabase() (string, bool) {
+	defer config.LogStart("ConnectionScreen.ActiveDatabase", nil)()
+
 	if c.activeDatabase.Get() == nil {
 		return "", false
 	}
@@ -382,6 +410,8 @@ func (c *ConnectionScreen) ActiveDatabase() (string, bool) {
 }
 
 func (c *ConnectionScreen) ActiveTable() (driver.TableDef, bool) {
+	defer config.LogStart("ConnectionScreen.ActiveTable", nil)()
+
 	i, ok := c.tableList.SelectedItem()
 	if !ok {
 		return driver.TableDef{}, false
@@ -391,6 +421,8 @@ func (c *ConnectionScreen) ActiveTable() (driver.TableDef, bool) {
 }
 
 func (c *ConnectionScreen) ShowTableSchemaModal(tableName, schema string) {
+	defer config.LogStart("ConnectionScreen.ShowTableSchemaModal", nil)()
+
 	modal, err := gtk.DialogNewWithButtons(fmt.Sprintf("Table %s", tableName), c.w,
 		gtk.DIALOG_DESTROY_WITH_PARENT|gtk.DIALOG_MODAL,
 		[]interface{}{"Ok", gtk.RESPONSE_ACCEPT},
@@ -431,6 +463,8 @@ func (c *ConnectionScreen) ShowTableSchemaModal(tableName, schema string) {
 }
 
 func (c *ConnectionScreen) SelectedTable() (string, bool) {
+	defer config.LogStart("ConnectionScreen.SelectedTable", nil)()
+
 	i, ok := c.tableList.SelectedItem()
 	if !ok {
 		return "", ok
@@ -439,6 +473,8 @@ func (c *ConnectionScreen) SelectedTable() (string, bool) {
 }
 
 func (c *ConnectionScreen) onTableListButtonPress(_ *gtk.ListBox, e *gdk.Event) {
+	defer config.LogStart("ConnectionScreen.onTableListButtonPress", nil)()
+
 	keyEvent := gdk.EventButtonNewFromEvent(e)
 
 	if keyEvent.Button() != gdk.BUTTON_SECONDARY {
@@ -450,6 +486,8 @@ func (c *ConnectionScreen) onTableListButtonPress(_ *gtk.ListBox, e *gdk.Event) 
 }
 
 func (c *ConnectionScreen) onLogViewButtonPress(_ *gtk.ListBox, e *gdk.Event) {
+	defer config.LogStart("ConnectionScreen.onLogViewButtonPress", nil)()
+
 	keyEvent := gdk.EventButtonNewFromEvent(e)
 
 	if keyEvent.Button() != gdk.BUTTON_SECONDARY {
@@ -461,11 +499,15 @@ func (c *ConnectionScreen) onLogViewButtonPress(_ *gtk.ListBox, e *gdk.Event) {
 }
 
 func (c *ConnectionScreen) onDatabaseSelected() {
+	defer config.LogStart("ConnectionScreen.onDatabaseSelected", nil)()
+
 	dbName := c.dbCombo.GetActiveText()
 	c.activeDatabase.Set(dbName)
 }
 
 func (c *ConnectionScreen) initTableMenu() error {
+	defer config.LogStart("ConnectionScreen.initTableMenu", nil)()
+
 	var err error
 	c.tablesMenu.tableMenu, err = gtk.MenuNew()
 	if err != nil {
@@ -532,6 +574,8 @@ func (c *ConnectionScreen) initTableMenu() error {
 }
 
 func (c *ConnectionScreen) initLogMenu() error {
+	defer config.LogStart("ConnectionScreen.initLogMenu", nil)()
+
 	var err error
 	c.logMenu.logMenu, err = gtk.MenuNew()
 	if err != nil {
@@ -555,6 +599,8 @@ func (c *ConnectionScreen) initLogMenu() error {
 }
 
 func (c *ConnectionScreen) onSearch(e *gtk.SearchEntry) {
+	defer config.LogStart("ConnectionScreen.onSearch", nil)()
+
 	buff, err := e.GetBuffer()
 	if err != nil {
 		return
@@ -573,6 +619,8 @@ func (c *ConnectionScreen) onSearch(e *gtk.SearchEntry) {
 }
 
 func (c *ConnectionScreen) onClearLog() {
+	defer config.LogStart("ConnectionScreen.onClearLog", nil)()
+
 	c.logview.Clear()
 }
 
@@ -593,6 +641,8 @@ type ConnectionTabOpts struct {
 }
 
 func (c ConnectionTab) Init(opts ConnectionTabOpts) (*ConnectionTab, error) {
+	defer config.LogStart("ConnectionTab.Init", nil)()
+
 	var err error
 
 	c.database = opts.Database
@@ -630,5 +680,7 @@ func (c ConnectionTab) Init(opts ConnectionTabOpts) (*ConnectionTab, error) {
 }
 
 func (c *ConnectionTab) SetTitle(title string) {
+	defer config.LogStart("ConnectionTab.SetTitle", nil)()
+
 	c.label.SetText(title)
 }

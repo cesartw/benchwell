@@ -18,6 +18,8 @@ type HTTPTabCtrl struct {
 }
 
 func (c HTTPTabCtrl) Init(p *WindowCtrl) (*HTTPTabCtrl, error) {
+	defer config.LogStart("HTTPTabCtrl.Init", nil)()
+
 	c.WindowCtrl = p
 	c.client = &http.Client{}
 
@@ -31,6 +33,8 @@ func (c HTTPTabCtrl) Init(p *WindowCtrl) (*HTTPTabCtrl, error) {
 }
 
 func (c *HTTPTabCtrl) OnCollectionSelected() {
+	defer config.LogStart("HTTPTabCtrl.OnCollectionSelected", nil)()
+
 	id, err := c.scr.GetSelectedCollectionID()
 	if err != nil {
 		c.window.PushStatus("getting collection: " + err.Error())
@@ -67,6 +71,8 @@ func (c *HTTPTabCtrl) OnCollectionSelected() {
 }
 
 func (c *HTTPTabCtrl) OnLoadItem() {
+	defer config.LogStart("HTTPTabCtrl.OnLoadItem", nil)()
+
 	itemID, path, err := c.scr.GetSelectedItemID()
 	if err != nil {
 		c.window.PushStatus("getting iter: " + err.Error())
@@ -104,9 +110,19 @@ func (c *HTTPTabCtrl) OnLoadItem() {
 	}
 }
 
-func (c *HTTPTabCtrl) Save()   {}
-func (c *HTTPTabCtrl) SaveAs() {}
+func (c *HTTPTabCtrl) Save() {
+	defer config.LogStart("HTTPTabCtrl.Save", nil)()
+
+}
+
+func (c *HTTPTabCtrl) SaveAs() {
+	defer config.LogStart("HTTPTabCtrl.SaveAs", nil)()
+
+}
+
 func (c *HTTPTabCtrl) Send() {
+	defer config.LogStart("HTTPTabCtrl.Send", nil)()
+
 	req, err := c.scr.GetRequest()
 	if err != nil {
 		c.window.PushStatus("getting request: ", err.Error())
@@ -143,10 +159,39 @@ func (c *HTTPTabCtrl) Send() {
 	c.scr.SetResponse(string(b), resp.Header, duration)
 }
 
-func (c *HTTPTabCtrl) Close()                    {}
-func (c *HTTPTabCtrl) Removed()                  {}
-func (c *HTTPTabCtrl) Title() string             { return "HTTP" }
-func (c *HTTPTabCtrl) Content() ggtk.IWidget     { return c.scr }
-func (c *HTTPTabCtrl) SetFileText(string)        {}
-func (c *HTTPTabCtrl) OnCloseTab()               {}
-func (c *HTTPTabCtrl) SetWindowCtrl(interface{}) {}
+func (c *HTTPTabCtrl) Close() {
+	defer config.LogStart("HTTPTabCtrl.Close", nil)()
+
+}
+
+func (c *HTTPTabCtrl) Removed() {
+	defer config.LogStart("HTTPTabCtrl.Removed", nil)()
+
+}
+
+func (c *HTTPTabCtrl) Title() string {
+	defer config.LogStart("HTTPTabCtrl.Title", nil)()
+
+	return "HTTP"
+}
+
+func (c *HTTPTabCtrl) Content() ggtk.IWidget {
+	defer config.LogStart("HTTPTabCtrl.Content", nil)()
+
+	return c.scr
+}
+
+func (c *HTTPTabCtrl) SetFileText(string) {
+	defer config.LogStart("HTTPTabCtrl.SetFileText", nil)()
+
+}
+
+func (c *HTTPTabCtrl) OnCloseTab() {
+	defer config.LogStart("HTTPTabCtrl.OnCloseTab", nil)()
+
+}
+
+func (c *HTTPTabCtrl) SetWindowCtrl(interface{}) {
+	defer config.LogStart("HTTPTabCtrl.SetWindowCtrl", nil)()
+
+}

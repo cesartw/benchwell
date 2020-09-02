@@ -1,6 +1,7 @@
 package gtk
 
 import (
+	"bitbucket.org/goreorto/benchwell/config"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 )
@@ -34,6 +35,8 @@ type ToolTabOptions struct {
 }
 
 func (t ToolTab) Init(w *Window) (*ToolTab, error) {
+	defer config.LogStart("ToolTab.Init", nil)()
+
 	var err error
 	t.w = w
 
@@ -75,10 +78,14 @@ func (t *ToolTab) SetWindowCtrl(
 		OnCloseTab()
 	},
 ) {
+	defer config.LogStart("ToolTab.SetWindowCtrl", nil)()
+
 	t.tabCtrl.SetWindowCtrl(ctrl)
 }
 
 func (t *ToolTab) SetContent(opts ToolTabOptions) {
+	defer config.LogStart("ToolTab.SetContent", nil)()
+
 	if opts.Ctrl != nil {
 		t.tabCtrl = opts.Ctrl
 	}
@@ -107,13 +114,19 @@ func (t *ToolTab) SetContent(opts ToolTabOptions) {
 }
 
 func (t *ToolTab) SetTitle(title string) {
+	defer config.LogStart("ToolTab.SetTitle", nil)()
+
 	t.label.SetText(title)
 }
 
 func (t *ToolTab) Label() *gtk.Box {
+	defer config.LogStart("ToolTab.Label", nil)()
+
 	return t.header
 }
 
 func (t *ToolTab) Content() *gtk.Box {
+	defer config.LogStart("ToolTab.Content", nil)()
+
 	return t.content
 }

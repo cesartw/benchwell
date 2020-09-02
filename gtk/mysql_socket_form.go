@@ -25,6 +25,8 @@ type socketForm struct {
 }
 
 func (f socketForm) Init(_ *Window) (*socketForm, error) {
+	defer config.LogStart("socketForm.Init", nil)()
+
 	var err error
 
 	f.Grid, err = gtk.GridNew()
@@ -111,6 +113,8 @@ func (f socketForm) Init(_ *Window) (*socketForm, error) {
 }
 
 func (f *socketForm) Clear() {
+	defer config.LogStart("socketForm.Clear", nil)()
+
 	f.conn = nil
 	f.entryName.SetText("")
 	f.entrySocket.SetText("")
@@ -120,10 +124,14 @@ func (f *socketForm) Clear() {
 }
 
 func (f *socketForm) GrabFocus() {
+	defer config.LogStart("socketForm.GrabFocus", nil)()
+
 	f.entryName.GrabFocus()
 }
 
 func (f *socketForm) SetConnection(conn *config.Connection) {
+	defer config.LogStart("socketForm.SetConnection", nil)()
+
 	f.conn = conn
 	f.entryName.SetText(conn.Name)
 	f.entrySocket.SetText(conn.Socket)
@@ -133,6 +141,8 @@ func (f *socketForm) SetConnection(conn *config.Connection) {
 }
 
 func (f *socketForm) GetConnection() (*config.Connection, bool) {
+	defer config.LogStart("socketForm.GetConnection", nil)()
+
 	var newConn bool
 	conn := f.conn
 	if conn == nil {
@@ -151,6 +161,8 @@ func (f *socketForm) GetConnection() (*config.Connection, bool) {
 }
 
 func (f *socketForm) onChange(fn func(form)) {
+	defer config.LogStart("socketForm.onChange", nil)()
+
 	ff := func() { fn(f) }
 	f.entryName.Connect("key-release-event", ff)
 	f.entrySocket.Connect("key-release-event", ff)

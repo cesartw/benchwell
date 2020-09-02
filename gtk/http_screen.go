@@ -64,6 +64,8 @@ type httpScreenCtrl interface {
 }
 
 func (h HTTPScreen) Init(w *Window, ctrl httpScreenCtrl) (*HTTPScreen, error) {
+	defer config.LogStart("HTTPScreen.Init", nil)()
+
 	var err error
 
 	h.w = w
@@ -121,22 +123,32 @@ func (h HTTPScreen) Init(w *Window, ctrl httpScreenCtrl) (*HTTPScreen, error) {
 }
 
 func (h *HTTPScreen) GetSelectedItemID() (int64, string, error) {
+	defer config.LogStart("HTTPScreen.GetSelectedItemID", nil)()
+
 	return h.collection.GetSelectedItemID()
 }
 
 func (h *HTTPScreen) GetSelectedCollectionID() (int64, error) {
+	defer config.LogStart("HTTPScreen.GetSelectedCollectionID", nil)()
+
 	return h.collection.GetSelectedCollectionID()
 }
 
 func (h *HTTPScreen) LoadCollection(items []*config.HTTPItem) error {
+	defer config.LogStart("HTTPScreen.LoadCollection", nil)()
+
 	return h.collection.LoadCollection(items)
 }
 
 func (h *HTTPScreen) LoadFolder(at string, item *config.HTTPItem) error {
+	defer config.LogStart("HTTPScreen.LoadFolder", nil)()
+
 	return h.collection.LoadFolder(at, item)
 }
 
 func (h *HTTPScreen) buildAddressBar() (*gtk.Box, error) {
+	defer config.LogStart("HTTPScreen.buildAddressBar", nil)()
+
 	box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 5)
 	if err != nil {
 		return nil, err
@@ -181,6 +193,8 @@ func (h *HTTPScreen) buildAddressBar() (*gtk.Box, error) {
 }
 
 func (h *HTTPScreen) buildRequest() (*gtk.Notebook, error) {
+	defer config.LogStart("HTTPScreen.buildRequest", nil)()
+
 	nb, err := gtk.NotebookNew()
 	if err != nil {
 		return nil, err
@@ -315,6 +329,8 @@ func (h *HTTPScreen) buildRequest() (*gtk.Notebook, error) {
 }
 
 func (h *HTTPScreen) buildResponse() (*gtk.Box, error) {
+	defer config.LogStart("HTTPScreen.buildResponse", nil)()
+
 	box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if err != nil {
 		return nil, err
@@ -380,6 +396,8 @@ func (h *HTTPScreen) buildResponse() (*gtk.Box, error) {
 }
 
 func (h *HTTPScreen) onAddressChange() {
+	defer config.LogStart("HTTPScreen.onAddressChange", nil)()
+
 	if h.buildingAddr {
 		return
 	}
@@ -423,6 +441,8 @@ type Request struct {
 }
 
 func (h *HTTPScreen) GetRequest() (*Request, error) {
+	defer config.LogStart("HTTPScreen.GetRequest", nil)()
+
 	address, err := h.address.GetText()
 	if err != nil {
 		return nil, err
@@ -465,6 +485,8 @@ func (h *HTTPScreen) GetRequest() (*Request, error) {
 }
 
 func (h *HTTPScreen) SetResponse(body string, headers http.Header, duration time.Duration) {
+	defer config.LogStart("HTTPScreen.SetResponse", nil)()
+
 	switch strings.Split(headers.Get("Content-Type"), ";")[0] {
 	case "application/json", "text/json":
 		err := h.response.SetLanguage("json")
@@ -500,6 +522,8 @@ func (h *HTTPScreen) SetResponse(body string, headers http.Header, duration time
 }
 
 func (h *HTTPScreen) SetRequest(req *config.HTTPItem) {
+	defer config.LogStart("HTTPScreen.SetResponse", nil)()
+
 	h.address.SetText(req.URL)
 	h.method.SetActiveID(strings.ToLower(req.Method))
 	h.headers.Clear()
@@ -522,6 +546,8 @@ type KeyValue struct {
 }
 
 func (c KeyValue) Init() (*KeyValue, error) {
+	defer config.LogStart("KeyValue.Init", nil)()
+
 	var err error
 	c.key, err = gtk.EntryNew()
 	if err != nil {
@@ -560,6 +586,8 @@ func (c KeyValue) Init() (*KeyValue, error) {
 }
 
 func (c *KeyValue) Get() (string, string, error) {
+	defer config.LogStart("KeyValue.Get", nil)()
+
 	key, err := c.key.GetText()
 	if err != nil {
 		return "", "", err
@@ -579,6 +607,8 @@ type KeyValues struct {
 }
 
 func (c KeyValues) Init(onChange func()) (*KeyValues, error) {
+	defer config.LogStart("KeyValues.Init", nil)()
+
 	var err error
 	c.onChange = onChange
 	c.Box, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
@@ -590,6 +620,8 @@ func (c KeyValues) Init(onChange func()) (*KeyValues, error) {
 }
 
 func (c *KeyValues) AddEmpty() error {
+	defer config.LogStart("KeyValues.AddEmpty", nil)()
+
 	_, err := c.add()
 	if err != nil {
 		return err
@@ -599,6 +631,8 @@ func (c *KeyValues) AddEmpty() error {
 }
 
 func (c *KeyValues) AddWithValues(key, value string, enabled bool) error {
+	defer config.LogStart("KeyValues.AddWithValues", nil)()
+
 	for _, kv := range c.keyvalues {
 		s, _ := kv.key.GetText()
 		if s != "" {
@@ -622,6 +656,8 @@ func (c *KeyValues) AddWithValues(key, value string, enabled bool) error {
 }
 
 func (c *KeyValues) add() (*KeyValue, error) {
+	defer config.LogStart("KeyValues.add", nil)()
+
 	kv, err := KeyValue{}.Init()
 	if err != nil {
 		return kv, err
@@ -651,6 +687,8 @@ func (c *KeyValues) add() (*KeyValue, error) {
 }
 
 func (c *KeyValues) onBlur(kv *KeyValue) func() {
+	defer config.LogStart("KeyValues.onBlur", nil)()
+
 	return func() {
 		c.Box.Remove(kv)
 
@@ -668,6 +706,8 @@ func (c *KeyValues) onBlur(kv *KeyValue) func() {
 }
 
 func (c *KeyValues) Clear() {
+	defer config.LogStart("KeyValues.Clear", nil)()
+
 	for _, kv := range c.keyvalues {
 		c.Remove(kv)
 	}
@@ -676,6 +716,8 @@ func (c *KeyValues) Clear() {
 }
 
 func (c KeyValues) Collect() (map[string][]string, error) {
+	defer config.LogStart("KeyValues.Collect", nil)()
+
 	keyvalues := map[string][]string{}
 
 	for _, kv := range c.keyvalues {

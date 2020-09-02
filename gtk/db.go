@@ -1,6 +1,9 @@
 package gtk
 
-import "github.com/gotk3/gotk3/gtk"
+import (
+	"bitbucket.org/goreorto/benchwell/config"
+	"github.com/gotk3/gotk3/gtk"
+)
 
 type DB struct {
 	*gtk.Box
@@ -9,6 +12,8 @@ type DB struct {
 }
 
 func (d DB) Init(w *Window) (*DB, error) {
+	defer config.LogStart("DB.Init", nil)()
+
 	var err error
 	d.w = w
 	d.Box, err = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
@@ -21,6 +26,8 @@ func (d DB) Init(w *Window) (*DB, error) {
 }
 
 func (d *DB) SetContent(w gtk.IWidget) {
+	defer config.LogStart("DB.SetContent", nil)()
+
 	if d.content != nil {
 		d.Remove(d.content)
 	}

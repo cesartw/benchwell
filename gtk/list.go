@@ -36,6 +36,8 @@ type listCtrl interface {
 }
 
 func (list List) Init(_ *Window, opts *ListOptions, ctrl listCtrl) (*List, error) {
+	defer config.LogStart("List.Init", nil)()
+
 	var err error
 	list.options = opts
 	list.ctrl = ctrl
@@ -85,10 +87,14 @@ func (list List) Init(_ *Window, opts *ListOptions, ctrl listCtrl) (*List, error
 }
 
 func (u *List) CtrlMod() bool {
+	defer config.LogStart("List.CtrlMod", nil)()
+
 	return u.ctrlMod
 }
 
 func (u *List) ClearSelection() {
+	defer config.LogStart("List.ClearSelection", nil)()
+
 	u.UnselectAll()
 	u.activeItem.Set(nil)
 	u.activeItemIndex.Set(nil)
@@ -97,6 +103,8 @@ func (u *List) ClearSelection() {
 }
 
 func (u *List) Clear() {
+	defer config.LogStart("List.Clear", nil)()
+
 	u.ClearSelection()
 	for _, row := range u.rows {
 		u.Remove(row)
@@ -107,6 +115,8 @@ func (u *List) Clear() {
 }
 
 func (u *List) onRightClick(_ *gtk.ListBox, e *gdk.Event) {
+	defer config.LogStart("List.onRightClick", nil)()
+
 	keyEvent := gdk.EventButtonNewFromEvent(e)
 
 	if keyEvent.Button() != gdk.BUTTON_SECONDARY {
@@ -119,10 +129,14 @@ func (u *List) onRightClick(_ *gtk.ListBox, e *gdk.Event) {
 }
 
 func (u *List) OnButtonPress(f interface{}) {
+	defer config.LogStart("List.OnButtonPress", nil)()
+
 	u.ListBox.Connect("button-press-event", f)
 }
 
 func (u *List) UpdateItems(names []fmt.Stringer) error {
+	defer config.LogStart("List.UpdateItems", nil)()
+
 	u.ListBox.GetChildren().Foreach(func(item interface{}) {
 		u.ListBox.Remove(item.(gtk.IWidget))
 	})
@@ -141,10 +155,14 @@ func (u *List) UpdateItems(names []fmt.Stringer) error {
 }
 
 func (u *List) AppendItem(name fmt.Stringer) (*gtk.ListBoxRow, error) {
+	//defer config.LogStart("List.AppendItem", nil)()
+
 	return u.appendItem(name, true)
 }
 
 func (u *List) appendItem(name fmt.Stringer, addToStore bool) (*gtk.ListBoxRow, error) {
+	//defer config.LogStart("List.appendItem", nil)()
+
 	row, err := u.buildItem(name, addToStore)
 	if err != nil {
 		return nil, err
@@ -160,10 +178,14 @@ func (u *List) appendItem(name fmt.Stringer, addToStore bool) (*gtk.ListBoxRow, 
 }
 
 func (u *List) PrependItem(name fmt.Stringer) (*gtk.ListBoxRow, error) {
+	//defer config.LogStart("List.PrependItem", nil)()
+
 	return u.prependItem(name, true)
 }
 
 func (u *List) prependItem(name fmt.Stringer, addToStore bool) (*gtk.ListBoxRow, error) {
+	//defer config.LogStart("List.prependItem", nil)()
+
 	row, err := u.buildItem(name, addToStore)
 	if err != nil {
 		return nil, err
@@ -179,6 +201,8 @@ func (u *List) prependItem(name fmt.Stringer, addToStore bool) (*gtk.ListBoxRow,
 }
 
 func (u *List) buildItem(name fmt.Stringer, appendToStore bool) (*gtk.ListBoxRow, error) {
+	//defer config.LogStart("List.buildItem", nil)()
+
 	label, err := gtk.LabelNew(name.String())
 	if err != nil {
 		return nil, err
@@ -231,11 +255,15 @@ func (u *List) buildItem(name fmt.Stringer, appendToStore bool) (*gtk.ListBoxRow
 }
 
 func (u *List) onRowActivated(_ *gtk.ListBox, row *gtk.ListBoxRow) {
+	defer config.LogStart("List.onRowActivated", nil)()
+
 	u.activeItem.Set(u.options.Names[row.GetIndex()])
 	u.activeItemIndex.Set(row.GetIndex())
 }
 
 func (u *List) onRowSelected(_ *gtk.ListBox, row *gtk.ListBoxRow) {
+	defer config.LogStart("List.onRowSelected", nil)()
+
 	if row != nil && row.GetIndex() >= 0 {
 		u.selectedItem.Set(u.options.Names[row.GetIndex()])
 		u.selectedItemIndex.Set(row.GetIndex())
@@ -243,6 +271,8 @@ func (u *List) onRowSelected(_ *gtk.ListBox, row *gtk.ListBoxRow) {
 }
 
 func (u *List) ActiveItem() (string, bool) {
+	defer config.LogStart("List.ActiveItem", nil)()
+
 	v := u.activeItem.Get()
 	if v == nil {
 		return "", false
@@ -253,6 +283,8 @@ func (u *List) ActiveItem() (string, bool) {
 }
 
 func (u *List) ActiveItemIndex() (int, bool) {
+	defer config.LogStart("List.ActiveItemIndex", nil)()
+
 	v := u.activeItemIndex.Get()
 	if v == nil {
 		return 0, false
@@ -261,7 +293,10 @@ func (u *List) ActiveItemIndex() (int, bool) {
 
 	return i, ok
 }
+
 func (u *List) SelectedItem() (fmt.Stringer, bool) {
+	defer config.LogStart("List.SelectedItem", nil)()
+
 	v := u.selectedItem.Get()
 	if v == nil {
 		return nil, false
@@ -271,6 +306,8 @@ func (u *List) SelectedItem() (fmt.Stringer, bool) {
 }
 
 func (u *List) SelectedItemIndex() (int, bool) {
+	defer config.LogStart("List.SelectedItemIndex", nil)()
+
 	v := u.selectedItemIndex.Get()
 	if v == nil {
 		return 0, false
@@ -281,6 +318,8 @@ func (u *List) SelectedItemIndex() (int, bool) {
 }
 
 func (u *List) SetFilterRegex(rg *regexp.Regexp) {
+	defer config.LogStart("List.SetFilterRegex", nil)()
+
 	u.options.FilterRegex = rg
 	u.InvalidateFilter()
 }

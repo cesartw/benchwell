@@ -24,6 +24,8 @@ type sqliteForm struct {
 }
 
 func (f sqliteForm) Init(w *Window) (*sqliteForm, error) {
+	defer config.LogStart("sqliteForm.Init", nil)()
+
 	var err error
 
 	f.Grid, err = gtk.GridNew()
@@ -73,16 +75,22 @@ func (f sqliteForm) Init(w *Window) (*sqliteForm, error) {
 }
 
 func (f *sqliteForm) Clear() {
+	defer config.LogStart("sqliteForm.Clear", nil)()
+
 	f.conn = nil
 	f.entryName.SetText("")
 	f.filename = ""
 }
 
 func (f *sqliteForm) GrabFocus() {
+	defer config.LogStart("sqliteForm.GrabFocus", nil)()
+
 	f.entryName.GrabFocus()
 }
 
 func (f *sqliteForm) SetConnection(conn *config.Connection) {
+	defer config.LogStart("sqliteForm.SetConnection", nil)()
+
 	f.conn = conn
 	f.entryName.SetText(conn.Name)
 	f.btnFile.SelectFilename(conn.File)
@@ -90,6 +98,8 @@ func (f *sqliteForm) SetConnection(conn *config.Connection) {
 }
 
 func (f *sqliteForm) GetConnection() (*config.Connection, bool) {
+	defer config.LogStart("sqliteForm.GetConnection", nil)()
+
 	var newConn bool
 	conn := f.conn
 	if conn == nil {
@@ -105,11 +115,15 @@ func (f *sqliteForm) GetConnection() (*config.Connection, bool) {
 }
 
 func (f *sqliteForm) onChange(fn func(form)) {
+	defer config.LogStart("sqliteForm.onChange", nil)()
+
 	ff := func() { fn(f) }
 	f.entryName.Connect("key-release-event", ff)
 	f.fileChooser.Connect("file-activated", ff)
 }
 
 func (f *sqliteForm) onFileSet() {
+	defer config.LogStart("sqliteForm.onFileSet", nil)()
+
 	f.filename = f.fileChooser.GetFilename()
 }

@@ -57,6 +57,8 @@ type connectScreenCtrl interface {
 }
 
 func (c ConnectScreen) Init(w *Window, ctrl connectScreenCtrl) (*ConnectScreen, error) {
+	defer config.LogStart("ConnectScreen.Init", nil)()
+
 	var err error
 	c.w = w
 	c.ctrl = ctrl
@@ -198,6 +200,8 @@ func (c ConnectScreen) Init(w *Window, ctrl connectScreenCtrl) (*ConnectScreen, 
 }
 
 func (c *ConnectScreen) onConnectListButtonPress(_ *gtk.ListBox, e *gdk.Event) {
+	defer config.LogStart("ConnectScreen.onConnectListButtonPress", nil)()
+
 	keyEvent := gdk.EventButtonNewFromEvent(e)
 
 	if keyEvent.Button() != gdk.BUTTON_SECONDARY {
@@ -209,6 +213,8 @@ func (c *ConnectScreen) onConnectListButtonPress(_ *gtk.ListBox, e *gdk.Event) {
 }
 
 func (c *ConnectScreen) initMenu() error {
+	defer config.LogStart("ConnectScreen.initMenu", nil)()
+
 	var err error
 	c.contextMenu, err = gtk.MenuNew()
 	if err != nil {
@@ -249,6 +255,8 @@ func (c *ConnectScreen) initMenu() error {
 }
 
 func (c *ConnectScreen) buildTcpForm() (*gtk.Label, *tcpForm, error) {
+	defer config.LogStart("ConnectScreen.buildTcpForm", nil)()
+
 	label, err := gtk.LabelNew("TCP/IP")
 	if err != nil {
 		return nil, nil, err
@@ -266,6 +274,8 @@ func (c *ConnectScreen) buildTcpForm() (*gtk.Label, *tcpForm, error) {
 }
 
 func (c *ConnectScreen) buildSocketForm() (*gtk.Label, *socketForm, error) {
+	defer config.LogStart("ConnectScreen.buildSocketForm", nil)()
+
 	label, err := gtk.LabelNew("Socket")
 	if err != nil {
 		return nil, nil, err
@@ -283,6 +293,8 @@ func (c *ConnectScreen) buildSocketForm() (*gtk.Label, *socketForm, error) {
 }
 
 func (c *ConnectScreen) buildSshForm() (*gtk.Label, *sshForm, error) {
+	defer config.LogStart("ConnectScreen.buildSshForm", nil)()
+
 	label, err := gtk.LabelNew("SSH")
 	if err != nil {
 		return nil, nil, err
@@ -300,6 +312,8 @@ func (c *ConnectScreen) buildSshForm() (*gtk.Label, *sshForm, error) {
 }
 
 func (c *ConnectScreen) SetConnections(connections []*config.Connection) {
+	defer config.LogStart("ConnectScreen.SetConnections", nil)()
+
 	//c.connections = connections
 	names := make([]string, len(connections))
 	for i, con := range connections {
@@ -310,6 +324,8 @@ func (c *ConnectScreen) SetConnections(connections []*config.Connection) {
 }
 
 func (c *ConnectScreen) ClearForm() {
+	defer config.LogStart("ConnectScreen.ClearForm", nil)()
+
 	c.forms.active.Clear()
 	c.btnConnect.SetSensitive(false)
 	c.btnTest.SetSensitive(false)
@@ -317,20 +333,28 @@ func (c *ConnectScreen) ClearForm() {
 }
 
 func (c *ConnectScreen) Connecting(cancel func()) {
+	defer config.LogStart("ConnectScreen.Connecting", nil)()
+
 	c.formOverlay.Run(cancel)
 	c.ConnectionList.SetSensitive(false)
 }
 
 func (c *ConnectScreen) CancelConnecting() {
+	defer config.LogStart("ConnectScreen.CancelConnecting", nil)()
+
 	c.formOverlay.Stop()
 	c.ConnectionList.SetSensitive(true)
 }
 
 func (c *ConnectScreen) FocusForm() {
+	defer config.LogStart("ConnectScreen.FocusForm", nil)()
+
 	c.forms.active.GrabFocus()
 }
 
 func (c *ConnectScreen) SetConnection(conn *config.Connection) {
+	defer config.LogStart("ConnectScreen.SetConnection", nil)()
+
 	c.forms.mysql.tcpForm.Clear()
 	c.forms.mysql.socketForm.Clear()
 	c.forms.mysql.sshForm.Clear()
@@ -368,17 +392,20 @@ func (c *ConnectScreen) SetConnection(conn *config.Connection) {
 }
 
 func (c *ConnectScreen) ActiveConnectionIndex() int {
+	defer config.LogStart("ConnectScreen.ActiveConnectionIndex", nil)()
+
 	return c.ConnectionList.GetSelectedRow().GetIndex()
 }
 
 func (c *ConnectScreen) onConnect() {
+	defer config.LogStart("ConnectScreen.onConnect", nil)()
+
 	c.btnConnect.Emit("activate")
 }
 
-func (c *ConnectScreen) Dispose() {
-}
-
 func (c *ConnectScreen) buildMysqlForms() (*gtk.Box, error) {
+	defer config.LogStart("ConnectScreen.buildMysqlForms", nil)()
+
 	box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
 	if err != nil {
 		return nil, err
@@ -439,6 +466,8 @@ func (c *ConnectScreen) buildMysqlForms() (*gtk.Box, error) {
 }
 
 func (c *ConnectScreen) buildSqliteForms() (*sqliteForm, error) {
+	defer config.LogStart("ConnectScreen.buildSqliteForms", nil)()
+
 	frm, err := sqliteForm{}.Init(c.w)
 	if err != nil {
 		return nil, err
@@ -450,11 +479,15 @@ func (c *ConnectScreen) buildSqliteForms() (*sqliteForm, error) {
 }
 
 func (c *ConnectScreen) GetFormConnection() *config.Connection {
+	defer config.LogStart("ConnectScreen.GetFormConnection", nil)()
+
 	conn, _ := c.forms.active.GetConnection()
 	return conn
 }
 
 func (c *ConnectScreen) onChangeCurrentPage(_ *gtk.Notebook, _ gtk.IWidget, currentPage int) {
+	defer config.LogStart("ConnectScreen.onChangeCurrentPage", nil)()
+
 	switch currentPage {
 	case 0:
 		c.forms.active = c.forms.mysql.tcpForm
@@ -478,6 +511,8 @@ func (c *ConnectScreen) onChangeCurrentPage(_ *gtk.Notebook, _ gtk.IWidget, curr
 }
 
 func (c *ConnectScreen) onFormChanged(f form) {
+	defer config.LogStart("ConnectScreen.onFormChanged", nil)()
+
 	// NOTE: kinda of a hack
 	//       gtk.Stack doesn't emit a signal when the selected item changes
 	//       so if a forms is being changed, it means it's active :shrug:
@@ -491,6 +526,8 @@ func (c *ConnectScreen) onFormChanged(f form) {
 }
 
 func (c *ConnectScreen) onSubmit(_ *gtk.Entry, e *gdk.Event) {
+	defer config.LogStart("ConnectScreen.onSubmit", nil)()
+
 	conn, _ := c.forms.active.GetConnection()
 	if driver.ValidateConnection(*conn) {
 		keyEvent := gdk.EventKeyNewFromEvent(e)

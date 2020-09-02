@@ -53,6 +53,8 @@ type Window struct {
 }
 
 func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
+	defer config.LogStart("Window.Init", nil)()
+
 	var err error
 
 	w.id = uuid.New().String()
@@ -147,7 +149,11 @@ func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 }
 
 func (w *Window) OnOpenFile(f func(string)) func() {
+	defer config.LogStart("Window.OnOpenFile", nil)()
+
 	return func() {
+		defer config.LogStart("Window.OnOpenFile.inner", nil)()
+
 		openfileDialog, err := gtk.FileChooserDialogNewWith2Buttons("Select file", w, gtk.FILE_CHOOSER_ACTION_OPEN,
 			"Open", gtk.RESPONSE_OK,
 			"Cancel", gtk.RESPONSE_CANCEL,
@@ -166,6 +172,8 @@ func (w *Window) OnOpenFile(f func(string)) func() {
 }
 
 func (w *Window) OnSaveQuery(query string, f func(string, string)) {
+	defer config.LogStart("Window.OnSaveQuery", nil)()
+
 	openfileDialog, err := gtk.FileChooserDialogNewWith2Buttons("Save file", w, gtk.FILE_CHOOSER_ACTION_SAVE,
 		"Save", gtk.RESPONSE_OK,
 		"Cancel", gtk.RESPONSE_CANCEL,
@@ -185,6 +193,8 @@ func (w *Window) OnSaveQuery(query string, f func(string, string)) {
 }
 
 func (w *Window) AddToolTab(tab *ToolTab) error {
+	defer config.LogStart("Window.AddToolTab", nil)()
+
 	w.nb.AppendPage(tab.Content(), tab.Label())
 	w.nb.SetTabReorderable(tab.Content(), true)
 	w.nb.SetCurrentPage(w.nb.PageNum(tab.Content()))
@@ -195,14 +205,20 @@ func (w *Window) AddToolTab(tab *ToolTab) error {
 }
 
 func (w *Window) RemoveCurrentPage() {
+	defer config.LogStart("Window.RemoveCurrentPage", nil)()
+
 	w.nb.RemovePage(w.CurrentPage())
 }
 
 func (w *Window) CurrentPage() int {
+	defer config.LogStart("Window.CurrentPage", nil)()
+
 	return w.nb.GetCurrentPage()
 }
 
 func (w *Window) CurrentTab() *ToolTab {
+	defer config.LogStart("Window.CurrentTab", nil)()
+
 	if len(tabs[w.id]) == 0 {
 		return nil
 	}
@@ -210,6 +226,8 @@ func (w *Window) CurrentTab() *ToolTab {
 }
 
 func (w *Window) Remove(wd gtk.IWidget) {
+	defer config.LogStart("Window.Remove", nil)()
+
 	w.nb.Remove(wd)
 }
 
@@ -219,14 +237,20 @@ func (w Window) PushStatus(format string, args ...interface{}) {
 }
 
 func (w *Window) OnPageRemoved(f interface{}) {
+	defer config.LogStart("Window.OnPageRemoved", nil)()
+
 	w.nb.Connect("page-removed", f)
 }
 
 func (w *Window) PageCount() int {
+	defer config.LogStart("Window.PageCount", nil)()
+
 	return w.nb.GetNPages()
 }
 
 func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
+	defer config.LogStart("Window.headerMenu", nil)()
+
 	w.Menu.NewDatabaseTab = glib.SimpleActionNew("new.db", nil)
 	w.Menu.NewHTTPTab = glib.SimpleActionNew("new.http", nil)
 	w.Menu.LoadFile = glib.SimpleActionNew("file.load", nil)
@@ -292,6 +316,8 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 }
 
 func (w *Window) Go(job func(context.Context) func()) func() {
+	defer config.LogStart("Window.Go", nil)()
+
 	cancel := make(chan struct{}, 0)
 	done := make(chan struct{}, 0)
 	onDone := func() {}
@@ -324,6 +350,8 @@ func (w *Window) Go(job func(context.Context) func()) func() {
 }
 
 func (w *Window) onTabReorder(_ *gtk.Notebook, _ *gtk.Widget, landing int) {
+	defer config.LogStart("Window.onTabReorder", nil)()
+
 	// https://play.golang.com/p/YMfQouxHuvr
 	movingTab := tabs[w.id][w.tabIndex]
 

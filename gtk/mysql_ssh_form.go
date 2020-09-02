@@ -36,6 +36,8 @@ type sshForm struct {
 }
 
 func (f sshForm) Init(_ *Window) (*sshForm, error) {
+	defer config.LogStart("sshForm.Init", nil)()
+
 	var err error
 	f.Grid, err = gtk.GridNew()
 	if err != nil {
@@ -181,6 +183,8 @@ func (f sshForm) Init(_ *Window) (*sshForm, error) {
 }
 
 func (f *sshForm) newInput(l string) (*gtk.Label, *gtk.Entry, error) {
+	defer config.LogStart("sshForm.newInput", nil)()
+
 	label, err := gtk.LabelNew(l)
 	if err != nil {
 		return nil, nil, err
@@ -196,6 +200,8 @@ func (f *sshForm) newInput(l string) (*gtk.Label, *gtk.Entry, error) {
 }
 
 func (f *sshForm) Clear() {
+	defer config.LogStart("sshForm.Clear", nil)()
+
 	f.conn = nil
 	f.entryName.SetText("")
 	f.entryDbHost.SetText("")
@@ -208,10 +214,14 @@ func (f *sshForm) Clear() {
 }
 
 func (f *sshForm) GrabFocus() {
+	defer config.LogStart("sshForm.GrabFocus", nil)()
+
 	f.entryName.GrabFocus()
 }
 
 func (f *sshForm) SetConnection(conn *config.Connection) {
+	defer config.LogStart("sshForm.SetConnection", nil)()
+
 	f.conn = conn
 	f.entryName.SetText(conn.Name)
 	f.entryDbHost.SetText(conn.Host)
@@ -224,6 +234,8 @@ func (f *sshForm) SetConnection(conn *config.Connection) {
 }
 
 func (f *sshForm) GetConnection() (*config.Connection, bool) {
+	defer config.LogStart("sshForm.GetConnection", nil)()
+
 	var newConn bool
 	conn := f.conn
 	if conn == nil {
@@ -251,6 +263,8 @@ func (f *sshForm) GetConnection() (*config.Connection, bool) {
 }
 
 func (f *sshForm) onChange(fn func(form)) {
+	defer config.LogStart("sshForm.onChange", nil)()
+
 	ff := func() { fn(f) }
 	f.entryName.Connect("key-release-event", ff)
 	f.entryDbHost.Connect("key-release-event", ff)

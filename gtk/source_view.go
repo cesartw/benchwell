@@ -1,6 +1,7 @@
 package gtk
 
 import (
+	"bitbucket.org/goreorto/benchwell/config"
 	"github.com/gotk3/sourceview"
 )
 
@@ -15,6 +16,8 @@ type SourceViewOptions struct {
 }
 
 func (t SourceView) Init(_ *Window, opts SourceViewOptions, ctrl interface{}) (*SourceView, error) {
+	defer config.LogStart("SourceView.Init", nil)()
+
 	var err error
 	t.SourceView, err = sourceview.SourceViewNew()
 
@@ -38,6 +41,8 @@ func (t SourceView) Init(_ *Window, opts SourceViewOptions, ctrl interface{}) (*
 }
 
 func (t *SourceView) SetLanguage(lang string) error {
+	defer config.LogStart("SourceView.SetLanguage", nil)()
+
 	buff, err := t.SourceView.GetBuffer()
 	if err != nil {
 		return err
@@ -62,6 +67,8 @@ func (t *SourceView) SetLanguage(lang string) error {
 }
 
 func (t *SourceView) ShowAutoComplete(words []string) {
+	defer config.LogStart("SourceView.ShowAutoComplete", nil)()
+
 	return
 	// TODO: implement SourceCompletion
 	//completion, err := t.SourceView.GetCompletion()

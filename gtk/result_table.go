@@ -66,6 +66,8 @@ type resultCtrl interface {
 }
 
 func (u Result) Init(_ *Window, ctrl resultCtrl, parser parser) (*Result, error) {
+	defer config.LogStart("Result.Init", nil)()
+
 	var err error
 	u.parser = parser
 	u.ctrl = ctrl
@@ -128,6 +130,8 @@ func (u Result) Init(_ *Window, ctrl resultCtrl, parser parser) (*Result, error)
 }
 
 func (u *Result) UpdateColumns(cols []driver.ColDef) error {
+	defer config.LogStart("Result.UpdateColumns", nil)()
+
 	u.mode = MODE_DEF
 	// columns shift to the left
 	for _ = range u.cols {
@@ -162,6 +166,8 @@ func (u *Result) UpdateColumns(cols []driver.ColDef) error {
 }
 
 func (u *Result) UpdateData(data [][]interface{}) error {
+	defer config.LogStart("Result.UpdateData", nil)()
+
 	u.mode = MODE_DEF
 	u.data = data
 	u.store.Clear()
@@ -174,6 +180,8 @@ func (u *Result) UpdateData(data [][]interface{}) error {
 }
 
 func (u *Result) UpdateRawData(cols []string, data [][]interface{}) error {
+	defer config.LogStart("Result.UpdateRawData", nil)()
+
 	// columns shift to the left
 	u.mode = MODE_RAW
 	for _ = range u.cols {
@@ -227,6 +235,8 @@ func (u *Result) UpdateRawData(cols []string, data [][]interface{}) error {
 }
 
 func (u *Result) AddEmptyRow() (err error) {
+	defer config.LogStart("Result.AddEmptyRow", nil)()
+
 	if u.mode == MODE_RAW {
 		return nil
 	}
@@ -302,6 +312,8 @@ func (u *Result) AddEmptyRow() (err error) {
 }
 
 func (u *Result) AddRow(originalRow []interface{}) {
+	defer config.LogStart("Result.AddRow", nil)()
+
 	// Get an iterator for a new row at the end of the list store
 	iter := u.store.Append()
 
@@ -345,6 +357,8 @@ func (u *Result) AddRow(originalRow []interface{}) {
 }
 
 func (u *Result) GetCurrentIter() (*gtk.TreeIter, error) {
+	defer config.LogStart("Result.GetCurrentIter", nil)()
+
 	var storeSelected *gtk.TreeIter
 
 	sel, err := u.TreeView.GetSelection()
@@ -367,6 +381,8 @@ func (u *Result) GetCurrentIter() (*gtk.TreeIter, error) {
 }
 
 func (u *Result) SelectedIsNewRecord() (bool, error) {
+	defer config.LogStart("Result.SelectedIsNewRecord", nil)()
+
 	iter, err := u.GetCurrentIter()
 	if err != nil {
 		return false, err
@@ -388,6 +404,8 @@ func (u *Result) SelectedIsNewRecord() (bool, error) {
 }
 
 func (u *Result) RemoveSelected() error {
+	defer config.LogStart("Result.RemoveSelected", nil)()
+
 	iter, err := u.GetCurrentIter()
 	if err != nil {
 		return err
@@ -409,6 +427,8 @@ func (u *Result) RemoveSelected() error {
 }
 
 func (u *Result) GetRowID() ([]driver.ColDef, []interface{}, error) {
+	defer config.LogStart("Result.GetRowID", nil)()
+
 	iter, err := u.GetCurrentIter()
 	if err != nil {
 		return nil, nil, err
@@ -441,6 +461,8 @@ func (u *Result) GetRowID() ([]driver.ColDef, []interface{}, error) {
 }
 
 func (u *Result) ForEachSelected(f func([]driver.ColDef, []interface{})) error {
+	defer config.LogStart("Result.ForEachSelected", nil)()
+
 	selection, err := u.GetSelection()
 	if err != nil {
 		return err
@@ -470,6 +492,8 @@ func (u *Result) ForEachSelected(f func([]driver.ColDef, []interface{})) error {
 }
 
 func (u *Result) GetRow() ([]driver.ColDef, []interface{}, error) {
+	defer config.LogStart("Result.GetRow", nil)()
+
 	iter, err := u.GetCurrentIter()
 	if err != nil {
 		return nil, nil, err
@@ -498,6 +522,8 @@ func (u *Result) GetRow() ([]driver.ColDef, []interface{}, error) {
 }
 
 func (u *Result) UpdateRow(values []interface{}) error {
+	defer config.LogStart("Result.UpdateRow", nil)()
+
 	iter, err := u.GetCurrentIter()
 	if err != nil {
 		return err
@@ -524,6 +550,8 @@ func (u *Result) UpdateRow(values []interface{}) error {
 }
 
 func (u *Result) SortOptions() []driver.SortOption {
+	defer config.LogStart("Result.SortOptions", nil)()
+
 	if u.mode == MODE_RAW {
 		return nil
 	}
@@ -547,6 +575,8 @@ func (u *Result) SortOptions() []driver.SortOption {
 }
 
 func (u *Result) onCopyInsert() {
+	defer config.LogStart("Result.onCopyInsert", nil)()
+
 	if u.mode == MODE_RAW {
 		return
 	}
@@ -560,7 +590,8 @@ func (u *Result) onCopyInsert() {
 }
 
 func (u *Result) onEdited(_ *gtk.CellRendererText, rowPath string, newValue string, userData interface{}) {
-	config.Debug("cell edited")
+	defer config.LogStart("Result.onEdited", nil)()
+
 	if u.mode == MODE_RAW {
 		return
 	}
@@ -570,6 +601,8 @@ func (u *Result) onEdited(_ *gtk.CellRendererText, rowPath string, newValue stri
 }
 
 func (u *Result) onSaveCell(row, column int, newValue string) {
+	defer config.LogStart("Result.onSaveCell", nil)()
+
 	tpath, err := gtk.TreePathNewFromString(fmt.Sprintf("%d", row))
 	if err != nil {
 		config.Error(err)
@@ -643,6 +676,8 @@ func (u *Result) onSaveCell(row, column int, newValue string) {
 }
 
 func (u *Result) createColumn(title string, id int, useEditModal bool) (*gtk.TreeViewColumn, error) {
+	defer config.LogStart("Result.createColumn", nil)()
+
 	cellRenderer, err := gtk.CellRendererTextNew()
 	if err != nil {
 		return nil, err
@@ -702,6 +737,8 @@ func (u *Result) createColumn(title string, id int, useEditModal bool) (*gtk.Tre
 }
 
 func (u *Result) onSort(column *gtk.TreeViewColumn) func() {
+	defer config.LogStart("Result.onSort", nil)()
+
 	return func() {
 		if !column.GetSortIndicator() {
 			column.SetSortIndicator(true)
@@ -718,6 +755,8 @@ func (u *Result) onSort(column *gtk.TreeViewColumn) func() {
 }
 
 func (u *Result) editDialog(data string, done func(string)) {
+	defer config.LogStart("Result.editDialog", nil)()
+
 	modal, err := gtk.DialogNewWithButtons("Edit", nil,
 		gtk.DIALOG_DESTROY_WITH_PARENT|gtk.DIALOG_MODAL,
 		[]interface{}{"Save", gtk.RESPONSE_ACCEPT},
@@ -774,6 +813,8 @@ func (u *Result) editDialog(data string, done func(string)) {
 }
 
 func (u *Result) onTreeViewButtonPress(_ *gtk.TreeView, e *gdk.Event) {
+	defer config.LogStart("Result.onTreeViewButtonPress", nil)()
+
 	keyEvent := gdk.EventButtonNewFromEvent(e)
 
 	path, col, _, _, ok := u.TreeView.GetPathAtPos(int(keyEvent.X()), int(keyEvent.Y()))
@@ -792,6 +833,8 @@ func (u *Result) onTreeViewButtonPress(_ *gtk.TreeView, e *gdk.Event) {
 }
 
 func (u *Result) onTreeViewKeyPress(_ *gtk.TreeView, e *gdk.Event) {
+	defer config.LogStart("Result.onTreeViewKeyPress", nil)()
+
 	keyEvent := gdk.EventKeyNewFromEvent(e)
 	if keyEvent.KeyVal() == gdk.KEY_F2 {
 		path, col := u.TreeView.GetCursor()
@@ -800,6 +843,8 @@ func (u *Result) onTreeViewKeyPress(_ *gtk.TreeView, e *gdk.Event) {
 }
 
 func (u *Result) onCloneRow() {
+	defer config.LogStart("Result.onCloneRow", nil)()
+
 	cols, data, err := u.GetRow()
 	if err != nil {
 		config.Error("getting current row", err)
@@ -837,10 +882,14 @@ func (u *Result) onCloneRow() {
 }
 
 func (u *Result) onCopy() {
+	defer config.LogStart("Result.onCopy", nil)()
+
 	ClipboardCopy(u.dataAtCursor())
 }
 
 func (u *Result) dataAtCursor() string {
+	defer config.LogStart("Result.dataAtCursor", nil)()
+
 	var at int
 	for i, col := range u.cols {
 		if col.String() == underscoreUnfix(u.colAtCursor.GetTitle()) {

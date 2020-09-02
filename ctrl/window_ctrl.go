@@ -33,6 +33,8 @@ type WindowCtrl struct {
 }
 
 func (c WindowCtrl) Init(parent *AppCtrl) (*WindowCtrl, error) {
+	defer config.LogStart("WindowCtrl.Init", nil)()
+
 	var err error
 	ctrl := &c
 	ctrl.AppCtrl = parent
@@ -49,6 +51,8 @@ func (c WindowCtrl) Init(parent *AppCtrl) (*WindowCtrl, error) {
 }
 
 func (c *WindowCtrl) OnSaveQuery(query, path string) {
+	defer config.LogStart("WindowCtrl.OnSaveQuery", nil)()
+
 	err := ioutil.WriteFile(path, []byte(query), os.FileMode(666))
 	if err != nil {
 		c.window.PushStatus("failed to save file: %#v", err)
@@ -56,6 +60,8 @@ func (c *WindowCtrl) OnSaveQuery(query, path string) {
 }
 
 func (c *WindowCtrl) OnFileSelected(filepath string) {
+	defer config.LogStart("WindowCtrl.OnFileSelected", nil)()
+
 	bytes, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		config.Error("reading file", err)
@@ -66,6 +72,8 @@ func (c *WindowCtrl) OnFileSelected(filepath string) {
 }
 
 func (c *WindowCtrl) OnNewDatabaseTab() {
+	defer config.LogStart("WindowCtrl.OnNewDatabaseTab", nil)()
+
 	err := c.AddTab(TAB_TYPE_DB)
 	if err != nil {
 		config.Error(err)
@@ -75,6 +83,8 @@ func (c *WindowCtrl) OnNewDatabaseTab() {
 }
 
 func (c *WindowCtrl) OnNewHTTPTab() {
+	defer config.LogStart("WindowCtrl.OnNewHTTPTab", nil)()
+
 	err := c.AddTab(TAB_TYPE_HTTP)
 	if err != nil {
 		config.Error(err)
@@ -84,14 +94,20 @@ func (c *WindowCtrl) OnNewHTTPTab() {
 }
 
 func (c *WindowCtrl) Show() {
+	defer config.LogStart("WindowCtrl.Show", nil)()
+
 	c.window.Show()
 }
 
 func (c *WindowCtrl) Hide() {
+	defer config.LogStart("WindowCtrl.Hide", nil)()
+
 	c.window.Hide()
 }
 
 func (c *WindowCtrl) AddTab(t tab_type) error {
+	defer config.LogStart("WindowCtrl.AddTab", nil)()
+
 	var (
 		err  error
 		ctrl tabCtrl
@@ -127,15 +143,21 @@ func (c *WindowCtrl) AddTab(t tab_type) error {
 
 // click on main tab close
 func (c *WindowCtrl) OnCloseTab() {
+	defer config.LogStart("WindowCtrl.OnCloseTab", nil)()
+
 	// tell the tool tab that we closing it
 	c.currentWindowTab().Close()
 	c.window.RemoveCurrentPage()
 }
 
 func (c *WindowCtrl) ChangeTitle(title string) {
+	defer config.LogStart("WindowCtrl.ChangeTitle", nil)()
+
 	c.currentWindowTab().SetTitle(title)
 }
 
 func (c *WindowCtrl) currentWindowTab() *gtk.ToolTab {
+	defer config.LogStart("WindowCtrl.currentWindowTab", nil)()
+
 	return c.window.CurrentTab()
 }

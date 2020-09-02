@@ -41,6 +41,8 @@ func (h HTTPCollection) Init(
 	hs *HTTPScreen,
 	ctrl ctrlHTTPCollection,
 ) (*HTTPCollection, error) {
+	defer config.LogStart("HTTPCollection.Init", nil)()
+
 	var err error
 
 	h.ctrl = ctrl
@@ -103,6 +105,8 @@ func (h HTTPCollection) Init(
 }
 
 func (h *HTTPCollection) GetSelectedCollectionID() (int64, error) {
+	defer config.LogStart("HTTPCollection.GetSelectedCollectionID", nil)()
+
 	if h.colBox.GetActiveID() == "" {
 		return 0, nil
 	}
@@ -111,6 +115,8 @@ func (h *HTTPCollection) GetSelectedCollectionID() (int64, error) {
 }
 
 func (h *HTTPCollection) GetSelectedItemID() (int64, string, error) {
+	defer config.LogStart("HTTPCollection.GetSelectedItemID", nil)()
+
 	sel, _ := h.tree.GetSelection()
 	_, iter, _ := sel.GetSelected()
 
@@ -138,11 +144,15 @@ func (h *HTTPCollection) GetSelectedItemID() (int64, string, error) {
 }
 
 func (h *HTTPCollection) LoadCollection(items []*config.HTTPItem) error {
+	defer config.LogStart("HTTPCollection.LoadCollection", nil)()
+
 	h.store.Clear()
 	return h.buildTree(nil, items)
 }
 
 func (h *HTTPCollection) LoadFolder(at string, item *config.HTTPItem) error {
+	defer config.LogStart("HTTPCollection.LoadFolder", nil)()
+
 	path, err := gtk.TreePathNewFromString(at)
 	if err != nil {
 		return err
@@ -164,6 +174,8 @@ func (h *HTTPCollection) LoadFolder(at string, item *config.HTTPItem) error {
 }
 
 func (h *HTTPCollection) buildTree(iter *gtk.TreeIter, items []*config.HTTPItem) error {
+	defer config.LogStart("HTTPCollection.buildTree", nil)()
+
 	for _, item := range items {
 		switch item.IsFolder {
 		case true:
@@ -193,6 +205,8 @@ func (h *HTTPCollection) buildTree(iter *gtk.TreeIter, items []*config.HTTPItem)
 }
 
 func (h *HTTPCollection) createTextColumn(title string, id int) (*gtk.TreeViewColumn, error) {
+	defer config.LogStart("HTTPCollection.createTextColumn", nil)()
+
 	// In this column we want to show text, hence create a text renderer
 	cellRenderer, err := gtk.CellRendererTextNew()
 	if err != nil {
@@ -210,6 +224,8 @@ func (h *HTTPCollection) createTextColumn(title string, id int) (*gtk.TreeViewCo
 }
 
 func (h *HTTPCollection) createImageColumn(title string, id int) (*gtk.TreeViewColumn, error) {
+	defer config.LogStart("HTTPCollection.createImageColumn", nil)()
+
 	// In this column we want to show image data from Pixbuf, hence
 	// create a pixbuf renderer
 	cellRenderer, err := gtk.CellRendererPixbufNew()
@@ -233,6 +249,8 @@ func (h *HTTPCollection) addRow(
 	id int64,
 	text string,
 ) (*gtk.TreeIter, error) {
+	defer config.LogStart("HTTPCollection.addRow", nil)()
+
 	// Get an iterator for a new row at the end of the list store
 	iter := h.store.Append(parentIter)
 

@@ -35,6 +35,8 @@ type Condition struct {
 }
 
 func (c Conditions) Init(w *Window, ctrl conditionsCtrl) (*Conditions, error) {
+	defer config.LogStart("Conditions.Init", nil)()
+
 	var err error
 	c.w = w
 	c.ctrl = ctrl
@@ -61,6 +63,8 @@ func (c Conditions) Init(w *Window, ctrl conditionsCtrl) (*Conditions, error) {
 }
 
 func (c *Conditions) Add() error {
+	defer config.LogStart("Conditions.Add", nil)()
+
 	cond, err := Condition{}.Init(c.w, c.cols, c.ctrl)
 	if err != nil {
 		return err
@@ -114,6 +118,8 @@ func (c *Conditions) Add() error {
 }
 
 func (c *Conditions) Statements() ([]driver.CondStmt, error) {
+	defer config.LogStart("Conditions.Statements", nil)()
+
 	stmts := []driver.CondStmt{}
 	for _, cond := range c.conditions {
 		if !cond.activeCb.GetActive() {
@@ -146,6 +152,8 @@ func (c *Conditions) Statements() ([]driver.CondStmt, error) {
 }
 
 func (c *Conditions) Update(cols []driver.ColDef) error {
+	defer config.LogStart("Conditions.Update", nil)()
+
 	c.cols = cols
 	conditions := []*Condition{}
 
@@ -218,6 +226,8 @@ func (c *Conditions) Update(cols []driver.ColDef) error {
 }
 
 func (c Condition) Init(_ *Window, cols []driver.ColDef, ctrl conditionsCtrl) (*Condition, error) {
+	defer config.LogStart("Condition.Init", nil)()
+
 	c.cols = cols
 	c.ctrl = ctrl
 	var err error
@@ -289,6 +299,8 @@ func (c Condition) Init(_ *Window, cols []driver.ColDef, ctrl conditionsCtrl) (*
 }
 
 func (c *Condition) Field() (string, error) {
+	defer config.LogStart("Condition.Fields", nil)()
+
 	if c.fieldCb.GetActiveID() == "" {
 		return "", nil
 	}
@@ -312,6 +324,8 @@ func (c *Condition) Field() (string, error) {
 }
 
 func (c *Condition) onFocusOut() {
+	defer config.LogStart("Condition.onFocusOut", nil)()
+
 	entry, err := c.fieldCb.GetEntry()
 	if err != nil {
 		config.Error(err)

@@ -84,7 +84,6 @@ func Init() {
 	if err != nil {
 		logger.Error(err)
 	}
-
 }
 
 func getSetting(s string) *Setting {
@@ -364,12 +363,9 @@ func LogStart(fname string, args map[string]interface{}) func() {
 	}
 
 	e := logger.WithFields(fields)
-	e.Debug("START", fields)
+	e.Debug("START")
 
 	return ctxlogger{start: time.Now(), Entry: e}.Done
-}
-
-func LogEnd(fname string, args ...interface{}) {
 }
 
 func SaveConnection(w *gtk.ApplicationWindow, conn *Connection) error {
