@@ -128,11 +128,6 @@ func (c *ConnectionCtrl) OnTableSelected() {
 	c.tableDef = tableDef
 
 	c.OnLoadTable()
-	//if c.scr.CtrlMod() {
-	//c.AddTab(tableDef)
-	//} else {
-	//c.UpdateOrAddTab(tableDef)
-	//}
 }
 
 func (c *ConnectionCtrl) OnEditTable() {
@@ -219,6 +214,31 @@ func (c *ConnectionCtrl) OnSchemaMenu() {
 	}
 
 	c.scr.ShowTableSchemaModal(tableName, schema)
+}
+
+func (c *ConnectionCtrl) OnNewTabMenu() {
+	defer config.LogStart("ConnectionCtrl.OnNewTabMenu", nil)()
+
+	table, ok := c.scr.ActiveTable()
+	if !ok {
+		return
+	}
+
+	ctrl, err := c.AddTab(TAB_TYPE_DB)
+	if err != nil {
+		config.Error(err)
+		return
+	}
+
+	conn := *c.conn
+	dbCtrl := ctrl.(*DbTabCtrl)
+	connectCtrl := dbCtrl.currentCtrl.(*ConnectCtrl)
+	connectCtrl.scr.SetConnection(&conn)
+	dbCtrl.onConnect(func() {
+		connectionCtrl := dbCtrl.currentCtrl.(*ConnectionCtrl)
+		connectionCtrl.scr.SetActiveTable(table)
+		connectionCtrl.OnTableSelected()
+	})
 }
 
 func (c *ConnectionCtrl) OnRefreshMenu() {
@@ -526,6 +546,10 @@ func (c *ConnectionCtrl) SetQuery(ctx *sqlengine.Context, query string) (bool, e
 	}
 
 	return c.scr.SetQuery(ctx, query)
+}
+
+func (c *ConnectionCtrl) Close() {
+	c.Engine.Disconnect(c.ctx)
 }
 
 func (c *ConnectionCtrl) updateTitle() {

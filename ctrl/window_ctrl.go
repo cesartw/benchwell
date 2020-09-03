@@ -23,7 +23,7 @@ type tabCtrl interface {
 	Title() string
 	Content() ggtk.IWidget
 	SetFileText(string)
-	OnCloseTab()
+	OnCloseTab(string)
 	SetWindowCtrl(interface{})
 }
 
@@ -42,12 +42,16 @@ func (c WindowCtrl) Init(parent *AppCtrl) (*WindowCtrl, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = ctrl.AddTab(TAB_TYPE_HTTP)
+	_, err = ctrl.AddTab(TAB_TYPE_HTTP)
+	if err != nil {
+		return nil, err
+	}
+	_, err = ctrl.AddTab(TAB_TYPE_DB)
 	if err != nil {
 		return nil, err
 	}
 
-	return ctrl, ctrl.AddTab(TAB_TYPE_DB)
+	return ctrl, nil
 }
 
 func (c *WindowCtrl) OnSaveQuery(query, path string) {
@@ -74,7 +78,7 @@ func (c *WindowCtrl) OnFileSelected(filepath string) {
 func (c *WindowCtrl) OnNewDatabaseTab() {
 	defer config.LogStart("WindowCtrl.OnNewDatabaseTab", nil)()
 
-	err := c.AddTab(TAB_TYPE_DB)
+	_, err := c.AddTab(TAB_TYPE_DB)
 	if err != nil {
 		config.Error(err)
 		return
@@ -85,7 +89,7 @@ func (c *WindowCtrl) OnNewDatabaseTab() {
 func (c *WindowCtrl) OnNewHTTPTab() {
 	defer config.LogStart("WindowCtrl.OnNewHTTPTab", nil)()
 
-	err := c.AddTab(TAB_TYPE_HTTP)
+	_, err := c.AddTab(TAB_TYPE_HTTP)
 	if err != nil {
 		config.Error(err)
 		return
@@ -105,7 +109,7 @@ func (c *WindowCtrl) Hide() {
 	c.window.Hide()
 }
 
-func (c *WindowCtrl) AddTab(t tab_type) error {
+func (c *WindowCtrl) AddTab(t tab_type) (interface{}, error) {
 	defer config.LogStart("WindowCtrl.AddTab", nil)()
 
 	var (
@@ -117,18 +121,18 @@ func (c *WindowCtrl) AddTab(t tab_type) error {
 	case TAB_TYPE_DB:
 		ctrl, err = DbTabCtrl{}.Init(c)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	case TAB_TYPE_HTTP:
 		ctrl, err = HTTPTabCtrl{}.Init(c)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	tab, err := gtk.ToolTab{}.Init(c.window)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	tab.SetContent(gtk.ToolTabOptions{
 		Content: ctrl.Content(),
@@ -138,16 +142,16 @@ func (c *WindowCtrl) AddTab(t tab_type) error {
 
 	c.window.AddToolTab(tab)
 
-	return nil
+	return ctrl, nil
 }
 
 // click on main tab close
-func (c *WindowCtrl) OnCloseTab() {
+func (c *WindowCtrl) OnCloseTab(id string) {
 	defer config.LogStart("WindowCtrl.OnCloseTab", nil)()
 
 	// tell the tool tab that we closing it
 	c.currentWindowTab().Close()
-	c.window.RemoveCurrentPage()
+	c.window.RemovePage(id)
 }
 
 func (c *WindowCtrl) ChangeTitle(title string) {

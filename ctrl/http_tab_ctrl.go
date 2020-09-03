@@ -186,11 +186,6 @@ func (c *HTTPTabCtrl) SetFileText(string) {
 
 }
 
-func (c *HTTPTabCtrl) OnCloseTab() {
-	defer config.LogStart("HTTPTabCtrl.OnCloseTab", nil)()
-
-}
-
 func (c *HTTPTabCtrl) SetWindowCtrl(interface{}) {
 	defer config.LogStart("HTTPTabCtrl.SetWindowCtrl", nil)()
 

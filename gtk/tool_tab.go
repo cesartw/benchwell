@@ -2,6 +2,7 @@ package gtk
 
 import (
 	"bitbucket.org/goreorto/benchwell/config"
+	"github.com/google/uuid"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
 )
@@ -12,13 +13,14 @@ type tabCtrl interface {
 	Title() string        //tab
 	Content() gtk.IWidget //tab
 	SetFileText(string)   //tab
-	OnCloseTab()
+	OnCloseTab(id string)
 	SetWindowCtrl(interface{}) // tab
 }
 
 type ToolTab struct {
 	tabCtrl
 
+	id        string
 	w         *Window
 	label     *gtk.Label
 	btn       *gtk.Button
@@ -36,6 +38,7 @@ type ToolTabOptions struct {
 
 func (t ToolTab) Init(w *Window) (*ToolTab, error) {
 	defer config.LogStart("ToolTab.Init", nil)()
+	t.id = uuid.New().String()
 
 	var err error
 	t.w = w
@@ -75,7 +78,7 @@ func (t ToolTab) Init(w *Window) (*ToolTab, error) {
 
 func (t *ToolTab) SetWindowCtrl(
 	ctrl interface {
-		OnCloseTab()
+		OnCloseTab(string)
 	},
 ) {
 	defer config.LogStart("ToolTab.SetWindowCtrl", nil)()
@@ -86,31 +89,14 @@ func (t *ToolTab) SetWindowCtrl(
 func (t *ToolTab) SetContent(opts ToolTabOptions) {
 	defer config.LogStart("ToolTab.SetContent", nil)()
 
-	if opts.Ctrl != nil {
-		t.tabCtrl = opts.Ctrl
-	}
-
-	if opts.Title != "" {
-		t.SetTitle(opts.Title)
-	}
-
-	if opts.Content != nil {
-		if t.mainW != nil {
-			t.content.Remove(t.mainW)
-		}
-
-		if t.btnHandle > 0 {
-			t.btn.HandlerDisconnect(t.btnHandle)
-		}
-
-		t.content.PackStart(opts.Content, true, true, 0)
-		t.mainW = opts.Content
-		t.content.Show()
-	}
-
-	if opts.Ctrl != nil {
-		t.btnHandle, _ = t.btn.Connect("clicked", t.OnCloseTab)
-	}
+	t.tabCtrl = opts.Ctrl
+	t.SetTitle(opts.Title)
+	t.content.PackStart(opts.Content, true, true, 0)
+	t.mainW = opts.Content
+	t.content.Show()
+	t.btn.Connect("clicked", func() {
+		t.OnCloseTab(t.id)
+	})
 }
 
 func (t *ToolTab) SetTitle(title string) {

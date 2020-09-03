@@ -27,7 +27,7 @@ var transit = struct {
 type windowCtrl interface {
 	OnNewDatabaseTab()
 	OnNewHTTPTab()
-	OnCloseTab()
+	OnCloseTab(string)
 	OnFileSelected(string)
 	OnSaveQuery(string, string)
 }
@@ -204,10 +204,16 @@ func (w *Window) AddToolTab(tab *ToolTab) error {
 	return nil
 }
 
-func (w *Window) RemoveCurrentPage() {
+func (w *Window) RemovePage(id string) {
 	defer config.LogStart("Window.RemoveCurrentPage", nil)()
+	for i, tab := range tabs[w.id] {
+		if tab.id != id {
+			continue
+		}
 
-	w.nb.RemovePage(w.CurrentPage())
+		w.nb.RemovePage(i)
+		break
+	}
 }
 
 func (w *Window) CurrentPage() int {

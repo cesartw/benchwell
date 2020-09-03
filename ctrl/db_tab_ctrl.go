@@ -17,6 +17,7 @@ type DbTabCtrl struct {
 	connectionCtrl *ConnectionCtrl
 
 	currentCtrl interface {
+		Close()
 		SetFileText(string)
 		Content() ggtk.IWidget
 		Title() string
@@ -40,6 +41,7 @@ func (c DbTabCtrl) Init(p *WindowCtrl) (*DbTabCtrl, error) {
 }
 
 func (c *DbTabCtrl) Close() {
+	c.currentCtrl.Close()
 }
 
 func (c *DbTabCtrl) Title() string {
@@ -110,6 +112,12 @@ func (c *DbTabCtrl) launchConnection(ctx *sqlengine.Context, conn *config.Connec
 func (c *DbTabCtrl) OnConnect() {
 	defer config.LogStart("DbTabCtrl.OnConnect", nil)()
 
+	c.onConnect(nil)
+}
+
+func (c *DbTabCtrl) onConnect(f func()) {
+	defer config.LogStart("DbTabCtrl.OnConnect", nil)()
+
 	conn := c.connectCtrl.scr.GetFormConnection()
 
 	cancel := c.window.Go(func(ctx context.Context) func() {
@@ -126,6 +134,9 @@ func (c *DbTabCtrl) OnConnect() {
 			c.window.PushStatus("Connected to `%s`(%s)", conn.Name, conn.Host)
 			c.connectCtrl.CancelConnecting()
 			c.launchConnection(engineCtx, conn)
+			if f != nil {
+				f()
+			}
 		}
 	})
 

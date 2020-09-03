@@ -16,6 +16,7 @@ type connectionScreenCtrl interface {
 	OnDatabaseSelected()
 	OnTableSelected()
 	OnSchemaMenu()
+	OnNewTabMenu()
 	OnRefreshMenu()
 	OnEditTable()
 	OnTruncateTable()
@@ -220,7 +221,7 @@ func (c ConnectionScreen) Init(
 	c.tableList.Connect("row-activated", ctrl.OnTableSelected)
 	c.tablesMenu.schemaMenu.Connect("activate", ctrl.OnSchemaMenu)
 	c.tablesMenu.refreshMenu.Connect("activate", ctrl.OnRefreshMenu)
-	//c.tablesMenu.newTabMenu.Connect("activate", ctrl.OnNewTabMenu)
+	c.tablesMenu.newTabMenu.Connect("activate", ctrl.OnNewTabMenu)
 	c.tablesMenu.editMenu.Connect("activate", ctrl.OnEditTable)
 	c.tablesMenu.truncateMenu.Connect("activate", ctrl.OnTruncateTable)
 	c.tablesMenu.deleteMenu.Connect("activate", ctrl.OnDeleteTable)
@@ -298,6 +299,12 @@ func (c *ConnectionScreen) ActiveTable() (driver.TableDef, bool) {
 	}
 
 	return i.(driver.TableDef), true
+}
+
+func (c *ConnectionScreen) SetActiveTable(t driver.TableDef) {
+	defer config.LogStart("ConnectionScreen.SetActiveTable", nil)()
+
+	c.tableList.selectedItem.Set(t)
 }
 
 func (c *ConnectionScreen) ShowTableSchemaModal(tableName, schema string) {

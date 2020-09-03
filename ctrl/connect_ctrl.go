@@ -42,12 +42,6 @@ func (c *ConnectCtrl) Content() ggtk.IWidget {
 	return c.scr
 }
 
-func (c *ConnectCtrl) AddEmptyTab() error {
-	defer config.LogStart("ConnectCtrl.AddEmptyTab", nil)()
-
-	return nil
-}
-
 func (c *ConnectCtrl) SetFileText(s string) {
 	defer config.LogStart("ConnectCtrl.SetFileText", nil)()
 }
@@ -155,13 +149,8 @@ func (c *ConnectCtrl) Screen() interface{} {
 	return c.scr
 }
 
-func (c *ConnectCtrl) Close() bool {
+func (c *ConnectCtrl) Close() {
 	defer config.LogStart("ConnectCtrl.Close", nil)()
-	return false
-}
-
-func (c *ConnectCtrl) FullClose() {
-	defer config.LogStart("ConnectCtrl.FullClose", nil)()
 }
 
 func (c *ConnectCtrl) Connecting(cancel func()) {
