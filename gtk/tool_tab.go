@@ -10,8 +10,8 @@ import (
 type tabCtrl interface {
 	Close()               //tab
 	Removed()             //tab
-	Title() string        //tab
 	Content() gtk.IWidget //tab
+	Title() string        //tab
 	SetFileText(string)   //tab
 	OnCloseTab(id string)
 	SetWindowCtrl(interface{}) // tab
@@ -31,7 +31,6 @@ type ToolTab struct {
 }
 
 type ToolTabOptions struct {
-	Title   string
 	Content gtk.IWidget
 	Ctrl    tabCtrl
 }
@@ -90,7 +89,6 @@ func (t *ToolTab) SetContent(opts ToolTabOptions) {
 	defer config.LogStart("ToolTab.SetContent", nil)()
 
 	t.tabCtrl = opts.Ctrl
-	t.SetTitle(opts.Title)
 	t.content.PackStart(opts.Content, true, true, 0)
 	t.mainW = opts.Content
 	t.content.Show()
@@ -102,11 +100,12 @@ func (t *ToolTab) SetContent(opts ToolTabOptions) {
 func (t *ToolTab) SetTitle(title string) {
 	defer config.LogStart("ToolTab.SetTitle", nil)()
 
+	t.w.nb.SetMenuLabelText(t.Content(), title)
 	t.label.SetText(title)
 }
 
-func (t *ToolTab) Label() *gtk.Box {
-	defer config.LogStart("ToolTab.Label", nil)()
+func (t *ToolTab) Header() *gtk.Box {
+	defer config.LogStart("ToolTab.Header", nil)()
 
 	return t.header
 }

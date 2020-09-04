@@ -31,8 +31,6 @@ func (c ConnectCtrl) Init(p *DbTabCtrl) (*ConnectCtrl, error) {
 }
 
 func (c *ConnectCtrl) Title() string {
-	defer config.LogStart("ConnectCtrl.Title", nil)()
-
 	return "Connect"
 }
 

@@ -19,8 +19,8 @@ const (
 
 type tabCtrl interface {
 	Close()
-	Removed()
 	Title() string
+	Removed()
 	Content() ggtk.IWidget
 	SetFileText(string)
 	OnCloseTab(string)
@@ -36,22 +36,21 @@ func (c WindowCtrl) Init(parent *AppCtrl) (*WindowCtrl, error) {
 	defer config.LogStart("WindowCtrl.Init", nil)()
 
 	var err error
-	ctrl := &c
-	ctrl.AppCtrl = parent
-	ctrl.window, err = gtk.Window{}.Init(parent.App.Application, &c)
+	c.AppCtrl = parent
+	c.window, err = gtk.Window{}.Init(parent.App.Application, &c)
 	if err != nil {
 		return nil, err
 	}
-	_, err = ctrl.AddTab(TAB_TYPE_HTTP)
+	_, err = c.AddTab(TAB_TYPE_HTTP)
 	if err != nil {
 		return nil, err
 	}
-	_, err = ctrl.AddTab(TAB_TYPE_DB)
+	_, err = c.AddTab(TAB_TYPE_DB)
 	if err != nil {
 		return nil, err
 	}
 
-	return ctrl, nil
+	return &c, nil
 }
 
 func (c *WindowCtrl) OnSaveQuery(query, path string) {
@@ -136,7 +135,6 @@ func (c *WindowCtrl) AddTab(t tab_type) (interface{}, error) {
 	}
 	tab.SetContent(gtk.ToolTabOptions{
 		Content: ctrl.Content(),
-		Title:   ctrl.Title(),
 		Ctrl:    ctrl,
 	})
 

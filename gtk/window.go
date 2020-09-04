@@ -67,8 +67,10 @@ func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 	if err != nil {
 		return nil, err
 	}
+	w.nb.SetProperty("scrollable", true)
 	w.nb.SetName("MainNotebook")
 	w.nb.SetGroupName("MainWindow")
+	w.nb.PopupEnable()
 
 	w.nb.Connect("switch-page", func(_ *gtk.Notebook, _ *gtk.Widget, i int) {
 		w.tabIndex = i
@@ -195,7 +197,11 @@ func (w *Window) OnSaveQuery(query string, f func(string, string)) {
 func (w *Window) AddToolTab(tab *ToolTab) error {
 	defer config.LogStart("Window.AddToolTab", nil)()
 
-	w.nb.AppendPage(tab.Content(), tab.Label())
+	w.nb.AppendPage(tab.Content(), tab.Header())
+
+	tab.SetTitle(tab.tabCtrl.Title())
+	w.nb.ChildSetProperty(tab.Content(), "tab-fill", false)
+	w.nb.SetMenuLabelText(tab.Content(), tab.Title())
 	w.nb.SetTabReorderable(tab.Content(), true)
 	w.nb.SetCurrentPage(w.nb.PageNum(tab.Content()))
 	tabs[w.id] = append(tabs[w.id], tab)

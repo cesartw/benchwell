@@ -56,16 +56,6 @@ func (c ConnectionCtrl) Init(
 	return &c, nil
 }
 
-func (c *ConnectionCtrl) Title() string {
-	defer config.LogStart("ConnectionCtrl.Title", nil)()
-
-	if c.conn.Name != "" {
-		return c.conn.Name
-	}
-
-	return c.conn.Host
-}
-
 func (c *ConnectionCtrl) Content() ggtk.IWidget {
 	defer config.LogStart("ConnectionCtrl.Content", nil)()
 
@@ -553,13 +543,19 @@ func (c *ConnectionCtrl) Close() {
 }
 
 func (c *ConnectionCtrl) updateTitle() {
+	c.ChangeTitle(c.Title())
+}
+
+func (c *ConnectionCtrl) Title() string {
+	defer config.LogStart("ConnectionCtrl.Title", nil)()
+
 	switch {
 	case c.tableDef.Name != "":
-		c.ChangeTitle(fmt.Sprintf("%s.%s.%s", c.conn.Name, c.dbName, c.tableDef.Name))
+		return fmt.Sprintf("%s.%s.%s", c.conn.Name, c.dbName, c.tableDef.Name)
 	case c.dbName != "":
-		c.ChangeTitle(fmt.Sprintf("%s.%s", c.conn.Name, c.dbName))
+		return fmt.Sprintf("%s.%s", c.conn.Name, c.dbName)
 	default:
-		c.ChangeTitle(fmt.Sprintf("%s", c.conn.Name))
+		return fmt.Sprintf("%s", c.conn.Name)
 	}
 }
 
