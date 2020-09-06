@@ -71,17 +71,11 @@ func (c ConnectScreen) Init(w *Window, ctrl connectScreenCtrl) (*ConnectScreen, 
 	c.Paned.SetVExpand(true)
 	c.Paned.SetWideHandle(true)
 
-	frame1, err := gtk.FrameNew("")
-	if err != nil {
-		return nil, err
-	}
-
 	frame2, err := gtk.FrameNew("")
 	if err != nil {
 		return nil, err
 	}
-
-	frame1.SetShadowType(gtk.SHADOW_IN)
+	frame2.Show()
 	frame2.SetShadowType(gtk.SHADOW_IN)
 
 	c.ConnectionList, err = List{}.Init(c.w, &ListOptions{
@@ -97,16 +91,24 @@ func (c ConnectScreen) Init(w *Window, ctrl connectScreenCtrl) (*ConnectScreen, 
 	c.ConnectionList.OnButtonPress(c.onConnectListButtonPress)
 	c.ConnectionList.SetHExpand(true)
 	c.ConnectionList.SetVExpand(true)
-	frame1.Add(c.ConnectionList)
+	connectionListSW, err := gtk.ScrolledWindowNew(nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	connectionListSW.Add(c.ConnectionList)
+	connectionListSW.Show()
 
 	mysqlForms, err := c.buildMysqlForms()
 	if err != nil {
 		return nil, err
 	}
+	mysqlForms.ShowAll()
+
 	sqliteForm, err := c.buildSqliteForms()
 	if err != nil {
 		return nil, err
 	}
+	sqliteForm.ShowAll()
 
 	c.btnBox, err = gtk.ButtonBoxNew(gtk.ORIENTATION_HORIZONTAL)
 	if err != nil {
@@ -138,8 +140,7 @@ func (c ConnectScreen) Init(w *Window, ctrl connectScreenCtrl) (*ConnectScreen, 
 	c.btnBox.Add(c.btnConnect)
 	c.btnBox.Add(c.btnTest)
 	c.btnBox.Add(c.btnSave)
-
-	mysqlForms.ShowAll()
+	c.btnBox.ShowAll()
 
 	vbox, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
 	if err != nil {
@@ -167,21 +168,25 @@ func (c ConnectScreen) Init(w *Window, ctrl connectScreenCtrl) (*ConnectScreen, 
 	c.stack.SetVisibleChildName("mysql")
 	c.stack.SetVExpand(true)
 	c.stack.SetHExpand(true)
+	c.stack.Show()
 
 	adapterStack.SetStack(c.stack)
+	adapterStack.Show()
 
 	vbox.PackStart(adapterStack, false, true, 0)
 	vbox.PackStart(c.stack, true, false, 0)
+	vbox.Show()
 
 	frame2.Add(vbox)
 	c.formOverlay, err = CancelOverlay{}.Init(frame2)
 	if err != nil {
 		return nil, err
 	}
+	c.formOverlay.Show()
 
-	c.Paned.Pack1(frame1, true, true)
+	c.Paned.Pack1(connectionListSW, true, true)
 	c.Paned.Pack2(c.formOverlay, true, false)
-	c.Paned.ShowAll()
+	c.Paned.Show()
 
 	err = c.initMenu()
 	if err != nil {
@@ -199,17 +204,18 @@ func (c ConnectScreen) Init(w *Window, ctrl connectScreenCtrl) (*ConnectScreen, 
 	return &c, nil
 }
 
-func (c *ConnectScreen) onConnectListButtonPress(_ *gtk.ListBox, e *gdk.Event) {
+func (c *ConnectScreen) onConnectListButtonPress(_ *gtk.ListBox, e *gdk.Event) bool {
 	defer config.LogStart("ConnectScreen.onConnectListButtonPress", nil)()
 
 	keyEvent := gdk.EventButtonNewFromEvent(e)
 
 	if keyEvent.Button() != gdk.BUTTON_SECONDARY {
-		return
+		return false
 	}
 
-	c.contextMenu.ShowAll()
+	c.contextMenu.Show()
 	c.contextMenu.PopupAtPointer(e)
+	return true
 }
 
 func (c *ConnectScreen) initMenu() error {

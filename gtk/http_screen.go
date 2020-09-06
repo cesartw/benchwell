@@ -566,7 +566,7 @@ func (c KeyValue) Init() (*KeyValue, error) {
 		return nil, err
 	}
 
-	c.remove, err = BWButtonNewFromIconName("close", ICON_SIZE_BUTTON)
+	c.remove, err = BWButtonNewFromIconName("close", "orange", ICON_SIZE_BUTTON)
 	if err != nil {
 		return nil, err
 	}

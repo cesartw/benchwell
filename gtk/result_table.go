@@ -35,6 +35,7 @@ const (
 
 type Result struct {
 	*gtk.TreeView
+	w              *Window
 	cols           []fmt.Stringer
 	data           [][]interface{}
 	store          *gtk.ListStore
@@ -64,11 +65,12 @@ type resultCtrl interface {
 	ParseValue(driver.ColDef, string) (interface{}, error)
 }
 
-func (u Result) Init(_ *Window, ctrl resultCtrl) (*Result, error) {
+func (u Result) Init(w *Window, ctrl resultCtrl) (*Result, error) {
 	defer config.LogStart("Result.Init", nil)()
 
 	var err error
 	u.ctrl = ctrl
+	u.w = w
 
 	u.TreeView, err = gtk.TreeViewNew()
 	if err != nil {
@@ -683,9 +685,7 @@ func (u *Result) createColumn(title string, id int, useEditModal bool) (*gtk.Tre
 	cellRenderer.SetProperty("editable", true)
 	cellRenderer.SetProperty("xpad", 10)
 	cellRenderer.SetProperty("height", 23)
-	cellRenderer.SetProperty("width-chars", config.GUI.CellWidth.String())
-	cellRenderer.SetProperty("max-width-chars", config.GUI.CellWidth.String())
-	cellRenderer.SetProperty("wrap-width", config.GUI.CellWidth.String())
+	cellRenderer.SetProperty("max-width-chars", config.GUI.CellWidth.Int())
 
 	// i think "text" refers to a property of the column.
 	// `"text", id` means that the text source for the column should come from
@@ -755,7 +755,7 @@ func (u *Result) onSort(column *gtk.TreeViewColumn) func() {
 func (u *Result) editDialog(data string, done func(string)) {
 	defer config.LogStart("Result.editDialog", nil)()
 
-	modal, err := gtk.DialogNewWithButtons("Edit", nil,
+	modal, err := gtk.DialogNewWithButtons("Edit", u.w,
 		gtk.DIALOG_DESTROY_WITH_PARENT|gtk.DIALOG_MODAL,
 		[]interface{}{"Save", gtk.RESPONSE_ACCEPT},
 		[]interface{}{"Cancel", gtk.RESPONSE_CANCEL},

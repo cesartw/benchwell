@@ -69,7 +69,7 @@ func (c *ConnectCtrl) OnSave() {
 	defer config.LogStart("ConnectCtrl.OnSave", nil)()
 
 	conn := c.scr.GetFormConnection()
-	err := config.SaveConnection(c.window.ApplicationWindow, conn)
+	err := config.SaveConnection(conn)
 	if err != nil {
 		c.window.PushStatus(err.Error())
 		return
@@ -132,7 +132,7 @@ func (c *ConnectCtrl) OnConnectionSelected() {
 	}
 
 	conn := config.Connections[row.GetIndex()]
-	err := conn.Decrypt(c.window.ApplicationWindow)
+	err := conn.Decrypt()
 	if err != nil {
 		conn.Encrypted = false
 		c.window.PushStatus("Fail to decrypt password: %s", err.Error())

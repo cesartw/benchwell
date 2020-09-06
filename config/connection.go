@@ -3,8 +3,6 @@ package config
 import (
 	"bytes"
 	"fmt"
-
-	"github.com/gotk3/gotk3/gtk"
 )
 
 // Connection ...
@@ -55,7 +53,7 @@ func (c Connection) mysqlDSN() string {
 	}
 
 	if c.Password != "" && c.User != "" {
-		c.Decrypt(nil)
+		c.Decrypt()
 		b.WriteString(":" + c.Password)
 	}
 
@@ -145,7 +143,7 @@ func (c *Connection) DeleteQuery(name string) error {
 	return nil
 }
 
-func (c *Connection) Encrypt(w *gtk.ApplicationWindow) error {
+func (c *Connection) Encrypt() error {
 	if c.Encrypted {
 		return nil
 	}
@@ -164,12 +162,12 @@ func (c *Connection) Encrypt(w *gtk.ApplicationWindow) error {
 	return nil
 }
 
-func (c *Connection) Decrypt(w *gtk.ApplicationWindow) error {
+func (c *Connection) Decrypt() error {
 	if !c.Encrypted {
 		return nil
 	}
 
-	pass, err := Keychain.Get(&w.Window, c.Password)
+	pass, err := Keychain.Get(&ActiveWindow.Window, c.Password)
 	if err != nil {
 		return err
 	}

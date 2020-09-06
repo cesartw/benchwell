@@ -178,7 +178,7 @@ func (v ResultView) Init(
 		return nil, err
 	}
 
-	img, err := BWImageNewFromFile("save", ICON_SIZE_BUTTON)
+	img, err := BWImageNewFromFile("save", "orange", ICON_SIZE_BUTTON)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +198,7 @@ func (v ResultView) Init(
 	v.actionSaveFav.Connect("activate", v.onSaveFav(ctrl.OnSaveFav))
 	v.btnSaveMenu.SetMenuModel(&menu.MenuModel)
 
-	v.btnLoadQuery, err = BWButtonNewFromIconName("open", ICON_SIZE_BUTTON)
+	v.btnLoadQuery, err = BWButtonNewFromIconName("open", "orange", ICON_SIZE_BUTTON)
 	if err != nil {
 		return nil, err
 	}
@@ -462,21 +462,21 @@ func (v *ResultView) actionbar() (*gtk.ActionBar, error) {
 
 	// new-add-delete
 	{
-		v.btnAddRow, err = BWButtonNewFromIconName("add-record", ICON_SIZE_BUTTON)
+		v.btnAddRow, err = BWButtonNewFromIconName("add-record", "orange", ICON_SIZE_BUTTON)
 		if err != nil {
 			return nil, err
 		}
-		v.btnDeleteRow, err = BWButtonNewFromIconName("delete-record", ICON_SIZE_BUTTON)
-		if err != nil {
-			return nil, err
-		}
-
-		v.btnCreateRow, err = BWButtonNewFromIconName("save-record", ICON_SIZE_BUTTON)
+		v.btnDeleteRow, err = BWButtonNewFromIconName("delete-record", "orange", ICON_SIZE_BUTTON)
 		if err != nil {
 			return nil, err
 		}
 
-		v.btnShowFilters, err = BWButtonNewFromIconName("filter", ICON_SIZE_BUTTON)
+		v.btnCreateRow, err = BWButtonNewFromIconName("save-record", "orange", ICON_SIZE_BUTTON)
+		if err != nil {
+			return nil, err
+		}
+
+		v.btnShowFilters, err = BWButtonNewFromIconName("filter", "orange", ICON_SIZE_BUTTON)
 		if err != nil {
 			return nil, err
 		}
@@ -509,17 +509,17 @@ func (v *ResultView) actionbar() (*gtk.ActionBar, error) {
 
 	// pagination
 	{
-		v.btnPrev, err = BWButtonNewFromIconName("back", ICON_SIZE_BUTTON)
+		v.btnPrev, err = BWButtonNewFromIconName("back", "orange", ICON_SIZE_BUTTON)
 		if err != nil {
 			return nil, err
 		}
 
-		v.btnNext, err = BWButtonNewFromIconName("next", ICON_SIZE_BUTTON)
+		v.btnNext, err = BWButtonNewFromIconName("next", "orange", ICON_SIZE_BUTTON)
 		if err != nil {
 			return nil, err
 		}
 
-		v.btnRsh, err = BWButtonNewFromIconName("refresh", ICON_SIZE_BUTTON)
+		v.btnRsh, err = BWButtonNewFromIconName("refresh", "orange", ICON_SIZE_BUTTON)
 		if err != nil {
 			return nil, err
 		}
@@ -594,7 +594,7 @@ func (v *ResultView) onColFilterSearchChanged() {
 		return
 	}
 
-	rg, err := regexp.Compile(txt)
+	rg, err := regexp.Compile(strings.ToLower(txt))
 	if err != nil {
 		rg = regexp.MustCompile(fmt.Sprintf(".*%s.*", regexp.QuoteMeta(txt)))
 	}
@@ -602,7 +602,7 @@ func (v *ResultView) onColFilterSearchChanged() {
 	v.result.GetColumns().Foreach(func(i interface{}) {
 		c := i.(*gtk.TreeViewColumn)
 
-		c.SetVisible(rg.MatchString(strings.Replace(c.GetTitle(), "__", "_", -1)))
+		c.SetVisible(rg.MatchString(strings.Replace(strings.ToLower(c.GetTitle()), "__", "_", -1)))
 	})
 }
 

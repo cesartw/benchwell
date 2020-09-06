@@ -15,6 +15,7 @@ import (
 var (
 	colors = map[string]string{
 		"orange": "#ff7305",
+		"white":  "#ffffff",
 		"blue":   "#14d0f0",
 		"red":    "#bb070e",
 	}

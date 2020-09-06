@@ -179,7 +179,7 @@ func (h *HTTPCollection) buildTree(iter *gtk.TreeIter, items []*config.HTTPItem)
 	for _, item := range items {
 		switch item.IsFolder {
 		case true:
-			imageOK, err := BWPixbufFromFile("directory", 16)
+			imageOK, err := BWPixbufFromFile("directory", "orange", 16)
 			if err != nil {
 				return err
 			}

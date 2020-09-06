@@ -62,7 +62,7 @@ func (t ToolTab) Init(w *Window) (*ToolTab, error) {
 		return nil, err
 	}
 
-	t.btn, err = BWButtonNewFromIconName("close", ICON_SIZE_TAB)
+	t.btn, err = BWButtonNewFromIconName("close", "orange", ICON_SIZE_TAB)
 	if err != nil {
 		return nil, err
 	}

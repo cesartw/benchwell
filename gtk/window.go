@@ -62,6 +62,10 @@ func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 	w.SetTitle("BenchWell")
 	w.SetSizeRequest(1024, 768)
 	w.ctrl = ctrl
+	w.ApplicationWindow.Window.Connect("focus-in-event", func() {
+		config.ActiveWindow = w.ApplicationWindow
+	})
+	config.ActiveWindow = w.ApplicationWindow
 
 	w.nb, err = gtk.NotebookNew()
 	if err != nil {
@@ -101,7 +105,7 @@ func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 
 	w.nb.Connect("page-reordered", w.onTabReorder)
 
-	switch config.GUI.ConnectionTabPosition.String() {
+	switch config.GUI.TabPosition.String() {
 	case "bottom":
 		w.nb.SetProperty("tab-pos", gtk.POS_BOTTOM)
 	default:
@@ -283,7 +287,7 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 	if err != nil {
 		return nil, err
 	}
-	addImg, err := BWImageNewFromFile("add-tab", ICON_SIZE_MENU)
+	addImg, err := BWImageNewFromFile("add-tab", "orange", ICON_SIZE_MENU)
 	if err != nil {
 		return nil, err
 	}
@@ -306,7 +310,11 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 	if err != nil {
 		return nil, err
 	}
-	prefImg, _ := BWImageNewFromFile("config", ICON_SIZE_MENU)
+	prefImg, err := BWImageNewFromFile("config", "orange", ICON_SIZE_MENU)
+	if err != nil {
+		return nil, err
+	}
+
 	appBtnMenu.SetImage(prefImg)
 
 	// Set up the menu model for the button

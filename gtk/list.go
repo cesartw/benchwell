@@ -3,6 +3,7 @@ package gtk
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"bitbucket.org/goreorto/benchwell/config"
 	"github.com/gotk3/gotk3/gdk"
@@ -17,11 +18,20 @@ type ListOptions struct {
 	StockIcon          string
 }
 
+type listrow struct {
+	*gtk.ListBoxRow
+	imageOff *gtk.Image
+	imageOn  *gtk.Image
+	label    *gtk.Label
+	box      *gtk.Box
+	name     fmt.Stringer
+}
+
 type List struct {
 	*gtk.ListBox
 
 	options *ListOptions
-	rows    []*gtk.ListBoxRow
+	rows    []*listrow
 	ctrlMod bool
 
 	// TODO: these may not be needed
@@ -79,10 +89,10 @@ func (list List) Init(_ *Window, opts *ListOptions, ctrl listCtrl) (*List, error
 		}
 
 		name := list.options.Names[row.GetIndex()]
-		return list.options.FilterRegex.Match([]byte(name.String()))
+		return list.options.FilterRegex.Match([]byte(strings.ToLower(name.String())))
 	})
 
-	list.ShowAll()
+	list.Show()
 	return &list, nil
 }
 
@@ -125,7 +135,7 @@ func (u *List) onRightClick(_ *gtk.ListBox, e *gdk.Event) {
 
 	row := u.GetRowAtY(int(keyEvent.Y()))
 	u.GrabFocus()
-	u.SelectRow(row)
+	u.ListBox.SelectRow(row)
 }
 
 func (u *List) OnButtonPress(f interface{}) {
@@ -149,18 +159,22 @@ func (u *List) UpdateItems(names []fmt.Stringer) error {
 		}
 	}
 
-	u.ShowAll()
+	u.Show()
 
 	return nil
 }
 
 func (u *List) AppendItem(name fmt.Stringer) (*gtk.ListBoxRow, error) {
 	//defer config.LogStart("List.AppendItem", nil)()
+	row, err := u.appendItem(name, true)
+	if err != nil {
+		return nil, err
+	}
 
-	return u.appendItem(name, true)
+	return row.ListBoxRow, nil
 }
 
-func (u *List) appendItem(name fmt.Stringer, addToStore bool) (*gtk.ListBoxRow, error) {
+func (u *List) appendItem(name fmt.Stringer, addToStore bool) (*listrow, error) {
 	//defer config.LogStart("List.appendItem", nil)()
 
 	row, err := u.buildItem(name, addToStore)
@@ -179,11 +193,15 @@ func (u *List) appendItem(name fmt.Stringer, addToStore bool) (*gtk.ListBoxRow, 
 
 func (u *List) PrependItem(name fmt.Stringer) (*gtk.ListBoxRow, error) {
 	//defer config.LogStart("List.PrependItem", nil)()
+	row, err := u.prependItem(name, true)
+	if err != nil {
+		return nil, err
+	}
 
-	return u.prependItem(name, true)
+	return row.ListBoxRow, nil
 }
 
-func (u *List) prependItem(name fmt.Stringer, addToStore bool) (*gtk.ListBoxRow, error) {
+func (u *List) prependItem(name fmt.Stringer, addToStore bool) (*listrow, error) {
 	//defer config.LogStart("List.prependItem", nil)()
 
 	row, err := u.buildItem(name, addToStore)
@@ -200,56 +218,67 @@ func (u *List) prependItem(name fmt.Stringer, addToStore bool) (*gtk.ListBoxRow,
 	return row, nil
 }
 
-func (u *List) buildItem(name fmt.Stringer, appendToStore bool) (*gtk.ListBoxRow, error) {
-	//defer config.LogStart("List.buildItem", nil)()
+func (u *List) buildItem(name fmt.Stringer, appendToStore bool) (*listrow, error) {
+	row := &listrow{name: name}
 
-	label, err := gtk.LabelNew(name.String())
+	var err error
+	row.label, err = gtk.LabelNew(name.String())
 	if err != nil {
 		return nil, err
 	}
-	label.SetHAlign(gtk.ALIGN_START)
+	row.label.SetHAlign(gtk.ALIGN_START)
 
-	row, err := gtk.ListBoxRowNew()
+	row.ListBoxRow, err = gtk.ListBoxRowNew()
 	if err != nil {
 		return nil, err
 	}
 
-	var widget gtk.IWidget = label
+	var widget gtk.IWidget = row.label
 
 	switch {
 	case u.options.IconFunc != nil:
 		fileName, size := u.options.IconFunc(name)
-		image, err := BWImageNewFromFile(fileName, size)
+		row.imageOff, err = BWImageNewFromFile(fileName, "orange", size)
+		if err != nil {
+			return nil, err
+		}
+		row.imageOn, err = BWImageNewFromFile(fileName, "white", size)
 		if err != nil {
 			return nil, err
 		}
 
-		box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 3)
+		row.box, err = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
 		if err != nil {
 			return nil, err
 		}
 
-		box.Add(image)
-		box.Add(label)
-		widget = box
+		row.box.PackStart(row.imageOff, false, false, 5)
+		row.box.PackStart(row.imageOn, false, false, 5)
+		row.box.PackStart(row.label, false, false, 0)
+		widget = row.box
 	case u.options.StockIcon != "":
-		image, err := gtk.ImageNewFromIconName(u.options.StockIcon, gtk.ICON_SIZE_MENU)
+		row.imageOff, err = gtk.ImageNewFromIconName(u.options.StockIcon, gtk.ICON_SIZE_MENU)
 		if err != nil {
 			return nil, err
 		}
 
-		box, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 3)
+		row.box, err = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
 		if err != nil {
 			return nil, err
 		}
 
-		box.Add(image)
-		box.Add(label)
-		widget = box
+		row.box.PackStart(row.imageOff, false, false, 5)
+		row.box.PackStart(row.label, false, false, 5)
+		widget = row.box
 	}
 
 	row.Add(widget)
-	row.ShowAll()
+	if row.box != nil {
+		row.box.Show()
+		row.imageOff.Show()
+	}
+	row.label.Show()
+	row.ListBoxRow.Show()
 
 	return row, nil
 }
@@ -267,6 +296,21 @@ func (u *List) onRowSelected(_ *gtk.ListBox, row *gtk.ListBoxRow) {
 	if row != nil && row.GetIndex() >= 0 {
 		u.selectedItem.Set(u.options.Names[row.GetIndex()])
 		u.selectedItemIndex.Set(row.GetIndex())
+
+		if u.options.IconFunc != nil {
+			lr := u.rows[row.GetIndex()]
+			if lr.imageOn == nil {
+				return
+			}
+
+			for _, row := range u.rows {
+				row.imageOff.Show()
+				row.imageOn.Hide()
+			}
+
+			lr.imageOff.Hide()
+			lr.imageOn.Show()
+		}
 	}
 }
 

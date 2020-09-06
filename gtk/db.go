@@ -16,7 +16,7 @@ func (d DB) Init(w *Window) (*DB, error) {
 
 	var err error
 	d.w = w
-	d.Box, err = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
+	d.Box, err = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 5)
 	if err != nil {
 		return nil, err
 	}

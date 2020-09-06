@@ -707,18 +707,18 @@ func (d *mysqlDb) UpdateField(
 	lastIndex := len(cols) - 1
 	wheres := []string{}
 
+	params := []interface{}{values[lastIndex]}
 	for i := 0; i <= len(cols)-2; i++ {
-		wheres = append(wheres, fmt.Sprintf("`%s` = %#v", cols[i].Name, values[i]))
-		//args = append(args, values[i])
+		wheres = append(wheres, fmt.Sprintf("`%s` = ?", cols[i].Name))
+		params = append(params, values[i])
 	}
 
-	query := fmt.Sprintf("UPDATE `%s` SET `%s` = %#v WHERE %s",
+	query := fmt.Sprintf("UPDATE `%s` SET `%s` = ? WHERE %s",
 		tableName,
 		cols[lastIndex].Name,
-		values[lastIndex],
 		strings.Join(wheres, " AND "))
 
-	result, err := d.db.ExecContext(ctx, query)
+	result, err := d.db.ExecContext(ctx, query, params...)
 	if err != nil {
 		driver.LogError(ctx, err)
 		return "", err

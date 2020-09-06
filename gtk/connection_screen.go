@@ -3,6 +3,7 @@ package gtk
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/gtk"
@@ -359,30 +360,32 @@ func (c *ConnectionScreen) SelectedTable() (string, bool) {
 	return i.String(), true
 }
 
-func (c *ConnectionScreen) onTableListButtonPress(_ *gtk.ListBox, e *gdk.Event) {
+func (c *ConnectionScreen) onTableListButtonPress(_ *gtk.ListBox, e *gdk.Event) bool {
 	defer config.LogStart("ConnectionScreen.onTableListButtonPress", nil)()
 
 	keyEvent := gdk.EventButtonNewFromEvent(e)
 
 	if keyEvent.Button() != gdk.BUTTON_SECONDARY {
-		return
+		return false
 	}
 
-	c.tablesMenu.tableMenu.ShowAll()
+	c.tablesMenu.tableMenu.Show()
 	c.tablesMenu.tableMenu.PopupAtPointer(e)
+	return true
 }
 
-func (c *ConnectionScreen) onLogViewButtonPress(_ *gtk.ListBox, e *gdk.Event) {
+func (c *ConnectionScreen) onLogViewButtonPress(_ *gtk.ListBox, e *gdk.Event) bool {
 	defer config.LogStart("ConnectionScreen.onLogViewButtonPress", nil)()
 
 	keyEvent := gdk.EventButtonNewFromEvent(e)
 
 	if keyEvent.Button() != gdk.BUTTON_SECONDARY {
-		return
+		return false
 	}
 
-	c.logMenu.logMenu.ShowAll()
+	c.logMenu.logMenu.Show()
 	c.logMenu.logMenu.PopupAtPointer(e)
+	return true
 }
 
 func (c *ConnectionScreen) onDatabaseSelected() {
@@ -455,7 +458,7 @@ func (c *ConnectionScreen) initTableMenu() error {
 	cowboyMenu.Add(c.tablesMenu.truncateMenu)
 	cowboyMenu.Add(c.tablesMenu.deleteMenu)
 	cowboy.SetSubmenu(cowboyMenu)
-	cowboy.ShowAll()
+	cowboy.Show()
 
 	return nil
 }
@@ -498,7 +501,7 @@ func (c *ConnectionScreen) onSearch(e *gtk.SearchEntry) {
 		return
 	}
 
-	rg, err := regexp.Compile(txt)
+	rg, err := regexp.Compile(strings.ToLower(txt))
 	if err != nil {
 		rg = regexp.MustCompile(fmt.Sprintf(".*%s.*", regexp.QuoteMeta(txt)))
 	}

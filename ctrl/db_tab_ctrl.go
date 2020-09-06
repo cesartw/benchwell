@@ -35,9 +35,7 @@ func (c DbTabCtrl) Init(p *WindowCtrl) (*DbTabCtrl, error) {
 		return nil, err
 	}
 
-	c.launchConnect()
-
-	return &c, nil
+	return &c, c.launchConnect()
 }
 
 func (c *DbTabCtrl) Close() {
@@ -83,17 +81,17 @@ func (c *DbTabCtrl) Removed() {
 	}
 }
 
-func (c *DbTabCtrl) launchConnect() {
+func (c *DbTabCtrl) launchConnect() error {
 	defer config.LogStart("DbTabCtrl.launchConnect", nil)()
 
 	var err error
 	c.connectCtrl, err = ConnectCtrl{}.Init(c)
 	if err != nil {
-		config.Error(err)
-		return
+		return err
 	}
 	c.currentCtrl = c.connectCtrl
 	c.screenHolder.SetContent(c.connectCtrl.scr)
+	return nil
 }
 
 func (c *DbTabCtrl) launchConnection(ctx *sqlengine.Context, conn *config.Connection) {

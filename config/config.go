@@ -22,15 +22,15 @@ var (
 		WordWrap *Setting
 	}{}
 	GUI = struct {
-		CellWidth             *Setting
-		ConnectionTabPosition *Setting
-		TableTabPosition      *Setting
-		PageSize              *Setting
-		DarkMode              *Setting
+		CellWidth   *Setting
+		TabPosition *Setting
+		PageSize    *Setting
+		DarkMode    *Setting
 	}{}
-	Home        string
-	Connections []*Connection
-	Collections []*HTTPCollection
+	Home         string
+	Connections  []*Connection
+	Collections  []*HTTPCollection
+	ActiveWindow *gtk.ApplicationWindow
 
 	loadedSettings map[string]*Setting
 	logFile        string
@@ -39,16 +39,15 @@ var (
 )
 
 func Init() {
+	logger = logrus.New()
+
 	var err error
 	userHome, _ := os.UserConfigDir()
 	benchwellHome := userHome + "/benchwell"
+	dbFile := benchwellHome + "/config.db"
+	logger.Infof("Using %s", dbFile)
 
-	if Version == "dev" {
-		userHome = "./assets/data/"
-		benchwellHome = userHome
-	}
-
-	db, err = sql.Open("sqlite3", benchwellHome+"/config.db")
+	db, err = sql.Open("sqlite3", dbFile)
 	if err != nil {
 		panic(err)
 	}
@@ -58,14 +57,12 @@ func Init() {
 		panic(err)
 	}
 
-	logger = logrus.New()
 	Home = benchwellHome
 	loadedSettings = map[string]*Setting{}
 
 	Editor.WordWrap = getSetting("gui.editor.word_wrap")
 	GUI.CellWidth = getSetting("gui.cell_width")
-	GUI.ConnectionTabPosition = getSetting("gui.connection_tab_position")
-	GUI.TableTabPosition = getSetting("gui.table_tab_position")
+	GUI.TabPosition = getSetting("gui.table_tab_position")
 	GUI.PageSize = getSetting("gui.page_size")
 	GUI.DarkMode = getSetting("gui.dark_mode")
 	EncryptionMode = getSetting("encryption_mode")
@@ -77,7 +74,7 @@ func Init() {
 	}
 
 	if len(Connections) == 0 {
-		SaveConnection(nil, &Connection{Name: "New connection", Type: "tcp", Adapter: "mysql", Port: 3306})
+		//SaveConnection(&Connection{Name: "New connection", Type: "tcp", Adapter: "mysql", Port: 3306})
 	}
 
 	err = loadCollections()
@@ -368,14 +365,14 @@ func LogStart(fname string, args map[string]interface{}) func() {
 	return ctxlogger{start: time.Now(), Entry: e}.Done
 }
 
-func SaveConnection(w *gtk.ApplicationWindow, conn *Connection) error {
-	err := conn.Encrypt(nil)
+func SaveConnection(conn *Connection) error {
+	err := conn.Encrypt()
 	if err != nil {
 		return err
 	}
 
 	if conn.ID == 0 {
-		sql := `INSERT INTO connections(adapter, type, name, socket, file, host, port,
+		sql := `INSERT INTO db_connections(adapter, type, name, socket, file, host, port,
 					user, password, database, sshhost, sshagent, options, encrypted)
 				VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		result, err := db.Exec(sql,
@@ -392,7 +389,7 @@ func SaveConnection(w *gtk.ApplicationWindow, conn *Connection) error {
 		conn.ID = id
 		Connections = append(Connections, conn)
 	} else {
-		sql := `UPDATE connections
+		sql := `UPDATE db_connections
 					SET adapter = ?, type = ?, name = ?, socket = ?, file = ?, host = ?, port = ?,
 					user = ?, password = ?, database = ?, sshhost = ?, sshagent = ?, options = ?, encrypted = ?
 				WHERE ID = ?`
@@ -404,7 +401,7 @@ func SaveConnection(w *gtk.ApplicationWindow, conn *Connection) error {
 			return err
 		}
 	}
-	conn.Decrypt(w)
+	conn.Decrypt()
 
 	return nil
 }

@@ -90,17 +90,29 @@ func BWMenuItemWithImage(txt string, asset string) (*gtk.MenuItem, error) {
 		return nil, err
 	}
 
-	var icon *gtk.Image
+	var iconOff, iconOn *gtk.Image
 	if strings.HasPrefix(asset, "gtk-") {
-		icon, err = gtk.ImageNewFromIconName(asset, gtk.ICON_SIZE_MENU)
+		iconOff, err = gtk.ImageNewFromIconName(asset, gtk.ICON_SIZE_MENU)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		icon, err = BWImageNewFromFile(asset, ICON_SIZE_MENU)
+		iconOff, err = BWImageNewFromFile(asset, "orange", ICON_SIZE_MENU)
 		if err != nil {
 			return nil, err
 		}
+		iconOn, err = BWImageNewFromFile(asset, "white", ICON_SIZE_MENU)
+		if err != nil {
+			return nil, err
+		}
+		item.Connect("select", func() {
+			iconOff.Hide()
+			iconOn.Show()
+		})
+		item.Connect("deselect", func() {
+			iconOn.Hide()
+			iconOff.Show()
+		})
 	}
 
 	label, err := gtk.LabelNew(txt)
@@ -110,15 +122,24 @@ func BWMenuItemWithImage(txt string, asset string) (*gtk.MenuItem, error) {
 	label.SetUseUnderline(true)
 	label.SetXAlign(0.0)
 
-	box.PackStart(icon, false, false, 0)
+	box.PackStart(iconOff, false, false, 0)
+	if iconOn != nil {
+		box.PackStart(iconOn, false, false, 0)
+		iconOn.Hide()
+	}
 	box.PackEnd(label, true, true, 5)
 	item.Add(box)
+
+	label.Show()
+	iconOff.Show()
+	box.Show()
+	item.Show()
 
 	return item, nil
 }
 
-func BWImageNewFromFile(asset string, size int) (*gtk.Image, error) {
-	pixbuf, err := BWPixbufFromFile(asset, size)
+func BWImageNewFromFile(asset, color string, size int) (*gtk.Image, error) {
+	pixbuf, err := BWPixbufFromFile(asset, color, size)
 	if err != nil {
 		return nil, err
 	}
@@ -131,13 +152,17 @@ func BWImageNewFromFile(asset string, size int) (*gtk.Image, error) {
 	return img, nil
 }
 
-func BWPixbufFromFile(asset string, size int) (*gdk.Pixbuf, error) {
+func BWPixbufFromFile(asset, color string, size int) (*gdk.Pixbuf, error) {
 	loader, err := gdk.PixbufLoaderNewWithType("png")
 	if err != nil {
 		return nil, err
 	}
+	colors := assets.IconsetOrange48
+	if color == "white" {
+		colors = assets.IconsetWhite48
+	}
 
-	data, ok := assets.Iconset48[asset]
+	data, ok := colors[asset]
 	if !ok {
 		return nil, fmt.Errorf("`%s` icon not found", asset)
 	}
@@ -155,13 +180,13 @@ func BWPixbufFromFile(asset string, size int) (*gdk.Pixbuf, error) {
 	return pixbuf, nil
 }
 
-func BWButtonNewFromIconName(asset string, size int) (*gtk.Button, error) {
+func BWButtonNewFromIconName(asset, color string, size int) (*gtk.Button, error) {
 	btn, err := gtk.ButtonNew()
 	if err != nil {
 		return nil, err
 	}
 
-	img, err := BWImageNewFromFile(asset, size)
+	img, err := BWImageNewFromFile(asset, color, size)
 	if err != nil {
 		return nil, err
 	}

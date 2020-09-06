@@ -6,7 +6,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"bitbucket.org/goreorto/benchwell/assets"
 	"bitbucket.org/goreorto/benchwell/config"
 	"bitbucket.org/goreorto/benchwell/ctrl"
 	"bitbucket.org/goreorto/benchwell/gtk"
@@ -36,16 +35,13 @@ var rootCmd = &cobra.Command{
 		}
 
 		config.Debug("application startup")
-		err := assets.Load()
-		if err != nil {
-			panic(err)
-		}
 
 		eng := sqlengine.New()
 		defer eng.Dispose()
 
 		ctr := ctrl.AppCtrl{}.Init(eng)
 
+		var err error
 		// Create a new application.
 		ctr.App, err = gtk.Application{}.Init(ctr)
 		if err != nil {
