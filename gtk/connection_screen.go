@@ -38,7 +38,6 @@ type connectionScreenCtrl interface {
 	ParseValue(driver.ColDef, string) (interface{}, error)
 
 	SetTableDef(ctx *sqlengine.Context, tableDef driver.TableDef) (bool, error)
-	SetQuery(ctx *sqlengine.Context, query string) (bool, error)
 	String() string
 	OnApplyConditions()
 }
@@ -247,10 +246,10 @@ func (c *ConnectionScreen) SetTableDef(ctx *sqlengine.Context, tableDef driver.T
 	return c.ctrl.SetTableDef(ctx, tableDef)
 }
 
-func (c *ConnectionScreen) SetQuery(ctx *sqlengine.Context, query string) (bool, error) {
+func (c *ConnectionScreen) SetQuery(query string) {
 	defer config.LogStart("ConnectionScreen.SetQuery", nil)()
 
-	return c.ctrl.SetQuery(ctx, query)
+	c.ResultView.SetQuery(query)
 }
 
 func (c *ConnectionScreen) SetDatabases(dbs []string) {

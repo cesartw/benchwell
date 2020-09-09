@@ -28,8 +28,6 @@ type windowCtrl interface {
 	OnNewDatabaseTab()
 	OnNewHTTPTab()
 	OnCloseTab(string)
-	OnFileSelected(string)
-	OnSaveQuery(string, string)
 }
 
 type Window struct {
@@ -44,8 +42,6 @@ type Window struct {
 		NewConnection  *glib.SimpleAction
 		NewDatabaseTab *glib.SimpleAction
 		NewHTTPTab     *glib.SimpleAction
-		LoadFile       *glib.SimpleAction
-		SaveQuery      *glib.SimpleAction
 	}
 	ctrl windowCtrl
 
@@ -60,7 +56,7 @@ func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 	w.id = uuid.New().String()
 	w.ApplicationWindow, err = gtk.ApplicationWindowNew(app)
 	w.SetTitle("BenchWell")
-	w.SetSizeRequest(1024, 768)
+	w.SetSizeRequest(1432, 867)
 	w.ctrl = ctrl
 	w.ApplicationWindow.Window.Connect("focus-in-event", func() {
 		config.ActiveWindow = w.ApplicationWindow
@@ -144,58 +140,10 @@ func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 	// add main tab
 	w.Menu.NewDatabaseTab.Connect("activate", ctrl.OnNewDatabaseTab)
 	w.Menu.NewHTTPTab.Connect("activate", ctrl.OnNewHTTPTab)
-	// action menu for sub nb
-	//w.Menu.NewSubToolTab.Connect("activate", ctrl.OnNewSubTab)
-	w.Menu.LoadFile.Connect("activate", w.OnOpenFile(ctrl.OnFileSelected))
-	//w.Menu.SaveQuery.Connect("activate", w.OnSaveQuery(ctrl.OnSaveQuery))
 
 	tabs[w.id] = []*ToolTab{}
 
 	return &w, nil
-}
-
-func (w *Window) OnOpenFile(f func(string)) func() {
-	defer config.LogStart("Window.OnOpenFile", nil)()
-
-	return func() {
-		defer config.LogStart("Window.OnOpenFile.inner", nil)()
-
-		openfileDialog, err := gtk.FileChooserDialogNewWith2Buttons("Select file", w, gtk.FILE_CHOOSER_ACTION_OPEN,
-			"Open", gtk.RESPONSE_OK,
-			"Cancel", gtk.RESPONSE_CANCEL,
-		)
-		if err != nil {
-			config.Error("open file dialog", err)
-			return
-		}
-		defer openfileDialog.Destroy()
-
-		response := openfileDialog.Run()
-		if response == gtk.RESPONSE_OK && openfileDialog.GetFilename() != "" {
-			f(openfileDialog.GetFilename())
-		}
-	}
-}
-
-func (w *Window) OnSaveQuery(query string, f func(string, string)) {
-	defer config.LogStart("Window.OnSaveQuery", nil)()
-
-	openfileDialog, err := gtk.FileChooserDialogNewWith2Buttons("Save file", w, gtk.FILE_CHOOSER_ACTION_SAVE,
-		"Save", gtk.RESPONSE_OK,
-		"Cancel", gtk.RESPONSE_CANCEL,
-	)
-	if err != nil {
-		config.Error("save file dialog", err)
-		return
-	}
-	defer openfileDialog.Destroy()
-
-	response := openfileDialog.Run()
-	if response == gtk.RESPONSE_CANCEL {
-		return
-	}
-
-	f(query, openfileDialog.GetFilename())
 }
 
 func (w *Window) AddToolTab(tab *ToolTab) error {
@@ -269,10 +217,8 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 
 	w.Menu.NewDatabaseTab = glib.SimpleActionNew("new.db", nil)
 	w.Menu.NewHTTPTab = glib.SimpleActionNew("new.http", nil)
-	w.Menu.LoadFile = glib.SimpleActionNew("file.load", nil)
 	w.AddAction(w.Menu.NewDatabaseTab)
 	w.AddAction(w.Menu.NewHTTPTab)
-	w.AddAction(w.Menu.LoadFile)
 
 	header, err := gtk.HeaderBarNew()
 	if err != nil {

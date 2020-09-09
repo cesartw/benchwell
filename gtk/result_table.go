@@ -143,7 +143,8 @@ func (u *Result) UpdateColumns(cols []driver.ColDef) error {
 
 	columns := make([]glib.Type, len(u.cols)+1) // +1 internal status col
 	for i, col := range u.cols {
-		c, err := u.createColumn(col.String(), i, u.cols[i].(driver.ColDef).Type == driver.ColTypeLongString)
+		def := u.cols[i].(driver.ColDef)
+		c, err := u.createColumn(col.String(), i, def.Type == driver.ColTypeLongString, def.PK)
 		if err != nil {
 			return err
 		}
@@ -193,7 +194,7 @@ func (u *Result) UpdateRawData(cols []string, data [][]interface{}) error {
 
 	columns := make([]glib.Type, len(u.cols))
 	for i, col := range u.cols {
-		gtkc, err := u.createColumn(col.String(), i, false)
+		gtkc, err := u.createColumn(col.String(), i, false, false)
 		if err != nil {
 			return err
 		}
@@ -675,7 +676,7 @@ func (u *Result) onSaveCell(row, column int, newValue string) {
 	u.data[row][column], _ = u.ctrl.ParseValue(affectedCol, newValue)
 }
 
-func (u *Result) createColumn(title string, id int, useEditModal bool) (*gtk.TreeViewColumn, error) {
+func (u *Result) createColumn(title string, id int, useEditModal, highlight bool) (*gtk.TreeViewColumn, error) {
 	defer config.LogStart("Result.createColumn", nil)()
 
 	cellRenderer, err := gtk.CellRendererTextNew()
@@ -686,6 +687,8 @@ func (u *Result) createColumn(title string, id int, useEditModal bool) (*gtk.Tre
 	cellRenderer.SetProperty("xpad", 10)
 	cellRenderer.SetProperty("height", 23)
 	cellRenderer.SetProperty("max-width-chars", config.GUI.CellWidth.Int())
+	cellRenderer.SetProperty("cell-background", "#575756")
+	cellRenderer.SetProperty("cell-background-set", highlight)
 
 	// i think "text" refers to a property of the column.
 	// `"text", id` means that the text source for the column should come from

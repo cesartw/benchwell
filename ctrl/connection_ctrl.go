@@ -3,6 +3,8 @@ package ctrl
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
 
 	"bitbucket.org/goreorto/benchwell/config"
 	"bitbucket.org/goreorto/benchwell/gtk"
@@ -129,17 +131,7 @@ func (c *ConnectionCtrl) OnEditTable() {
 	}
 
 	if tableDef.Type == driver.TableTypeDummy {
-		ok, err := c.scr.SetQuery(c.ctx, tableDef.Query)
-		if err != nil {
-			config.Error(err)
-			return
-		}
-
-		if ok {
-			return
-		}
-
-		c.scr.SetQuery(c.ctx, tableDef.Query)
+		c.scr.SetQuery(tableDef.Query)
 	}
 }
 
@@ -247,6 +239,8 @@ func (c *ConnectionCtrl) OnSaveFav(name, query string) {
 		Query:        query,
 		ConnectionID: c.conn.ID,
 	})
+
+	c.OnDatabaseSelected()
 }
 
 func (c *ConnectionCtrl) Screen() interface{} {
@@ -528,14 +522,10 @@ func (c *ConnectionCtrl) SetTableDef(ctx *sqlengine.Context, tableDef driver.Tab
 	return true, nil
 }
 
-func (c *ConnectionCtrl) SetQuery(ctx *sqlengine.Context, query string) (bool, error) {
+func (c *ConnectionCtrl) SetQuery(query string) {
 	defer config.LogStart("ConnectionCtrl.SetQuery", nil)()
 
-	if c.ctx != nil && c.ctx != ctx {
-		return false, nil
-	}
-
-	return c.scr.SetQuery(ctx, query)
+	c.scr.SetQuery(query)
 }
 
 func (c *ConnectionCtrl) Close() {
@@ -556,6 +546,27 @@ func (c *ConnectionCtrl) Title() string {
 		return fmt.Sprintf("%s.%s", c.conn.Name, c.dbName)
 	default:
 		return fmt.Sprintf("%s", c.conn.Name)
+	}
+}
+
+func (c *ConnectionCtrl) OnFileSelected(filepath string) {
+	defer config.LogStart("ConnectionCtrl.OnFileSelected", nil)()
+
+	bytes, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		config.Error("reading file", err)
+		return
+	}
+
+	c.scr.SetQuery(string(bytes))
+}
+
+func (c *ConnectionCtrl) OnSaveQuery(query, path string) {
+	defer config.LogStart("ConnectionCtrl.OnSaveQuery", nil)()
+
+	err := ioutil.WriteFile(path, []byte(query), os.FileMode(0666))
+	if err != nil {
+		c.window.PushStatus("failed to save file: %#v", err)
 	}
 }
 

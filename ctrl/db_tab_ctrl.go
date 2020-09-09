@@ -18,7 +18,6 @@ type DbTabCtrl struct {
 
 	currentCtrl interface {
 		Close()
-		SetFileText(string)
 		Content() ggtk.IWidget
 		Title() string
 	}
@@ -58,12 +57,6 @@ func (c *DbTabCtrl) SetWindowCtrl(i interface{}) {
 	defer config.LogStart("DbTabCtrl.SetWindowCtrl", nil)()
 
 	c.WindowCtrl = i.(*WindowCtrl)
-}
-
-func (c *DbTabCtrl) SetFileText(s string) {
-	defer config.LogStart("DbTabCtrl.SetFileText", nil)()
-
-	c.currentCtrl.SetFileText(s)
 }
 
 func (c *DbTabCtrl) Show() {

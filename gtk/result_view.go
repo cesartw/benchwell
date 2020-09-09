@@ -194,8 +194,8 @@ func (v ResultView) Init(
 	v.w.AddAction(v.actionSaveFile)
 	v.w.AddAction(v.actionSaveFav)
 
-	v.actionSaveFile.Connect("activate", v.onSaveQuery(w.OnSaveQuery, ctrl.OnSaveQuery))
-	v.actionSaveFav.Connect("activate", v.onSaveFav(ctrl.OnSaveFav))
+	v.actionSaveFile.Connect("activate", v.onSaveQuery)
+	v.actionSaveFav.Connect("activate", v.onSaveFav)
 	v.btnSaveMenu.SetMenuModel(&menu.MenuModel)
 
 	v.btnLoadQuery, err = BWButtonNewFromIconName("open", "orange", ICON_SIZE_BUTTON)
@@ -203,7 +203,7 @@ func (v ResultView) Init(
 		return nil, err
 	}
 
-	v.btnLoadQuery.Connect("clicked", w.OnOpenFile(ctrl.OnFileSelected))
+	v.btnLoadQuery.Connect("clicked", v.onOpenFile)
 
 	tvActionBar.PackEnd(v.btnSaveMenu)
 	tvActionBar.PackEnd(v.btnLoadQuery)
@@ -257,6 +257,25 @@ func (v ResultView) Init(
 	return &v, nil
 }
 
+func (v *ResultView) onOpenFile() {
+	defer config.LogStart("ResultView.onOpenFile", nil)()
+
+	openfileDialog, err := gtk.FileChooserDialogNewWith2Buttons("Select file", v.w, gtk.FILE_CHOOSER_ACTION_OPEN,
+		"Open", gtk.RESPONSE_OK,
+		"Cancel", gtk.RESPONSE_CANCEL,
+	)
+	if err != nil {
+		config.Error("open file dialog", err)
+		return
+	}
+	defer openfileDialog.Destroy()
+
+	response := openfileDialog.Run()
+	if response == gtk.RESPONSE_OK && openfileDialog.GetFilename() != "" {
+		v.ctrl.OnFileSelected(openfileDialog.GetFilename())
+	}
+}
+
 func (v *ResultView) ShowAutoComplete(words []string) {
 	defer config.LogStart("ResultView.ShowAutoComplete", nil)()
 
@@ -279,62 +298,68 @@ func (v *ResultView) SetQuery(query string) {
 	}
 
 	buff.Delete(buff.GetStartIter(), buff.GetEndIter())
-	buff.InsertMarkup(buff.GetStartIter(), query)
+	buff.Insert(buff.GetStartIter(), query)
 }
 
-func (v *ResultView) onSaveQuery(
-	openDialog func(string, func(string, string)),
-	onSaveQuery func(string, string),
-) func() {
+func (v *ResultView) onSaveQuery() {
 	defer config.LogStart("ResultView.onSaveQuery", nil)()
 
-	return func() {
-		buff, err := v.sourceView.GetBuffer()
-		if err != nil {
-			config.Error(err)
-			return
-		}
-
-		txt, err := buff.GetText(buff.GetStartIter(), buff.GetEndIter(), false)
-		if err != nil {
-			config.Error(err)
-			return
-		}
-
-		openDialog(txt, onSaveQuery)
+	openfileDialog, err := gtk.FileChooserDialogNewWith2Buttons("Save file", v.w, gtk.FILE_CHOOSER_ACTION_SAVE,
+		"Save", gtk.RESPONSE_OK,
+		"Cancel", gtk.RESPONSE_CANCEL,
+	)
+	if err != nil {
+		config.Error("save file dialog", err)
+		return
 	}
+	defer openfileDialog.Destroy()
+
+	response := openfileDialog.Run()
+	if response == gtk.RESPONSE_CANCEL {
+		return
+	}
+
+	buff, err := v.sourceView.GetBuffer()
+	if err != nil {
+		config.Error(err)
+		return
+	}
+
+	txt, err := buff.GetText(buff.GetStartIter(), buff.GetEndIter(), false)
+	if err != nil {
+		config.Error(err)
+		return
+	}
+
+	v.ctrl.OnSaveQuery(txt, openfileDialog.GetFilename())
 }
 
-func (v *ResultView) onSaveFav(
-	onSaveQuery func(string, string),
-) func() {
+func (v *ResultView) onSaveFav() {
 	defer config.LogStart("ResultView.onSaveFac", nil)()
 
-	return func() {
-		name, err := v.askFavName()
-		if err != nil {
-			config.Error(err)
-			return
-		}
-
-		if name == "" {
-			return
-		}
-
-		buff, err := v.sourceView.GetBuffer()
-		if err != nil {
-			config.Error(err)
-			return
-		}
-
-		query, err := buff.GetText(buff.GetStartIter(), buff.GetEndIter(), false)
-		if err != nil {
-			config.Error(err)
-			return
-		}
-
-		onSaveQuery(name, query)
+	name, err := v.askFavName()
+	if err != nil {
+		config.Error(err)
+		return
 	}
+
+	if name == "" {
+		return
+	}
+
+	buff, err := v.sourceView.GetBuffer()
+	if err != nil {
+		config.Error(err)
+		return
+	}
+
+	query, err := buff.GetText(buff.GetStartIter(), buff.GetEndIter(), false)
+	if err != nil {
+		config.Error(err)
+		return
+	}
+
+	v.ctrl.OnSaveFav(name, query)
 }
 
 func (v *ResultView) PageSize() int64 {

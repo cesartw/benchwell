@@ -184,7 +184,7 @@ func SaveSetting(s *Setting) error {
 
 func SaveQuery(query *Query) error {
 	if query.ID == 0 {
-		sql := `INSERT INTO queries(name, query, connections_id)
+		sql := `INSERT INTO db_queries(name, query, connections_id)
 				VALUES(?, ?, ?)`
 		result, err := db.Exec(sql, query.Name, query.Query, query.ConnectionID)
 		if err != nil {
@@ -203,7 +203,7 @@ func SaveQuery(query *Query) error {
 			}
 		}
 	} else {
-		sql := `UPDATE queries
+		sql := `UPDATE db_queries
 					SET name = ?, query = ?
 				WHERE ID = ?`
 		_, err := db.Exec(sql,
@@ -212,7 +212,6 @@ func SaveQuery(query *Query) error {
 			return err
 		}
 	}
-
 	return nil
 }
 

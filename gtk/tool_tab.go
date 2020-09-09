@@ -12,7 +12,6 @@ type tabCtrl interface {
 	Removed()             //tab
 	Content() gtk.IWidget //tab
 	Title() string        //tab
-	SetFileText(string)   //tab
 	OnCloseTab(id string)
 	SetWindowCtrl(interface{}) // tab
 }

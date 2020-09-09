@@ -1,9 +1,6 @@
 package ctrl
 
 import (
-	"io/ioutil"
-	"os"
-
 	ggtk "github.com/gotk3/gotk3/gtk"
 
 	"bitbucket.org/goreorto/benchwell/config"
@@ -22,7 +19,6 @@ type tabCtrl interface {
 	Title() string
 	Removed()
 	Content() ggtk.IWidget
-	SetFileText(string)
 	OnCloseTab(string)
 	SetWindowCtrl(interface{})
 }
@@ -51,27 +47,6 @@ func (c WindowCtrl) Init(parent *AppCtrl) (*WindowCtrl, error) {
 	}
 
 	return &c, nil
-}
-
-func (c *WindowCtrl) OnSaveQuery(query, path string) {
-	defer config.LogStart("WindowCtrl.OnSaveQuery", nil)()
-
-	err := ioutil.WriteFile(path, []byte(query), os.FileMode(666))
-	if err != nil {
-		c.window.PushStatus("failed to save file: %#v", err)
-	}
-}
-
-func (c *WindowCtrl) OnFileSelected(filepath string) {
-	defer config.LogStart("WindowCtrl.OnFileSelected", nil)()
-
-	bytes, err := ioutil.ReadFile(filepath)
-	if err != nil {
-		config.Error("reading file", err)
-		return
-	}
-
-	c.currentWindowTab().SetFileText(string(bytes))
 }
 
 func (c *WindowCtrl) OnNewDatabaseTab() {
