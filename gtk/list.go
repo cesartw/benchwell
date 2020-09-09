@@ -92,7 +92,6 @@ func (list List) Init(_ *Window, opts *ListOptions, ctrl listCtrl) (*List, error
 		return list.options.FilterRegex.Match([]byte(strings.ToLower(name.String())))
 	})
 
-	list.Show()
 	return &list, nil
 }
 

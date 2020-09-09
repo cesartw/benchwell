@@ -11,8 +11,7 @@ import (
 // TODO: look into gtk.EntryCompletion for combobox
 type Conditions struct {
 	w *Window
-	*gtk.Frame
-	grid       *gtk.Grid
+	*gtk.Grid
 	conditions []*Condition
 	cols       []driver.ColDef
 
@@ -41,23 +40,24 @@ func (c Conditions) Init(w *Window, ctrl conditionsCtrl) (*Conditions, error) {
 	c.w = w
 	c.ctrl = ctrl
 
-	c.Frame, err = gtk.FrameNew("Filter:")
+	//c.Frame, err = gtk.FrameNew("")
+	//if err != nil {
+	//return nil, err
+	//}
+	//c.Frame.SetProperty("shadow-type", gtk.SHADOW_NONE)
+	//c.Frame.SetName("conditions")
+
+	c.Grid, err = gtk.GridNew()
 	if err != nil {
 		return nil, err
 	}
-	c.Frame.SetProperty("shadow-type", gtk.SHADOW_NONE)
-	c.Frame.SetName("conditions")
+	c.Grid.SetRowSpacing(5)
+	c.Grid.SetColumnSpacing(5)
+	c.Grid.SetName("conditions")
 
-	c.grid, err = gtk.GridNew()
-	if err != nil {
-		return nil, err
-	}
-	c.grid.SetRowSpacing(5)
-	c.grid.SetColumnSpacing(5)
+	c.Grid.Show()
 
-	c.grid.Show()
-
-	c.Frame.Add(c.grid)
+	//c.Frame.Add(c.grid)
 
 	return &c, nil //c.Add()
 }
@@ -79,11 +79,11 @@ func (c *Conditions) Add() error {
 	}
 
 	y := len(c.conditions)
-	c.grid.Attach(cond.activeCb, 0, y, 2, 1)
-	c.grid.Attach(cond.fieldCb, 2, y, 2, 1)
-	c.grid.Attach(cond.opCb, 4, y, 1, 1)
-	c.grid.Attach(cond.valueEntry, 5, y, 2, 1)
-	c.grid.Attach(cond.btnRm, 8, y, 1, 1)
+	c.Grid.Attach(cond.activeCb, 0, y, 2, 1)
+	c.Grid.Attach(cond.fieldCb, 2, y, 2, 1)
+	c.Grid.Attach(cond.opCb, 4, y, 1, 1)
+	c.Grid.Attach(cond.valueEntry, 5, y, 2, 1)
+	c.Grid.Attach(cond.btnRm, 8, y, 1, 1)
 
 	entry, err := cond.fieldCb.GetEntry()
 	if err != nil {
@@ -101,7 +101,7 @@ func (c *Conditions) Add() error {
 				continue
 			}
 
-			c.grid.RemoveRow(i)
+			c.Grid.RemoveRow(i)
 			c.conditions = append(c.conditions[:i], c.conditions[i+1:]...)
 			if len(c.conditions) == 0 {
 				c.Add()
@@ -166,7 +166,7 @@ func (c *Conditions) Update(cols []driver.ColDef) error {
 			}
 
 			if field == "" {
-				c.grid.RemoveRow(i)
+				c.Grid.RemoveRow(i)
 				continue
 			}
 			conditions = append(conditions, cond)
@@ -289,11 +289,11 @@ func (c Condition) Init(_ *Window, cols []driver.ColDef, ctrl conditionsCtrl) (*
 		return nil, err
 	}
 
-	c.activeCb.ShowAll()
-	c.fieldCb.ShowAll()
-	c.opCb.ShowAll()
-	c.valueEntry.ShowAll()
-	c.btnRm.ShowAll()
+	c.activeCb.Show()
+	c.fieldCb.Show()
+	c.opCb.Show()
+	c.valueEntry.Show()
+	c.btnRm.Show()
 
 	return &c, nil
 }

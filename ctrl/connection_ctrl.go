@@ -47,7 +47,7 @@ func (c ConnectionCtrl) Init(
 
 	c.scr.SetDatabases(dbNames)
 
-	c.scr.ShowAll()
+	c.scr.Show()
 
 	if c.conn.Database != "" {
 		c.scr.SetActiveDatabase(c.conn.Database)

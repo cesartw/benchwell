@@ -33,6 +33,7 @@ func (f socketForm) Init(_ *Window) (*socketForm, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	f.SetName("form")
 	f.SetColumnHomogeneous(true)
 	f.SetRowSpacing(5)
@@ -41,45 +42,53 @@ func (f socketForm) Init(_ *Window) (*socketForm, error) {
 	if err != nil {
 		return nil, err
 	}
+	f.labelName.Show()
 	f.labelName.SetHAlign(gtk.ALIGN_START)
 
 	f.entryName, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	f.entryName.Show()
 
 	f.labelSocket, err = gtk.LabelNew("Socket")
 	if err != nil {
 		return nil, err
 	}
+	f.labelSocket.Show()
 	f.labelSocket.SetHAlign(gtk.ALIGN_START)
 
 	f.entrySocket, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	f.entrySocket.Show()
 
 	f.labelUser, err = gtk.LabelNew("User")
 	if err != nil {
 		return nil, err
 	}
+	f.labelUser.Show()
 	f.labelUser.SetHAlign(gtk.ALIGN_START)
 
 	f.entryUser, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	f.entryUser.Show()
 
 	f.labelPassword, err = gtk.LabelNew("Password")
 	if err != nil {
 		return nil, err
 	}
+	f.labelPassword.Show()
 	f.labelPassword.SetHAlign(gtk.ALIGN_START)
 
 	f.entryPassword, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	f.entryPassword.Show()
 	f.entryPassword.SetProperty("input-purpose", gtk.INPUT_PURPOSE_PASSWORD)
 	f.entryPassword.SetProperty("visibility", false)
 
@@ -87,12 +96,14 @@ func (f socketForm) Init(_ *Window) (*socketForm, error) {
 	if err != nil {
 		return nil, err
 	}
+	f.labelDatabase.Show()
 	f.labelDatabase.SetHAlign(gtk.ALIGN_START)
 
 	f.entryDatabase, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	f.entryDatabase.Show()
 
 	f.Attach(f.labelName, 0, 1, 1, 1)
 	f.Attach(f.entryName, 1, 1, 2, 1)

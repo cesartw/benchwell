@@ -31,7 +31,7 @@ type ResultView struct {
 	btnPrev        *gtk.Button
 	btnNext        *gtk.Button
 	btnRsh         *gtk.Button
-	btnShowFilters *gtk.Button
+	btnShowFilters *gtk.ToggleButton
 	perPage        *gtk.Entry
 	//offset    *gtk.Entry
 	pagerMenu *gtk.MenuButton
@@ -81,6 +81,7 @@ func (v ResultView) Init(
 	if err != nil {
 		return nil, err
 	}
+	v.Paned.Show()
 	v.CancelOverlay, err = CancelOverlay{}.Init(v.Paned)
 	if err != nil {
 		return nil, err
@@ -90,6 +91,7 @@ func (v ResultView) Init(
 	if err != nil {
 		return nil, err
 	}
+	v.sourceView.Show()
 	v.sourceView.SetShowLineNumbers(false)
 	v.sourceView.SetShowRightMargin()
 	v.sourceView.SetHExpand(true)
@@ -124,11 +126,13 @@ func (v ResultView) Init(
 	if err != nil {
 		return nil, err
 	}
+	resultSW.Show()
 
 	actionbar, err := v.actionbar()
 	if err != nil {
 		return nil, err
 	}
+	actionbar.Show()
 
 	v.conditions, err = Conditions{}.Init(v.w, ctrl)
 	if err != nil {
@@ -148,8 +152,12 @@ func (v ResultView) Init(
 			v.offset = 0
 		}
 	})
-	v.btnShowFilters.Connect("clicked", func() {
-		v.conditions.Show()
+	v.btnShowFilters.Connect("toggled", func() {
+		if v.btnShowFilters.GetActive() {
+			v.conditions.Show()
+		} else {
+			v.conditions.Hide()
+		}
 	})
 	v.colFilter.Connect("search-changed", v.onColFilterSearchChanged)
 
@@ -157,6 +165,7 @@ func (v ResultView) Init(
 	if err != nil {
 		return nil, err
 	}
+	btnGridBox.Show()
 	btnGridBox.PackStart(actionbar, false, false, 0)
 	btnGridBox.PackStart(v.conditions, false, false, 5)
 	btnGridBox.PackEnd(resultSW, true, true, 0)
@@ -165,25 +174,34 @@ func (v ResultView) Init(
 	if err != nil {
 		return nil, err
 	}
-
+	resultBox.Show()
 	resultBox.PackStart(btnGridBox, true, true, 0)
 
 	tvBox, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if err != nil {
 		return nil, err
 	}
+	tvBox.Show()
 
 	tvActionBar, err := gtk.ActionBarNew()
 	if err != nil {
 		return nil, err
 	}
+	tvActionBar.Show()
 
 	img, err := BWImageNewFromFile("save", "orange", ICON_SIZE_BUTTON)
 	if err != nil {
 		return nil, err
 	}
+	img.Show()
+
 	v.btnSaveMenu, err = gtk.MenuButtonNew()
+	if err != nil {
+		return nil, err
+	}
+	v.btnSaveMenu.Show()
 	v.btnSaveMenu.SetImage(img)
+
 	menu := glib.MenuNew()
 	menu.Append("Save As", "win.save.file")
 	menu.Append("Save fav", "win.save.fav")
@@ -202,7 +220,7 @@ func (v ResultView) Init(
 	if err != nil {
 		return nil, err
 	}
-
+	v.btnLoadQuery.Show()
 	v.btnLoadQuery.Connect("clicked", v.onOpenFile)
 
 	tvActionBar.PackEnd(v.btnSaveMenu)
@@ -213,12 +231,13 @@ func (v ResultView) Init(
 	if err != nil {
 		return nil, err
 	}
+	textViewSW.Show()
 
 	v.result, err = Result{}.Init(v.w, ctrl)
 	if err != nil {
 		return nil, err
 	}
-
+	v.result.Show()
 	v.result.TreeView.Connect("row-activated", v.onRowActivated)
 
 	v.sourceView.SetProperty("highlight-current-line", false)
@@ -245,7 +264,7 @@ func (v ResultView) Init(
 	v.Paned.Pack2(resultBox, true, false)
 
 	v.disableAll()
-	v.Paned.ShowAll()
+	v.Paned.Show()
 	v.conditions.Hide()
 
 	v.btnRsh.Connect("clicked", ctrl.OnRefresh)
@@ -491,20 +510,25 @@ func (v *ResultView) actionbar() (*gtk.ActionBar, error) {
 		if err != nil {
 			return nil, err
 		}
+		v.btnAddRow.Show()
+
 		v.btnDeleteRow, err = BWButtonNewFromIconName("delete-record", "orange", ICON_SIZE_BUTTON)
 		if err != nil {
 			return nil, err
 		}
+		v.btnDeleteRow.Show()
 
 		v.btnCreateRow, err = BWButtonNewFromIconName("save-record", "orange", ICON_SIZE_BUTTON)
 		if err != nil {
 			return nil, err
 		}
+		v.btnCreateRow.Show()
 
-		v.btnShowFilters, err = BWButtonNewFromIconName("filter", "orange", ICON_SIZE_BUTTON)
+		v.btnShowFilters, err = BWToggleButtonNewFromIconName("filter", "orange", ICON_SIZE_BUTTON)
 		if err != nil {
 			return nil, err
 		}
+		v.btnShowFilters.Show()
 		v.newRecordEnable(false)
 
 		actionbar.Add(v.btnAddRow)
@@ -520,6 +544,7 @@ func (v *ResultView) actionbar() (*gtk.ActionBar, error) {
 			return nil, err
 		}
 		v.colFilter.SetPlaceholderText("Column filter: .*")
+		v.colFilter.Show()
 		actionbar.PackEnd(v.colFilter)
 	}
 
@@ -538,16 +563,19 @@ func (v *ResultView) actionbar() (*gtk.ActionBar, error) {
 		if err != nil {
 			return nil, err
 		}
+		v.btnPrev.Show()
 
 		v.btnNext, err = BWButtonNewFromIconName("next", "orange", ICON_SIZE_BUTTON)
 		if err != nil {
 			return nil, err
 		}
+		v.btnNext.Show()
 
 		v.btnRsh, err = BWButtonNewFromIconName("refresh", "orange", ICON_SIZE_BUTTON)
 		if err != nil {
 			return nil, err
 		}
+		v.btnRsh.Show()
 
 		actionbar.PackEnd(v.btnRsh)
 		actionbar.PackEnd(v.btnNext)
@@ -677,26 +705,29 @@ func (v *ResultView) askFavName() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	content.Show()
 
 	label, err := gtk.LabelNew("Enter favorite name")
 	if err != nil {
 		return "", err
 	}
+	label.Show()
 
 	entry, err := gtk.EntryNew()
 	if err != nil {
 		return "", err
 	}
+	entry.Show()
 
 	box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 10)
 	if err != nil {
 		return "", err
 	}
+	box.Show()
 
 	box.PackStart(label, true, true, 0)
 	box.PackStart(entry, true, true, 0)
 	content.Add(box)
-	content.ShowAll()
 
 	defer modal.Destroy()
 	resp := modal.Run()

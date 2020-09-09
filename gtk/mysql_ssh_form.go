@@ -51,57 +51,67 @@ func (f sshForm) Init(_ *Window) (*sshForm, error) {
 	if err != nil {
 		return nil, err
 	}
+	f.labelName.Show()
 	f.labelName.SetHAlign(gtk.ALIGN_START)
 
 	f.entryName, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	f.entryName.Show()
 
 	f.labelDbHost, err = gtk.LabelNew("Host")
 	if err != nil {
 		return nil, err
 	}
+	f.labelDbHost.Show()
 	f.labelDbHost.SetHAlign(gtk.ALIGN_START)
 
 	f.entryDbHost, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	f.entryDbHost.Show()
 
 	f.labelPort, err = gtk.LabelNew("Port")
 	if err != nil {
 		return nil, err
 	}
+	f.labelPort.Show()
 	f.labelPort.SetHAlign(gtk.ALIGN_START)
 
 	f.entryPort, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	f.entryPort.Show()
 	f.entryPort.SetProperty("input_purpose", gtk.INPUT_PURPOSE_NUMBER)
 
 	f.labelUser, err = gtk.LabelNew("User")
 	if err != nil {
 		return nil, err
 	}
+	f.labelUser.Show()
 	f.labelUser.SetHAlign(gtk.ALIGN_START)
 
 	f.entryUser, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	f.entryUser.Show()
 
 	f.labelPassword, err = gtk.LabelNew("Password")
 	if err != nil {
 		return nil, err
 	}
+	f.labelPassword.Show()
 	f.labelPassword.SetHAlign(gtk.ALIGN_START)
 
 	f.entryPassword, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	f.entryPassword.Show()
 	f.entryPassword.SetProperty("input-purpose", gtk.INPUT_PURPOSE_PASSWORD)
 	f.entryPassword.SetProperty("visibility", false)
 
@@ -109,46 +119,54 @@ func (f sshForm) Init(_ *Window) (*sshForm, error) {
 	if err != nil {
 		return nil, err
 	}
+	f.labelDatabase.Show()
 	f.labelDatabase.SetHAlign(gtk.ALIGN_START)
 
 	f.entryDatabase, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	f.entryDatabase.Show()
 
 	// SSH
 	sshFrame, err := gtk.FrameNew("SSH")
 	if err != nil {
 		return nil, err
 	}
+	sshFrame.Show()
 	sshFrame.SetProperty("shadow-type", gtk.SHADOW_NONE)
 
 	sshBox, err := gtk.GridNew()
 	if err != nil {
 		return nil, err
 	}
+	sshBox.Show()
 
 	f.labelSshHost, err = gtk.LabelNew("Host")
 	if err != nil {
 		return nil, err
 	}
+	f.labelSshHost.Show()
 	f.labelSshHost.SetHAlign(gtk.ALIGN_START)
 
 	f.entrySshHost, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	f.entrySshHost.Show()
 
 	f.labelSshAgent, err = gtk.LabelNew("Agent")
 	if err != nil {
 		return nil, err
 	}
+	f.labelSshAgent.Show()
 	f.labelSshAgent.SetHAlign(gtk.ALIGN_START)
 
 	f.entrySshAgent, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	f.entrySshAgent.Show()
 
 	sshBox.SetColumnHomogeneous(true)
 	sshBox.SetRowSpacing(5)
@@ -189,6 +207,7 @@ func (f *sshForm) newInput(l string) (*gtk.Label, *gtk.Entry, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	label.Show()
 	label.SetHAlign(gtk.ALIGN_START)
 
 	entry, err := gtk.EntryNew()

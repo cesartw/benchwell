@@ -105,6 +105,7 @@ func (u Result) Init(w *Window, ctrl resultCtrl) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	u.ddMenu.Show()
 	u.ddMenu.clone.Connect("activate", u.onCloneRow)
 	u.ddMenu.Add(u.ddMenu.clone)
 
@@ -112,6 +113,7 @@ func (u Result) Init(w *Window, ctrl resultCtrl) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	u.ddMenu.cpInsert.Show()
 	u.ddMenu.cpInsert.Connect("activate", u.onCopyInsert)
 	u.ddMenu.Add(u.ddMenu.cpInsert)
 
@@ -119,6 +121,7 @@ func (u Result) Init(w *Window, ctrl resultCtrl) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	u.ddMenu.cp.Show()
 	u.ddMenu.cp.Connect("activate", u.onCopy)
 	u.ddMenu.Add(u.ddMenu.cp)
 
@@ -772,11 +775,13 @@ func (u *Result) editDialog(data string, done func(string)) {
 	if err != nil {
 		return
 	}
+	content.Show()
 
 	sw, err := gtk.ScrolledWindowNew(nil, nil)
 	if err != nil {
 		return
 	}
+	sw.Show()
 	sw.SetVExpand(true)
 	sw.SetHExpand(true)
 
@@ -784,6 +789,7 @@ func (u *Result) editDialog(data string, done func(string)) {
 	if err != nil {
 		return
 	}
+	textView.Show()
 	textView.SetVExpand(true)
 	textView.SetHExpand(true)
 
@@ -796,7 +802,7 @@ func (u *Result) editDialog(data string, done func(string)) {
 
 	sw.Add(textView)
 	content.Add(sw)
-	content.ShowAll()
+	content.Show()
 
 	resp := modal.Run()
 	defer modal.Destroy()
@@ -829,7 +835,7 @@ func (u *Result) onTreeViewButtonPress(_ *gtk.TreeView, e *gdk.Event) {
 	if keyEvent.Button() != gdk.BUTTON_SECONDARY {
 		return
 	}
-	u.ddMenu.ShowAll()
+	u.ddMenu.Show()
 	u.ddMenu.PopupAtPointer(e)
 }
 

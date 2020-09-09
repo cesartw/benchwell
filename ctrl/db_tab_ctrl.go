@@ -116,7 +116,7 @@ func (c *DbTabCtrl) onConnect(f func()) {
 		if err != nil {
 			return func() {
 				config.Error(err)
-				c.window.PushStatus("Failed connect to `%s`(%s): %s", conn.Name, conn.Host, err.Error())
+				c.window.PushStatus("Failed to connect to `%s`(%s): %s", conn.Name, conn.Host, err.Error())
 				c.connectCtrl.CancelConnecting()
 			}
 		}

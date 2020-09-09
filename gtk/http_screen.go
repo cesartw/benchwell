@@ -117,7 +117,7 @@ func (h HTTPScreen) Init(w *Window, ctrl httpScreenCtrl) (*HTTPScreen, error) {
 
 	h.Paned.Add1(h.collection)
 	h.Paned.Add2(main)
-	h.Paned.ShowAll()
+	h.Paned.Show()
 
 	return &h, nil
 }

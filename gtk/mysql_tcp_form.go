@@ -46,57 +46,67 @@ func (f tcpForm) Init(_ *Window) (*tcpForm, error) {
 	if err != nil {
 		return nil, err
 	}
+	f.labelName.Show()
 	f.labelName.SetHAlign(gtk.ALIGN_START)
 
 	f.entryName, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	f.entryName.Show()
 
 	f.labelHost, err = gtk.LabelNew("Host")
 	if err != nil {
 		return nil, err
 	}
+	f.labelHost.Show()
 	f.labelHost.SetHAlign(gtk.ALIGN_START)
 
 	f.entryHost, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	f.entryHost.Show()
 
 	f.labelPort, err = gtk.LabelNew("Port")
 	if err != nil {
 		return nil, err
 	}
+	f.labelPort.Show()
 	f.labelPort.SetHAlign(gtk.ALIGN_START)
 
 	f.entryPort, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	f.entryPort.Show()
 	f.entryPort.SetProperty("input_purpose", gtk.INPUT_PURPOSE_NUMBER)
 
 	f.labelUser, err = gtk.LabelNew("User")
 	if err != nil {
 		return nil, err
 	}
+	f.labelUser.Show()
 	f.labelUser.SetHAlign(gtk.ALIGN_START)
 
 	f.entryUser, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	f.entryUser.Show()
 
 	f.labelPassword, err = gtk.LabelNew("Password")
 	if err != nil {
 		return nil, err
 	}
+	f.labelPassword.Show()
 	f.labelPassword.SetHAlign(gtk.ALIGN_START)
 
 	f.entryPassword, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	f.entryPassword.Show()
 	f.entryPassword.SetProperty("input-purpose", gtk.INPUT_PURPOSE_PASSWORD)
 	f.entryPassword.SetProperty("visibility", false)
 
@@ -104,12 +114,14 @@ func (f tcpForm) Init(_ *Window) (*tcpForm, error) {
 	if err != nil {
 		return nil, err
 	}
+	f.labelDatabase.Show()
 	f.labelDatabase.SetHAlign(gtk.ALIGN_START)
 
 	f.entryDatabase, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	f.entryDatabase.Show()
 
 	f.Attach(f.labelName, 0, 0, 1, 1)
 	f.Attach(f.entryName, 1, 0, 2, 1)

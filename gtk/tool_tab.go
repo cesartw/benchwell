@@ -46,30 +46,31 @@ func (t ToolTab) Init(w *Window) (*ToolTab, error) {
 		return nil, err
 	}
 
-	//t.content.PackStart(opts.Content, true, true, 0)
+	t.content.Show()
 	t.content.SetVExpand(true)
 	t.content.SetHExpand(true)
-	t.content.Show()
 
 	t.header, err = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
 	if err != nil {
 		return nil, err
 	}
+	t.header.Show()
 
 	t.label, err = gtk.LabelNew("")
 	if err != nil {
 		return nil, err
 	}
+	t.label.Show()
 
 	t.btn, err = BWButtonNewFromIconName("close", "orange", ICON_SIZE_TAB)
 	if err != nil {
 		return nil, err
 	}
+	t.btn.Show()
 	t.btn.SetRelief(gtk.RELIEF_NONE)
 
 	t.header.PackStart(t.label, true, true, 0)
 	t.header.PackEnd(t.btn, false, false, 0)
-	t.header.ShowAll()
 
 	return &t, nil
 }

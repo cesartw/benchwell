@@ -40,17 +40,20 @@ func (f sqliteForm) Init(w *Window) (*sqliteForm, error) {
 	if err != nil {
 		return nil, err
 	}
+	f.labelName.Show()
 	f.labelName.SetHAlign(gtk.ALIGN_START)
 
 	f.entryName, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	f.entryName.Show()
 
 	f.labelFile, err = gtk.LabelNew("File")
 	if err != nil {
 		return nil, err
 	}
+	f.labelFile.Show()
 	f.labelFile.SetHAlign(gtk.ALIGN_START)
 
 	f.fileChooser, err = gtk.FileChooserDialogNewWith2Buttons("Select", &w.Window, gtk.FILE_CHOOSER_ACTION_OPEN,
@@ -63,6 +66,8 @@ func (f sqliteForm) Init(w *Window) (*sqliteForm, error) {
 	if err != nil {
 		return nil, err
 	}
+	f.btnFile.Show()
+
 	f.fileChooser.Connect("file-activated", f.onFileSet)
 
 	f.Attach(f.labelName, 0, 1, 1, 1)

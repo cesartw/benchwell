@@ -67,6 +67,7 @@ func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 	if err != nil {
 		return nil, err
 	}
+	w.nb.Show()
 	w.nb.SetProperty("scrollable", true)
 	w.nb.SetName("MainNotebook")
 	w.nb.SetGroupName("MainWindow")
@@ -112,6 +113,7 @@ func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 	if err != nil {
 		return nil, err
 	}
+	w.box.Show()
 	w.box.SetVExpand(true)
 	w.box.SetHExpand(true)
 
@@ -119,6 +121,7 @@ func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 	if err != nil {
 		return nil, err
 	}
+	w.statusBar.Show()
 
 	w.box.PackStart(w.nb, true, true, 0)
 	w.box.PackEnd(w.statusBar, false, false, 0)
@@ -131,9 +134,10 @@ func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 	if err != nil {
 		return nil, err
 	}
+	header.Show()
 	w.SetTitlebar(header)
 
-	w.ShowAll()
+	w.Show()
 	// TODO: when we get a systray
 	//w.HideOnDelete()
 
@@ -233,10 +237,12 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 	if err != nil {
 		return nil, err
 	}
+	windowBtnMenu.Show()
 	addImg, err := BWImageNewFromFile("add-tab", "orange", ICON_SIZE_MENU)
 	if err != nil {
 		return nil, err
 	}
+	addImg.Show()
 
 	windowBtnMenu.SetImage(addImg)
 
@@ -256,10 +262,13 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 	if err != nil {
 		return nil, err
 	}
+	appBtnMenu.Show()
+
 	prefImg, err := BWImageNewFromFile("config", "orange", ICON_SIZE_MENU)
 	if err != nil {
 		return nil, err
 	}
+	prefImg.Show()
 
 	appBtnMenu.SetImage(prefImg)
 

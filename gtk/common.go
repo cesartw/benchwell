@@ -195,6 +195,21 @@ func BWButtonNewFromIconName(asset, color string, size int) (*gtk.Button, error)
 	return btn, nil
 }
 
+func BWToggleButtonNewFromIconName(asset, color string, size int) (*gtk.ToggleButton, error) {
+	btn, err := gtk.ToggleButtonNew()
+	if err != nil {
+		return nil, err
+	}
+
+	img, err := BWImageNewFromFile(asset, color, size)
+	if err != nil {
+		return nil, err
+	}
+	btn.SetImage(img)
+
+	return btn, nil
+}
+
 func BWRadioButtonNew(label string, l *glib.SList) (*gtk.RadioButton, *glib.SList, error) {
 	if l == nil {
 		l = &glib.SList{}
@@ -323,7 +338,7 @@ func (c CancelOverlay) Init(widget gtk.IWidget) (*CancelOverlay, error) {
 }
 
 func (c *CancelOverlay) Run(onCancel func()) {
-	c.box.ShowAll()
+	c.box.Show()
 	c.spinner.Start()
 	c.AddOverlay(c.box)
 	c.onCancel = onCancel

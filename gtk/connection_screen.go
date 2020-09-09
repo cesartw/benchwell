@@ -91,6 +91,7 @@ func (c ConnectionScreen) Init(
 		return nil, err
 	}
 	c.Paned.SetWideHandle(true)
+	c.Paned.Show()
 
 	c.hPaned, err = gtk.PanedNew(gtk.ORIENTATION_HORIZONTAL)
 	if err != nil {
@@ -99,6 +100,7 @@ func (c ConnectionScreen) Init(
 	c.hPaned.SetWideHandle(true)
 	c.hPaned.SetHExpand(true)
 	c.hPaned.SetVExpand(true)
+	c.hPaned.Show()
 
 	// Sidebar
 
@@ -106,6 +108,7 @@ func (c ConnectionScreen) Init(
 	if err != nil {
 		return nil, err
 	}
+	sideBar.Show()
 
 	c.hPaned.Pack1(sideBar, false, true)
 
@@ -113,6 +116,7 @@ func (c ConnectionScreen) Init(
 	if err != nil {
 		return nil, err
 	}
+	c.tableFilter.Show()
 	c.tableFilter.Connect("search-changed", c.onSearch)
 	c.tableFilter.SetPlaceholderText("Filter table: .*")
 
@@ -124,12 +128,14 @@ func (c ConnectionScreen) Init(
 	if err != nil {
 		return nil, err
 	}
+	tableListSW.Show()
 
 	c.dbCombo, err = gtk.ComboBoxTextNew()
 	if err != nil {
 		return nil, err
 	}
 	c.dbCombo.SetIDColumn(0)
+	c.dbCombo.Show()
 
 	c.tableList, err = List{}.Init(c.w, &ListOptions{
 		SelectOnRightClick: true,
@@ -151,6 +157,7 @@ func (c ConnectionScreen) Init(
 	c.tableList.SetHExpand(true)
 	c.tableList.SetVExpand(true)
 	c.tableList.OnButtonPress(c.onTableListButtonPress)
+	c.tableList.Show()
 
 	tableListSW.Add(c.tableList)
 
@@ -164,6 +171,7 @@ func (c ConnectionScreen) Init(
 	if err != nil {
 		return nil, err
 	}
+	mainSection.Show()
 
 	c.ResultView, err = ResultView{}.Init(
 		c.w,
@@ -172,7 +180,6 @@ func (c ConnectionScreen) Init(
 	if err != nil {
 		return nil, err
 	}
-
 	c.ResultView.Show()
 
 	mainSection.Add(c.ResultView)
@@ -197,6 +204,7 @@ func (c ConnectionScreen) Init(
 	if err != nil {
 		return nil, err
 	}
+	logSW.Show()
 
 	c.logview, err = List{}.Init(c.w, &ListOptions{SelectOnRightClick: true}, ctrl)
 	if err != nil {
@@ -205,16 +213,10 @@ func (c ConnectionScreen) Init(
 	c.logview.SetName("logger")
 	c.logview.SetSizeRequest(-1, 30)
 	c.logview.OnButtonPress(c.onLogViewButtonPress)
-	//c.logview.SetEditable(false)
-	//c.logview.SetPixelsAboveLines(5)
-	//c.logview.SetPixelsBelowLines(5)
 
 	logSW.Add(c.logview)
 	c.Paned.Pack1(c.hPaned, false, false)
 	c.Paned.Pack2(logSW, false, true)
-
-	c.Paned.ShowAll()
-	c.hPaned.ShowAll()
 
 	c.dbCombo.Connect("changed", c.onDatabaseSelected)
 	c.dbCombo.Connect("changed", ctrl.OnDatabaseSelected)
@@ -229,7 +231,7 @@ func (c ConnectionScreen) Init(
 
 	c.logMenu.clearMenu.Connect("activate", c.onClearLog)
 	//c.logMenu.copyMenu.Connect("activate", ctrl.OnCopyLog)
-	c.ShowAll()
+	c.Show()
 
 	return &c, nil
 }

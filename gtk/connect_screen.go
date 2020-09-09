@@ -67,6 +67,7 @@ func (c ConnectScreen) Init(w *Window, ctrl connectScreenCtrl) (*ConnectScreen, 
 	if err != nil {
 		return nil, err
 	}
+	c.Paned.Show()
 	c.Paned.SetHExpand(true)
 	c.Paned.SetVExpand(true)
 	c.Paned.SetWideHandle(true)
@@ -87,10 +88,11 @@ func (c ConnectScreen) Init(w *Window, ctrl connectScreenCtrl) (*ConnectScreen, 
 	if err != nil {
 		return nil, err
 	}
-
+	c.ConnectionList.Show()
 	c.ConnectionList.OnButtonPress(c.onConnectListButtonPress)
 	c.ConnectionList.SetHExpand(true)
 	c.ConnectionList.SetVExpand(true)
+
 	connectionListSW, err := gtk.ScrolledWindowNew(nil, nil)
 	if err != nil {
 		return nil, err
@@ -102,32 +104,36 @@ func (c ConnectScreen) Init(w *Window, ctrl connectScreenCtrl) (*ConnectScreen, 
 	if err != nil {
 		return nil, err
 	}
-	mysqlForms.ShowAll()
+	mysqlForms.Show()
 
 	sqliteForm, err := c.buildSqliteForms()
 	if err != nil {
 		return nil, err
 	}
-	sqliteForm.ShowAll()
+	sqliteForm.Show()
 
 	c.btnBox, err = gtk.ButtonBoxNew(gtk.ORIENTATION_HORIZONTAL)
 	if err != nil {
 		return nil, err
 	}
+	c.btnBox.Show()
 	c.btnBox.SetLayout(gtk.BUTTONBOX_EDGE)
 
 	c.btnConnect, err = gtk.ButtonNew()
 	if err != nil {
 		return nil, err
 	}
+	c.btnConnect.Show()
 	c.btnSave, err = gtk.ButtonNew()
 	if err != nil {
 		return nil, err
 	}
+	c.btnSave.Show()
 	c.btnTest, err = gtk.ButtonNew()
 	if err != nil {
 		return nil, err
 	}
+	c.btnTest.Show()
 
 	c.btnConnect.SetLabel("Connect")
 	c.btnTest.SetLabel("Test")
@@ -140,12 +146,13 @@ func (c ConnectScreen) Init(w *Window, ctrl connectScreenCtrl) (*ConnectScreen, 
 	c.btnBox.Add(c.btnConnect)
 	c.btnBox.Add(c.btnTest)
 	c.btnBox.Add(c.btnSave)
-	c.btnBox.ShowAll()
+	c.btnBox.Show()
 
 	vbox, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
 	if err != nil {
 		return nil, err
 	}
+	vbox.Show()
 	vbox.SetSizeRequest(300, 200)
 	vbox.SetVAlign(gtk.ALIGN_CENTER)
 	vbox.SetHAlign(gtk.ALIGN_CENTER)
@@ -156,26 +163,26 @@ func (c ConnectScreen) Init(w *Window, ctrl connectScreenCtrl) (*ConnectScreen, 
 	if err != nil {
 		return nil, err
 	}
+	adapterStack.Show()
 	adapterStack.SetVExpand(true)
 	adapterStack.SetHExpand(true)
+
 	c.stack, err = gtk.StackNew()
 	if err != nil {
 		return nil, err
 	}
+	c.stack.Show()
 	c.stack.SetHomogeneous(true)
 	c.stack.AddTitled(mysqlForms, "mysql", "Mysql")
 	c.stack.AddTitled(sqliteForm, "sqlite", "SQLite")
 	c.stack.SetVisibleChildName("mysql")
 	c.stack.SetVExpand(true)
 	c.stack.SetHExpand(true)
-	c.stack.Show()
 
 	adapterStack.SetStack(c.stack)
-	adapterStack.Show()
 
 	vbox.PackStart(adapterStack, false, true, 0)
 	vbox.PackStart(c.stack, true, false, 0)
-	vbox.Show()
 
 	frame2.Add(vbox)
 	c.formOverlay, err = CancelOverlay{}.Init(frame2)
@@ -231,30 +238,35 @@ func (c *ConnectScreen) initMenu() error {
 	if err != nil {
 		return err
 	}
+	c.menuNew.Show()
 	c.contextMenu.Add(c.menuNew)
 
 	c.menuConnect, err = BWMenuItemWithImage("Connect", "next")
 	if err != nil {
 		return err
 	}
+	c.menuConnect.Show()
 	c.menuConnect.Connect("activate", func() {
 		c.onConnect()
 	})
-	c.contextMenu.Add(c.menuConnect)
 
 	c.menuTest, err = BWMenuItemWithImage("Test", "refresh")
 	if err != nil {
 		return err
 	}
+	c.menuTest.Show()
 	c.menuTest.Connect("activate", func() {
 		c.btnTest.Emit("clicked")
 	})
-	c.contextMenu.Add(c.menuTest)
 
 	c.menuDel, err = BWMenuItemWithImage("Delete", "close")
 	if err != nil {
 		return err
 	}
+	c.menuDel.Show()
+
+	c.contextMenu.Add(c.menuConnect)
+	c.contextMenu.Add(c.menuTest)
 	c.contextMenu.Add(c.menuDel)
 
 	return nil
@@ -267,14 +279,13 @@ func (c *ConnectScreen) buildTcpForm() (*gtk.Label, *tcpForm, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	label.Show()
 
 	frm, err := tcpForm{}.Init(c.w)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	frm.ShowAll()
-	label.Show()
+	frm.Show()
 
 	return label, frm, nil
 }
@@ -286,14 +297,13 @@ func (c *ConnectScreen) buildSocketForm() (*gtk.Label, *socketForm, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	label.Show()
 
 	frm, err := socketForm{}.Init(c.w)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	frm.ShowAll()
-	label.Show()
+	frm.Show()
 
 	return label, frm, nil
 }
@@ -305,14 +315,13 @@ func (c *ConnectScreen) buildSshForm() (*gtk.Label, *sshForm, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	label.Show()
 
 	frm, err := sshForm{}.Init(c.w)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	frm.ShowAll()
-	label.Show()
+	frm.Show()
 
 	return label, frm, nil
 }
@@ -416,11 +425,13 @@ func (c *ConnectScreen) buildMysqlForms() (*gtk.Box, error) {
 	if err != nil {
 		return nil, err
 	}
+	box.Show()
 
 	c.forms.mysql.notebook, err = gtk.NotebookNew()
 	if err != nil {
 		return nil, err
 	}
+	c.forms.mysql.notebook.Show()
 	c.forms.mysql.notebook.SetCanFocus(true)
 	box.Add(c.forms.mysql.notebook)
 
@@ -478,6 +489,7 @@ func (c *ConnectScreen) buildSqliteForms() (*sqliteForm, error) {
 	if err != nil {
 		return nil, err
 	}
+	frm.Show()
 
 	c.forms.sqlite.form = frm
 	frm.onChange(c.onFormChanged)
