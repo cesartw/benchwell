@@ -14,7 +14,7 @@ treeview.view button {
 }
 
 #queryactionbar box {
-	background-color: #312e30;
+	background-color: #2d2d2d;
 }
 
 menu menuitem {
@@ -22,6 +22,6 @@ menu menuitem {
 }
 
 actionbar {
-	background-color: #2f2f2f; border: 1px none #1b1b1b;
+	background-color: #2d2d2d; border: 1px none #1b1b1b;
 }
 `

@@ -58,9 +58,17 @@ func (h HTTPCollection) Init(
 	if err != nil {
 		return nil, err
 	}
+	h.tree.Show()
 	h.tree.SetHeadersVisible(false)
 	h.tree.SetProperty("show-expanders", false)
 	h.tree.Connect("row-activated", ctrl.OnLoadItem)
+	selection, err := h.tree.GetSelection()
+	if err != nil {
+		return nil, err
+	}
+	selection.Connect("changed", func() {
+		fmt.Println("=========")
+	})
 
 	col, err := h.createImageColumn("", COLUMN_ICON)
 	if err != nil {
@@ -85,15 +93,17 @@ func (h HTTPCollection) Init(
 	if err != nil {
 		return nil, err
 	}
+	collectionSW.Show()
 	collectionSW.Add(h.tree)
 
 	h.colBox, err = gtk.ComboBoxTextNew()
 	if err != nil {
 		return nil, err
 	}
+	h.colBox.Show()
 	h.colBox.Connect("changed", ctrl.OnCollectionSelected)
-
 	h.colBox.Append("", "")
+
 	for _, collection := range config.Collections {
 		h.colBox.Append(fmt.Sprintf("%d", collection.ID), collection.Name)
 	}

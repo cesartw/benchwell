@@ -74,16 +74,20 @@ func (h HTTPScreen) Init(w *Window, ctrl httpScreenCtrl) (*HTTPScreen, error) {
 	if err != nil {
 		return nil, err
 	}
+	h.Paned.Show()
 	h.Paned.SetWideHandle(true)
+
 	h.collection, err = HTTPCollection{}.Init(w, &h, ctrl)
 	if err != nil {
 		return nil, err
 	}
+	h.collection.Show()
 
 	main, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
 	if err != nil {
 		return nil, err
 	}
+	main.Show()
 	main.SetHExpand(true)
 	main.SetVExpand(true)
 
@@ -91,20 +95,25 @@ func (h HTTPScreen) Init(w *Window, ctrl httpScreenCtrl) (*HTTPScreen, error) {
 	if err != nil {
 		return nil, err
 	}
+	addressBar.Show()
 
 	request, err := h.buildRequest()
 	if err != nil {
 		return nil, err
 	}
+	request.Show()
+
 	response, err := h.buildResponse()
 	if err != nil {
 		return nil, err
 	}
+	response.Show()
 
 	vPaned, err := gtk.PanedNew(gtk.ORIENTATION_VERTICAL)
 	if err != nil {
 		return nil, err
 	}
+	vPaned.Show()
 	vPaned.SetVExpand(true)
 	vPaned.SetHExpand(true)
 	vPaned.SetWideHandle(true)
@@ -117,7 +126,6 @@ func (h HTTPScreen) Init(w *Window, ctrl httpScreenCtrl) (*HTTPScreen, error) {
 
 	h.Paned.Add1(h.collection)
 	h.Paned.Add2(main)
-	h.Paned.Show()
 
 	return &h, nil
 }
@@ -159,6 +167,7 @@ func (h *HTTPScreen) buildAddressBar() (*gtk.Box, error) {
 	if err != nil {
 		return nil, err
 	}
+	h.method.Show()
 	for _, m := range methods {
 		h.method.Append(strings.ToLower(m), m)
 	}
@@ -168,6 +177,7 @@ func (h *HTTPScreen) buildAddressBar() (*gtk.Box, error) {
 	if err != nil {
 		return nil, err
 	}
+	h.address.Show()
 	h.address.SetPlaceholderText("http://localhost/path.json")
 	h.address.Connect("key-release-event", h.onAddressChange)
 
@@ -175,12 +185,14 @@ func (h *HTTPScreen) buildAddressBar() (*gtk.Box, error) {
 	if err != nil {
 		return nil, err
 	}
+	h.send.Show()
 	h.send.Connect("clicked", h.ctrl.Send)
 
 	h.save, err = BWOptionButtonNew("SAVE", h.w, []string{"Save as", "win.saveas"})
 	if err != nil {
 		return nil, err
 	}
+	h.save.Show()
 	h.save.ConnectAction("win.saveas", h.ctrl.SaveAs)
 	h.save.btn.Connect("activate", h.ctrl.Save)
 
@@ -204,6 +216,7 @@ func (h *HTTPScreen) buildRequest() (*gtk.Notebook, error) {
 	if err != nil {
 		return nil, err
 	}
+	h.body.Show()
 	h.body.SetHExpand(true)
 	h.body.SetVExpand(true)
 	h.body.SetProperty("highlight-current-line", false)
@@ -230,17 +243,20 @@ func (h *HTTPScreen) buildRequest() (*gtk.Notebook, error) {
 	if err != nil {
 		return nil, err
 	}
+	bodySW.Show()
 	bodySW.Add(h.body)
 
 	h.bodySize, err = BWLabelNewWithClass("0KB", "tag")
 	if err != nil {
 		return nil, err
 	}
+	h.bodySize.Show()
 
 	h.headers, err = KeyValues{}.Init(func() {})
 	if err != nil {
 		return nil, err
 	}
+	h.headers.Show()
 
 	h.params, err = KeyValues{}.Init(func() {
 		if h.buildingAddr {
@@ -263,30 +279,38 @@ func (h *HTTPScreen) buildRequest() (*gtk.Notebook, error) {
 	if err != nil {
 		return nil, err
 	}
+	h.params.Show()
 
 	bodyLabel, err := gtk.LabelNew("Body")
 	if err != nil {
 		return nil, err
 	}
+	bodyLabel.Show()
+
 	paramsLabel, err := gtk.LabelNew("Params")
 	if err != nil {
 		return nil, err
 	}
+	paramsLabel.Show()
+
 	headersLabel, err := gtk.LabelNew("Headers")
 	if err != nil {
 		return nil, err
 	}
+	headersLabel.Show()
 
 	mimeOptions, err := gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 0)
 	if err != nil {
 		return nil, err
 	}
+	mimeOptions.Show()
 	mimeOptions.SetName("BodyMimeOpts")
 
 	bodyBox, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if err != nil {
 		return nil, err
 	}
+	bodyBox.Show()
 	bodyBox.SetHExpand(true)
 	bodyBox.SetVExpand(true)
 
@@ -297,6 +321,7 @@ func (h *HTTPScreen) buildRequest() (*gtk.Notebook, error) {
 	if err != nil {
 		return nil, err
 	}
+	h.mime.Show()
 	h.mime.Append("json", "JSON")
 	h.mime.Append("plain", "PLAIN")
 	h.mime.Append("html", "HTML")
@@ -315,7 +340,6 @@ func (h *HTTPScreen) buildRequest() (*gtk.Notebook, error) {
 			config.Error(err, "setting language")
 		}
 	})
-
 	h.mime.SetActive(0)
 
 	mimeOptions.PackStart(h.mime, false, false, 0)
@@ -340,6 +364,7 @@ func (h *HTTPScreen) buildResponse() (*gtk.Box, error) {
 	if err != nil {
 		return nil, err
 	}
+	h.response.Show()
 	h.response.SetHExpand(true)
 	h.response.SetVExpand(true)
 	h.response.SetProperty("highlight-current-line", false)
@@ -360,12 +385,14 @@ func (h *HTTPScreen) buildResponse() (*gtk.Box, error) {
 	if err != nil {
 		return nil, err
 	}
+	details.Show()
 	details.SetName("ResponseDetails")
 
 	h.status, err = BWLabelNewWithClass("200 OK", "tag")
 	if err != nil {
 		return nil, err
 	}
+	h.status.Show()
 	h.status.SetName("Status")
 	BWAddClass(h.status, "success")
 
@@ -373,16 +400,19 @@ func (h *HTTPScreen) buildResponse() (*gtk.Box, error) {
 	if err != nil {
 		return nil, err
 	}
+	h.duration.Show()
 	h.duration.SetName("Duration")
 
 	h.respSize, err = BWLabelNewWithClass("0KB", "tag")
 	if err != nil {
 		return nil, err
 	}
+	h.respSize.Show()
 	responseSW, err := gtk.ScrolledWindowNew(nil, nil)
 	if err != nil {
 		return nil, err
 	}
+	responseSW.Show()
 	responseSW.Add(h.response)
 
 	details.PackStart(h.status, false, false, 0)
@@ -553,12 +583,14 @@ func (c KeyValue) Init() (*KeyValue, error) {
 	if err != nil {
 		return nil, err
 	}
+	c.key.Show()
 	c.key.SetPlaceholderText("Name")
 
 	c.value, err = gtk.EntryNew()
 	if err != nil {
 		return nil, err
 	}
+	c.value.Show()
 	c.value.SetPlaceholderText("Value")
 
 	c.Box, err = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 5)
@@ -570,11 +602,13 @@ func (c KeyValue) Init() (*KeyValue, error) {
 	if err != nil {
 		return nil, err
 	}
+	c.remove.Show()
 
 	c.enabled, err = gtk.CheckButtonNew()
 	if err != nil {
 		return nil, err
 	}
+	c.enabled.Show()
 	c.enabled.SetActive(true)
 
 	c.Box.PackStart(c.enabled, false, false, 5)
@@ -622,10 +656,11 @@ func (c KeyValues) Init(onChange func()) (*KeyValues, error) {
 func (c *KeyValues) AddEmpty() error {
 	defer config.LogStart("KeyValues.AddEmpty", nil)()
 
-	_, err := c.add()
+	kv, err := c.add()
 	if err != nil {
 		return err
 	}
+	kv.Show()
 
 	return nil
 }
@@ -662,7 +697,7 @@ func (c *KeyValues) add() (*KeyValue, error) {
 	if err != nil {
 		return kv, err
 	}
-
+	kv.Show()
 	kv.remove.Connect("clicked", c.onBlur(kv))
 
 	focused := func() {
@@ -681,7 +716,6 @@ func (c *KeyValues) add() (*KeyValue, error) {
 
 	c.Box.PackStart(kv, false, false, 0)
 	c.keyvalues = append(c.keyvalues, kv)
-	kv.ShowAll()
 
 	return kv, nil
 }

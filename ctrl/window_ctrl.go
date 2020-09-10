@@ -123,7 +123,11 @@ func (c *WindowCtrl) OnCloseTab(id string) {
 	defer config.LogStart("WindowCtrl.OnCloseTab", nil)()
 
 	// tell the tool tab that we closing it
-	c.currentWindowTab().Close()
+	tab := c.window.TabByID(id)
+	if tab == nil {
+		return
+	}
+	tab.Close()
 	c.window.RemovePage(id)
 }
 

@@ -68,11 +68,17 @@ func (t ToolTab) Init(w *Window) (*ToolTab, error) {
 	}
 	t.btn.Show()
 	t.btn.SetRelief(gtk.RELIEF_NONE)
+	t.btn.Connect("clicked", t.onCloseTab)
 
 	t.header.PackStart(t.label, true, true, 0)
 	t.header.PackEnd(t.btn, false, false, 0)
 
 	return &t, nil
+}
+
+func (t *ToolTab) onCloseTab() {
+	defer config.LogStart("ToolTab.onCloseTab", nil)()
+	t.OnCloseTab(t.id)
 }
 
 func (t *ToolTab) SetWindowCtrl(
@@ -92,9 +98,6 @@ func (t *ToolTab) SetContent(opts ToolTabOptions) {
 	t.content.PackStart(opts.Content, true, true, 0)
 	t.mainW = opts.Content
 	t.content.Show()
-	t.btn.Connect("clicked", func() {
-		t.OnCloseTab(t.id)
-	})
 }
 
 func (t *ToolTab) SetTitle(title string) {

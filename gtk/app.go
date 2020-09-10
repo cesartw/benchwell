@@ -58,12 +58,9 @@ func (a Application) Init(ctrl applicationCtrl) (*Application, error) {
 	})
 
 	//a.Application.SetAccelsForAction("app.new", []string{"<control>N"})
-	// main tab
-	a.Application.SetAccelsForAction("win.new.db", []string{"<control>N"})
+	a.Application.SetAccelsForAction("win.new.db", []string{"<control>D"})
 	a.Application.SetAccelsForAction("win.new.http", []string{"<control>H"})
-	// sub tab
 	a.Application.SetAccelsForAction("win.tabnew", []string{"<control>T"})
-	// close sub tab, and main tab when there's no sub tabs left
 	a.Application.SetAccelsForAction("win.close", []string{"<control>W"})
 
 	a.Application.Connect("activate", func() {

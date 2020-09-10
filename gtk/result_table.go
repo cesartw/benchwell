@@ -11,6 +11,7 @@ import (
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
+	"github.com/gotk3/gotk3/pango"
 
 	"bitbucket.org/goreorto/benchwell/config"
 	"bitbucket.org/goreorto/benchwell/sqlengine/driver"
@@ -318,9 +319,6 @@ func (u *Result) AddEmptyRow() (err error) {
 func (u *Result) AddRow(originalRow []interface{}) {
 	defer config.LogStart("Result.AddRow", nil)()
 
-	// Get an iterator for a new row at the end of the list store
-	iter := u.store.Append()
-
 	if len(originalRow) != len(u.cols) {
 		log.Fatal("wrong row length")
 	}
@@ -337,11 +335,12 @@ func (u *Result) AddRow(originalRow []interface{}) {
 			continue
 		}
 
-		if data, ok := d.(string); ok && len(data) > 1000 {
-			s := make([]byte, 255)
-			copy(s, []byte(d.(string)))
-			row[i] = strings.TrimSpace(strings.TrimLeft(strings.TrimLeft(strings.TrimLeft(string(s), "\t"), "\n"), "\r"))
-		}
+		// NOTE: improve performance when loading large text columns
+		//if data, ok := d.(string); ok && len(data) > 1000 {
+		//s := make([]byte, 255)
+		//copy(s, []byte(d.(string)))
+		//row[i] = strings.TrimSpace(strings.TrimLeft(strings.TrimLeft(strings.TrimLeft(string(s), "\t"), "\n"), "\r"))
+		//}
 
 		if s, ok := d.(int64); ok {
 			row[i] = s
@@ -354,7 +353,7 @@ func (u *Result) AddRow(originalRow []interface{}) {
 	}
 
 	// Set the contents of the list store row that the iterator represents
-	err := u.store.Set(iter, columns, row)
+	err := u.store.Set(u.store.Append(), columns, row)
 	if err != nil {
 		log.Fatal("Unable to add row:", err)
 	}
@@ -692,6 +691,8 @@ func (u *Result) createColumn(title string, id int, useEditModal, highlight bool
 	cellRenderer.SetProperty("max-width-chars", config.GUI.CellWidth.Int())
 	cellRenderer.SetProperty("cell-background", "#575756")
 	cellRenderer.SetProperty("cell-background-set", highlight)
+	cellRenderer.SetProperty("ellipsize", pango.ELLIPSIZE_END)
+	cellRenderer.SetProperty("ellipsize-set", true)
 
 	// i think "text" refers to a property of the column.
 	// `"text", id` means that the text source for the column should come from

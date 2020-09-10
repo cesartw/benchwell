@@ -67,6 +67,7 @@ func (c *AppCtrl) createWindow() error {
 	c.windows = append(c.windows, window)
 
 	window.Show()
+	c.App.AddWindow(window.window)
 
 	return nil
 }

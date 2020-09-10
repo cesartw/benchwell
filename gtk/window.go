@@ -42,6 +42,7 @@ type Window struct {
 		NewConnection  *glib.SimpleAction
 		NewDatabaseTab *glib.SimpleAction
 		NewHTTPTab     *glib.SimpleAction
+		Close          *glib.SimpleAction
 	}
 	ctrl windowCtrl
 
@@ -76,30 +77,8 @@ func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 	w.nb.Connect("switch-page", func(_ *gtk.Notebook, _ *gtk.Widget, i int) {
 		w.tabIndex = i
 	})
-	w.nb.Connect("page-removed", func(_ *gtk.Notebook, _ *gtk.Widget, i int) {
-		transit.tab = tabs[w.id][i]
-		transit.src = w.nb
-		tabs[w.id] = append(tabs[w.id][:i], tabs[w.id][i+1:]...)
-	})
-	w.nb.Connect("page-added", func(_ *gtk.Notebook, c *gtk.Widget, i int) {
-		if transit.tab == nil {
-			return
-		}
-
-		if i > len(tabs[w.id]) {
-			tabs[w.id] = append(tabs[w.id], transit.tab)
-		} else {
-			rest := make([]*ToolTab, len(tabs[w.id][i:]))
-			copy(rest, tabs[w.id][i:])
-			tabs[w.id] = append(tabs[w.id][:i], transit.tab)
-			tabs[w.id] = append(tabs[w.id], rest...)
-		}
-
-		transit.tab.SetWindowCtrl(ctrl)
-		transit.tab = nil
-		transit.src = nil
-	})
-
+	w.nb.Connect("page-removed", w.onPageRemoved)
+	w.nb.Connect("page-added", w.onPageAdded)
 	w.nb.Connect("page-reordered", w.onTabReorder)
 
 	switch config.GUI.TabPosition.String() {
@@ -144,6 +123,13 @@ func (w Window) Init(app *gtk.Application, ctrl windowCtrl) (*Window, error) {
 	// add main tab
 	w.Menu.NewDatabaseTab.Connect("activate", ctrl.OnNewDatabaseTab)
 	w.Menu.NewHTTPTab.Connect("activate", ctrl.OnNewHTTPTab)
+	w.Menu.Close.Connect("activate", func() {
+		tab := w.CurrentTab()
+		if tab == nil {
+			return
+		}
+		ctrl.OnCloseTab(tab.id)
+	})
 
 	tabs[w.id] = []*ToolTab{}
 
@@ -166,8 +152,41 @@ func (w *Window) AddToolTab(tab *ToolTab) error {
 	return nil
 }
 
+func (w *Window) onPageRemoved(_ *gtk.Notebook, _ *gtk.Widget, i int) {
+	defer config.LogStart("Window.onPageRemoved", nil)()
+	transit.tab = tabs[w.id][i]
+	transit.src = w.nb
+	tabs[w.id] = append(tabs[w.id][:i], tabs[w.id][i+1:]...)
+}
+
+func (w *Window) onPageAdded(_ *gtk.Notebook, c *gtk.Widget, i int) {
+	defer config.LogStart("Window.onPageAdded", nil)()
+	if transit.tab == nil {
+		return
+	}
+	if transit.tab.w.id == w.id {
+		transit.tab = nil
+		transit.src = nil
+		return
+	}
+
+	if i > len(tabs[w.id]) {
+		tabs[w.id] = append(tabs[w.id], transit.tab)
+	} else {
+		rest := make([]*ToolTab, len(tabs[w.id][i:]))
+		copy(rest, tabs[w.id][i:])
+		tabs[w.id] = append(tabs[w.id][:i], transit.tab)
+		tabs[w.id] = append(tabs[w.id], rest...)
+	}
+
+	transit.tab.SetWindowCtrl(w.ctrl)
+	transit.tab.w = w
+	transit.tab = nil
+	transit.src = nil
+}
+
 func (w *Window) RemovePage(id string) {
-	defer config.LogStart("Window.RemoveCurrentPage", nil)()
+	defer config.LogStart("Window.RemovePage", nil)()
 	for i, tab := range tabs[w.id] {
 		if tab.id != id {
 			continue
@@ -191,6 +210,15 @@ func (w *Window) CurrentTab() *ToolTab {
 		return nil
 	}
 	return tabs[w.id][w.CurrentPage()]
+}
+
+func (w *Window) TabByID(id string) *ToolTab {
+	for _, tab := range tabs[w.id] {
+		if tab.id == id {
+			return tab
+		}
+	}
+	return nil
 }
 
 func (w *Window) Remove(wd gtk.IWidget) {
@@ -221,8 +249,10 @@ func (w *Window) headerMenu() (*gtk.HeaderBar, error) {
 
 	w.Menu.NewDatabaseTab = glib.SimpleActionNew("new.db", nil)
 	w.Menu.NewHTTPTab = glib.SimpleActionNew("new.http", nil)
+	w.Menu.Close = glib.SimpleActionNew("close", nil)
 	w.AddAction(w.Menu.NewDatabaseTab)
 	w.AddAction(w.Menu.NewHTTPTab)
+	w.AddAction(w.Menu.Close)
 
 	header, err := gtk.HeaderBarNew()
 	if err != nil {
