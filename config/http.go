@@ -1,5 +1,7 @@
 package config
 
+import "fmt"
+
 type HTTPEnvironment struct {
 	ID        int64
 	Variables []*HTTPVariable
@@ -32,6 +34,7 @@ func (c *HTTPCollection) LoadRootItems() error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		item := &HTTPItem{}
@@ -60,6 +63,7 @@ func (i *HTTPItem) LoadFull() error {
 		if err != nil {
 			return err
 		}
+		defer rows.Close()
 
 		for rows.Next() {
 			item := &HTTPItem{}
@@ -81,6 +85,7 @@ func (i *HTTPItem) LoadFull() error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		err := rows.Scan(&i.Method, &i.URL, &i.Body, &i.Mime)
@@ -100,6 +105,7 @@ func (i *HTTPItem) LoadFull() error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		kv := &HTTPKV{HTTPItemID: i.ID}
@@ -135,6 +141,13 @@ type HTTPItem struct {
 	Loaded bool
 }
 
+func (i *HTTPItem) UIName() string {
+	if i.IsFolder {
+		return i.Name
+	}
+	return fmt.Sprintf("% -6s %s", i.Method, i.Name)
+}
+
 func (i *HTTPItem) SearchID(id int64) *HTTPItem {
 	if i.ID == id {
 		return i
@@ -151,6 +164,10 @@ func (i *HTTPItem) SearchID(id int64) *HTTPItem {
 
 func (i *HTTPItem) Save() error {
 	return SaveHTTPItem(i)
+}
+
+func (i *HTTPItem) Delete() error {
+	return DeleteHTTPItem(i)
 }
 
 type HTTPRequest struct {
@@ -175,4 +192,8 @@ type HTTPKV struct {
 
 func (i *HTTPKV) Save() error {
 	return SaveHTTPKV(i)
+}
+
+func (i *HTTPKV) Delete() error {
+	return DeleteHTTPKV(i)
 }

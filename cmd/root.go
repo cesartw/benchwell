@@ -79,7 +79,8 @@ var rootCmd = &cobra.Command{
 				},
 				func() { //quit
 				},
-			)*/
+			)
+		*/
 
 		ctr.App.Run(nil)
 

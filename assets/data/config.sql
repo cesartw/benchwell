@@ -55,12 +55,12 @@ CREATE TABLE "http_items" (
 
 CREATE TRIGGER increment_http_collections_count AFTER INSERT ON http_items
     BEGIN
-        UPDATE http_collections SET count = count + 1 WHERE http_collections.id = new.http_collections_id;
+        UPDATE http_collections SET count = count + 1 WHERE http_collections.id = NEW.http_collections_id;
     END;
 
 CREATE TRIGGER decrement_http_collections_count AFTER DELETE ON http_items
     BEGIN
-        UPDATE http_collections SET count = count - 1 WHERE http_collections.id = new.http_collections_id;
+        UPDATE http_collections SET count = count - 1 WHERE http_collections.id = OLD.http_collections_id;
     END;
 
 CREATE TABLE "http_kvs" (

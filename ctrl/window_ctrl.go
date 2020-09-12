@@ -37,14 +37,14 @@ func (c WindowCtrl) Init(parent *AppCtrl) (*WindowCtrl, error) {
 	if err != nil {
 		return nil, err
 	}
-	//_, err = c.AddTab(TAB_TYPE_HTTP)
-	//if err != nil {
-	//return nil, err
-	//}
-	_, err = c.AddTab(TAB_TYPE_DB)
+	_, err = c.AddTab(TAB_TYPE_HTTP)
 	if err != nil {
 		return nil, err
 	}
+	//_, err = c.AddTab(TAB_TYPE_DB)
+	//if err != nil {
+	//return nil, err
+	//}
 
 	return &c, nil
 }

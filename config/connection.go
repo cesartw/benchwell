@@ -111,6 +111,7 @@ func (c *Connection) LoadQueries() error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	c.Queries = nil
 	for rows.Next() {

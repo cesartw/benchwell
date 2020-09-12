@@ -94,6 +94,7 @@ func getSetting(s string) *Setting {
 	if err != nil {
 		panic(err)
 	}
+	defer row.Close()
 
 	for row.Next() {
 		if err := row.Scan(&setting.id, &setting.name, &setting.value); err != nil {
@@ -112,6 +113,7 @@ func loadConnections() error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		conn := &Connection{}
@@ -133,6 +135,7 @@ func loadCollections() error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		collection := &HTTPCollection{}
@@ -151,6 +154,7 @@ func LoadQueries() error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	connMap := map[int64]*Connection{}
 	for _, conn := range Connections {
@@ -256,14 +260,16 @@ func SaveHTTPItem(item *HTTPItem) error {
 		sql := `UPDATE http_items
 					SET name = ?, description = ?, parent_id = ?, is_folder = ?,
 					sort = ?, http_collections_id = ?, external_data = ?,
-					method = ?, url = ?, body = ?, mime = ?)
+					method = ?, url = ?, body = ?, mime = ?
 				WHERE ID = ?`
 		_, err := db.Exec(sql,
 			item.Name, item.Description, item.ParentID,
 			item.IsFolder, item.Sort, item.HTTPCollectionID,
 			"", item.Method, item.URL, item.Body, item.Mime,
 			item.ID)
-		return err
+		if err != nil {
+			return err
+		}
 	}
 
 	for _, kv := range item.Params {
@@ -284,6 +290,42 @@ func SaveHTTPItem(item *HTTPItem) error {
 	return nil
 }
 
+func DeleteHTTPItem(item *HTTPItem) error {
+	if item.ID == 0 {
+		return nil
+	}
+
+	sql := `delete from http_items where id = ?`
+
+	_, err := db.Exec(sql, item.ID)
+	if err != nil {
+		return err
+	}
+
+	for _, kv := range item.Params {
+		err := kv.Delete()
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, kv := range item.Headers {
+		err := kv.Delete()
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, subitem := range item.Items {
+		err = DeleteHTTPItem(subitem)
+		if err != nil {
+			return err
+		}
+	}
+
+	return err
+}
+
 func SaveHTTPKV(kv *HTTPKV) error {
 	if kv.ID == 0 {
 		sql := `INSERT INTO http_kvs(key, value,  type, sort, enabled, http_items_id)
@@ -298,14 +340,25 @@ func SaveHTTPKV(kv *HTTPKV) error {
 		}
 		kv.ID = id
 	} else {
-		sql := `update http_kvs(key, value,  type, sort, enabled, http_items_id)
-				VALUES(?, ?, ?, ?, ?, ?)
-				where id = ?`
+		sql := `UPDATE http_kvs
+				SET key = ?, value = ?, type = ?, sort = ?, enabled = ?, http_items_id = ?
+				WHERE id = ?`
 		_, err := db.Exec(sql, kv.Key, kv.Value, kv.Type, kv.Sort, kv.Enabled, kv.HTTPItemID, kv.ID)
 		return err
 	}
 
 	return nil
+}
+
+func DeleteHTTPKV(kv *HTTPKV) error {
+	if kv.ID == 0 {
+		return nil
+	}
+
+	sql := `delete from http_kvs where id = ?`
+	_, err := db.Exec(sql, kv.ID)
+
+	return err
 }
 
 func SaveHTTPCollection(collection *HTTPCollection) error {
@@ -323,7 +376,7 @@ func SaveHTTPCollection(collection *HTTPCollection) error {
 		collection.ID = id
 	} else {
 		sql := `UPDATE http_collections
-					SET name = ?)
+					SET name = ?
 				WHERE ID = ?`
 		_, err := db.Exec(sql,
 			collection.Name, collection.ID)

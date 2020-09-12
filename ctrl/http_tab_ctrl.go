@@ -15,6 +15,7 @@ type HTTPTabCtrl struct {
 	scr                *gtk.HTTPScreen
 	client             *http.Client
 	selectedCollection *config.HTTPCollection
+	//selectedItem       *config.HTTPItem
 }
 
 func (c HTTPTabCtrl) Init(p *WindowCtrl) (*HTTPTabCtrl, error) {
@@ -35,22 +36,10 @@ func (c HTTPTabCtrl) Init(p *WindowCtrl) (*HTTPTabCtrl, error) {
 func (c *HTTPTabCtrl) OnCollectionSelected() {
 	defer config.LogStart("HTTPTabCtrl.OnCollectionSelected", nil)()
 
-	id, err := c.scr.GetSelectedCollectionID()
+	var err error
+	c.selectedCollection = c.scr.GetSelectedCollection()
 	if err != nil {
-		c.window.PushStatus("getting collection: " + err.Error())
 		return
-	}
-
-	if id == 0 {
-		return
-	}
-
-	for _, collection := range config.Collections {
-		if collection.ID != id {
-			continue
-		}
-		c.selectedCollection = collection
-		break
 	}
 
 	if c.selectedCollection == nil {
@@ -73,27 +62,13 @@ func (c *HTTPTabCtrl) OnCollectionSelected() {
 func (c *HTTPTabCtrl) OnLoadItem() {
 	defer config.LogStart("HTTPTabCtrl.OnLoadItem", nil)()
 
-	itemID, path, err := c.scr.GetSelectedItemID()
-	if err != nil {
-		c.window.PushStatus("getting iter: " + err.Error())
-		return
-	}
-
-	var item *config.HTTPItem
-	items := c.selectedCollection.Items
-
-	for _, i := range items {
-		if found := i.SearchID(itemID); found != nil {
-			item = found
-			break
-		}
-	}
+	item := c.scr.GetSelectedItem()
 	if item == nil {
 		c.window.PushStatus("no item found")
 		return
 	}
 
-	err = item.LoadFull()
+	err := item.LoadFull()
 	if err != nil {
 		c.window.PushStatus("loading item: " + err.Error())
 		return
@@ -104,24 +79,87 @@ func (c *HTTPTabCtrl) OnLoadItem() {
 			return
 		}
 		item.Loaded = true
+
+		path, err := c.scr.GetSelectedPath()
+		if err != nil {
+			return
+		}
+
 		c.scr.LoadFolder(path, item)
 	} else {
 		c.scr.SetRequest(item)
 	}
 }
 
-func (c *HTTPTabCtrl) Save() {
-	defer config.LogStart("HTTPTabCtrl.Save", nil)()
+func (c *HTTPTabCtrl) OnDeleteItem() {
+	defer config.LogStart("HTTPTabCtrl.OnDeleteItem", nil)()
+	item := c.scr.GetSelectedItem()
+	if item == nil {
+		return
+	}
 
+	path, err := c.scr.GetSelectedPath()
+	if err != nil {
+		return
+	}
+
+	err = item.Delete()
+	if err != nil {
+		c.window.PushStatus("couldn't delete item: " + err.Error())
+		return
+	}
+
+	c.scr.RemoveItem(path)
 }
 
-func (c *HTTPTabCtrl) SaveAs() {
-	defer config.LogStart("HTTPTabCtrl.SaveAs", nil)()
-
+func (c *HTTPTabCtrl) OnNewFolder() {
 }
 
-func (c *HTTPTabCtrl) Send() {
-	defer config.LogStart("HTTPTabCtrl.Send", nil)()
+func (c *HTTPTabCtrl) OnNewRequest() {
+	c.OnLoadItem()
+
+	path, err := c.scr.GetSelectedPath()
+	if err != nil {
+		return
+	}
+
+	selectedItem := c.scr.GetSelectedItem()
+
+	item := &config.HTTPItem{HTTPRequest: config.HTTPRequest{Method: "GET"}, HTTPCollectionID: c.selectedCollection.ID}
+	if selectedItem != nil && selectedItem.IsFolder {
+		item.ParentID = selectedItem.ID
+		selectedItem.Items = append(selectedItem.Items, item)
+	}
+
+	if err := item.Save(); err != nil {
+		c.window.PushStatus("failed to save item: %s", err.Error())
+		return
+	}
+
+	c.scr.SetRequest(item)
+	c.scr.AddItem(item, path)
+}
+
+func (c *HTTPTabCtrl) OnSave(item *config.HTTPItem) error {
+	defer config.LogStart("HTTPTabCtrl.OnSave", nil)()
+
+	if err := item.Save(); err != nil {
+		c.window.PushStatus("failed to save item: %s", err.Error())
+		return err
+	}
+
+	c.window.PushStatus("Saved")
+
+	return nil
+}
+
+func (c *HTTPTabCtrl) OnSaveAs() error {
+	defer config.LogStart("HTTPTabCtrl.OnSaveAs", nil)()
+	return nil
+}
+
+func (c *HTTPTabCtrl) OnSend() {
+	defer config.LogStart("HTTPTabCtrl.OnSend", nil)()
 
 	req, err := c.scr.GetRequest()
 	if err != nil {

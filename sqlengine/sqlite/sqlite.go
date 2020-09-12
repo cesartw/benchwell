@@ -45,6 +45,7 @@ func (d *sqliteDriver) Connect(ctx context.Context, cfg config.Connection) (driv
 	d.cfgCon = cfg
 	return d.connect(ctx)
 }
+
 func (d *sqliteDriver) CompleteTableMachines() []driver.Machine {
 	table := driver.Machine{}
 	table.

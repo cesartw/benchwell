@@ -50,17 +50,21 @@ type HTTPScreen struct {
 	respSize *gtk.Label
 
 	// side panel
-	collection *HTTPCollection
+	collection  *HTTPCollection
+	currentItem *config.HTTPItem
 
 	ctrl httpScreenCtrl
 }
 
 type httpScreenCtrl interface {
-	Save()
-	SaveAs()
-	Send()
+	OnSave(*config.HTTPItem) error
+	OnSaveAs() error
+	OnSend()
 	OnLoadItem()
 	OnCollectionSelected()
+	OnDeleteItem()
+	OnNewRequest()
+	OnNewFolder()
 }
 
 func (h HTTPScreen) Init(w *Window, ctrl httpScreenCtrl) (*HTTPScreen, error) {
@@ -124,22 +128,30 @@ func (h HTTPScreen) Init(w *Window, ctrl httpScreenCtrl) (*HTTPScreen, error) {
 	main.PackStart(addressBar, false, false, 0)
 	main.PackStart(vPaned, true, true, 0)
 
-	h.Paned.Add1(h.collection)
-	h.Paned.Add2(main)
+	h.Paned.Pack1(h.collection, false, false)
+	h.Paned.Pack2(main, false, true)
 
 	return &h, nil
 }
 
-func (h *HTTPScreen) GetSelectedItemID() (int64, string, error) {
-	defer config.LogStart("HTTPScreen.GetSelectedItemID", nil)()
-
-	return h.collection.GetSelectedItemID()
+func (h *HTTPScreen) AddItem(item *config.HTTPItem, path *gtk.TreePath) {
+	h.collection.AddItem(item, path)
 }
 
-func (h *HTTPScreen) GetSelectedCollectionID() (int64, error) {
-	defer config.LogStart("HTTPScreen.GetSelectedCollectionID", nil)()
+func (h *HTTPScreen) GetSelectedItem() *config.HTTPItem {
+	defer config.LogStart("HTTPScreen.GetSelectedItem", nil)()
 
-	return h.collection.GetSelectedCollectionID()
+	return h.collection.GetSelectedItem()
+}
+
+func (h *HTTPScreen) GetSelectedCollection() *config.HTTPCollection {
+	defer config.LogStart("HTTPScreen.GetSelectedCollection", nil)()
+	return h.collection.GetSelectedCollection()
+}
+
+func (h *HTTPScreen) GetSelectedPath() (*gtk.TreePath, error) {
+	defer config.LogStart("HTTPScreen.GetSelectedPath", nil)()
+	return h.collection.GetSelectedPath()
 }
 
 func (h *HTTPScreen) LoadCollection(items []*config.HTTPItem) error {
@@ -148,10 +160,14 @@ func (h *HTTPScreen) LoadCollection(items []*config.HTTPItem) error {
 	return h.collection.LoadCollection(items)
 }
 
-func (h *HTTPScreen) LoadFolder(at string, item *config.HTTPItem) error {
+func (h *HTTPScreen) LoadFolder(path *gtk.TreePath, item *config.HTTPItem) error {
 	defer config.LogStart("HTTPScreen.LoadFolder", nil)()
 
-	return h.collection.LoadFolder(at, item)
+	return h.collection.LoadFolder(path, item)
+}
+
+func (h *HTTPScreen) RemoveItem(path *gtk.TreePath) {
+	h.collection.RemoveItem(path)
 }
 
 func (h *HTTPScreen) buildAddressBar() (*gtk.Box, error) {
@@ -168,10 +184,17 @@ func (h *HTTPScreen) buildAddressBar() (*gtk.Box, error) {
 		return nil, err
 	}
 	h.method.Show()
+	h.method.SetActive(0)
+	h.method.Connect("changed", func() {
+		if h.currentItem == nil {
+			return
+		}
+		h.currentItem.Method = h.method.GetActiveText()
+	})
+
 	for _, m := range methods {
 		h.method.Append(strings.ToLower(m), m)
 	}
-	h.method.SetActive(0)
 
 	h.address, err = gtk.EntryNew()
 	if err != nil {
@@ -186,15 +209,25 @@ func (h *HTTPScreen) buildAddressBar() (*gtk.Box, error) {
 		return nil, err
 	}
 	h.send.Show()
-	h.send.Connect("clicked", h.ctrl.Send)
+	h.send.Connect("clicked", h.ctrl.OnSend)
 
 	h.save, err = BWOptionButtonNew("SAVE", h.w, []string{"Save as", "win.saveas"})
 	if err != nil {
 		return nil, err
 	}
 	h.save.Show()
-	h.save.ConnectAction("win.saveas", h.ctrl.SaveAs)
-	h.save.btn.Connect("activate", h.ctrl.Save)
+	h.save.ConnectAction("win.saveas", h.ctrl.OnSaveAs)
+	h.save.btn.Connect("clicked", func() {
+		err := h.ctrl.OnSave(h.currentItem)
+		if err != nil {
+			return
+		}
+
+		path, _ := h.GetSelectedPath()
+		item := h.GetSelectedItem()
+		iter, _ := h.collection.store.GetIter(path)
+		h.collection.store.SetValue(iter, COLUMN_METHOD, item.Method)
+	})
 
 	box.PackStart(h.method, false, false, 0)
 	box.PackStart(h.address, true, true, 0)
@@ -439,6 +472,7 @@ func (h *HTTPScreen) onAddressChange() {
 		h.w.PushStatus("getting address: " + err.Error())
 		return
 	}
+	h.currentItem.URL = address
 
 	u, err := url.Parse(address)
 	if err != nil {
@@ -553,6 +587,7 @@ func (h *HTTPScreen) SetResponse(body string, headers http.Header, duration time
 
 func (h *HTTPScreen) SetRequest(req *config.HTTPItem) {
 	defer config.LogStart("HTTPScreen.SetResponse", nil)()
+	h.currentItem = req
 
 	h.address.SetText(req.URL)
 	h.method.SetActiveID(strings.ToLower(req.Method))

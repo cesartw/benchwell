@@ -172,9 +172,17 @@ func BWPixbufFromFile(asset, color string, size int) (*gdk.Pixbuf, error) {
 		return nil, err
 	}
 
-	pixbuf, err = pixbuf.ScaleSimple(size, size, gdk.INTERP_BILINEAR)
-	if err != nil {
-		return nil, err
+	if size > 0 {
+		pixbuf, err = pixbuf.ScaleSimple(size, size, gdk.INTERP_BILINEAR)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+
+		pixbuf, err = pixbuf.ScaleSimple(52, 9, gdk.INTERP_BILINEAR)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return pixbuf, nil
@@ -251,6 +259,7 @@ func BWOptionButtonNew(label string, w *Window, options []string) (*OptionButton
 	if err != nil {
 		return nil, err
 	}
+	ob.menubtn.Show()
 
 	ob.menu = glib.MenuNew()
 	for i := 0; i < len(options)-1; i = i + 2 {
@@ -268,6 +277,7 @@ func BWOptionButtonNew(label string, w *Window, options []string) (*OptionButton
 	if err != nil {
 		return nil, err
 	}
+	ob.btn.Show()
 
 	ob.Grid, err = gtk.GridNew()
 	if err != nil {

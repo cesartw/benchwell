@@ -75,10 +75,17 @@ var iconsetCmd = &cobra.Command{
 			}
 
 			//code = code + fmt.Sprintf(tpl, strings.TrimSuffix(info.Name(), ".svg"), replacer.Replace(string(b)))
-			exportPNG(
-				"assets/iconset-temp/"+info.Name(),
-				"assets/iconset-temp/"+strings.Replace(info.Name(), ".svg", size+".png", -1),
-				size)
+			if strings.HasPrefix(info.Name(), "method-") {
+				exportPNG(
+					"assets/iconset-temp/"+info.Name(),
+					"assets/iconset-temp/"+strings.Replace(info.Name(), ".svg", size+".png", -1),
+					"105", "18")
+			} else {
+				exportPNG(
+					"assets/iconset-temp/"+info.Name(),
+					"assets/iconset-temp/"+strings.Replace(info.Name(), ".svg", size+".png", -1),
+					size, size)
+			}
 
 			return nil
 		})
@@ -115,6 +122,7 @@ var iconsetCmd = &cobra.Command{
 			code = code + fmt.Sprintf(tpl, strings.TrimSuffix(info.Name(), size+".png"), data)
 			return nil
 		})
+
 		code = code + "}"
 
 		err = ioutil.WriteFile("assets/iconset.go", []byte(code), 0644)
@@ -125,7 +133,7 @@ var iconsetCmd = &cobra.Command{
 	},
 }
 
-func exportPNG(src, dst, size string) {
+func exportPNG(src, dst, w, h string) {
 	goExecutable, err := exec.LookPath("inkscape")
 	if err != nil {
 		return
@@ -134,8 +142,30 @@ func exportPNG(src, dst, size string) {
 	cmd := &exec.Cmd{
 		Path: goExecutable,
 		//"inkscape -z -w %d -h %d %s.svg -e %s.png"
-		Args: []string{goExecutable, "-w", size, "-h",
-			size, src, "--export-filename", dst},
+		Args: []string{goExecutable, "-w", w, "-h",
+			h, src, "--export-filename", dst},
+		Stdout: os.Stdout,
+		Stderr: os.Stdout,
+	}
+
+	err = cmd.Start()
+	if err != nil {
+		return
+	}
+
+	cmd.Process.Release()
+}
+
+func exportNoSizePNG(src, dst string) {
+	goExecutable, err := exec.LookPath("inkscape")
+	if err != nil {
+		return
+	}
+
+	cmd := &exec.Cmd{
+		Path: goExecutable,
+		//"inkscape -z -w %d -h %d %s.svg -e %s.png"
+		Args:   []string{goExecutable, src, "--export-filename", dst},
 		Stdout: os.Stdout,
 		Stderr: os.Stdout,
 	}
