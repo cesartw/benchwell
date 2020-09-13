@@ -88,6 +88,24 @@ func (c *WindowCtrl) OnSaveEnv(env *config.Env) error {
 	return env.Save()
 }
 
+func (c *WindowCtrl) OnDeleteEnv(env *config.Env) error {
+	err := env.Delete()
+	if err != nil {
+		return err
+	}
+
+	for i, e := range config.Environments {
+		if e != e {
+			continue
+		}
+
+		config.Environments = append(config.Environments[:i], config.Environments[i+1:]...)
+		break
+	}
+
+	return nil
+}
+
 func (c *WindowCtrl) Show() {
 	defer config.LogStart("WindowCtrl.Show", nil)()
 

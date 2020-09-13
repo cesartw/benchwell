@@ -29,6 +29,7 @@ type windowCtrl interface {
 	OnNewHTTPTab()
 	OnCloseTab(string)
 	OnSaveEnv(*config.Env) error
+	OnDeleteEnv(*config.Env) error
 }
 
 type Window struct {
@@ -39,8 +40,9 @@ type Window struct {
 	statusBar   *gtk.Statusbar
 	statusBarID uint
 
-	envCb  *gtk.ComboBoxText
-	btnEnv *gtk.Button
+	envCb    *gtk.ComboBox
+	envModel *gtk.ListStore
+	btnEnv   *gtk.Button
 
 	Menu struct {
 		NewConnection  *glib.SimpleAction
@@ -383,14 +385,28 @@ func (w *Window) onTabReorder(_ *gtk.Notebook, _ *gtk.Widget, landing int) {
 
 func (w *Window) envselector() (*gtk.Grid, error) {
 	var err error
-	w.envCb, err = gtk.ComboBoxTextNew()
+
+	w.envModel, err = gtk.ListStoreNew(glib.TYPE_INT64, glib.TYPE_STRING)
+	if err != nil {
+		return nil, err
+	}
+	w.envCb, err = gtk.ComboBoxNewWithModel(w.envModel)
 	if err != nil {
 		return nil, err
 	}
 	w.envCb.Show()
+	w.envCb.SetProperty("id-column", 0)
+	w.envCb.SetIDColumn(0)
+	w.envCb.SetEntryTextColumn(1)
+	area, err := w.envCb.GetProperty("cell-area")
+	fmt.Println("=====", area.(*gtk.CellArea), err)
 
 	for _, env := range config.Environments {
-		w.envCb.Append(fmt.Sprintf("%d", env.ID), env.Name)
+		fmt.Println("=====", env.Name)
+		iter := w.envModel.Append()
+		//w.envModel.SetValue(iter, 0, env.ID)
+		w.envModel.SetValue(iter, 1, env.Name)
+		//w.envCb.Append(fmt.Sprintf("%d", env.ID), env.Name)
 	}
 
 	w.btnEnv, err = gtk.ButtonNew()
@@ -413,7 +429,7 @@ func (w *Window) envselector() (*gtk.Grid, error) {
 		popover.Show()
 	})
 
-	envpop, err := EnvironmentsPopover{}.Init(w.ctrl)
+	envpop, err := EnvironmentsPopover{}.Init(w, w.ctrl)
 	if err != nil {
 		return nil, err
 	}
@@ -433,10 +449,12 @@ func (w *Window) envselector() (*gtk.Grid, error) {
 
 type environmenctrl interface {
 	OnSaveEnv(*config.Env) error
+	OnDeleteEnv(*config.Env) error
 }
 
 type EnvironmentsPopover struct {
 	*gtk.Box
+	w      *Window
 	btnAdd *gtk.Button
 	envs   []*EnvironmentPanel
 
@@ -445,9 +463,10 @@ type EnvironmentsPopover struct {
 	environmenctrl
 }
 
-func (e EnvironmentsPopover) Init(ctrl environmenctrl) (*EnvironmentsPopover, error) {
+func (e EnvironmentsPopover) Init(w *Window, ctrl environmenctrl) (*EnvironmentsPopover, error) {
 	var err error
 	e.environmenctrl = ctrl
+	e.w = w
 
 	e.Box, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 	if err != nil {
@@ -466,6 +485,27 @@ func (e EnvironmentsPopover) Init(ctrl environmenctrl) (*EnvironmentsPopover, er
 	}
 	e.btnAdd.Show()
 	BWAddClass(e.btnAdd, "suggested-action")
+	e.btnAdd.Connect("clicked", func() {
+		env := &config.Env{Name: "new"}
+		err := ctrl.OnSaveEnv(env)
+		if err != nil {
+			e.w.PushStatus("saving environment: %s", err.Error())
+			return
+		}
+
+		envpanel, err := EnvironmentPanel{}.Init(env, &e)
+		if err != nil {
+			e.w.PushStatus("error creating EnvironmentPanel: %s", err.Error())
+			return
+		}
+		envpanel.Show()
+		//w.envCb.Append(fmt.Sprintf("%d", env.ID), env.Name)
+		//w.envCb.SetActiveID(fmt.Sprintf("%d", env.ID))
+
+		config.Environments = append(config.Environments, env)
+		e.stack.AddTitled(envpanel, fmt.Sprintf("%d", len(config.Environments)), env.Name)
+		e.stack.SetVisibleChildName(env.Name)
+	})
 	header.PackEnd(e.btnAdd)
 
 	paned, err := gtk.PanedNew(gtk.ORIENTATION_HORIZONTAL)
@@ -490,19 +530,19 @@ func (e EnvironmentsPopover) Init(ctrl environmenctrl) (*EnvironmentsPopover, er
 	e.stack.Show()
 	e.stack.SetHomogeneous(true)
 
-	for _, env := range config.Environments {
+	for i, env := range config.Environments {
 		envpanel, err := EnvironmentPanel{}.Init(env, &e)
 		if err != nil {
 			return nil, err
 		}
 		envpanel.Show()
 
-		e.stack.AddTitled(envpanel, env.Name, env.Name)
+		e.stack.AddTitled(envpanel, fmt.Sprintf("%d", i), env.Name)
 		e.envs = append(e.envs, envpanel)
 	}
 
 	if len(config.Environments) > 0 {
-		e.stack.SetVisibleChildName(config.Environments[0].Name)
+		e.stack.SetVisibleChildName("0")
 	}
 	e.stack.SetVExpand(true)
 	e.stack.SetHExpand(true)
@@ -521,6 +561,7 @@ func (e EnvironmentsPopover) Init(ctrl environmenctrl) (*EnvironmentsPopover, er
 func (e *EnvironmentsPopover) OnSaveEnv(env *config.Env) error {
 	err := e.environmenctrl.OnSaveEnv(env)
 	if err != nil {
+		e.w.PushStatus("Fail to save env: %s", err.Error())
 		return err
 	}
 
@@ -530,6 +571,28 @@ func (e *EnvironmentsPopover) OnSaveEnv(env *config.Env) error {
 		}
 
 		e.stack.ChildSetProperty(panel, "title", env.Name)
+		//e.w.envCb.Remov
+		break
+	}
+
+	return nil
+}
+
+func (e *EnvironmentsPopover) OnDeleteEnv(env *config.Env) error {
+	err := e.environmenctrl.OnDeleteEnv(env)
+	if err != nil {
+		e.w.PushStatus("Fail to delete env: %s", err.Error())
+		return err
+	}
+
+	for _, panel := range e.envs {
+		if panel.env != env {
+			continue
+		}
+
+		e.stack.Remove(panel)
+
+		//e.w.envCb.Remove(i)
 		break
 	}
 
@@ -575,6 +638,12 @@ func (e EnvironmentPanel) Init(env *config.Env, ctrl environmenctrl) (*Environme
 	}
 	e.btnRemove.Show()
 	BWAddClass(e.btnRemove, "destructive-action")
+	e.btnRemove.Connect("clicked", func() {
+		err := ctrl.OnDeleteEnv(e.env)
+		if err != nil {
+			return
+		}
+	})
 
 	btnBox, err := gtk.ButtonBoxNew(gtk.ORIENTATION_HORIZONTAL)
 	if err != nil {

@@ -10,6 +10,7 @@ import (
 
 	"github.com/gotk3/gotk3/gtk"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"bitbucket.org/goreorto/benchwell/assets"
@@ -68,11 +69,11 @@ func (e *Env) Save() error {
 				VALUES(?)`
 		result, err := db.Exec(sql, e.Name)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "inserting env")
 		}
 		id, err := result.LastInsertId()
 		if err != nil {
-			return err
+			return errors.Wrap(err, "getting lastinsertid env")
 		}
 		e.ID = id
 	} else {
@@ -83,7 +84,7 @@ func (e *Env) Save() error {
 			e.Name,
 			e.ID)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "updating env")
 		}
 	}
 
@@ -91,6 +92,26 @@ func (e *Env) Save() error {
 		v.EnvID = e.ID
 		err := v.Save()
 		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (e *Env) Delete() error {
+	if e.ID == 0 {
+		return nil
+	}
+
+	sql := `DELETE FROM  environments WHERE ID = ?`
+	_, err := db.Exec(sql, e.ID)
+	if err != nil {
+		return errors.Wrap(err, "deleting env")
+	}
+
+	for _, v := range e.Variables {
+		if err := v.Delete(); e != nil {
 			return err
 		}
 	}
@@ -109,23 +130,37 @@ func (e *EnvVar) Save() error {
 				VALUES(?, ?, ?, ?)`
 		result, err := db.Exec(sql, e.Key, e.Value, e.Enabled, e.EnvID)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "inserting envvar")
 		}
 		id, err := result.LastInsertId()
 		if err != nil {
-			return err
+			return errors.Wrap(err, "getting LastInsertId envvar")
 		}
 		e.ID = id
 	} else {
-		sql := `UPDATE environment_variables(key, value, enabled, environment_id)
-				set key = ?, value = ?, enabled = ?, environment_id = ?
+		sql := `UPDATE environment_variables
+				SET key = ?, value = ?, enabled = ?, environment_id = ?
 				WHERE ID = ?`
 		_, err := db.Exec(sql,
 			e.Key, e.Value, e.Enabled, e.EnvID,
 			e.ID)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "updating envvar")
 		}
+	}
+
+	return nil
+}
+
+func (e *EnvVar) Delete() error {
+	if e.ID == 0 {
+		return nil
+	}
+
+	sql := `DELETE FROM  environment_variables WHERE ID = ?`
+	_, err := db.Exec(sql, e.ID)
+	if err != nil {
+		return errors.Wrap(err, "deleting envvar")
 	}
 
 	return nil
@@ -307,6 +342,9 @@ func loadEnvironments() error {
 	}
 
 	for _, envar := range variables {
+		if envmap[envar.EnvID] == nil {
+			continue
+		}
 		envmap[envar.EnvID].Variables = append(envmap[envar.EnvID].Variables, envar)
 	}
 

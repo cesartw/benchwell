@@ -13,6 +13,7 @@ require (
 	github.com/keybase/go.dbus v0.0.0-20200324223359-a94be52c0b03
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/mattn/go-sqlite3 v1.14.0
+	github.com/pkg/errors v0.9.1
 	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v0.0.6
