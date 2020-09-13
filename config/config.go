@@ -1,7 +1,9 @@
 package config
 
 import (
+	"bytes"
 	"database/sql"
+	"html/template"
 	"io"
 	"os"
 	"time"
@@ -14,6 +16,120 @@ import (
 )
 
 const AppID = "io.benchwell"
+
+type Var struct {
+	ID      int64
+	Key     string
+	Value   string
+	Enabled bool
+}
+
+func (e *Var) Name() string      { return e.Key }
+func (e *Var) Val() string       { return e.Value }
+func (e *Var) IsEnabled() bool   { return e.Enabled }
+func (e *Var) SetName(v string)  { e.Key = v }
+func (e *Var) SetVal(v string)   { e.Value = v }
+func (e *Var) SetEnabled(v bool) { e.Enabled = v }
+
+type Env struct {
+	ID        int64
+	Name      string
+	Variables []*EnvVar
+}
+
+func (e Env) Interpolate(s string) string {
+	funcs := template.FuncMap{}
+	for _, v := range e.Variables {
+		value := v.Value
+		funcs[v.Key] = func() string {
+			return value
+		}
+	}
+
+	t := template.New("")
+	t.Funcs(funcs)
+	t, err := t.Parse(s)
+	if err != nil {
+		return s
+	}
+
+	buff := bytes.NewBuffer(nil)
+	err = t.Execute(buff, s)
+	if err != nil {
+		return s
+	}
+
+	return buff.String()
+}
+
+func (e *Env) Save() error {
+	if e.ID == 0 {
+		sql := `INSERT INTO environments(name)
+				VALUES(?)`
+		result, err := db.Exec(sql, e.Name)
+		if err != nil {
+			return err
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			return err
+		}
+		e.ID = id
+	} else {
+		sql := `UPDATE environments
+					SET name = ?
+				WHERE ID = ?`
+		_, err := db.Exec(sql,
+			e.Name,
+			e.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, v := range e.Variables {
+		v.EnvID = e.ID
+		err := v.Save()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+type EnvVar struct {
+	Var
+	EnvID int64
+}
+
+func (e *EnvVar) Save() error {
+	if e.ID == 0 {
+		sql := `INSERT INTO environment_variables(key, value, enabled, environment_id)
+				VALUES(?, ?, ?, ?)`
+		result, err := db.Exec(sql, e.Key, e.Value, e.Enabled, e.EnvID)
+		if err != nil {
+			return err
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			return err
+		}
+		e.ID = id
+	} else {
+		sql := `UPDATE environment_variables(key, value, enabled, environment_id)
+				set key = ?, value = ?, enabled = ?, environment_id = ?
+				WHERE ID = ?`
+		_, err := db.Exec(sql,
+			e.Key, e.Value, e.Enabled, e.EnvID,
+			e.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 
 var (
 	Version        = "dev"
@@ -30,6 +146,7 @@ var (
 	Home         string
 	Connections  []*Connection
 	Collections  []*HTTPCollection
+	Environments []*Env
 	ActiveWindow *gtk.ApplicationWindow
 
 	loadedSettings map[string]*Setting
@@ -73,11 +190,12 @@ func Init() {
 		panic(err)
 	}
 
-	if len(Connections) == 0 {
-		//SaveConnection(&Connection{Name: "New connection", Type: "tcp", Adapter: "mysql", Port: 3306})
+	err = loadCollections()
+	if err != nil {
+		logger.Error(err)
 	}
 
-	err = loadCollections()
+	err = loadEnvironments()
 	if err != nil {
 		logger.Error(err)
 	}
@@ -144,6 +262,52 @@ func loadCollections() error {
 			return err
 		}
 		Collections = append(Collections, collection)
+	}
+
+	return nil
+}
+
+func loadEnvironments() error {
+	Environments = nil
+
+	rows, err := db.Query("SELECT * FROM environments")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		env := &Env{}
+		err := rows.Scan(&env.ID, &env.Name)
+		if err != nil {
+			return err
+		}
+		Environments = append(Environments, env)
+	}
+
+	rows, err = db.Query("SELECT * FROM environment_variables")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	variables := []*EnvVar{}
+	for rows.Next() {
+		envar := &EnvVar{}
+		err := rows.Scan(&envar.ID, &envar.Key, &envar.Value, &envar.Enabled, &envar.EnvID)
+		if err != nil {
+			return err
+		}
+		variables = append(variables, envar)
+	}
+
+	envmap := map[int64]*Env{}
+	for _, env := range Environments {
+		envmap[env.ID] = env
+	}
+
+	for _, envar := range variables {
+		envmap[envar.EnvID].Variables = append(envmap[envar.EnvID].Variables, envar)
 	}
 
 	return nil
@@ -216,173 +380,6 @@ func SaveQuery(query *Query) error {
 			return err
 		}
 	}
-	return nil
-}
-
-func DeleteConnection(conn *Connection) error {
-	if conn.ID != 0 {
-		sql := `DELETE FROM connections WHERE id = ?`
-		_, err := db.Exec(sql, conn.ID)
-		if err != nil {
-			return err
-		}
-
-		for i, co := range Connections {
-			if co.ID != conn.ID {
-				continue
-			}
-
-			Connections = append(Connections[:i], Connections[i+1:]...)
-			break
-		}
-	}
-
-	return nil
-}
-
-func SaveHTTPItem(item *HTTPItem) error {
-	if item.ID == 0 {
-		sql := `INSERT INTO http_items(name, description, parent_id, is_folder, sort, http_collections_id, external_data, method, url, body, mime)
-				VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-		result, err := db.Exec(sql, item.Name,
-			item.Description, item.ParentID, item.IsFolder,
-			item.Sort, item.HTTPCollectionID, "", item.Method,
-			item.URL, item.Body, item.Mime)
-		if err != nil {
-			return err
-		}
-		id, err := result.LastInsertId()
-		if err != nil {
-			return err
-		}
-		item.ID = id
-	} else {
-		sql := `UPDATE http_items
-					SET name = ?, description = ?, parent_id = ?, is_folder = ?,
-					sort = ?, http_collections_id = ?, external_data = ?,
-					method = ?, url = ?, body = ?, mime = ?
-				WHERE ID = ?`
-		_, err := db.Exec(sql,
-			item.Name, item.Description, item.ParentID,
-			item.IsFolder, item.Sort, item.HTTPCollectionID,
-			"", item.Method, item.URL, item.Body, item.Mime,
-			item.ID)
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, kv := range item.Params {
-		kv.HTTPItemID = item.ID
-		err := kv.Save()
-		if err != nil {
-			return err
-		}
-	}
-	for _, kv := range item.Headers {
-		kv.HTTPItemID = item.ID
-		err := kv.Save()
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func DeleteHTTPItem(item *HTTPItem) error {
-	if item.ID == 0 {
-		return nil
-	}
-
-	sql := `delete from http_items where id = ?`
-
-	_, err := db.Exec(sql, item.ID)
-	if err != nil {
-		return err
-	}
-
-	for _, kv := range item.Params {
-		err := kv.Delete()
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, kv := range item.Headers {
-		err := kv.Delete()
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, subitem := range item.Items {
-		err = DeleteHTTPItem(subitem)
-		if err != nil {
-			return err
-		}
-	}
-
-	return err
-}
-
-func SaveHTTPKV(kv *HTTPKV) error {
-	if kv.ID == 0 {
-		sql := `INSERT INTO http_kvs(key, value,  type, sort, enabled, http_items_id)
-				VALUES(?, ?, ?, ?, ?, ?)`
-		result, err := db.Exec(sql, kv.Key, kv.Value, kv.Type, kv.Sort, kv.Enabled, kv.HTTPItemID)
-		if err != nil {
-			return err
-		}
-		id, err := result.LastInsertId()
-		if err != nil {
-			return err
-		}
-		kv.ID = id
-	} else {
-		sql := `UPDATE http_kvs
-				SET key = ?, value = ?, type = ?, sort = ?, enabled = ?, http_items_id = ?
-				WHERE id = ?`
-		_, err := db.Exec(sql, kv.Key, kv.Value, kv.Type, kv.Sort, kv.Enabled, kv.HTTPItemID, kv.ID)
-		return err
-	}
-
-	return nil
-}
-
-func DeleteHTTPKV(kv *HTTPKV) error {
-	if kv.ID == 0 {
-		return nil
-	}
-
-	sql := `delete from http_kvs where id = ?`
-	_, err := db.Exec(sql, kv.ID)
-
-	return err
-}
-
-func SaveHTTPCollection(collection *HTTPCollection) error {
-	if collection.ID == 0 {
-		sql := `INSERT INTO http_collections(name)
-				VALUES(?)`
-		result, err := db.Exec(sql, collection.Name)
-		if err != nil {
-			return err
-		}
-		id, err := result.LastInsertId()
-		if err != nil {
-			return err
-		}
-		collection.ID = id
-	} else {
-		sql := `UPDATE http_collections
-					SET name = ?
-				WHERE ID = ?`
-		_, err := db.Exec(sql,
-			collection.Name, collection.ID)
-		return err
-	}
-
 	return nil
 }
 

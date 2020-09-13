@@ -55,26 +55,32 @@ func (i insomnia) ToHTTPItem() *config.HTTPItem {
 	switch i.Authentication.Type {
 	case "bearer":
 		item.Headers = append(item.Headers, &config.HTTPKV{
-			Key:   "Authentication",
-			Value: "Bearer " + i.Authentication.Token,
+			Var: config.Var{
+				Key:   "Authentication",
+				Value: "Bearer " + i.Authentication.Token,
+			},
 		})
 	}
 
 	for _, h := range i.Headers {
 		item.Headers = append(item.Headers, &config.HTTPKV{
-			Key:     h.Name,
-			Value:   h.Value,
-			Type:    "header",
-			Enabled: true,
+			Var: config.Var{
+				Key:     h.Name,
+				Value:   h.Value,
+				Enabled: true,
+			},
+			Type: "header",
 		})
 	}
 
 	for _, h := range i.Params {
 		item.Params = append(item.Params, &config.HTTPKV{
-			Key:     h.Name,
-			Value:   h.Value,
-			Type:    "param",
-			Enabled: !h.Disabled,
+			Var: config.Var{
+				Key:     h.Name,
+				Value:   h.Value,
+				Enabled: !h.Disabled,
+			},
+			Type: "param",
 		})
 	}
 

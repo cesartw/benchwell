@@ -4,6 +4,19 @@ CREATE TABLE "config" (
     value NVARCHAR(300) NOT NULL
 );
 
+CREATE TABLE "environments" (
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    name text NOT NULL
+);
+
+CREATE TABLE "environment_variables" (
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    key text NOT NULL,
+    value text NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT 1 CHECK (enabled IN (0,1)),
+    environment_id integer NOT NULL
+);
+
 CREATE TABLE "db_connections" (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     name text NOT NULL,

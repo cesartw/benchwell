@@ -74,6 +74,13 @@ func (h HTTPScreen) Init(w *Window, ctrl httpScreenCtrl) (*HTTPScreen, error) {
 
 	h.w = w
 	h.ctrl = ctrl
+	h.currentItem = &config.HTTPItem{
+		HTTPRequest: config.HTTPRequest{
+			Headers: []*config.HTTPKV{},
+			Params:  []*config.HTTPKV{},
+		},
+	}
+
 	h.Paned, err = gtk.PanedNew(gtk.ORIENTATION_HORIZONTAL)
 	if err != nil {
 		return nil, err
@@ -210,6 +217,7 @@ func (h *HTTPScreen) buildAddressBar() (*gtk.Box, error) {
 	}
 	h.send.Show()
 	h.send.Connect("clicked", h.ctrl.OnSend)
+	BWAddClass(h.send, "suggested-action")
 
 	h.save, err = BWOptionButtonNew("SAVE", h.w, []string{"Save as", "win.saveas"})
 	if err != nil {
@@ -285,13 +293,13 @@ func (h *HTTPScreen) buildRequest() (*gtk.Notebook, error) {
 	}
 	h.bodySize.Show()
 
-	h.headers, err = KeyValues{}.Init(func() {})
+	h.headers, err = KeyValues{}.Init(&h.currentItem.Headers, func() {})
 	if err != nil {
 		return nil, err
 	}
 	h.headers.Show()
 
-	h.params, err = KeyValues{}.Init(func() {
+	h.params, err = KeyValues{}.Init(&h.currentItem.Params, func() {
 		if h.buildingAddr {
 			return
 		}
@@ -492,7 +500,7 @@ func (h *HTTPScreen) onAddressChange() {
 
 	for _, key := range keys {
 		for _, value := range params[key] {
-			h.params.AddWithValues(key, value, true)
+			h.params.Add(&config.HTTPKV{Var: config.Var{Key: key, Value: value, Enabled: true}})
 		}
 	}
 }
@@ -593,218 +601,15 @@ func (h *HTTPScreen) SetRequest(req *config.HTTPItem) {
 	h.method.SetActiveID(strings.ToLower(req.Method))
 	h.headers.Clear()
 	for _, kv := range req.Headers {
-		h.headers.AddWithValues(kv.Key, kv.Value, true)
+		h.headers.Add(kv)
 	}
 	for _, kv := range req.Params {
-		h.params.AddWithValues(kv.Key, kv.Value, kv.Enabled)
+		h.params.Add(kv)
 	}
 
 	h.mime.SetActiveID(req.Mime)
 }
 
-type KeyValue struct {
-	*gtk.Box
-	enabled *gtk.CheckButton
-	key     *gtk.Entry
-	value   *gtk.Entry
-	remove  *gtk.Button
-}
-
-func (c KeyValue) Init() (*KeyValue, error) {
-	defer config.LogStart("KeyValue.Init", nil)()
-
-	var err error
-	c.key, err = gtk.EntryNew()
-	if err != nil {
-		return nil, err
-	}
-	c.key.Show()
-	c.key.SetPlaceholderText("Name")
-
-	c.value, err = gtk.EntryNew()
-	if err != nil {
-		return nil, err
-	}
-	c.value.Show()
-	c.value.SetPlaceholderText("Value")
-
-	c.Box, err = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 5)
-	if err != nil {
-		return nil, err
-	}
-
-	c.remove, err = BWButtonNewFromIconName("close", "orange", ICON_SIZE_BUTTON)
-	if err != nil {
-		return nil, err
-	}
-	c.remove.Show()
-
-	c.enabled, err = gtk.CheckButtonNew()
-	if err != nil {
-		return nil, err
-	}
-	c.enabled.Show()
-	c.enabled.SetActive(true)
-
-	c.Box.PackStart(c.enabled, false, false, 5)
-	c.Box.PackStart(c.key, true, true, 0)
-	c.Box.PackStart(c.value, true, true, 0)
-	c.Box.PackEnd(c.remove, false, false, 5)
-
-	return &c, nil
-}
-
-func (c *KeyValue) Get() (string, string, error) {
-	defer config.LogStart("KeyValue.Get", nil)()
-
-	key, err := c.key.GetText()
-	if err != nil {
-		return "", "", err
-	}
-	value, err := c.value.GetText()
-	if err != nil {
-		return "", "", err
-	}
-
-	return key, value, nil
-}
-
-type KeyValues struct {
-	*gtk.Box
-	keyvalues []*KeyValue
-	onChange  func()
-}
-
-func (c KeyValues) Init(onChange func()) (*KeyValues, error) {
-	defer config.LogStart("KeyValues.Init", nil)()
-
-	var err error
-	c.onChange = onChange
-	c.Box, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
-	if err != nil {
-		return nil, err
-	}
-
-	return &c, c.AddEmpty()
-}
-
-func (c *KeyValues) AddEmpty() error {
-	defer config.LogStart("KeyValues.AddEmpty", nil)()
-
-	kv, err := c.add()
-	if err != nil {
-		return err
-	}
-	kv.Show()
-
-	return nil
-}
-
-func (c *KeyValues) AddWithValues(key, value string, enabled bool) error {
-	defer config.LogStart("KeyValues.AddWithValues", nil)()
-
-	for _, kv := range c.keyvalues {
-		s, _ := kv.key.GetText()
-		if s != "" {
-			continue
-		}
-		kv.key.SetText(key)
-		kv.value.SetText(value)
-		return nil
-	}
-
-	kv, err := c.add()
-	if err != nil {
-		return err
-	}
-	kv.enabled.SetActive(enabled)
-
-	kv.key.SetText(key)
-	kv.value.SetText(value)
-
-	return nil
-}
-
-func (c *KeyValues) add() (*KeyValue, error) {
-	defer config.LogStart("KeyValues.add", nil)()
-
-	kv, err := KeyValue{}.Init()
-	if err != nil {
-		return kv, err
-	}
-	kv.Show()
-	kv.remove.Connect("clicked", c.onBlur(kv))
-
-	focused := func() {
-		if c.keyvalues[len(c.keyvalues)-1] != kv {
-			return
-		}
-
-		c.AddEmpty()
-	}
-	kv.key.Connect("grab-focus", focused)
-	kv.value.Connect("grab-focus", focused)
-	kv.key.Connect("key-release-event", c.onChange)
-	kv.value.Connect("key-release-event", c.onChange)
-	kv.enabled.Connect("toggled", c.onChange)
-	kv.remove.Connect("clicked", c.onChange)
-
-	c.Box.PackStart(kv, false, false, 0)
-	c.keyvalues = append(c.keyvalues, kv)
-
-	return kv, nil
-}
-
-func (c *KeyValues) onBlur(kv *KeyValue) func() {
-	defer config.LogStart("KeyValues.onBlur", nil)()
-
-	return func() {
-		c.Box.Remove(kv)
-
-		for i, v := range c.keyvalues {
-			if v != kv {
-				continue
-			}
-			c.keyvalues = append(c.keyvalues[:i], c.keyvalues[i+1:]...)
-		}
-
-		if len(c.keyvalues) == 0 {
-			c.AddEmpty()
-		}
-	}
-}
-
-func (c *KeyValues) Clear() {
-	defer config.LogStart("KeyValues.Clear", nil)()
-
-	for _, kv := range c.keyvalues {
-		c.Remove(kv)
-	}
-	c.keyvalues = nil
-	c.AddEmpty()
-}
-
-func (c KeyValues) Collect() (map[string][]string, error) {
-	defer config.LogStart("KeyValues.Collect", nil)()
-
-	keyvalues := map[string][]string{}
-
-	for _, kv := range c.keyvalues {
-		if !kv.enabled.GetActive() {
-			continue
-		}
-
-		key, value, err := kv.Get()
-		if err != nil {
-			return nil, err
-		}
-
-		if key == "" {
-			continue
-		}
-
-		keyvalues[key] = append(keyvalues[key], value)
-	}
-
-	return keyvalues, nil
+func (h *HTTPScreen) CurrentItem() *config.HTTPItem {
+	return h.currentItem
 }

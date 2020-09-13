@@ -3,10 +3,12 @@ package gtk
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 
 	"bitbucket.org/goreorto/benchwell/assets"
+	"bitbucket.org/goreorto/benchwell/config"
 	"github.com/gotk3/gotk3/gdk"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
@@ -357,4 +359,266 @@ func (c *CancelOverlay) Run(onCancel func()) {
 func (c *CancelOverlay) Stop() {
 	c.Remove(c.box)
 	c.spinner.Stop()
+}
+
+type KeyValues struct {
+	*gtk.Box
+	kvs       reflect.Value
+	keyvalues []*KeyValue
+	onChange  func()
+}
+
+type kv interface {
+	Name() string
+	Val() string
+	IsEnabled() bool
+	SetName(string)
+	SetVal(string)
+	SetEnabled(bool)
+}
+
+func (c KeyValues) Init(values interface{}, onChange func()) (*KeyValues, error) {
+	defer config.LogStart("KeyValues.Init", nil)()
+
+	c.kvs = reflect.ValueOf(values)
+	if c.kvs.Kind() != reflect.Ptr || c.kvs.Elem().Kind() != reflect.Slice {
+		return nil, errors.New("values must be pointer to slice")
+	}
+
+	var err error
+	c.onChange = onChange
+	c.Box, err = gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 5)
+	if err != nil {
+		return nil, err
+	}
+
+	return &c, c.AddEmpty()
+}
+
+func (c *KeyValues) AddEmpty() error {
+	defer config.LogStart("KeyValues.AddEmpty", nil)()
+
+	kv, err := c.add(nil)
+	if err != nil {
+		return err
+	}
+	kv.Show()
+
+	return nil
+}
+
+func (c *KeyValues) Add(v kv) error {
+	defer config.LogStart("KeyValues.AddWithValues", nil)()
+
+	// if there's an empty one already
+	//for _, kv := range c.keyvalues {
+	//s, _ := kv.key.GetText()
+	//if s != "" {
+	//continue
+	//}
+	//kv.key.SetText(v.Key())
+	//kv.value.SetText(v.Value())
+	//return nil
+	//}
+
+	kv, err := c.add(v)
+	if err != nil {
+		return err
+	}
+	kv.enabled.SetActive(v.IsEnabled())
+
+	kv.key.SetText(v.Name())
+	kv.value.SetText(v.Val())
+
+	return nil
+}
+
+func (c *KeyValues) add(v kv) (*KeyValue, error) {
+	defer config.LogStart("KeyValues.add", nil)()
+
+	if v == nil {
+		v = reflect.New(
+			c.kvs.Type().Elem().Elem().Elem(),
+		).Interface().(kv)
+	}
+
+	kV, err := KeyValue{}.Init(v)
+	if err != nil {
+		return nil, err
+	}
+	kV.Show()
+	kV.remove.Connect("clicked", c.onRemove(kV))
+
+	focused := func() {
+		if c.keyvalues[len(c.keyvalues)-1] != kV {
+			return
+		}
+
+		c.AddEmpty()
+	}
+	kV.key.Connect("grab-focus", focused)
+	kV.value.Connect("grab-focus", focused)
+	kV.key.Connect("key-release-event", c.onChange)
+	kV.value.Connect("key-release-event", c.onChange)
+	kV.enabled.Connect("toggled", c.onChange)
+	kV.remove.Connect("clicked", c.onChange)
+
+	c.Box.PackStart(kV, false, false, 0)
+
+	c.keyvalues = append(c.keyvalues, kV)
+	c.kvs.Elem().Set(
+		reflect.Append(
+			c.kvs.Elem(),
+			reflect.ValueOf(v),
+		),
+	)
+
+	return kV, nil
+}
+
+func (c *KeyValues) onRemove(kv *KeyValue) func() {
+	defer config.LogStart("KeyValues.onRemove", nil)()
+
+	return func() {
+		c.Box.Remove(kv)
+
+		for i, v := range c.keyvalues {
+			if v != kv {
+				continue
+			}
+			c.keyvalues = append(c.keyvalues[:i], c.keyvalues[i+1:]...)
+
+			// TODO: splice c.kvs
+			kvsStart := c.kvs.Elem().Slice(0, i)
+			kvsEnd := c.kvs.Elem().Slice(i+1, c.kvs.Elem().Len())
+
+			for i := 0; i < kvsEnd.Len(); i++ {
+				kvsStart = reflect.Append(kvsStart, kvsEnd.Index(i))
+			}
+
+			c.kvs.Elem().Set(kvsStart)
+		}
+
+		if len(c.keyvalues) == 0 {
+			c.AddEmpty()
+		}
+	}
+}
+
+func (c *KeyValues) Clear() {
+	defer config.LogStart("KeyValues.Clear", nil)()
+
+	for _, kv := range c.keyvalues {
+		c.Remove(kv)
+	}
+	c.keyvalues = nil
+	c.AddEmpty()
+}
+
+func (c KeyValues) Collect() (map[string][]string, error) {
+	defer config.LogStart("KeyValues.Collect", nil)()
+
+	keyvalues := map[string][]string{}
+
+	for _, kv := range c.keyvalues {
+		if !kv.enabled.GetActive() {
+			continue
+		}
+
+		key, value, err := kv.Get()
+		if err != nil {
+			return nil, err
+		}
+
+		if key == "" {
+			continue
+		}
+
+		keyvalues[key] = append(keyvalues[key], value)
+	}
+
+	return keyvalues, nil
+}
+
+type KeyValue struct {
+	*gtk.Box
+	enabled *gtk.CheckButton
+	key     *gtk.Entry
+	value   *gtk.Entry
+	remove  *gtk.Button
+	kv      kv
+}
+
+func (c KeyValue) Init(v kv) (*KeyValue, error) {
+	defer config.LogStart("KeyValue.Init", nil)()
+	c.kv = v
+
+	var err error
+	c.key, err = gtk.EntryNew()
+	if err != nil {
+		return nil, err
+	}
+	c.key.Show()
+	c.key.SetPlaceholderText("Name")
+
+	c.value, err = gtk.EntryNew()
+	if err != nil {
+		return nil, err
+	}
+	c.value.Show()
+	c.value.SetPlaceholderText("Value")
+
+	c.Box, err = gtk.BoxNew(gtk.ORIENTATION_HORIZONTAL, 5)
+	if err != nil {
+		return nil, err
+	}
+
+	c.remove, err = BWButtonNewFromIconName("close", "orange", ICON_SIZE_TAB)
+	if err != nil {
+		return nil, err
+	}
+	c.remove.Show()
+
+	c.enabled, err = gtk.CheckButtonNew()
+	if err != nil {
+		return nil, err
+	}
+	c.enabled.Show()
+	c.enabled.SetActive(true)
+
+	c.enabled.Connect("toggled", c.onChange)
+	c.key.Connect("key-release-event", c.onChange)
+	c.value.Connect("key-release-event", c.onChange)
+
+	c.Box.PackStart(c.enabled, false, false, 5)
+	c.Box.PackStart(c.key, true, true, 0)
+	c.Box.PackStart(c.value, true, true, 0)
+	c.Box.PackEnd(c.remove, false, false, 5)
+
+	return &c, nil
+}
+
+func (c *KeyValue) Get() (string, string, error) {
+	defer config.LogStart("KeyValue.Get", nil)()
+
+	key, err := c.key.GetText()
+	if err != nil {
+		return "", "", err
+	}
+	value, err := c.value.GetText()
+	if err != nil {
+		return "", "", err
+	}
+
+	return key, value, nil
+}
+
+func (c *KeyValue) onChange() {
+	val, _ := c.value.GetText()
+	c.kv.SetVal(val)
+
+	key, _ := c.key.GetText()
+	c.kv.SetName(key)
+
+	c.kv.SetEnabled(c.enabled.GetActive())
 }

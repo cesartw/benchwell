@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gotk3/gotk3/glib"
 	"github.com/gotk3/gotk3/gtk"
+	"github.com/gotk3/gotk3/pango"
 )
 
 type tabCtrl interface {
@@ -61,6 +62,8 @@ func (t ToolTab) Init(w *Window) (*ToolTab, error) {
 		return nil, err
 	}
 	t.label.Show()
+	t.label.SetEllipsize(pango.ELLIPSIZE_END)
+	t.label.SetWidthChars(20)
 
 	t.btn, err = BWButtonNewFromIconName("close", "orange", ICON_SIZE_TAB)
 	if err != nil {

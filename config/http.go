@@ -1,17 +1,8 @@
 package config
 
-import "fmt"
-
-type HTTPEnvironment struct {
-	ID        int64
-	Variables []*HTTPVariable
-}
-
-type HTTPVariable struct {
-	ID    int64
-	Name  string
-	Value string
-}
+import (
+	"fmt"
+)
 
 type HTTPCollection struct {
 	ID    int64
@@ -21,7 +12,28 @@ type HTTPCollection struct {
 }
 
 func (i *HTTPCollection) Save() error {
-	return SaveHTTPCollection(i)
+	if i.ID == 0 {
+		sql := `INSERT INTO http_collections(name)
+				VALUES(?)`
+		result, err := db.Exec(sql, i.Name)
+		if err != nil {
+			return err
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			return err
+		}
+		i.ID = id
+	} else {
+		sql := `UPDATE http_collections
+					SET name = ?
+				WHERE ID = ?`
+		_, err := db.Exec(sql,
+			i.Name, i.ID)
+		return err
+	}
+
+	return nil
 }
 
 func (c *HTTPCollection) LoadRootItems() error {
@@ -163,11 +175,89 @@ func (i *HTTPItem) SearchID(id int64) *HTTPItem {
 }
 
 func (i *HTTPItem) Save() error {
-	return SaveHTTPItem(i)
+	if i.ID == 0 {
+		sql := `INSERT INTO http_is(name, description, parent_id, is_folder, sort, http_collections_id, external_data, method, url, body, mime)
+				VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		result, err := db.Exec(sql, i.Name,
+			i.Description, i.ParentID, i.IsFolder,
+			i.Sort, i.HTTPCollectionID, "", i.Method,
+			i.URL, i.Body, i.Mime)
+		if err != nil {
+			return err
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			return err
+		}
+		i.ID = id
+	} else {
+		sql := `UPDATE http_is
+					SET name = ?, description = ?, parent_id = ?, is_folder = ?,
+					sort = ?, http_collections_id = ?, external_data = ?,
+					method = ?, url = ?, body = ?, mime = ?
+				WHERE ID = ?`
+		_, err := db.Exec(sql,
+			i.Name, i.Description, i.ParentID,
+			i.IsFolder, i.Sort, i.HTTPCollectionID,
+			"", i.Method, i.URL, i.Body, i.Mime,
+			i.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, kv := range i.Params {
+		kv.HTTPItemID = i.ID
+		err := kv.Save()
+		if err != nil {
+			return err
+		}
+	}
+	for _, kv := range i.Headers {
+		kv.HTTPItemID = i.ID
+		err := kv.Save()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (i *HTTPItem) Delete() error {
-	return DeleteHTTPItem(i)
+	if i.ID == 0 {
+		return nil
+	}
+
+	sql := `delete from http_items where id = ?`
+
+	_, err := db.Exec(sql, i.ID)
+	if err != nil {
+		return err
+	}
+
+	for _, kv := range i.Params {
+		err := kv.Delete()
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, kv := range i.Headers {
+		err := kv.Delete()
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, subitem := range i.Items {
+		err = subitem.Delete()
+		if err != nil {
+			return err
+		}
+	}
+
+	return err
 }
 
 type HTTPRequest struct {
@@ -180,20 +270,44 @@ type HTTPRequest struct {
 }
 
 type HTTPKV struct {
-	ID      int64
-	Key     string
-	Value   string
-	Type    string // header | param
-	Sort    int
-	Enabled bool
+	Var
+	Type string // header | param
+	Sort int
 
 	HTTPItemID int64
 }
 
 func (i *HTTPKV) Save() error {
-	return SaveHTTPKV(i)
+	if i.ID == 0 {
+		sql := `INSERT INTO http_kvs(key, value,  type, sort, enabled, http_items_id)
+				VALUES(?, ?, ?, ?, ?, ?)`
+		result, err := db.Exec(sql, i.Key, i.Value, i.Type, i.Sort, i.Enabled, i.HTTPItemID)
+		if err != nil {
+			return err
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			return err
+		}
+		i.ID = id
+	} else {
+		sql := `UPDATE http_kvs
+				SET key = ?, value = ?, type = ?, sort = ?, enabled = ?, http_items_id = ?
+				WHERE id = ?`
+		_, err := db.Exec(sql, i.Key, i.Value, i.Type, i.Sort, i.Enabled, i.HTTPItemID, i.ID)
+		return err
+	}
+
+	return nil
 }
 
 func (i *HTTPKV) Delete() error {
-	return DeleteHTTPKV(i)
+	if i.ID == 0 {
+		return nil
+	}
+
+	sql := `delete from http_kvs where id = ?`
+	_, err := db.Exec(sql, i.ID)
+
+	return err
 }

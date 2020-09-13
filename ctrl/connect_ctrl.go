@@ -93,7 +93,7 @@ func (c *ConnectCtrl) OnDeleteConnection() {
 		return
 	}
 
-	err := config.DeleteConnection(config.Connections[index])
+	err := config.Connections[index].Delete()
 	if err != nil {
 		c.window.PushStatus(err.Error())
 		return

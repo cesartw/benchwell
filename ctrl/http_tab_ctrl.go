@@ -12,10 +12,10 @@ import (
 
 type HTTPTabCtrl struct {
 	*WindowCtrl
-	scr                *gtk.HTTPScreen
-	client             *http.Client
-	selectedCollection *config.HTTPCollection
-	//selectedItem       *config.HTTPItem
+	scr                 *gtk.HTTPScreen
+	client              *http.Client
+	selectedCollection  *config.HTTPCollection
+	selectedEnvironment *config.Env
 }
 
 func (c HTTPTabCtrl) Init(p *WindowCtrl) (*HTTPTabCtrl, error) {
@@ -89,6 +89,8 @@ func (c *HTTPTabCtrl) OnLoadItem() {
 	} else {
 		c.scr.SetRequest(item)
 	}
+
+	c.ChangeTitle(c.Title())
 }
 
 func (c *HTTPTabCtrl) OnDeleteItem() {
@@ -167,6 +169,8 @@ func (c *HTTPTabCtrl) OnSend() {
 		return
 	}
 
+	c.interpolate(req)
+
 	httpreq, err := http.NewRequest(req.Method, req.URL, req.Body)
 	if err != nil {
 		c.window.PushStatus("building request: ", err.Error())
@@ -199,7 +203,6 @@ func (c *HTTPTabCtrl) OnSend() {
 
 func (c *HTTPTabCtrl) Close() {
 	defer config.LogStart("HTTPTabCtrl.Close", nil)()
-
 }
 
 func (c *HTTPTabCtrl) Removed() {
@@ -209,6 +212,10 @@ func (c *HTTPTabCtrl) Removed() {
 
 func (c *HTTPTabCtrl) Title() string {
 	defer config.LogStart("HTTPTabCtrl.Title", nil)()
+
+	if item := c.scr.CurrentItem(); item != nil {
+		return item.Name
+	}
 
 	return "HTTP"
 }
@@ -227,4 +234,11 @@ func (c *HTTPTabCtrl) SetFileText(string) {
 func (c *HTTPTabCtrl) SetWindowCtrl(interface{}) {
 	defer config.LogStart("HTTPTabCtrl.SetWindowCtrl", nil)()
 
+}
+
+func (c *HTTPTabCtrl) interpolate(req *gtk.Request) {
+	if c.selectedEnvironment == nil {
+		return
+	}
+	req.URL = c.selectedEnvironment.Interpolate(req.URL)
 }

@@ -284,7 +284,7 @@ func (c Condition) Init(_ *Window, cols []driver.ColDef, ctrl conditionsCtrl) (*
 		return nil, err
 	}
 
-	c.btnRm, err = BWButtonNewFromIconName("close", "orange", ICON_SIZE_BUTTON)
+	c.btnRm, err = BWButtonNewFromIconName("close", "orange", ICON_SIZE_TAB)
 	if err != nil {
 		return nil, err
 	}

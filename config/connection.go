@@ -178,3 +178,24 @@ func (c *Connection) Decrypt() error {
 
 	return nil
 }
+
+func (c *Connection) Delete() error {
+	if c.ID != 0 {
+		sql := `DELETE FROM connections WHERE id = ?`
+		_, err := db.Exec(sql, c.ID)
+		if err != nil {
+			return err
+		}
+
+		for i, co := range Connections {
+			if co.ID != c.ID {
+				continue
+			}
+
+			Connections = append(Connections[:i], Connections[i+1:]...)
+			break
+		}
+	}
+
+	return nil
+}

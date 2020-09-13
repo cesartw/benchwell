@@ -71,6 +71,23 @@ func (c *WindowCtrl) OnNewHTTPTab() {
 	c.window.PushStatus("Ready")
 }
 
+// click on main tab close
+func (c *WindowCtrl) OnCloseTab(id string) {
+	defer config.LogStart("WindowCtrl.OnCloseTab", nil)()
+
+	// tell the tool tab that we closing it
+	tab := c.window.TabByID(id)
+	if tab == nil {
+		return
+	}
+	tab.Close()
+	c.window.RemovePage(id)
+}
+
+func (c *WindowCtrl) OnSaveEnv(env *config.Env) error {
+	return env.Save()
+}
+
 func (c *WindowCtrl) Show() {
 	defer config.LogStart("WindowCtrl.Show", nil)()
 
@@ -116,19 +133,6 @@ func (c *WindowCtrl) AddTab(t tab_type) (interface{}, error) {
 	c.window.AddToolTab(tab)
 
 	return ctrl, nil
-}
-
-// click on main tab close
-func (c *WindowCtrl) OnCloseTab(id string) {
-	defer config.LogStart("WindowCtrl.OnCloseTab", nil)()
-
-	// tell the tool tab that we closing it
-	tab := c.window.TabByID(id)
-	if tab == nil {
-		return
-	}
-	tab.Close()
-	c.window.RemovePage(id)
 }
 
 func (c *WindowCtrl) ChangeTitle(title string) {
