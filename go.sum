@@ -78,6 +78,8 @@ github.com/gorilla/websocket v1.4.0/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoA
 github.com/gotk3/gotk3 v0.4.0/go.mod h1:Eew3QBwAOBTrfFFDmsDE5wZWbcagBL1NUslj1GhRveo=
 github.com/gotk3/gotk3 v0.4.1-0.20200908164657-030ba00f1a88 h1:s0fkyvH9SjrD0pCXfCm6JheiDeUbj+d4vYdb0rZBEQw=
 github.com/gotk3/gotk3 v0.4.1-0.20200908164657-030ba00f1a88/go.mod h1:/hqFpkNa9T3JgNAE2fLvCdov7c5bw//FHNZrZ3Uv9/Q=
+github.com/gotk3/sourceview v0.0.0-20200523170151-58bbfa485ab5 h1:gli8o5zdjYDnCnSIgUZwS3TUnwWSax4V2gGxxe+k7ts=
+github.com/gotk3/sourceview v0.0.0-20200523170151-58bbfa485ab5/go.mod h1:zHpY35dOWdQHFcttshX3aZxV7qRDlR9L6pEUxojcOg4=
 github.com/grpc-ecosystem/go-grpc-middleware v1.0.0/go.mod h1:FiyG127CGDf3tlThmgyCl78X/SZQqEOJBCDaAfeWzPs=
 github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0/go.mod h1:8NvIoxWQoOIhqOTXgfV/d3M/q6VIi02HzZEHgUlZvzk=
 github.com/grpc-ecosystem/grpc-gateway v1.9.0/go.mod h1:vNeuVxBJEsws4ogUvrchl83t/GYV9WGTSLVdBhOQFDY=
