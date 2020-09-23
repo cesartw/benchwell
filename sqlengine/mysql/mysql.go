@@ -704,6 +704,7 @@ func (d *mysqlDb) UpdateField(
 		return "", errors.New("keys or changes are not present")
 	}
 
+	// last field is the one being updated
 	lastIndex := len(cols) - 1
 	wheres := []string{}
 

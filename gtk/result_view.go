@@ -14,6 +14,22 @@ import (
 	"bitbucket.org/goreorto/benchwell/sqlengine/driver"
 )
 
+type resultViewCtrl interface {
+	OnUpdateRecord([]driver.ColDef, []interface{}) error
+	OnCreateRecord([]driver.ColDef, []interface{}) ([]interface{}, error)
+	OnExecQuery(string)
+	OnTextChange(string, int) //query, cursor position
+	OnRefresh()
+	OnDelete()
+	OnCreate()
+	OnCopyInsert([]driver.ColDef, []interface{})
+	OnFileSelected(string)
+	OnSaveQuery(string, string)
+	OnSaveFav(string, string)
+	OnApplyConditions()
+	ParseValue(driver.ColDef, string) (interface{}, error)
+}
+
 // ResultView is a table result tab content
 type ResultView struct {
 	w *Window
@@ -49,22 +65,6 @@ type ResultView struct {
 	colFilter *gtk.SearchEntry
 
 	ctrl resultViewCtrl
-}
-
-type resultViewCtrl interface {
-	OnUpdateRecord([]driver.ColDef, []interface{}) error
-	OnCreateRecord([]driver.ColDef, []interface{}) ([]interface{}, error)
-	OnExecQuery(string)
-	OnTextChange(string, int) //query, cursor position
-	OnRefresh()
-	OnDelete()
-	OnCreate()
-	OnCopyInsert([]driver.ColDef, []interface{})
-	OnFileSelected(string)
-	OnSaveQuery(string, string)
-	OnSaveFav(string, string)
-	OnApplyConditions()
-	ParseValue(driver.ColDef, string) (interface{}, error)
 }
 
 func (v ResultView) Init(
@@ -177,12 +177,6 @@ func (v ResultView) Init(
 	resultBox.Show()
 	resultBox.PackStart(btnGridBox, true, true, 0)
 
-	tvBox, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
-	if err != nil {
-		return nil, err
-	}
-	tvBox.Show()
-
 	tvActionBar, err := gtk.ActionBarNew()
 	if err != nil {
 		return nil, err
@@ -257,6 +251,12 @@ func (v ResultView) Init(
 
 	resultSW.Add(v.result)
 	textViewSW.Add(v.sourceView)
+
+	tvBox, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
+	if err != nil {
+		return nil, err
+	}
+	tvBox.Show()
 
 	tvBox.PackStart(textViewSW, false, true, 0)
 	tvBox.PackEnd(tvActionBar, false, false, 0)

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+	<schema path="/io/benchwell/" id="io.benchwell">
+		<key name="window-pos-x" type="i">
+			<default>360</default>
+			<summary>Window horizontal position</summary>
+			<description>The saved window horizontal position</description>
+		</key>
+		<key name="window-pos-y" type="i">
+			<default>360</default>
+			<summary>Window vertical position</summary>
+			<description>The saved window vertical position</description>
+		</key>
+		<key name="window-size-w" type="i">
+			<default>1432</default>
+			<summary>Window width</summary>
+			<description>The saved window width</description>
+		</key>
+		<key name="window-size-h" type="i">
+			<default>867</default>
+			<summary>Window height</summary>
+			<description>The saved window height</description>
+		</key>
+		<key name="tab-position" type="s">
+			<default>"TOP"</default>
+			<summary>Tab position</summary>
+			<description>The tool tab saved position</description>
+		</key>
+	</schema>
+</schemalist>

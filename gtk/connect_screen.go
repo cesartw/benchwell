@@ -157,8 +157,6 @@ func (c ConnectScreen) Init(w *Window, ctrl connectScreenCtrl) (*ConnectScreen, 
 	vbox.SetVAlign(gtk.ALIGN_CENTER)
 	vbox.SetHAlign(gtk.ALIGN_CENTER)
 
-	vbox.PackEnd(c.btnBox, false, true, 0)
-
 	adapterStack, err := gtk.StackSwitcherNew()
 	if err != nil {
 		return nil, err
@@ -181,6 +179,7 @@ func (c ConnectScreen) Init(w *Window, ctrl connectScreenCtrl) (*ConnectScreen, 
 
 	adapterStack.SetStack(c.stack)
 
+	vbox.PackEnd(c.btnBox, false, true, 0)
 	vbox.PackStart(adapterStack, false, true, 0)
 	vbox.PackStart(c.stack, true, false, 0)
 

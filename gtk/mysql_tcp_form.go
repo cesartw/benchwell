@@ -11,8 +11,7 @@ import (
 
 type tcpForm struct {
 	*gtk.Grid
-	fields []string
-	conn   *config.Connection
+	conn *config.Connection
 
 	entryName     *gtk.Entry
 	entryHost     *gtk.Entry
@@ -144,6 +143,12 @@ func (f tcpForm) Init(_ *Window) (*tcpForm, error) {
 	return &f, nil
 }
 
+func (f *tcpForm) GrabFocus() {
+	defer config.LogStart("tcpForm.GrabFocus", nil)()
+
+	f.entryName.GrabFocus()
+}
+
 func (f *tcpForm) Clear() {
 	defer config.LogStart("tcpForm.Clear", nil)()
 
@@ -155,13 +160,6 @@ func (f *tcpForm) Clear() {
 	f.entryPassword.SetText("")
 	f.entryDatabase.SetText("")
 }
-
-func (f *tcpForm) GrabFocus() {
-	defer config.LogStart("tcpForm.GrabFocus", nil)()
-
-	f.entryName.GrabFocus()
-}
-
 func (f *tcpForm) SetConnection(conn *config.Connection) {
 	defer config.LogStart("tcpForm.SetConnection", nil)()
 

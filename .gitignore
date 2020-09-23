@@ -19,3 +19,6 @@ testing-vm.qemu
 
 benchwell
 assets/iconset-temp
+
+# vala
+build/
