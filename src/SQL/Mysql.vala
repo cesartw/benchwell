@@ -87,11 +87,11 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 	public void reconnect () throws Benchwell.SQL.ErrorConnection {
 	}
 
-	public List<TableDef> tables () throws Benchwell.SQL.ErrorQuery {
+	public TableDef[] tables () throws Benchwell.SQL.ErrorQuery {
 		var result = db.list_tables ();
 
 		string[] row;
-		var tables = new List<TableDef> ();
+		TableDef[] tables = {};
 		while ( ( row = result.fetch_row () ) != null ) {
 			var def = new TableDef () {
 				name = row[0]
@@ -105,13 +105,13 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 				def.ttype = Benchwell.SQL.TableType.Regular;
 			}
 
-			tables.append ( def );
+			tables += def;
 		}
 
 		return tables;
 	}
 
-	public owned List<ColDef> table_definition(string name) throws Benchwell.SQL.ErrorQuery {
+	public owned ColDef[] table_definition(string name) throws Benchwell.SQL.ErrorQuery {
 		var query = @"DESCRIBE $name";
 
 		string[] row;
@@ -121,7 +121,7 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 			throw new ErrorQuery.CODE_1("failed query");
 		}
 
-		var cols = new List<Benchwell.SQL.ColDef> ();
+		Benchwell.SQL.ColDef[] cols = {};
 		var result = db.use_result ();
 		while ( ( row = result.fetch_row () ) != null ) {
 			Benchwell.SQL.ColDef col = new Benchwell.SQL.ColDef ();
@@ -140,7 +140,7 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 			col.values = options;
 			col.ttype = coltype;
 
-			cols.append (col);
+			cols += col;
 		}
 
 		return cols;
@@ -272,6 +272,57 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		if ( rc != 0 ) {
 			throw new Benchwell.SQL.ErrorQuery.CODE_1 (db.error());
 		}
+	}
+
+	public string[] insert_record(string name, ColDef[] columns, string[] row) throws ErrorQuery
+		requires (name != "")
+		requires (row.length > 0)
+		requires (columns.length == row.length)
+	{
+		var names = new string[row.length];
+		var values = new string[row.length];
+		for (var i = 0; i < row.length; i++) {
+			names[i] = @"`$(columns[i].name)`";
+			if (row[i] == Benchwell.null_string) {
+				values[i] = "NULL";
+			} else {
+				values[i] = @"\"$(row[i])\"";
+			}
+		}
+
+		var query = @"INSERT INTO `$name`($(string.joinv (", ", names))) VALUES ($(string.joinv (", ", values)))";
+		var rc = db.query (query);
+		if ( rc != 0 ) {
+			throw new Benchwell.SQL.ErrorQuery.CODE_1 (db.error());
+		}
+
+		var id = db.insert_id ();
+
+		string? pk = null;
+		foreach (var column in columns) {
+			if (column.pk) {
+				pk = column.name;
+				break;
+			}
+		}
+
+		if (pk == null || pk == "") {
+			return row;
+		}
+
+		query = @"SELECT * FROM `$name` WHERE `$pk` = $id";
+
+		rc = db.query (query);
+		if ( rc != 0 ) {
+			throw new Benchwell.SQL.ErrorQuery.CODE_1 (db.error());
+		}
+
+		var result = db.use_result ();
+		while ((row = result.fetch_row () ) != null) {
+			return row;
+		}
+
+		return null;
 	}
 
 	private void parse_type(

@@ -8,8 +8,8 @@ public interface Benchwell.SQL.Connection : Object {
 	public abstract bool disconnect ();
 	public abstract void reconnect () throws Benchwell.SQL.ErrorConnection;
 
-	public abstract List<Benchwell.SQL.TableDef> tables () throws Benchwell.SQL.ErrorQuery;
-	public abstract List<Benchwell.SQL.ColDef> table_definition (string name) throws Benchwell.SQL.ErrorQuery;
+	public abstract Benchwell.SQL.TableDef[] tables () throws Benchwell.SQL.ErrorQuery;
+	public abstract Benchwell.SQL.ColDef[] table_definition (string name) throws Benchwell.SQL.ErrorQuery;
 	public abstract void delete_table(TableDef def) throws Benchwell.SQL.ErrorQuery;
 	public abstract void truncate_table(TableDef def) throws Benchwell.SQL.ErrorQuery;
 	public abstract List<List<string?>> fetch_table(
@@ -20,10 +20,10 @@ public interface Benchwell.SQL.Connection : Object {
 		int offset
 		) throws Benchwell.SQL.ErrorQuery;
 	public abstract void update_field (string name, ColDef[] defs, string[] row) throws ErrorQuery;
+	public abstract string[] insert_record(string name, ColDef[] defs, string[] row) throws ErrorQuery;
 	//public abstract void delete_record(string name, ColDef[] defs, string[] row) throws ErrorQuery;
 	//public abstract string update_record(string name, ColDef[] defs, string[] newrow, string[] oldrow) throws ErrorQuery; // new, oldvalues;
 	//public abstract string update_fields(string name, ColDef[] defs, string[] row, int keys) throws ErrorQuery;
-	//public abstract string[] insert_record(string name, ColDef[] defs, string[] row) throws ErrorQuery;
 	// NOTE: everything is an string... so ? public abstract string ParseValue(def ColDef, value string) interface{}
 	//public abstract void query(string query, ref string[] colnames, ref string[,] rows) throws ErrorQuery;
 	//public abstract void execute(string query, ref string lastId, ref int64 count) throws ErrorQuery;
