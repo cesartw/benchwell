@@ -21,7 +21,7 @@ public interface Benchwell.SQL.Connection : Object {
 		) throws Benchwell.SQL.ErrorQuery;
 	public abstract void update_field (string name, ColDef[] defs, string[] row) throws ErrorQuery;
 	public abstract string[] insert_record(string name, ColDef[] defs, string[] row) throws ErrorQuery;
-	//public abstract void delete_record(string name, ColDef[] defs, string[] row) throws ErrorQuery;
+	public abstract void delete_record(string name, ColDef[] defs, string[] row) throws ErrorQuery;
 	//public abstract string update_record(string name, ColDef[] defs, string[] newrow, string[] oldrow) throws ErrorQuery; // new, oldvalues;
 	//public abstract string update_fields(string name, ColDef[] defs, string[] row, int keys) throws ErrorQuery;
 	// NOTE: everything is an string... so ? public abstract string ParseValue(def ColDef, value string) interface{}

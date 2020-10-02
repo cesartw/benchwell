@@ -12,6 +12,8 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 	private List<string> databases;
 	private Benchwell.SQL.TableDef? table_def;
 
+	public signal void database_selected(string dbname);
+
 	public DBData (Benchwell.ApplicationWindow window,
 				   Benchwell.SQL.Connection connection,
 				   Benchwell.SQL.ConnectionInfo connection_info) {
@@ -101,7 +103,6 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 
 		database_combo.changed.connect (on_database_selected);
 
-
 		result_view.btn_save_row.clicked.connect (() => {
 			var data = result_view.table.get_selected_data ();
 			if (data == null) {
@@ -110,6 +111,15 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 
 			data = connection.insert_record (table_def.name, result_view.table.columns, data);
 			result_view.table.update_selected_row (data);
+		});
+
+		result_view.btn_delete_row.clicked.connect (() => {
+			var data = result_view.table.get_selected_data ();
+			if (data == null) {
+				return;
+			}
+			connection.delete_record (table_def.name, result_view.table.columns, data);
+			result_view.table.delete_selected_row ();
 		});
 	}
 
@@ -129,6 +139,8 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 		try {
 			connection.use_database (dbname);
 			tables.update_items (connection.tables ());
+
+			database_selected (dbname);
 		} catch (Benchwell.SQL.ErrorQuery e) {
 			stderr.printf(@"error: $(e.message)");
 		}
@@ -527,6 +539,18 @@ public class Benchwell.Views.DBTable : Gtk.TreeView {
 		}
 
 		return values;
+	}
+
+	public void delete_selected_row () {
+		Gtk.TreeIter? selected = null;
+		var selection = get_selection ();
+		selection.selected_foreach ( (model, path, iter) => {
+			if (selected != null){
+				return;
+			}
+			store.get_iter (out selected, path);
+			store.remove (ref selected);
+		});
 	}
 
 	public void update_selected_row (string[] data) {

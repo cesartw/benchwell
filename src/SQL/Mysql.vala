@@ -325,6 +325,53 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		return null;
 	}
 
+	public void delete_record(string name, ColDef[] columns, string[] row) throws ErrorQuery
+		requires (name != "")
+		requires (row.length > 0)
+		requires (columns.length == row.length)
+	{
+
+		string[] wheres = {};
+		// delete using PK
+		for (var i = 0; i < columns.length; i++) {
+			if (!columns[i].pk) {
+				continue;
+			}
+
+			var val = "";
+			if (row[i] == Benchwell.null_string) {
+				val = "IS NULL";
+			} else {
+				val = @"= \"$(row[i])\"";
+			}
+
+				wheres += @"`$(columns[i].name)` $val";
+		}
+
+		if (wheres.length == 0) {
+			for (var i = 0; i < columns.length; i++) {
+				string val = "";
+				if (row[i] == Benchwell.null_string) {
+					val = "IS NULL";
+				} else {
+					val = @"= $(row[i])";
+				}
+
+				wheres += @"";
+				wheres += @"`$(columns[i].name)` $val";
+			}
+		}
+
+
+		var query = @"DELETE FROM `$name` WHERE $(string.joinv (" AND ", wheres))";
+		var rc = db.query (query);
+		if ( rc != 0 ) {
+			throw new Benchwell.SQL.ErrorQuery.CODE_1 (db.error());
+		}
+
+		return;
+	}
+
 	private void parse_type(
 		string t,
 		ref Benchwell.SQL.ColType coltype,

@@ -1,8 +1,8 @@
 public class Benchwell.Views.DBDatabase : Gtk.Box {
 	public string title { get; set; }
 	public Benchwell.ApplicationWindow window { get; construct; }
-	private Benchwell.Views.DBConnect connect_view;
-	private Benchwell.Views.DBData data_view;
+	private Benchwell.Views.DBConnect? connect_view;
+	private Benchwell.Views.DBData? data_view;
 	private Benchwell.SQL.Engine engine;
 
 	public DBDatabase (Benchwell.ApplicationWindow window) {
@@ -12,6 +12,7 @@ public class Benchwell.Views.DBDatabase : Gtk.Box {
 			spacing: 5
 		);
 		engine = new Benchwell.SQL.Engine ();
+		title = "Connect";
 
 		connect_view = new Benchwell.Views.DBConnect (window);
 		//data = new Benchwell.Views.DBData (window);
@@ -29,6 +30,14 @@ public class Benchwell.Views.DBDatabase : Gtk.Box {
 
 			data_view = new Benchwell.Views.DBData(window, connection, c);
 			show_data ();
+
+			title = c.name;
+			if (c.database != "") {
+				title = @"$(c.name).$(c.database)";
+			}
+			data_view.database_selected.connect ((dbname) => {
+				title = @"$(c.name).$(dbname)";
+			});
 		});
 	}
 
@@ -39,7 +48,9 @@ public class Benchwell.Views.DBDatabase : Gtk.Box {
 	}
 
 	public void show_connect () {
-		remove (data_view);
+		if (data_view != null) {
+			remove (data_view);
+		}
 		add (connect_view);
 		connect_view.show ();
 		//add (connect);

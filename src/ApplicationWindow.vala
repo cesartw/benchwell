@@ -77,6 +77,14 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 
 		set_default_size (Config.window_width(), Config.window_height());
 		move (Config.window_position_x(), Config.window_position_y());
+
+		new_database_tab_menu.activate.connect ( () => {
+			add_database_tab ();
+		});
+
+		close_menu.activate.connect ( () => {
+			notebook.remove_page (notebook.get_current_page ());
+		});
 	}
 
 	public void add_database_tab() {
@@ -93,6 +101,9 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		tab.pack_start (database, true, true, 0);
 
 		notebook.append_page (tab, tab.header);
+		tab.btn.clicked.connect( () => {
+			notebook.remove_page (notebook.page_num (tab));
+		});
 	}
 }
 
