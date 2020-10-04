@@ -26,7 +26,6 @@ CREATE TABLE "db_connections" (
     host text NULL,
     options text NULL,
     user text NULL,
-    password text NULL,
     port integer NULL,
     encrypted BOOLEAN NOT NULL DEFAULT 0 CHECK (encrypted IN (0,1)),
 

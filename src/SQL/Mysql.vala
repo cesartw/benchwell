@@ -199,18 +199,16 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 					wheres += @"`$(cond.field.name)` IS NOT NULL";
 					break;
 				case Benchwell.SQL.Operator.Nin:
-					var values = @"$(string.joinv ("\",\"", cond.val.split(",")))";
-					wheres += @"`$(cond.field.name)` NOT IN $(values)";
+					var val = sanitize_string_array (cond.val);
+					wheres += @"`$(cond.field.name)` NOT IN ($val)";
 					break;
 				case Benchwell.SQL.Operator.In:
-					var values = @"$(string.joinv ("\",\"", cond.val.split(",")))";
-					wheres += @"`$(cond.field.name)` IN $(values)";
+					var val = sanitize_string_array (cond.val);
+					wheres += @"`$(cond.field.name)` IN ($val)";
 					break;
 				default:
-					// TODO: fix. This probably doesn't work
-					var chunk = "";
-					db.real_escape_string (chunk, cond.val, cond.val.length);
-					wheres += @"`$(cond.field.name)` $(cond.op) '$(chunk)'";
+					var val = sanitize_string (cond.val);
+					wheres += @"`$(cond.field.name)` $(cond.op) '$val'";
 					break;
 			}
 			i++;
@@ -425,5 +423,23 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 				coltype = Benchwell.SQL.ColType.Date;
 				break;
 		}
+	}
+
+	private string sanitize_string (string dirty) {
+		var chunk = "";
+		db.real_escape_string (chunk, dirty, dirty.length);
+		return chunk;
+	}
+
+	private string sanitize_string_array (string dirty) {
+		var parts = dirty.split (",");
+		string[] clean = {};
+		foreach (var part in parts) {
+			var chunk = "";
+			db.real_escape_string (chunk, part, part.length);
+			clean += @"\"$chunk\"";
+		}
+
+		return string.joinv (",", clean);
 	}
 }

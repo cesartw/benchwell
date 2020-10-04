@@ -9,6 +9,7 @@ public class Benchwell.Config : Object {
 	private static GLib.Settings settings;
 	private static Sqlite.Database db;
 	public static List<SQL.ConnectionInfo> connections;
+	public static Secret.Schema schema;
 
 	public Config () {
 		settings = new GLib.Settings ("io.benchwell");
@@ -17,6 +18,10 @@ public class Benchwell.Config : Object {
 		if (ec != Sqlite.OK) {
 			stderr.printf ("could not open config database: %d: %s\n", db.errcode (), db.errmsg ());
 		}
+
+		schema = new Secret.Schema (Constants.PROJECT_NAME, Secret.SchemaFlags.NONE,
+                                 "id", Secret.SchemaAttributeType.INTEGER,
+                                 "schema", Secret.SchemaAttributeType.STRING);
 
 		stdout.printf ("Using config db: %s\n", dbpath);
 		loadConnections ();
@@ -64,15 +69,15 @@ public class Benchwell.Config : Object {
 			 prepared_query_str = """
 				UPDATE db_connections
 					SET adapter = $ADAPTER, type = $TYPE, name = $NAME, socket = $SOCKET, file = $FILE, host = $HOST, port = $PORT,
-					user = $USER, password = $PASSWORD, database = $DATABASE, options = $OPT, encrypted = $ENC
+					user = $USER, database = $DATABASE, options = $OPT, encrypted = $ENC
 				WHERE ID = $ID
 			""";
 		} else {
 			 prepared_query_str = """
 				INSERT INTO db_connections(adapter, type, name, socket, file, host, port,
-					user, password, database, options, encrypted)
+					user, database, options, encrypted)
 				VALUES($ADAPTER, $TYPE, $NAME, $SOCKET, $FILE, $HOST, $PORT,
-					$USER, $PASSWORD, $DATABASE, $OPT, $ENC)
+					$USER, $DATABASE, $OPT, $ENC)
 			""";
 		}
 
@@ -112,9 +117,6 @@ public class Benchwell.Config : Object {
 		param_position = stmt.bind_parameter_index ("$USER");
 		stmt.bind_text (param_position, conn.user);
 
-		param_position = stmt.bind_parameter_index ("$PASSWORD");
-		stmt.bind_text (param_position, conn.password);
-
 		param_position = stmt.bind_parameter_index ("$DATABASE");
 		stmt.bind_text (param_position, conn.database);
 
@@ -134,7 +136,7 @@ public class Benchwell.Config : Object {
 			connections.append (conn);
 		}
 
-		//loadConnections ();
+		encrypt (conn);
 	}
 
 	public static void delete_connection (SQL.ConnectionInfo c) throws ConfigError {
@@ -176,13 +178,43 @@ public class Benchwell.Config : Object {
 		info.database = values[4];
 		info.host = values[5];
 		info.user = values[7];
-		info.password = values[8];
-		info.port = int.parse(values[9]);
-		info.encrypted = bool.parse(values[10]);
-		info.socket = values[11];
-		info.file = values[12];
+		info.port = int.parse(values[8]);
+		info.encrypted = bool.parse(values[9]);
+		info.socket = values[10];
+		info.file = values[11];
 
 		connections.append (info);
 		return 0;
 	}
+
+	public static async void encrypt (Benchwell.SQL.ConnectionInfo info) {
+		var attributes = new GLib.HashTable<string, string> (str_hash, str_equal);
+        attributes["id"] = info.id.to_string ();
+        attributes["schema"] = Constants.PROJECT_NAME;
+
+        var key_name = Constants.PROJECT_NAME + "." + info.id.to_string ();
+
+        bool result = yield Secret.password_storev (schema, attributes, Secret.COLLECTION_DEFAULT, key_name, info.password, null);
+
+        if (! result) {
+            debug ("Unable to store password for \"%s\" in libsecret keyring", key_name);
+        }
+	}
+
+	public static async string? decrypt (Benchwell.SQL.ConnectionInfo info) throws Error {
+        var attributes = new GLib.HashTable<string, string> (str_hash, str_equal);
+        attributes["id"] = info.id.to_string ();
+        attributes["schema"] = Constants.PROJECT_NAME;
+
+        var key_name = Constants.PROJECT_NAME + "." + info.id.to_string ();
+
+        string? password = yield Secret.password_lookupv (schema, attributes, null);
+
+        if (password == null) {
+            debug ("Unable to fetch password in libsecret keyring for %s", key_name);
+        }
+
+        return password;
+    }
 }
+

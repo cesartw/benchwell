@@ -109,7 +109,7 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 				return;
 			}
 
-			data = connection.insert_record (table_def.name, result_view.table.columns, data);
+			data = connection.insert_record (table_def.name, result_view.columns, data);
 			result_view.table.update_selected_row (data);
 		});
 
@@ -118,7 +118,7 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 			if (data == null) {
 				return;
 			}
-			connection.delete_record (table_def.name, result_view.table.columns, data);
+			connection.delete_record (table_def.name, result_view.columns, data);
 			result_view.table.delete_selected_row ();
 		});
 	}
@@ -152,10 +152,9 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 
 	private void on_load_table () {
 		table_def = tables.get_selected_table ();
-		result_view.table.update_columns (connection.table_definition (table_def.name));
+		result_view.columns = connection.table_definition (table_def.name);
 
-		var sorts = result_view.table.get_sort_options ();
-		result_view.table.update_data (connection.fetch_table (table_def.name, null, sorts, 100, 0));
+		result_view.data = connection.fetch_table (table_def.name, result_view.get_conditions (), result_view.table.get_sort_options (), 100, 0);
 	}
 
 	private void on_refresh_table () {
@@ -163,8 +162,7 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 			return;
 		}
 
-		var sorts = result_view.table.get_sort_options ();
-		result_view.table.update_data (connection.fetch_table (table_def.name, null, sorts, 100, 0));
+		result_view.data = connection.fetch_table (table_def.name, result_view.get_conditions (), result_view.table.get_sort_options (), 100, 0);
 	}
 }
 
@@ -182,6 +180,17 @@ public class Benchwell.Views.DBResultView : Gtk.Paned {
 	public Gtk.SourceView editor;
 	public Benchwell.Views.DBTable table;
 	public Benchwell.Views.DBConditions conditions;
+	public Benchwell.SQL.ColDef[] columns {
+		get { return table.columns; }
+		set {
+			table.columns = value;
+			conditions.columns = value;
+		}
+	}
+
+	public List<List<string?>> data {
+		set { table.data = value; }
+	}
 
 	public DBResultView () {
 		Object (
@@ -321,6 +330,10 @@ public class Benchwell.Views.DBResultView : Gtk.Paned {
 			table.add_empty_row ();
 		});
 	}
+
+	public Benchwell.SQL.CondStmt[] get_conditions () {
+		return conditions.get_conditions ();
+	}
 }
 
 public class Benchwell.Views.DBTable : Gtk.TreeView {
@@ -329,7 +342,18 @@ public class Benchwell.Views.DBTable : Gtk.TreeView {
 	public Gtk.MenuItem copy_insert_menu;
 	public Gtk.MenuItem copy_menu;
 	public Gtk.ListStore store;
-	public Benchwell.SQL.ColDef[] columns;
+
+	private Benchwell.SQL.ColDef[] _columns;
+	public Benchwell.SQL.ColDef[] columns {
+		get { return _columns; }
+		set { _columns = value; _update_columns (); }
+	}
+
+	public List<List<string?>> data {
+		set {
+			_update_data (value);
+		}
+	}
 
 	public signal void field_change (Benchwell.SQL.ColDef[] column, string[] row);
 
@@ -356,7 +380,7 @@ public class Benchwell.Views.DBTable : Gtk.TreeView {
 		menu.add (copy_menu);
 	}
 
-	public void update_columns (owned Benchwell.SQL.ColDef[] _columns) {
+	private void _update_columns () {
 		if (store != null) {
 			store.clear ();
 		}
@@ -365,29 +389,27 @@ public class Benchwell.Views.DBTable : Gtk.TreeView {
 			remove_column (get_column(0));
 		}
 
-		columns = (owned) _columns;
-
 		GLib.Type[] column_types = new GLib.Type[columns.length + 1];
 		var i = 0;
-		foreach (var column in columns) {
+		foreach (var column in _columns) {
 			insert_column (build_column (column, i ), i);
 			column_types[i] = GLib.Type.STRING;
 			i++;
 		};
 
-		column_types[columns.length] = GLib.Type.INT;
+		column_types[_columns.length] = GLib.Type.INT;
 
 		store = new Gtk.ListStore.newv (column_types);
 		model = store;
 	}
 
-	public void update_data (List<List<string?>> _data) {
+	private void _update_data (List<List<string?>> data) {
 		store.clear ();
 
-		if (_data == null) {
+		if (data == null) {
 			return;
 		}
-		_data.foreach ( (row) => {
+		data.foreach ( (row) => {
 			add_row (row);
 		});
 	}
@@ -571,7 +593,6 @@ public class Benchwell.Views.DBTable : Gtk.TreeView {
 		for(var i = 0; i < data.length; i++) {
 			store.set_value (selected, i, data[i]);
 		}
-
 	}
 
 	private void on_edited (Gtk.CellRendererText cell, string path, string new_value, int column_index) {
@@ -622,6 +643,243 @@ public class Benchwell.Views.DBTable : Gtk.TreeView {
 		values += new_value;
 
 		field_change (pks, values);
+	}
+}
+
+public class Benchwell.Views.DBCondition {
+	public Gtk.CheckButton active_check;
+	public Gtk.ListStore store;
+	public Gtk.ComboBox field_combo;
+	public Gtk.ComboBoxText operator_combo;
+	public Gtk.Entry value_entry;
+	public Benchwell.Button remove_btn;
+	private Benchwell.SQL.ColDef[] _columns;
+	public Benchwell.SQL.ColDef[] columns {
+		get { return _columns; }
+		set {
+			// keep active field before replace columns
+			if (field_combo.sensitive) {
+				Gtk.TreeIter iter;
+				GLib.Value? val;
+				field_combo.get_active_iter (out iter);
+				if (store.iter_is_valid (iter)) {
+					store.get_value (iter, 0, out val);
+					if (val != null) {
+						_active_field = val.get_string ();
+					} else {
+						_active_field = null;
+					}
+				}
+			}
+
+			_columns = value;
+			_update_fields ();
+		}
+	}
+	private string? _active_field;
+
+	public DBCondition () {
+		store = new Gtk.ListStore (1, GLib.Type.STRING);
+		Gtk.TreeIter iter;
+		store.append (out iter);
+		store.set_value (iter, 0 ,"");
+
+		active_check = new Gtk.CheckButton ();
+		active_check.active = true;
+		active_check.show ();
+
+		field_combo = new Gtk.ComboBox.with_model_and_entry (store);
+		field_combo.set_entry_text_column (0);
+		field_combo.show ();
+
+		var completion = new Gtk.EntryCompletion ();
+		completion.text_column = 0;
+		completion.set_inline_completion (true);
+		completion.set_inline_selection (true);
+		completion.minimum_key_length = 2;
+		completion.set_model (store);
+
+		var entry = field_combo.get_child () as Gtk.Entry;
+		entry.set_completion (completion);
+
+		operator_combo = new Gtk.ComboBoxText ();
+		foreach (var op in Benchwell.SQL.Operator.all ()) {
+			operator_combo.append (op.to_string(), op.to_string ());
+		}
+		operator_combo.set_active (0);
+		operator_combo.show ();
+
+		value_entry = new Gtk.Entry ();
+		value_entry.show ();
+		remove_btn = new Benchwell.Button ("close", "orange", 16);
+		remove_btn.show ();
+
+		operator_combo.changed.connect (() => {
+			var op = Benchwell.SQL.Operator.parse (operator_combo.get_active_text ());
+			value_entry.sensitive = true;
+
+			if (op == Benchwell.SQL.Operator.IsNull) {
+				value_entry.sensitive = false;
+			}
+			if (op == Benchwell.SQL.Operator.IsNotNull) {
+				value_entry.sensitive = false;
+			}
+
+		});
+	}
+
+	public Benchwell.SQL.CondStmt? get_condition () {
+		if (!active_check.get_active () || !active_check.sensitive) {
+			return null;
+		}
+
+		Gtk.TreeIter? iter;
+		field_combo.get_active_iter (out iter);
+		if (!store.iter_is_valid(iter)) {
+			return null;
+		}
+		GLib.Value val;
+		store.get_value (iter, 0, out val);
+		var column_name = val.get_string ();
+		if (column_name == "" || column_name == null) {
+			return null;
+		}
+		Benchwell.SQL.ColDef? column = null;
+		foreach (var c in columns) {
+			if (c.name == column_name) {
+				column = c;
+				break;
+			}
+		}
+		if (column == null) {
+			return null;
+		}
+
+		var op = operator_combo.get_active_text ();
+		if (op == null || op == "") {
+			return null;
+		}
+		var operator = Benchwell.SQL.Operator.parse (op);
+		if (operator == null) {
+			return null;
+		}
+
+		var cvalue = value_entry.get_text ();
+		if (cvalue == "" || cvalue == null) {
+			return null;
+		}
+
+		var stmt = new Benchwell.SQL.CondStmt ();
+		stmt.field = column;
+		stmt.op = operator;
+		stmt.val = cvalue;
+
+		return stmt;
+	}
+
+	private void _update_fields () {
+		store.clear ();
+
+		bool enable = _active_field == "" || _active_field == null;
+		foreach (var column in _columns) {
+			Gtk.TreeIter iter;
+			store.append (out iter);
+			store.set_value (iter, 0, column.name);
+			if (column.name == _active_field) {
+				enable = true;
+				field_combo.set_active_iter (iter);
+			}
+		}
+
+		active_check.sensitive = enable;
+		field_combo.sensitive = enable;
+		operator_combo.sensitive = enable;
+		value_entry.sensitive = enable;
+	}
+}
+
+public class Benchwell.Views.DBConditions : Gtk.Grid {
+	private List<Benchwell.Views.DBCondition> conditions;
+	private Benchwell.SQL.ColDef[] _columns;
+	public Benchwell.SQL.ColDef[] columns {
+		get { return _columns; }
+		set {
+			_columns = value;
+			conditions.foreach ((condition) => {
+				condition.columns = _columns;
+			});
+		}
+	}
+
+	public DBConditions () {
+		Object (
+			row_spacing: 5,
+			column_spacing: 5
+		);
+		set_name ("conditions");
+		add_condition ();
+	}
+
+	public void add_condition () {
+		var cond = new Benchwell.Views.DBCondition ();
+		cond.columns = _columns;
+
+		var y = (int) conditions.length ();
+		attach (cond.active_check, 0, y, 2, 1);
+		attach (cond.field_combo, 2, y, 2, 1);
+		attach (cond.operator_combo, 4, y, 1, 1);
+		attach (cond.value_entry, 5, y, 2, 1);
+		attach (cond.remove_btn, 8, y, 1, 1);
+
+		conditions.append (cond);
+
+		cond.remove_btn.clicked.connect ( () => {
+			var index = conditions.index (cond);
+			remove_row (index);
+			conditions.remove (cond);
+
+			if (conditions.length () == 0) {
+				add_condition ();
+			}
+		});
+
+		cond.active_check.grab_focus.connect (() => {
+			if (conditions.index (cond) != conditions.length () - 1) {
+				return;
+			}
+
+			add_condition ();
+		});
+
+		var entry = cond.field_combo.get_child () as Gtk.Entry;
+		entry.grab_focus.connect (() => {
+			if (conditions.index (cond) != conditions.length () - 1) {
+				return;
+			}
+
+			add_condition ();
+		});
+
+		cond.value_entry.grab_focus.connect (() => {
+			if (conditions.index (cond) != conditions.length () - 1) {
+				return;
+			}
+
+			add_condition ();
+		});
+	}
+
+	public Benchwell.SQL.CondStmt[] get_conditions () {
+		Benchwell.SQL.CondStmt[] stmts = {};
+
+		conditions.foreach( (condition) => {
+			var c = condition.get_condition ();
+			if (c != null) {
+				stmts += c;
+			}
+		});
+
+		return stmts;
 	}
 }
 
@@ -753,120 +1011,6 @@ public class Benchwell.Views.DBTables : Gtk.ListBox {
 	public unowned Benchwell.SQL.TableDef get_selected_table () {
 		var row = get_selected_row ();
 		return _tables[row.get_index ()];
-	}
-}
-
-public class Benchwell.Views.DBCondition {
-	public Gtk.CheckButton active_check;
-	public Gtk.ListStore store;
-	public Gtk.ComboBox field_combo;
-	public Gtk.ComboBoxText operator_combo;
-	public Gtk.Entry value_entry;
-	public Benchwell.Button remove_btn;
-
-	public DBCondition (List<Benchwell.SQL.ColDef> columns) {
-		store = new Gtk.ListStore (1, GLib.Type.STRING);
-		Gtk.TreeIter iter;
-		store.append (out iter);
-		store.set_value (iter, 0 ,"");
-
-		if (columns != null) {
-			columns.foreach( column => {
-				store.append (out iter);
-				store.set_value (iter, 0, column.name);
-			});
-		}
-
-		active_check = new Gtk.CheckButton ();
-		active_check.active = true;
-		active_check.show ();
-
-		field_combo = new Gtk.ComboBox.with_model_and_entry (store);
-		field_combo.set_entry_text_column (0);
-		field_combo.show ();
-
-		var completion = new Gtk.EntryCompletion ();
-		completion.text_column = 0;
-		completion.set_inline_completion (true);
-		completion.set_inline_selection (true);
-		completion.minimum_key_length = 2;
-		completion.set_model (store);
-
-		var entry = field_combo.get_child () as Gtk.Entry;
-		entry.set_completion (completion);
-
-		operator_combo = new Gtk.ComboBoxText ();
-		foreach (var op in Benchwell.SQL.Operator.all ()) {
-			operator_combo.append ( op.to_string(), op.to_string ());
-		}
-		operator_combo.set_active (0);
-		operator_combo.show ();
-
-		value_entry = new Gtk.Entry ();
-		value_entry.show ();
-		remove_btn = new Benchwell.Button ("close", "orange", 16);
-		remove_btn.show ();
-	}
-}
-
-public class Benchwell.Views.DBConditions : Gtk.Grid {
-	private List<Benchwell.Views.DBCondition> conditions;
-
-	public DBConditions () {
-		Object (
-			row_spacing: 5,
-			column_spacing: 5
-		);
-		set_name ("conditions");
-		add_condition (null);
-	}
-
-	public void add_condition (List<Benchwell.SQL.ColDef> columns) {
-		var cond = new Benchwell.Views.DBCondition (columns);
-
-		var y = (int) conditions.length ();
-		attach (cond.active_check, 0, y, 2, 1);
-		attach (cond.field_combo, 2, y, 2, 1);
-		attach (cond.operator_combo, 4, y, 1, 1);
-		attach (cond.value_entry, 5, y, 2, 1);
-		attach (cond.remove_btn, 8, y, 1, 1);
-
-		conditions.append (cond);
-
-		cond.remove_btn.clicked.connect ( () => {
-			var index = conditions.index (cond);
-			remove_row (index);
-			conditions.remove (cond);
-
-			if (conditions.length () == 0) {
-				add_condition (null);
-			}
-		});
-
-		cond.active_check.grab_focus.connect (() => {
-			if (conditions.index (cond) != conditions.length () - 1) {
-				return;
-			}
-
-			add_condition (null);
-		});
-
-		var entry = cond.field_combo.get_child () as Gtk.Entry;
-		entry.grab_focus.connect (() => {
-			if (conditions.index (cond) != conditions.length () - 1) {
-				return;
-			}
-
-			add_condition (null);
-		});
-
-		cond.value_entry.grab_focus.connect (() => {
-			if (conditions.index (cond) != conditions.length () - 1) {
-				return;
-			}
-
-			add_condition (null);
-		});
 	}
 }
 

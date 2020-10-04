@@ -124,6 +124,37 @@ public enum Benchwell.SQL.Operator {
 			IsNotNull
 		};
 	}
+
+	public static Benchwell.SQL.Operator? parse (string s) {
+		switch (s) {
+			case "=":
+				return Eq;
+			case "!=":
+				return Neq;
+			case ">":
+				return Gt;
+			case "<":
+				return Lt;
+			case ">=":
+				return Gte;
+			case "<=":
+				return Lte;
+			case "LIKE":
+				return Like;
+			case "NOT LIKE":
+				return NotLike;
+			case "IN":
+				return In;
+			case "NOT IN":
+				return Nin;
+			case "IS NULL":
+				return IsNull;
+			case "NOT NULL":
+				return IsNotNull;
+		}
+
+		return null;
+	}
 }
 
 public class Benchwell.SQL.ConnectionInfo {

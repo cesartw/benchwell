@@ -53,7 +53,6 @@ public class Benchwell.MysqlForm : Gtk.Box {
 			changed (connection);
 		});
 
-
 		add (notebook);
 	}
 
@@ -82,7 +81,7 @@ public class Benchwell.MysqlTCPForm : Gtk.Grid {
 	public Gtk.Entry host_entry;
 	public Gtk.Entry port_entry;
 	public Gtk.Entry user_entry;
-	public Gtk.Entry password_entry;
+	public SecretEntry password_entry;
 	public Gtk.Entry database_entry;
 
 	public Gtk.Label name_lbl;
@@ -117,8 +116,7 @@ public class Benchwell.MysqlTCPForm : Gtk.Grid {
 		user_entry = new Gtk.Entry();
 		user_entry.show ();
 
-		password_entry = new Gtk.Entry();
-		password_entry.set_property("input-purpose", Gtk.InputPurpose.PASSWORD);
+		password_entry = new SecretEntry(true);
 		password_entry.show ();
 
 		database_entry = new Gtk.Entry();
@@ -219,9 +217,10 @@ public class Benchwell.MysqlTCPForm : Gtk.Grid {
 		host_entry.set_text (conn.host);
 		port_entry.set_text (conn.port.to_string ());
 		user_entry.set_text (conn.user);
-		password_entry.set_text (conn.password);
+		//password_entry.set_text (conn.password);
 		database_entry.set_text (conn.database);
 		_setting_connection = false;
+		password_entry.open = false;
 	}
 }
 
@@ -231,7 +230,7 @@ public class Benchwell.MysqlSocketForm : Gtk.Grid {
 	public Gtk.Entry name_entry;
 	public Gtk.Entry socket_entry;
 	public Gtk.Entry user_entry;
-	public Gtk.Entry password_entry;
+	public SecretEntry password_entry;
 	public Gtk.Entry database_entry;
 
 	public Gtk.Label name_lbl;
@@ -261,8 +260,7 @@ public class Benchwell.MysqlSocketForm : Gtk.Grid {
 		user_entry = new Gtk.Entry();
 		user_entry.show ();
 
-		password_entry = new Gtk.Entry();
-		password_entry.set_property("input-purpose", Gtk.InputPurpose.PASSWORD);
+		password_entry = new SecretEntry(true);
 		password_entry.show ();
 
 		database_entry = new Gtk.Entry();
@@ -350,8 +348,35 @@ public class Benchwell.MysqlSocketForm : Gtk.Grid {
 		name_entry.set_text (conn.name);
 		socket_entry.set_text (conn.socket);
 		user_entry.set_text (conn.user);
-		password_entry.set_text (conn.password);
+		//password_entry.set_text (conn.password);
 		database_entry.set_text (conn.database);
 		_setting_connection = false;
+		password_entry.open = false;
+	}
+}
+
+public class SecretEntry : Gtk.Entry {
+	private bool _open;
+	public bool open {
+		get { return _open; }
+		set {
+			_open = value;
+			if ( _open ) {
+				placeholder_text = "";
+			} else {
+				set_text ("");
+				placeholder_text = "Stored";
+			}
+		}
+	}
+
+	public SecretEntry (bool open = false) {
+		Object(
+			caps_lock_warning: true,
+			placeholder_text: open ? "" : "Stored",
+			input_purpose: Gtk.InputPurpose.PASSWORD,
+			visibility: false
+		);
+		this.open = open;
 	}
 }

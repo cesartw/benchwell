@@ -21,23 +21,46 @@ public class Benchwell.Views.DBDatabase : Gtk.Box {
 		show_connect ();
 
 		connect_view.dbconnect.connect ((c) => {
-			Benchwell.SQL.Connection connection;
-			try {
-				connection = engine.connect (c);
-			} catch (Benchwell.SQL.ErrorConnection e) {
-				return;
-			}
+			if (c.password != "") {
+				Benchwell.SQL.Connection connection;
+				try {
+					connection = engine.connect (c);
+				} catch (Benchwell.SQL.ErrorConnection e) {
+					return;
+				}
 
-			data_view = new Benchwell.Views.DBData(window, connection, c);
-			show_data ();
+				data_view = new Benchwell.Views.DBData(window, connection, c);
+				show_data ();
 
-			title = c.name;
-			if (c.database != "") {
-				title = @"$(c.name).$(c.database)";
+				title = c.name;
+				if (c.database != "") {
+					title = @"$(c.name).$(c.database)";
+				}
+				data_view.database_selected.connect ((dbname) => {
+					title = @"$(c.name).$(dbname)";
+				});
+			} else {
+				Config.decrypt.begin (c, (obj, res) => {
+					c.password = Config.decrypt.end (res);
+					Benchwell.SQL.Connection connection;
+					try {
+						connection = engine.connect (c);
+					} catch (Benchwell.SQL.ErrorConnection e) {
+						return;
+					}
+
+					data_view = new Benchwell.Views.DBData(window, connection, c);
+					show_data ();
+
+					title = c.name;
+					if (c.database != "") {
+						title = @"$(c.name).$(c.database)";
+					}
+					data_view.database_selected.connect ((dbname) => {
+						title = @"$(c.name).$(dbname)";
+					});
+				});
 			}
-			data_view.database_selected.connect ((dbname) => {
-				title = @"$(c.name).$(dbname)";
-			});
 		});
 	}
 
