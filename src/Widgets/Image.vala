@@ -26,10 +26,10 @@ enum Benchwell.Icons {
 }
 
 public class Benchwell.Image : Gtk.Image {
-	public Image (string asset, string color, int size) {
-		var pixbuf = new Gdk.Pixbuf.from_file (@"/home/goreorto/gopath/src/bitbucket.org/goreorto/benchwell/assets/iconset-temp/$(asset)48.png");
-		pixbuf = pixbuf.scale_simple (size, size, Gdk.InterpType.BILINEAR);
-
-		set_from_pixbuf (pixbuf);
+	public Image (string asset, Gtk.IconSize size = Gtk.IconSize.BUTTON) {
+		Object(
+			icon_name: @"bw-$asset",
+			icon_size: Gtk.IconSize.BUTTON
+		);
 	}
 }

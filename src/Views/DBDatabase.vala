@@ -12,7 +12,7 @@ public class Benchwell.Views.DBDatabase : Gtk.Box {
 			spacing: 5
 		);
 		engine = new Benchwell.SQL.Engine ();
-		title = "Connect";
+		title = _("Connect");
 
 		connect_view = new Benchwell.Views.DBConnect (window);
 		//data = new Benchwell.Views.DBData (window);

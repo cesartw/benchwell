@@ -10,7 +10,7 @@ public class Benchwell.SQL.MysqlDB : Benchwell.SQL.Driver {
 
 		switch (c.ttype) {
 			case "tcp":
-				if (c.name == "") {
+						if (c.name == "") {
 					return false;
 				}
 				if (c.host == "") {
@@ -167,7 +167,7 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 				// TODO: delete from config;
 				break;
 			default:
-				var query = @"TRUNCATE TABLE $(def.name)";
+				var query = @"TRUNCATE TABLE `$(def.name)`";
 				var rc = db.query(query);
 				if ( rc != 0 ) {
 					throw new Benchwell.SQL.ErrorQuery.CODE_1("failed to truncate table");
@@ -208,7 +208,7 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 					break;
 				default:
 					var val = sanitize_string (cond.val);
-					wheres += @"`$(cond.field.name)` $(cond.op) '$val'";
+					wheres += @"`$(cond.field.name)` $(cond.op) $val";
 					break;
 			}
 			i++;
@@ -235,7 +235,6 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		}
 
 		var query = @"SELECT * FROM $name $whereStmt $sortStmt LIMIT $(limit) OFFSET $(offset)";
-
 		var rc = db.query (query);
 		if ( rc != 0 ) {
 			throw new Benchwell.SQL.ErrorQuery.CODE_1 (db.error());
@@ -266,6 +265,7 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		}
 
 		var query = @"UPDATE `$table` SET `$(columns[columns.length -1].name)` = '$(row[row.length - 1])' WHERE $(string.joinv (" AND ", wheres))";
+
 		var rc = db.query (query);
 		if ( rc != 0 ) {
 			throw new Benchwell.SQL.ErrorQuery.CODE_1 (db.error());
@@ -277,18 +277,30 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		requires (row.length > 0)
 		requires (columns.length == row.length)
 	{
-		var names = new string[row.length];
-		var values = new string[row.length];
+		var builder = new StringBuilder ();
+		builder.append ("INSERT INTO `");
+		builder.append (name);
+		builder.append ("`(");
 		for (var i = 0; i < row.length; i++) {
-			names[i] = @"`$(columns[i].name)`";
-			if (row[i] == Benchwell.null_string) {
-				values[i] = "NULL";
-			} else {
-				values[i] = @"\"$(row[i])\"";
+			builder.append (columns[i].name);
+			if (i != row.length -1) {
+				builder.append (",");
 			}
 		}
 
-		var query = @"INSERT INTO `$name`($(string.joinv (", ", names))) VALUES ($(string.joinv (", ", values)))";
+		builder.append (") VALUES (");
+
+
+		for (var i=0;i<row.length;i++) {
+			builder.append(sanitize_string (row[i]));
+			if (i != row.length -1) {
+				builder.append (",");
+			}
+		}
+		builder.append (")");
+
+		var query = builder.str;
+
 		var rc = db.query (query);
 		if ( rc != 0 ) {
 			throw new Benchwell.SQL.ErrorQuery.CODE_1 (db.error());
@@ -328,7 +340,6 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		requires (row.length > 0)
 		requires (columns.length == row.length)
 	{
-
 		string[] wheres = {};
 		// delete using PK
 		for (var i = 0; i < columns.length; i++) {
@@ -360,7 +371,6 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 			}
 		}
 
-
 		var query = @"DELETE FROM `$name` WHERE $(string.joinv (" AND ", wheres))";
 		var rc = db.query (query);
 		if ( rc != 0 ) {
@@ -368,6 +378,49 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		}
 
 		return;
+	}
+
+	public string get_create_table(string name) throws ErrorQuery {
+		var query = @"SHOW CREATE TABLE `$name`";
+		var rc = db.query (query);
+		if ( rc != 0 ) {
+			throw new Benchwell.SQL.ErrorQuery.CODE_1 (db.error());
+		}
+
+		string[] row;
+		var result = db.use_result ();
+		while ((row = result.fetch_row () ) != null) {
+			return row[1];
+		}
+
+		return "";
+	}
+
+	public void query(string query, out string[] columns, out List<List<string?>> rows) throws ErrorQuery {
+		var rc = db.query (query);
+		if ( rc != 0 ) {
+			throw new ErrorQuery.CODE_1(@"$(db.errno()): $(db.error())");
+		}
+
+		var result = db.use_result ();
+		Mysql.Field* field;
+
+		string[] names = {};
+		while ((field = result.fetch_field ()) != null) {
+			names += field.name;
+		}
+		columns = names;
+
+		rows = new List<List<string?>> ();
+		string[] row;
+		while ((row = result.fetch_row () ) != null) {
+			List<string> rowl = null;
+			foreach (string s in row) {
+				rowl.append (s);
+			}
+
+			rows.append ((owned) rowl);
+		}
 	}
 
 	private void parse_type(
@@ -425,17 +478,25 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		}
 	}
 
-	private string sanitize_string (string dirty) {
+	private string sanitize_string (string? dirty) {
+		if (dirty == Benchwell.null_string || dirty == null) {
+			return "NULL";
+		}
 		var chunk = "";
 		db.real_escape_string (chunk, dirty, dirty.length);
-		return chunk;
+
+		return @"\"$chunk\"";
 	}
 
 	private string sanitize_string_array (string dirty) {
 		var parts = dirty.split (",");
 		string[] clean = {};
 		foreach (var part in parts) {
-			var chunk = "";
+			if (part == null) {
+				clean += "NULL";
+				continue;
+			}
+			string chunk = "";
 			db.real_escape_string (chunk, part, part.length);
 			clean += @"\"$chunk\"";
 		}

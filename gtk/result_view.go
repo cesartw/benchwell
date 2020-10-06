@@ -102,6 +102,7 @@ func (v ResultView) Init(
 		return nil, err
 	}
 	buff.Connect("insert-text", func(_ *sourceview.SourceBuffer, iter *gtk.TextIter, txt string, _ int) {
+		// TODO: attemp to autocomplete
 		if iter.GetOffset() == 0 {
 			return
 		}

@@ -1,5 +1,8 @@
 project('io.benchwell', 'vala', 'c')
 
+i18n = import('i18n')
+add_global_arguments('-DGETTEXT_PACKAGE="@0@"'.format (meson.project_name()), language: 'c')
+
 if get_option('profile') == 'development'
 	application_id = '@0@Devel'.format(meson.project_name())
 	vala_args += ['-D', 'IS_DEVEL']
@@ -18,6 +21,13 @@ config_headers = configure_file(
     configuration: conf_data
 )
 
+gnome = import('gnome')
+asresources = gnome.compile_resources(
+    'as-resources', 'data/assets.gresource.xml',
+    source_dir: 'data',
+    c_name: 'as'
+)
+
 executable(
 	meson.project_name(),
 
@@ -31,6 +41,7 @@ executable(
 	'src/Widgets/Tab.vala',
 	'src/Widgets/MysqlForm.vala',
 	'src/Widgets/SqliteForm.vala',
+	'src/Widgets/SourceView.vala',
 
 	'src/Views/DBDatabase.vala',
 	'src/Views/DBConnect.vala',
@@ -42,10 +53,12 @@ executable(
 	'src/ApplicationWindow.vala',
 
 	config_headers,
+	asresources,
 
 	dependencies: [
 		dependency('gobject-2.0'),
 		dependency('glib-2.0'),
+		dependency('gio-2.0'),
 		dependency('gtk+-3.0'),
 		dependency('gtksourceview-3.0'),
 		dependency('sqlite3'),
@@ -58,5 +71,6 @@ executable(
 )
 
 subdir('data')
+subdir('po')
 
-meson.add_install_script('meson/post_install.py')
+meson.add_install_script('build-aux/post_install.py')

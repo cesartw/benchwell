@@ -29,6 +29,7 @@ public class Benchwell.Application : Gtk.Application {
 		window.show ();
 
 		window.add_database_tab ();
+		Gtk.Settings.get_default ().gtk_application_prefer_dark_theme = true;
 	}
 }
 

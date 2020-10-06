@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=Benchwell
+Version=1.0
+GenericName=Database Manager
+Comment=Benchwell - Tool kit
+Categories=Network;Application;
+Exec=@binary@
+TryExec=@binary@ %U
+Icon=@icon@
+Type=Application
+Terminal=false
+Encoding=UTF-8
+StartupWMClass=Benchwell
+Keywords=SQL;MySql;Database;MariaDB;
+MimeType=application/x-sqlite3;application/vnd.sqlite3;

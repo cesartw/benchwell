@@ -11,7 +11,7 @@ public class Benchwell.MenuItem : Gtk.MenuItem {
 		if (asset.has_prefix ("gtk-")){
 			image =	new Gtk.Image.from_icon_name (asset, Gtk.IconSize.MENU);
 		} else {
-			image =	new Image (asset, "orange", 16);
+			image =	new Image (asset, Gtk.IconSize.MENU);
 		}
 
 		image.show ();
@@ -21,7 +21,6 @@ public class Benchwell.MenuItem : Gtk.MenuItem {
 		lbl.set_halign (Gtk.Align.START);
 
 		lbl.set_use_underline (true);
-		//lbl.set_xalign ((double) 0.0);
 
 		box.pack_start (image, false, false, 0);
 		box.pack_start (lbl, false, false, 5);

@@ -12,7 +12,7 @@ public class Benchwell.Tab : Gtk.Box {
 		set_vexpand (true);
 		set_hexpand (true);
 
-		btn = new Benchwell.Button("close", "orange", 16);
+		btn = new Benchwell.Button("close", Gtk.IconSize.MENU);
 		btn.show ();
 		btn.set_relief (Gtk.ReliefStyle.NONE);
 

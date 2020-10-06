@@ -40,8 +40,8 @@ var iconsetCmd = &cobra.Command{
 	Use: "iconset",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// export PNG
-		err := filepath.Walk("assets/data/iconset", func(path string, info os.FileInfo, err error) error {
-			if path == "assets/data/iconset" {
+		err := filepath.Walk("data/raw/icons", func(path string, info os.FileInfo, err error) error {
+			if path == "data/raw/icons" {
 				return nil
 			}
 

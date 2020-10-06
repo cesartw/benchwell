@@ -20,7 +20,7 @@ public class Benchwell.Views.DBConnect : Gtk.Paned {
 			orientation: Gtk.Orientation.HORIZONTAL
 		);
 
-		title = "Connect";
+		title = _("Connect");
 
 		set_vexpand (true);
 		set_hexpand (true);
@@ -41,11 +41,12 @@ public class Benchwell.Views.DBConnect : Gtk.Paned {
 		btn_box.show ();
 		btn_box.set_layout (Gtk.ButtonBoxStyle.EDGE);
 
-		btn_connect = new Gtk.Button.with_label ("Connect");
+		btn_connect = new Gtk.Button.with_label (_("Connect"));
+		btn_connect.get_style_context ().add_class ("suggested-action");
 		btn_connect.show ();
-		btn_test = new Gtk.Button.with_label ("Test");
+		btn_test = new Gtk.Button.with_label (_("Test"));
 		btn_test.show ();
-		btn_save = new Gtk.Button.with_label ("Save");
+		btn_save = new Gtk.Button.with_label (_("Save"));
 		btn_save.show ();
 
 		btn_box.add (btn_connect);
@@ -209,13 +210,13 @@ public class Benchwell.Views.DBConnectionList : Gtk.ListBox {
 
 		// connection menu
 		menu = new Gtk.Menu ();
-		menu_new = new Benchwell.MenuItem ("New", "connection");
+		menu_new = new Benchwell.MenuItem (_("New"), "connection");
 		menu_new.show ();
-		menu_connect = new Benchwell.MenuItem ("Connect", "next");
+		menu_connect = new Benchwell.MenuItem (_("Connect"), "next");
 		menu_connect.show ();
-		menu_test = new Benchwell.MenuItem ("Test", "refresh");
+		menu_test = new Benchwell.MenuItem (_("Test"), "refresh");
 		menu_test.show ();
-		menu_del = new Benchwell.MenuItem ("Delete", "close");
+		menu_del = new Benchwell.MenuItem (_("Delete"), "close");
 		menu_del.show ();
 
 		menu.add (menu_new);
@@ -262,7 +263,7 @@ public class Benchwell.Views.DBConnectionList : Gtk.ListBox {
 		label.set_halign (Gtk.Align.START);
 		label.show ();
 
-		var image = new Benchwell.Image ("connection", "orange", 16);
+		var image = new Benchwell.Image ("connection", Gtk.IconSize.BUTTON);
 		image.show ();
 
 		box.pack_start (image, false, false, 5);
@@ -275,7 +276,7 @@ public class Benchwell.Views.DBConnectionList : Gtk.ListBox {
 
 	private void on_new () {
 		var c = new Benchwell.SQL.ConnectionInfo();
-		c.name = "New connection";
+		c.name = _("New connection");
 		c.adapter = "mysql";
 		c.ttype = "tcp";
 		c.port = 3306;

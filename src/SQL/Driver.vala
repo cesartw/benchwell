@@ -22,14 +22,14 @@ public interface Benchwell.SQL.Connection : Object {
 	public abstract void update_field (string name, ColDef[] defs, string[] row) throws ErrorQuery;
 	public abstract string[] insert_record(string name, ColDef[] defs, string[] row) throws ErrorQuery;
 	public abstract void delete_record(string name, ColDef[] defs, string[] row) throws ErrorQuery;
+	public abstract string get_create_table(string name) throws ErrorQuery;
+	public abstract void query(string query, out string[] columns, out List<List<string?>> rows) throws ErrorQuery;
 	//public abstract string update_record(string name, ColDef[] defs, string[] newrow, string[] oldrow) throws ErrorQuery; // new, oldvalues;
 	//public abstract string update_fields(string name, ColDef[] defs, string[] row, int keys) throws ErrorQuery;
 	// NOTE: everything is an string... so ? public abstract string ParseValue(def ColDef, value string) interface{}
-	//public abstract void query(string query, ref string[] colnames, ref string[,] rows) throws ErrorQuery;
 	//public abstract void execute(string query, ref string lastId, ref int64 count) throws ErrorQuery;
 	//public abstract string name();
 	// DDL
-	//public abstract string get_create_table(string name) throws ErrorQuery;
 	//public abstract string get_insert_statement(string name, ColDef[] def, string[] row) throws ErrorQuery;
 	//public abstract string get_select_statement(TableDef def) throws ErrorQuery;
 }
@@ -200,7 +200,7 @@ public class Benchwell.SQL.Query : Object {
 	public int64 id           { get; set; }
 	public string name        { get; set; }
 	public string query       { get; set; }
-	public int64 connectionId { get; set; }
+	public int64 connection_id { get; set; }
 }
 
 public class Benchwell.SQL.TableDef : Object {
@@ -228,6 +228,10 @@ public class Benchwell.SQL.ColDef : Object {
 	public bool nullable   { get; set; }
 	public Benchwell.SQL.ColType ttype   { get; set; }
 	public string[] values { get; set; }
+
+	public ColDef.with_name (string n) {
+		name = n;
+	}
 }
 
 public class Benchwell.SQL.CondStmt : Object {

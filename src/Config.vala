@@ -9,6 +9,7 @@ public class Benchwell.Config : Object {
 	private static GLib.Settings settings;
 	private static Sqlite.Database db;
 	public static List<SQL.ConnectionInfo> connections;
+	public static List<SQL.Query> queries;
 	public static Secret.Schema schema;
 
 	public Config () {
@@ -24,7 +25,7 @@ public class Benchwell.Config : Object {
                                  "schema", Secret.SchemaAttributeType.STRING);
 
 		stdout.printf ("Using config db: %s\n", dbpath);
-		loadConnections ();
+		load_connections ();
 	}
 
 	public static int window_width() {
@@ -59,6 +60,79 @@ public class Benchwell.Config : Object {
 		}
 
 		return v;
+	}
+
+	public static void save_query (ref SQL.Query query) throws ConfigError {
+		Sqlite.Statement stmt;
+		string prepared_query_str = "";
+
+		if (query.id > 0) {
+			 prepared_query_str = """
+				UPDATE db_queries
+					SET name = $NAME, query = $query
+				WHERE ID = $ID
+			""";
+		} else {
+			 prepared_query_str = """
+				INSERT INTO db_queries(name, query, connections_id)
+				VALUES($NAME, $QUERY, $CONNECTION_ID)
+			""";
+		}
+
+		var ec = db.prepare_v2 (prepared_query_str, prepared_query_str.length, out stmt);
+		if (ec != Sqlite.OK) {
+			stderr.printf ("Error: %d: %s\n", db.errcode (), db.errmsg ());
+			return;
+		}
+
+		int param_position;
+		if (query.id > 0) {
+			param_position = stmt.bind_parameter_index ("$ID");
+			assert (param_position > 0);
+			stmt.bind_int64 (param_position, query.id);
+		} else {
+			param_position = stmt.bind_parameter_index ("$CONNECTION_ID");
+			stmt.bind_int64 (param_position, query.connection_id);
+		}
+
+		param_position = stmt.bind_parameter_index ("$NAME");
+		stmt.bind_text (param_position, query.name);
+
+		param_position = stmt.bind_parameter_index ("$QUERY");
+		stmt.bind_text (param_position, query.query);
+
+		string errmsg = "";
+		ec = db.exec (stmt.expanded_sql(), null, out errmsg);
+		if ( ec != Sqlite.OK ){
+			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
+			stderr.printf ("ERR: %s\n", errmsg);
+			throw new ConfigError.SAVE_CONNECTION(errmsg);
+		}
+
+		if (query.id == 0) {
+			query.id = db.last_insert_rowid ();
+			queries.append (query);
+		}
+	}
+
+	public static void delete_query (SQL.Query query) throws ConfigError {
+		if (query.id == 0) {
+			return;
+		}
+
+		queries.foreach ( (q) => {
+			if ( query.id != q.id ){
+				return;
+			}
+
+			queries.remove (q);
+
+			string errmsg = "";
+			var ec = db.exec (@"DELETE FROM db_queries WHERE ID = $(q.id)", null, out errmsg);
+			if ( ec != Sqlite.OK ){
+				throw new ConfigError.DELETE_CONNECTION (errmsg);
+			}
+		});
 	}
 
 	public static void save_connection (ref SQL.ConnectionInfo conn) throws ConfigError {
@@ -159,7 +233,7 @@ public class Benchwell.Config : Object {
 		});
 	}
 
-	private static void loadConnections () throws ConfigError {
+	private static void load_connections () throws ConfigError {
 		string errmsg;
 		var ec = db.exec ("SELECT * FROM db_connections",
 						  connections_cb,
@@ -167,10 +241,31 @@ public class Benchwell.Config : Object {
 		if ( ec != Sqlite.OK ){
 			throw new ConfigError.GET_CONNECTIONS(errmsg);
 		}
+		load_queries ();
+	}
+
+	private static void load_queries () throws ConfigError {
+		string errmsg;
+		var ec = db.exec ("SELECT * FROM db_queries",
+						  queries_cb,
+						  out errmsg);
+		if ( ec != Sqlite.OK ){
+			throw new ConfigError.GET_CONNECTIONS(errmsg);
+		}
+
+		connections.foreach ((connection) => {
+			Benchwell.SQL.Query[] qq = {};
+			queries.foreach ((query) => {
+				if (query.connection_id == connection.id) {
+					qq += query;
+				}
+			});
+			connection.queries = qq;
+		});
 	}
 
 	private static int connections_cb(int n_columns, string[] values, string[] column_names){
-		var info = new SQL.ConnectionInfo ();
+		var info = new Benchwell.SQL.ConnectionInfo ();
 		info.id = int.parse (values[0]);
 		info.name = values[1];
 		info.adapter = values[2];
@@ -184,6 +279,17 @@ public class Benchwell.Config : Object {
 		info.file = values[11];
 
 		connections.append (info);
+		return 0;
+	}
+
+	private static int queries_cb(int n_columns, string[] values, string[] column_names){
+		var query = new Benchwell.SQL.Query ();
+		query.id = int.parse (values[0]);
+		query.name = values[1];
+		query.query = values[2];
+		query.connection_id = int64.parse (values[3]);
+
+		queries.append (query);
 		return 0;
 	}
 

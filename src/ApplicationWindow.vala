@@ -50,16 +50,16 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		var windowBtnMenu = new Gtk.MenuButton();
 		windowBtnMenu.show ();
 
-		var addImg = new Benchwell.Image ("add-tab", "orange", 16);
+		var addImg = new Benchwell.Image ("add-tab", Gtk.IconSize.BUTTON);
 		addImg.show ();
 		windowBtnMenu.set_image (addImg);
 
 		var windowMenu = new GLib.Menu ();
 		windowBtnMenu.set_menu_model (windowMenu);
 
-		windowMenu.append ("Window", "app.new");
-		windowMenu.append ("Database", "win.new.db");
-		windowMenu.append ("HTTP", "win.new.http");
+		windowMenu.append (_("Window"), "app.new");
+		windowMenu.append (_("Database"), "win.new.db");
+		windowMenu.append (_("HTTP"), "win.new.http");
 
 		var appBtnMenu = new Gtk.MenuButton ();
 		appBtnMenu.show ();
@@ -85,6 +85,12 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		close_menu.activate.connect ( () => {
 			notebook.remove_page (notebook.get_current_page ());
 		});
+
+		var css_provider = new Gtk.CssProvider ();
+        css_provider.load_from_resource ("/io/benchwell/stylesheet.css");
+		Gtk.StyleContext.add_provider_for_screen (
+			Gdk.Screen.get_default (), css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+		);
 	}
 
 	public void add_database_tab() {
