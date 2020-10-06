@@ -558,6 +558,7 @@ public class Benchwell.Views.DBTable : Gtk.Box {
 		btn_delete_row.show ();
 
 		btn_save_row = new Benchwell.Button ("save-record", Gtk.IconSize.BUTTON);
+		btn_save_row.sensitive = false;
 		btn_save_row.show ();
 
 		btn_show_filters = new Benchwell.ToggleButton ("filter", Gtk.IconSize.BUTTON);
