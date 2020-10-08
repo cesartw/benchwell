@@ -54,7 +54,6 @@ executable(
 
 	config_headers,
 	asresources,
-
 	dependencies: [
 		dependency('gobject-2.0'),
 		dependency('glib-2.0'),
