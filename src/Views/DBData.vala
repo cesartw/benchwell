@@ -194,7 +194,7 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 
 		result_view.exec_query.connect ((query) => {
 			string[] columns;
-			List<List<string?>> data;
+			List<List<string?>>data;
 			connection.query(query, out columns, out data);
 
 			Benchwell.SQL.ColDef[] cols = {};

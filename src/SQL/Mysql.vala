@@ -404,20 +404,35 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 
 		var result = db.use_result ();
 		Mysql.Field* field;
-
-		string[] names = {};
-		while ((field = result.fetch_field ()) != null) {
-			names += field.name;
-		}
-		columns = names;
-
 		rows = new List<List<string?>> ();
-		string[] row;
-		while ((row = result.fetch_row () ) != null) {
-			List<string> rowl = null;
-			foreach (string s in row) {
-				rowl.append (s);
+
+		// SELECT
+		if (result != null) {
+			string[] names = {};
+			while ((field = result.fetch_field ()) != null) {
+				names += field.name;
 			}
+			columns = names;
+
+			string[] row;
+			while ((row = result.fetch_row () ) != null) {
+				List<string> rowl = null;
+				foreach (string s in row) {
+					rowl.append (s);
+				}
+
+				rows.append ((owned) rowl);
+			}
+		} else {
+			// DML
+
+			columns = {"affected rows", "inserted id"};
+			var id = db.insert_id ();
+			var count = db.affected_rows ();
+
+			var rowl = new List<string> ();
+			rowl.append (count.to_string ());
+			rowl.append (id.to_string ());
 
 			rows.append ((owned) rowl);
 		}
