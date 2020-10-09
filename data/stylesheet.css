@@ -2099,3 +2099,7 @@ switch slider {
 	min-width: 20px;
 	min-height: 20px;
 }
+
+entry.search {
+	border-radius: 20px;
+}

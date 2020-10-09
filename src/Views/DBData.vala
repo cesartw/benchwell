@@ -51,6 +51,7 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 
 		result_view.table.field_change.connect (on_field_change);
 		result_view.table.btn_refresh.clicked.connect (on_refresh_table);
+		result_view.table.conditions.search.connect (on_refresh_table);
 
 		tables.schema_menu.activate.connect (on_show_schema);
 		tables.refresh_menu.activate.connect (on_refresh_tables);
@@ -60,6 +61,19 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 
 		result_view.table.btn_prev.clicked.connect (on_prev_page);
 		result_view.table.btn_next.clicked.connect (on_next_page);
+
+		result_view.table.copy_insert_menu.activate.connect (on_copy_insert);
+	}
+
+	private void on_copy_insert () {
+		var data = result_view.table.get_selected_data ();
+		if (data == null) {
+			return;
+		}
+
+		var st = connection.get_insert_statement (table_def.name, result_view.table.columns, data);
+		var cb = Gtk.Clipboard.get_default (Gdk.Display.get_default ());
+		cb.set_text (st, st.length);
 	}
 
 	private void on_show_schema () {
@@ -537,13 +551,13 @@ public class Benchwell.Views.DBTable : Gtk.Box {
 		table_sw.show ();
 
 		menu = new Gtk.Menu ();
-		clone_menu = new Benchwell.MenuItem (_("Clone row"), "gtk-convert");
+		clone_menu = new Benchwell.MenuItem (_("Clone row"), "copy");
 		clone_menu.show ();
 
-		copy_insert_menu = new Benchwell.MenuItem (_("Copy insert"), "gtk-page-setup");
+		copy_insert_menu = new Benchwell.MenuItem (_("Copy insert"), "copy");
 		copy_insert_menu.show ();
 
-		copy_menu = new Benchwell.MenuItem (_("Copy value"), "gtk-copy");
+		copy_menu = new Benchwell.MenuItem (_("Copy value"), "copy");
 		copy_menu.show ();
 
 		menu.add (clone_menu);
@@ -597,9 +611,7 @@ public class Benchwell.Views.DBTable : Gtk.Box {
 		pack_start (table_sw, true, true, 0);
 
 		// signals
-		button_press_event.connect (on_button_press);
-
-		clone_menu.activate.connect (on_clone);
+		table.button_press_event.connect (on_button_press);
 
 		btn_show_filters.toggled.connect (() => { if (btn_show_filters.active) { conditions.show ();
 			} else {
@@ -626,6 +638,26 @@ public class Benchwell.Views.DBTable : Gtk.Box {
 		btn_add_row.clicked.connect (() => {
 			add_empty_row ();
 		});
+
+		btn_delete_row.clicked.connect (on_delete_row);
+	}
+
+	private void on_delete_row () {
+		var selection = table.get_selection ();
+		Gtk.TreeIter? iter = null;
+		selection.selected_foreach ((model, path, i) => {
+			if (iter != null) {
+				return;
+			}
+			iter = i;
+		});
+
+		GLib.Value val;
+		store.get_value (iter, (int) columns.length, out val);
+		if (val.get_int () == 1) {
+			delete_selected_row ();
+			table.unselect_all ();
+		}
 	}
 
 	private void on_clone () {
@@ -672,6 +704,7 @@ public class Benchwell.Views.DBTable : Gtk.Box {
 
 		store = new Gtk.ListStore.newv (column_types);
 		table.model = store;
+		conditions.columns = _columns;
 	}
 
 	private void _update_data (List<List<string?>> data) {
@@ -964,7 +997,10 @@ public class Benchwell.Views.DBCondition {
 			_update_fields ();
 		}
 	}
+
 	private string? _active_field;
+
+	public signal void search();
 
 	public DBCondition () {
 		store = new Gtk.ListStore (1, GLib.Type.STRING);
@@ -979,13 +1015,14 @@ public class Benchwell.Views.DBCondition {
 		active_switch.show ();
 
 		field_combo = new Gtk.ComboBox.with_model_and_entry (store);
+		field_combo.id_column = 0;
 		field_combo.set_entry_text_column (0);
 		field_combo.show ();
 
 		var completion = new Gtk.EntryCompletion ();
 		completion.text_column = 0;
-		completion.set_inline_completion (true);
-		completion.set_inline_selection (true);
+		completion.inline_completion = true;
+		completion.inline_selection = true;
 		completion.minimum_key_length = 2;
 		completion.set_model (store);
 
@@ -1001,6 +1038,7 @@ public class Benchwell.Views.DBCondition {
 
 		value_entry = new Gtk.Entry ();
 		value_entry.show ();
+
 		remove_btn = new Benchwell.Button ("close", Gtk.IconSize.MENU);
 		remove_btn.show ();
 
@@ -1014,8 +1052,10 @@ public class Benchwell.Views.DBCondition {
 			if (op == Benchwell.SQL.Operator.IsNotNull) {
 				value_entry.sensitive = false;
 			}
-
 		});
+
+		entry.activate.connect( () => { search (); });
+		value_entry.activate.connect( () => { search (); });
 	}
 
 	public Benchwell.SQL.CondStmt? get_condition () {
@@ -1101,6 +1141,8 @@ public class Benchwell.Views.DBConditions : Gtk.Grid {
 		}
 	}
 
+	public signal void search();
+
 	public DBConditions () {
 		Object (
 			row_spacing: 5,
@@ -1157,6 +1199,10 @@ public class Benchwell.Views.DBConditions : Gtk.Grid {
 
 			add_condition ();
 		});
+
+		cond.search.connect ( () => {
+			search ();
+		});
 	}
 
 	public Benchwell.SQL.CondStmt[] get_conditions () {
@@ -1181,7 +1227,7 @@ public class Benchwell.Views.DBTables : Gtk.ListBox {
 	public Gtk.MenuItem truncate_menu;
 	public Gtk.MenuItem delete_menu;
 	public Gtk.MenuItem refresh_menu;
-	public Gtk.MenuItem copy_select_menu;
+	//public Gtk.MenuItem copy_select_menu;
 
 	public Benchwell.SQL.TableDef[] _tables;
 
@@ -1219,14 +1265,14 @@ public class Benchwell.Views.DBTables : Gtk.ListBox {
 		refresh_menu = new Benchwell.MenuItem (_("Refresh"), "refresh");
 		refresh_menu.show ();
 
-		copy_select_menu = new Benchwell.MenuItem (_("Copy SELECT"), "copy");
-		copy_select_menu.show ();
+		//copy_select_menu = new Benchwell.MenuItem (_("Copy SELECT"), "copy");
+		//copy_select_menu.show ();
 
 		var cowboy = new Benchwell.MenuItem (_("Cowboy"), "cowboy");
 		cowboy.show ();
 
 		menu.add (new_tab_menu);
-		menu.add (copy_select_menu);
+		//menu.add (copy_select_menu);
 		menu.add (schema_menu);
 		menu.add (edit_menu);
 		menu.add (refresh_menu);

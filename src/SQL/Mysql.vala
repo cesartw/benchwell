@@ -261,10 +261,12 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 	{
 		string[] wheres = {};
 		for (var i = 0; i < columns.length - 1; i++) {
-			wheres += @"`$(columns[i].name)` = '$(row[i])'";
+			var val = sanitize_string (row[i]);
+			wheres += @"`$(columns[i].name)` = $val";
 		}
 
-		var query = @"UPDATE `$table` SET `$(columns[columns.length -1].name)` = '$(row[row.length - 1])' WHERE $(string.joinv (" AND ", wheres))";
+		var new_value = sanitize_string (row[row.length - 1]);
+		var query = @"UPDATE `$table` SET `$(columns[columns.length -1].name)` = $new_value WHERE $(string.joinv (" AND ", wheres))";
 
 		var rc = db.query (query);
 		if ( rc != 0 ) {
@@ -497,7 +499,7 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		if (dirty == Benchwell.null_string || dirty == null) {
 			return "NULL";
 		}
-		var chunk = "";
+		string chunk = dirty;
 		db.real_escape_string (chunk, dirty, dirty.length);
 
 		return @"\"$chunk\"";
@@ -517,5 +519,36 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		}
 
 		return string.joinv (",", clean);
+	}
+
+	public string get_insert_statement(string name, unowned Benchwell.SQL.ColDef[] columns, unowned string[] row)
+		requires(columns.length == row.length)
+		requires(columns.length > 1)
+	{
+		var builder = new StringBuilder ();
+		builder.append ("INSERT INTO `")
+			.append (name)
+			.append ("`(");
+
+		for (var i = 0; i < columns.length; i++){
+			builder.append ("`")
+				.append (columns[i].name)
+				.append ("`");
+			if (i < columns.length -1) {
+				builder.append (", ");
+			}
+		}
+
+		builder.append(") VALUES(");
+		for (var i = 0; i < row.length; i++){
+			builder.append (sanitize_string (row[i]));
+			if (i < row.length - 1) {
+				builder.append (", ");
+			}
+		}
+		builder.append (");");
+
+		var s = builder.str;
+		return s;
 	}
 }

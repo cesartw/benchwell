@@ -19,6 +19,7 @@ public class Benchwell.Application : Gtk.Application {
 
 		set_accels_for_action ("win.new.db", {"<control>D"});
 		set_accels_for_action ("win.new.http", {"<control>H"});
+		set_accels_for_action ("win.new.tab", {"<control>T"});
 		set_accels_for_action ("win.close", {"<control>W"});
 	}
 

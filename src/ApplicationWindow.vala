@@ -8,6 +8,7 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 	public SimpleAction new_connection_menu;
 	public SimpleAction new_database_tab_menu;
 	public SimpleAction new_http_tab_menu;
+	public SimpleAction new_tab_menu;
 	public SimpleAction close_menu;
 
 	public class ApplicationWindow(Gtk.Application app) {
@@ -19,10 +20,12 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 
 		new_database_tab_menu = new SimpleAction("new.db", null);
 		new_http_tab_menu = new SimpleAction("new.http", null);
+		new_tab_menu = new SimpleAction("new.tab", null);
 		close_menu = new SimpleAction("close", null);
 
 		add_action(new_database_tab_menu);
 		add_action(new_http_tab_menu);
+		add_action(new_tab_menu);
 		add_action(close_menu);
 
 		notebook = new Gtk.Notebook ();
@@ -75,14 +78,17 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 
 		add(box);
 
-		set_default_size (Config.window_width(), Config.window_height());
-		move (Config.window_position_x(), Config.window_position_y());
+		set_default_size (Config.window_width (), Config.window_height ());
+		move (Config.window_position_x (), Config.window_position_y ());
 
-		new_database_tab_menu.activate.connect ( () => {
+		new_database_tab_menu.activate.connect (() => {
 			add_database_tab ();
 		});
 
-		close_menu.activate.connect ( () => {
+		new_tab_menu.activate.connect (() => {
+		});
+
+		close_menu.activate.connect (() => {
 			notebook.remove_page (notebook.get_current_page ());
 		});
 
@@ -110,6 +116,7 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		tab.btn.clicked.connect( () => {
 			notebook.remove_page (notebook.page_num (tab));
 		});
+		notebook.set_current_page (notebook.get_n_pages () - 1);
 	}
 }
 
