@@ -174,20 +174,20 @@ public class Benchwell.SQL.ConnectionInfo {
 	public Query[] queries { get; set; }
 
 	public ConnectionInfo () {
-		adapter  = "";
-		ttype    = "";
-		name     = "";
-		socket   = "";
-		file     = "";
-		host     = "";
-		port     = 0;
-		user     = "";
-		password = "";
-		database = "";
-		sshhost  = "";
-		sshagent = "";
-		options  = "";
-		encrypted  = false;
+		adapter     = "";
+		ttype       = "";
+		name        = "";
+		socket      = "";
+		file        = "";
+		host        = "";
+		port        = 0;
+		user        = "";
+		password    = "";
+		database    = "";
+		sshhost     = "";
+		sshagent    = "";
+		options     = "";
+		encrypted   = false;
 	}
 	public string to_string() {
 		return name;

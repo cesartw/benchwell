@@ -19,7 +19,8 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 
 	public DBData (Benchwell.ApplicationWindow window,
 				   Benchwell.SQL.Connection connection,
-				   Benchwell.SQL.ConnectionInfo connection_info) {
+				   Benchwell.SQL.ConnectionInfo connection_info)
+	{
 		Object(
 			window: window,
 			connection: connection,
@@ -31,8 +32,6 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 		);
 
 		build ();
-
-		fill ();
 
 		table_search.search_changed.connect ( () => {
 			var expr = table_search.get_buffer ().get_text ();
@@ -47,7 +46,7 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 			tables.invalidate_filter ();
 		});
 
-		tables.row_activated.connect (on_load_table);
+		tables.table_selected.connect (on_load_table);
 
 		result_view.table.field_change.connect (on_field_change);
 		result_view.table.btn_refresh.clicked.connect (on_refresh_table);
@@ -55,7 +54,6 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 
 		tables.schema_menu.activate.connect (on_show_schema);
 		tables.refresh_menu.activate.connect (on_refresh_tables);
-
 		tables.truncate_menu.activate.connect (on_truncate_table);
 		tables.delete_menu.activate.connect (on_delete_table);
 
@@ -63,6 +61,8 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 		result_view.table.btn_next.clicked.connect (on_next_page);
 
 		result_view.table.copy_insert_menu.activate.connect (on_copy_insert);
+
+		fill ();
 	}
 
 	private void on_copy_insert () {
@@ -277,9 +277,7 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 				tt += t;
 			}
 
-
 			tables.update_items (tt);
-
 			database_selected (dbname);
 		} catch (Benchwell.SQL.Error err) {
 			result_view.show_alert (err.message);
@@ -300,11 +298,10 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 		result_view.show_alert (_("Updated"), Gtk.MessageType.INFO, true);
 	}
 
-	private void on_load_table () {
+	private void on_load_table (Benchwell.SQL.TableDef table_def) {
 		result_view.hide_alert ();
 
 		current_page = 0;
-		table_def = tables.get_selected_table ();
 		try {
 			result_view.table.columns = connection.table_definition (table_def.name);
 			result_view.table.data = connection.fetch_table (table_def.name,
@@ -1345,11 +1342,8 @@ public class Benchwell.Views.DBTables : Gtk.ListBox {
 	public Gtk.MenuItem delete_menu;
 	public Gtk.MenuItem refresh_menu;
 	//public Gtk.MenuItem copy_select_menu;
-
 	public Benchwell.SQL.TableDef[] _tables;
-
 	public Regex? filter;
-
 	public Benchwell.SQL.TableDef? selected_tabledef {
 		get {
 			var row = get_selected_row ();
@@ -1358,7 +1352,22 @@ public class Benchwell.Views.DBTables : Gtk.ListBox {
 			}
 			return _tables[row.get_index ()];
 		}
+		set {
+			if (value == null) {
+				return;
+			}
+
+			for (var i = 0; i < _tables.length; i++){
+				if (_tables[i].name == value.name) {
+					var row = get_row_at_index (i);
+					select_row (row);
+					table_selected (value);
+					return;
+				}
+			}
+		}
 	}
+	public signal void table_selected (Benchwell.SQL.TableDef tabledef);
 
 	public DBTables () {
 		Object ();
@@ -1419,7 +1428,13 @@ public class Benchwell.Views.DBTables : Gtk.ListBox {
 			return true;
 		});
 
+
+		row_activated.connect (on_row_activated);
 		set_filter_func (search);
+	}
+
+	private void on_row_activated () {
+		table_selected (get_selected_table ());
 	}
 
 	public void update_items (owned Benchwell.SQL.TableDef[] tables, string name = "") {

@@ -22,48 +22,47 @@ public class Benchwell.Views.DBDatabase : Gtk.Box {
 
 		connect_view.dbconnect.connect ((c) => {
 			if (c.password != "") {
-				Benchwell.SQL.Connection connection;
-				try {
-					connection = engine.connect (c);
-				} catch (Benchwell.SQL.Error err) {
-					show_error_dialog (err.message);
-					return;
-				}
-
-				data_view = new Benchwell.Views.DBData(window, connection, c);
-				show_data ();
-
-				title = c.name;
-				if (c.database != "") {
-					title = @"$(c.name).$(c.database)";
-				}
-				data_view.database_selected.connect ((dbname) => {
-					title = @"$(c.name).$(dbname)";
-				});
+				launch_connection (c);
 			} else {
 				Config.decrypt.begin (c, (obj, res) => {
 					c.password = Config.decrypt.end (res);
-					Benchwell.SQL.Connection connection;
-					try {
-						connection = engine.connect (c);
-					} catch (Benchwell.SQL.Error err) {
-						show_error_dialog (err.message);
-						return;
-					}
-
-					data_view = new Benchwell.Views.DBData(window, connection, c);
-					show_data ();
-
-					title = c.name;
-					if (c.database != "") {
-						title = @"$(c.name).$(c.database)";
-					}
-					data_view.database_selected.connect ((dbname) => {
-						title = @"$(c.name).$(dbname)";
-					});
+					launch_connection (c);
 				});
 			}
 		});
+	}
+
+	public void launch_connection (Benchwell.SQL.ConnectionInfo c, Benchwell.SQL.TableDef? selected_tabledef = null) {
+		Benchwell.SQL.Connection connection;
+
+		try {
+			connection = engine.connect (c);
+		} catch (Benchwell.SQL.Error err) {
+			show_error_dialog (err.message);
+			return;
+		}
+
+		data_view = new Benchwell.Views.DBData(window, connection, c);
+		show_data ();
+
+		title = c.name;
+		if (c.database != "") {
+			title = @"$(c.name).$(c.database)";
+		}
+		data_view.database_selected.connect ((dbname) => {
+			title = @"$(c.name).$(dbname)";
+		});
+
+		data_view.tables.new_tab_menu.activate.connect (() => {
+			var tabledef = data_view.tables.selected_tabledef;
+			if (tabledef == null) {
+				return;
+			}
+
+			window.add_database_tab (c, tabledef);
+		});
+
+		data_view.tables.selected_tabledef = selected_tabledef;
 	}
 
 	public void show_error_dialog (string message) {

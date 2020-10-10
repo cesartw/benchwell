@@ -94,13 +94,14 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		);
 	}
 
-	public void add_database_tab() {
+	public void add_database_tab (Benchwell.SQL.ConnectionInfo? connection_info=null, Benchwell.SQL.TableDef? tabledef = null) {
 		var tab  = new Benchwell.Tab ();
 		tab.show ();
 
 		var database = new Benchwell.Views.DBDatabase (this);
 		database.notify["title"].connect ((s, p) => {
 			tab.label.set_text (database.title);
+			tab.label.tooltip_text = database.title;
 		});
 		database.show ();
 
@@ -112,6 +113,10 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 			notebook.remove_page (notebook.page_num (tab));
 		});
 		notebook.set_current_page (notebook.get_n_pages () - 1);
+
+		if (connection_info != null) {
+			database.launch_connection (connection_info, tabledef);
+		}
 	}
 }
 
