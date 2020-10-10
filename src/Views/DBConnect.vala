@@ -113,7 +113,7 @@ public class Benchwell.Views.DBConnect : Gtk.Paned {
 
 			try {
 				engine.connect (c);
-			} catch (SQL.ErrorConnection e) {
+			} catch (Benchwell.SQL.Error e) {
 				//info_message (e.message, Gtk.MessageType.ERROR);
 			}
 		});

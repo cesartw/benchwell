@@ -1,46 +1,43 @@
 public interface Benchwell.SQL.Driver {
-	public abstract Benchwell.SQL.Connection connect(Benchwell.SQL.ConnectionInfo c) throws Benchwell.SQL.ErrorConnection;
+	public abstract Benchwell.SQL.Connection connect(Benchwell.SQL.ConnectionInfo c) throws Benchwell.SQL.Error;
 }
 
 public interface Benchwell.SQL.Connection : Object {
-	public abstract List<string> databases () throws Benchwell.SQL.ErrorQuery;
-	public abstract void use_database (string name) throws Benchwell.SQL.ErrorQuery;
+	public abstract List<string> databases () throws Benchwell.SQL.Error;
+	public abstract void use_database (string name) throws Benchwell.SQL.Error;
 	public abstract bool disconnect ();
-	public abstract void reconnect () throws Benchwell.SQL.ErrorConnection;
+	public abstract void reconnect () throws Benchwell.SQL.Error;
 
-	public abstract Benchwell.SQL.TableDef[] tables () throws Benchwell.SQL.ErrorQuery;
-	public abstract Benchwell.SQL.ColDef[] table_definition (string name) throws Benchwell.SQL.ErrorQuery;
-	public abstract void delete_table(TableDef def) throws Benchwell.SQL.ErrorQuery;
-	public abstract void truncate_table(TableDef def) throws Benchwell.SQL.ErrorQuery;
+	public abstract Benchwell.SQL.TableDef[] tables () throws Benchwell.SQL.Error;
+	public abstract Benchwell.SQL.ColDef[] table_definition (string name) throws Benchwell.SQL.Error;
+	public abstract void delete_table(TableDef def) throws Benchwell.SQL.Error;
+	public abstract void truncate_table(TableDef def) throws Benchwell.SQL.Error;
 	public abstract List<List<string?>> fetch_table(
 		string name,
 		Benchwell.SQL.CondStmt[]? conditions,
 		Benchwell.SQL.SortOption[]? opts,
 		int limit,
 		int offset
-		) throws Benchwell.SQL.ErrorQuery;
-	public abstract void update_field (string name, ColDef[] defs, string[] row) throws ErrorQuery;
-	public abstract string[] insert_record(string name, ColDef[] defs, string[] row) throws ErrorQuery;
-	public abstract void delete_record(string name, ColDef[] defs, string[] row) throws ErrorQuery;
-	public abstract string get_create_table(string name) throws ErrorQuery;
-	public abstract void query(string query, out string[] columns, out List<List<string?>> rows) throws ErrorQuery;
+		) throws Benchwell.SQL.Error;
+	public abstract void update_field (string name, ColDef[] defs, string[] row) throws Error;
+	public abstract string[] insert_record(string name, ColDef[] defs, string[] row) throws Error;
+	public abstract void delete_record(string name, ColDef[] defs, string[] row) throws Error;
+	public abstract string get_create_table(string name) throws Error;
+	public abstract void query(string query, out string[] columns, out List<List<string?>> rows) throws Error;
 	public abstract string get_insert_statement(string name, unowned ColDef[] columns, unowned string[] row);
 
-	//public abstract string get_select_statement(TableDef def) throws ErrorQuery;
-	//public abstract string update_record(string name, ColDef[] defs, string[] newrow, string[] oldrow) throws ErrorQuery; // new, oldvalues;
-	//public abstract string update_fields(string name, ColDef[] defs, string[] row, int keys) throws ErrorQuery;
+	//public abstract string get_select_statement(TableDef def) throws Error;
+	//public abstract string update_record(string name, ColDef[] defs, string[] newrow, string[] oldrow) throws Error; // new, oldvalues;
+	//public abstract string update_fields(string name, ColDef[] defs, string[] row, int keys) throws Error;
 	// NOTE: everything is an string... so ? public abstract string ParseValue(def ColDef, value string) interface{}
-	//public abstract void execute(string query, ref string lastId, ref int64 count) throws ErrorQuery;
+	//public abstract void execute(string query, ref string lastId, ref int64 count) throws Error;
 	//public abstract string name();
 	// DDL
 }
 
-public errordomain Benchwell.SQL.ErrorConnection {
-	CODE_1
-}
-
-public errordomain Benchwell.SQL.ErrorQuery {
-	CODE_1
+public errordomain Benchwell.SQL.Error {
+	CONNECTION,
+	QUERY
 }
 
 public enum Benchwell.SQL.ColType {

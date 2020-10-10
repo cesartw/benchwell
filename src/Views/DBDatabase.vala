@@ -25,7 +25,7 @@ public class Benchwell.Views.DBDatabase : Gtk.Box {
 				Benchwell.SQL.Connection connection;
 				try {
 					connection = engine.connect (c);
-				} catch (Benchwell.SQL.ErrorConnection err) {
+				} catch (Benchwell.SQL.Error err) {
 					show_error_dialog (err.message);
 					return;
 				}
@@ -46,7 +46,7 @@ public class Benchwell.Views.DBDatabase : Gtk.Box {
 					Benchwell.SQL.Connection connection;
 					try {
 						connection = engine.connect (c);
-					} catch (Benchwell.SQL.ErrorConnection err) {
+					} catch (Benchwell.SQL.Error err) {
 						show_error_dialog (err.message);
 						return;
 					}

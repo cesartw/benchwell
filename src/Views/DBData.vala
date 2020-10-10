@@ -120,8 +120,9 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 				connection.delete_table (tabledef);
 			}
 			tables.remove_selected ();
-		} catch (Benchwell.SQL.ErrorQuery err) {
+		} catch (Benchwell.SQL.Error err) {
 			result_view.show_alert (err.message);
+			return;
 		}
 	}
 
@@ -135,8 +136,9 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 
 		try {
 			connection.truncate_table (tabledef);
-		} catch (Benchwell.SQL.ErrorQuery err) {
+		} catch (Benchwell.SQL.Error err) {
 			result_view.show_alert (err.message);
+			return;
 		}
 		result_view.show_alert (_("Done"), Gtk.MessageType.INFO, true);
 	}
@@ -206,8 +208,9 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 			try {
 				data = connection.insert_record (table_def.name, result_view.table.columns, data);
 				result_view.table.update_selected_row (data);
-			} catch (Benchwell.SQL.ErrorQuery err) {
+			} catch (Benchwell.SQL.Error err) {
 				result_view.show_alert (err.message);
+				return;
 			}
 		});
 
@@ -221,8 +224,9 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 			try {
 				connection.delete_record (table_def.name, result_view.table.columns, data);
 				result_view.table.delete_selected_row ();
-			} catch (Benchwell.SQL.ErrorQuery err) {
+			} catch (Benchwell.SQL.Error err) {
 				result_view.show_alert (err.message);
+				return;
 			}
 		});
 
@@ -242,8 +246,9 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 				result_view.table.columns = cols;
 				result_view.table.data = data;
 				result_view.table.raw_mode = true;
-			} catch (Benchwell.SQL.ErrorQuery err) {
+			} catch (Benchwell.SQL.Error err) {
 				result_view.show_alert (err.message);
+				return;
 			}
 		});
 	}
@@ -276,8 +281,9 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 			tables.update_items (tt);
 
 			database_selected (dbname);
-		} catch (Benchwell.SQL.ErrorQuery err) {
+		} catch (Benchwell.SQL.Error err) {
 			result_view.show_alert (err.message);
+			return;
 		}
 		result_view.table.clear ();
 		result_view.show_alert (_("Using %s").printf (dbname), Gtk.MessageType.INFO, true);
@@ -287,8 +293,9 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 		result_view.hide_alert ();
 		try {
 			connection.update_field (table_def.name, columns, row);
-		} catch (Benchwell.SQL.ErrorQuery err) {
+		} catch (Benchwell.SQL.Error err) {
 			result_view.show_alert (err.message);
+			return;
 		}
 		result_view.show_alert (_("Updated"), Gtk.MessageType.INFO, true);
 	}
@@ -305,8 +312,9 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 															 result_view.table.get_sort_options (),
 															 page_size, current_page*page_size);
 			result_view.table.raw_mode = false;
-		} catch (Benchwell.SQL.ErrorQuery err) {
+		} catch (Benchwell.SQL.Error err) {
 			result_view.show_alert (err.message);
+			return;
 		}
 
 		result_view.show_alert (_("Loaded"), Gtk.MessageType.INFO, true);
@@ -327,8 +335,9 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 															 result_view.table.get_conditions (),
 															 result_view.table.get_sort_options (),
 															 page_size, current_page*page_size);
-			} catch (Benchwell.SQL.ErrorQuery err) {
+			} catch (Benchwell.SQL.Error err) {
 				result_view.show_alert (err.message);
+				return;
 			}
 
 			result_view.show_alert (_("Refresh"), Gtk.MessageType.INFO, true);
