@@ -112,15 +112,22 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 			return;
 		}
 
-		if (tabledef.ttype == Benchwell.SQL.TableType.Dummy) {
-			//Config.delete_query (tabledef);
-		} else {
-			connection.delete_table (tabledef);
+		result_view.hide_alert ();
+		try {
+			if (tabledef.ttype == Benchwell.SQL.TableType.Dummy) {
+				//Config.delete_query (tabledef);
+			} else {
+				connection.delete_table (tabledef);
+			}
+			tables.remove_selected ();
+		} catch (Benchwell.SQL.ErrorQuery err) {
+			result_view.show_alert (err.message);
 		}
-		tables.remove_selected ();
 	}
 
 	private void on_truncate_table () {
+		result_view.hide_alert ();
+
 		var tabledef = tables.selected_tabledef;
 		if (tabledef == null) {
 			return;
@@ -128,9 +135,10 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 
 		try {
 			connection.truncate_table (tabledef);
-		} catch (Benchwell.SQL.ErrorQuery e) {
-			stderr.printf (@"$(e.message)");
+		} catch (Benchwell.SQL.ErrorQuery err) {
+			result_view.show_alert (err.message);
 		}
+		result_view.show_alert (_("Done"), Gtk.MessageType.INFO, true);
 	}
 
 	private void build () {
@@ -188,37 +196,55 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 		database_combo.changed.connect (on_database_selected);
 
 		result_view.table.btn_save_row.clicked.connect (() => {
+			result_view.hide_alert ();
+
 			var data = result_view.table.get_selected_data ();
 			if (data == null) {
 				return;
 			}
 
-			data = connection.insert_record (table_def.name, result_view.table.columns, data);
-			result_view.table.update_selected_row (data);
+			try {
+				data = connection.insert_record (table_def.name, result_view.table.columns, data);
+				result_view.table.update_selected_row (data);
+			} catch (Benchwell.SQL.ErrorQuery err) {
+				result_view.show_alert (err.message);
+			}
 		});
 
 		result_view.table.btn_delete_row.clicked.connect (() => {
+			result_view.infobar.hide ();
+
 			var data = result_view.table.get_selected_data ();
 			if (data == null) {
 				return;
 			}
-			connection.delete_record (table_def.name, result_view.table.columns, data);
-			result_view.table.delete_selected_row ();
+			try {
+				connection.delete_record (table_def.name, result_view.table.columns, data);
+				result_view.table.delete_selected_row ();
+			} catch (Benchwell.SQL.ErrorQuery err) {
+				result_view.show_alert (err.message);
+			}
 		});
 
 		result_view.exec_query.connect ((query) => {
-			string[] columns;
-			List<List<string?>>data;
-			connection.query(query, out columns, out data);
+			result_view.infobar.hide ();
 
-			Benchwell.SQL.ColDef[] cols = {};
-			foreach (var column in columns) {
-				cols += new Benchwell.SQL.ColDef.with_name (column);
+			try {
+				string[] columns;
+				List<List<string?>>data;
+				connection.query(query, out columns, out data);
+
+				Benchwell.SQL.ColDef[] cols = {};
+				foreach (var column in columns) {
+					cols += new Benchwell.SQL.ColDef.with_name (column);
+				}
+
+				result_view.table.columns = cols;
+				result_view.table.data = data;
+				result_view.table.raw_mode = true;
+			} catch (Benchwell.SQL.ErrorQuery err) {
+				result_view.show_alert (err.message);
 			}
-
-			result_view.table.columns = cols;
-			result_view.table.data = data;
-			result_view.table.raw_mode = true;
 		});
 	}
 
@@ -234,6 +260,7 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 	}
 
 	private void on_database_selected () {
+		result_view.hide_alert ();
 		var dbname = database_combo.get_active_text ();
 		try {
 			connection.use_database (dbname);
@@ -249,16 +276,26 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 			tables.update_items (tt);
 
 			database_selected (dbname);
-		} catch (Benchwell.SQL.ErrorQuery e) {
-			stderr.printf(@"error: $(e.message)");
+		} catch (Benchwell.SQL.ErrorQuery err) {
+			result_view.show_alert (err.message);
 		}
+		result_view.table.clear ();
+		result_view.show_alert (_("Using %s").printf (dbname), Gtk.MessageType.INFO, true);
 	}
 
 	private void on_field_change(Benchwell.SQL.ColDef[] columns, string[] row) {
-		connection.update_field (table_def.name, columns, row);
+		result_view.hide_alert ();
+		try {
+			connection.update_field (table_def.name, columns, row);
+		} catch (Benchwell.SQL.ErrorQuery err) {
+			result_view.show_alert (err.message);
+		}
+		result_view.show_alert (_("Updated"), Gtk.MessageType.INFO, true);
 	}
 
 	private void on_load_table () {
+		result_view.hide_alert ();
+
 		current_page = 0;
 		table_def = tables.get_selected_table ();
 		try {
@@ -268,12 +305,16 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 															 result_view.table.get_sort_options (),
 															 page_size, current_page*page_size);
 			result_view.table.raw_mode = false;
-		} catch (Benchwell.SQL.ErrorQuery e) {
-			stderr.printf(@"error: $(e.message)");
+		} catch (Benchwell.SQL.ErrorQuery err) {
+			result_view.show_alert (err.message);
 		}
+
+		result_view.show_alert (_("Loaded"), Gtk.MessageType.INFO, true);
 	}
 
 	private void on_refresh_table () {
+		result_view.hide_alert ();
+
 		if (result_view.table.raw_mode) {
 			result_view._exec_query ();
 		} else {
@@ -281,12 +322,17 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 				return;
 			}
 
-			result_view.table.data = connection.fetch_table (table_def.name,
+			try {
+				result_view.table.data = connection.fetch_table (table_def.name,
 															 result_view.table.get_conditions (),
 															 result_view.table.get_sort_options (),
 															 page_size, current_page*page_size);
-		}
+			} catch (Benchwell.SQL.ErrorQuery err) {
+				result_view.show_alert (err.message);
+			}
 
+			result_view.show_alert (_("Refresh"), Gtk.MessageType.INFO, true);
+		}
 	}
 
 	private void on_prev_page () {
@@ -310,6 +356,8 @@ public class Benchwell.Views.DBResultView : Gtk.Paned {
 	public Benchwell.Views.DBTable table;
 	public Gtk.Button btn_load_query;
 	public Gtk.MenuButton save_menu;
+	public Gtk.InfoBar infobar;
+	public Gtk.Label infobar_label;
 
 	public signal void exec_query (string query);
 
@@ -353,6 +401,20 @@ public class Benchwell.Views.DBResultView : Gtk.Paned {
 		window.add_action (action_save_file);
 		window.add_action (action_save_fav);
 
+		infobar = new Gtk.InfoBar ();
+		var infobar_label_sw = new Gtk.ScrolledWindow (null, null);
+		infobar_label_sw.show ();
+		//infobar_label_sw.vexpand = true;
+		infobar_label_sw.hexpand = true;
+		infobar.no_show_all = true;
+		infobar.add_button (_("Ok"), Gtk.ResponseType.OK);
+
+		infobar_label = new Gtk.Label("");
+		infobar_label.wrap = true;
+		infobar_label.show ();
+		infobar_label_sw.add (infobar_label);
+		infobar.get_content_area ().add (infobar_label_sw);
+
 		var editor_actionbar = new Gtk.ActionBar ();
 		editor_actionbar.show ();
 		editor_actionbar.pack_end (save_menu);
@@ -360,25 +422,33 @@ public class Benchwell.Views.DBResultView : Gtk.Paned {
 		editor_actionbar.set_name ("queryactionbar");
 		/////////////////
 
-		var box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
-		box.pack_start (editor_sw, true, true, 0);
-		box.pack_end (editor_actionbar, false, false, 0);
-		box.show ();
+		var editor_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
+		editor_box.pack_start (editor_sw, true, true, 0);
+		editor_box.pack_end (editor_actionbar, false, false, 0);
+		editor_box.show ();
 
-		pack1 (box, false, false);
-		pack2 (table, true, false);
+		var table_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
+		table_box.vexpand = true;
+		table_box.hexpand = true;
+		table_box.pack_start (table, true, true);
+		table_box.pack_end (infobar, false, false);
+		table_box.show ();
+
+		pack1 (editor_box, false, false);
+		pack2 (table_box, true, true);
 
 		action_save_file.activate.connect (on_save_file);
 		action_save_fav.activate.connect (on_save_fav);
 		btn_load_query.clicked.connect (on_open_file);
 
 		editor.key_press_event.connect (on_editor_key_press);
+		infobar.response.connect (infobar.hide);
 	}
 
 	public void on_open_file () {
 		var dialog = new Gtk.FileChooserDialog (_("Select file"), window,
 											 Gtk.FileChooserAction.OPEN,
-											_("Ok"), Gtk.ResponseType.OK,
+											_("Open"), Gtk.ResponseType.OK,
 											_("Cancel"), Gtk.ResponseType.CANCEL);
 		var resp = (Gtk.ResponseType) dialog.run ();
 
@@ -436,6 +506,37 @@ public class Benchwell.Views.DBResultView : Gtk.Paned {
 		buffer.get_start_iter (out start);
 		buffer.get_end_iter (out end);
 		var txt = buffer.get_text (start, end, false);
+	}
+
+	public void show_alert (string message, Gtk.MessageType type = Gtk.MessageType.ERROR, bool autohide = false, int timeout = 0) {
+		infobar_label.set_text (message);
+		infobar.message_type = type;
+		infobar.show ();
+
+		if (autohide) {
+			if (timeout == 0) {
+				switch (message.split (" ").length) {
+					case 1:
+						timeout = 1000;
+						break;
+					case 2, 3:
+						timeout = 1500;
+						break;
+					default:
+						timeout = 3000;
+						break;
+				}
+			}
+
+			Timeout.add (timeout, () => {
+				infobar.hide ();
+				return false;
+			});
+		}
+	}
+
+	public void hide_alert () {
+		infobar.hide ();
 	}
 
 	private string ask_fav_name () {
@@ -755,6 +856,13 @@ public class Benchwell.Views.DBTable : Gtk.Box {
 		}
 
 		return sorts;
+	}
+
+	public void clear () {
+		if (store != null) {
+			store.clear ();
+		}
+		columns = {};
 	}
 
 	private Gtk.TreeViewColumn build_column(SQL.ColDef column, int column_index) {

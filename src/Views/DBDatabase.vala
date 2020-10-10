@@ -25,7 +25,8 @@ public class Benchwell.Views.DBDatabase : Gtk.Box {
 				Benchwell.SQL.Connection connection;
 				try {
 					connection = engine.connect (c);
-				} catch (Benchwell.SQL.ErrorConnection e) {
+				} catch (Benchwell.SQL.ErrorConnection err) {
+					show_error_dialog (err.message);
 					return;
 				}
 
@@ -45,7 +46,8 @@ public class Benchwell.Views.DBDatabase : Gtk.Box {
 					Benchwell.SQL.Connection connection;
 					try {
 						connection = engine.connect (c);
-					} catch (Benchwell.SQL.ErrorConnection e) {
+					} catch (Benchwell.SQL.ErrorConnection err) {
+						show_error_dialog (err.message);
 						return;
 					}
 
@@ -62,6 +64,12 @@ public class Benchwell.Views.DBDatabase : Gtk.Box {
 				});
 			}
 		});
+	}
+
+	public void show_error_dialog (string message) {
+		var dialog = new Gtk.MessageDialog (window, Gtk.DialogFlags.DESTROY_WITH_PARENT, Gtk.MessageType.ERROR, Gtk.ButtonsType.CLOSE, message);
+		dialog.response.connect (dialog.destroy);
+		dialog.show ();
 	}
 
 	public void show_data () {

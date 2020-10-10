@@ -1,6 +1,5 @@
 public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 	public Gtk.Notebook notebook;
-	public Gtk.Statusbar statusbar;
 	public Gtk.ComboBox env_combo;
 	public Gtk.ListStore env_store;
 	public Gtk.Button btn_env;
@@ -37,9 +36,6 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		notebook.set_property ("tab-pos", Config.tab_position());
 		notebook.show ();
 
-		statusbar = new Gtk.Statusbar ();
-		statusbar.show ();
-
 		var box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
 		box.show ();
 
@@ -74,7 +70,6 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		header.pack_end (appBtnMenu);
 
 		box.pack_start (notebook, true, true, 0);
-		box.pack_end (statusbar, false, false, 0);
 
 		add(box);
 
