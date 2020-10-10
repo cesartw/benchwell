@@ -14,6 +14,7 @@
 log.txt
 
 /vendor
+/old/
 
 testing-vm.qemu
 
@@ -22,3 +23,4 @@ assets/iconset-temp
 
 # vala
 build/
+/ignore
