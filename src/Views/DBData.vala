@@ -876,7 +876,7 @@ public class Benchwell.Views.DBTable : Gtk.Box {
 		renderer.editable = true;
 		renderer.xpad = 10;
 		renderer.height = 23;
-		renderer.cell_background = Benchwell.Colors.PkHL.to_string ();
+		renderer.cell_background = Benchwell.Colors.PKHL.to_string ();
 		renderer.cell_background_set = column.pk;
 		renderer.ellipsize = Pango.EllipsizeMode.END;
 
@@ -901,19 +901,18 @@ public class Benchwell.Views.DBTable : Gtk.Box {
 		});
 
 		// NOTE: shiiiitt. affects all cell in the column not just the one
-		//_column.set_cell_data_func (renderer, (cell_layout, cell, tree_model, iter) => {
-			//GLib.Value val;
-			//var index = column_index;
-			//tree_model.get_value (iter, index, out val);
-			//var path = tree_model.get_path (iter);
+		_column.set_cell_data_func (renderer, (cell_layout, cell, tree_model, iter) => {
+			GLib.Value val;
+			var index = column_index;
+			tree_model.get_value (iter, index, out val);
+			var path = tree_model.get_path (iter);
 
-			//if ( val.holds (GLib.Type.STRING) ) {
-				//if ( val.get_string () == Benchwell.null_string ){
-					//cell.cell_background = Benchwell.Colors.NullHL.to_string ();
-					//cell.cell_background_set = true;
-				//}
-			//}
-		//});
+			if ( val.holds (GLib.Type.STRING) ) {
+				if ( val.get_string () == Benchwell.null_string ){
+					cell.set_property ("markup", @"<span foreground=\"$(Benchwell.Colors.NULLHL.to_string ())\">&lt;NULL&gt;</span>");
+				}
+			}
+		});
 
 		renderer.edited.connect ((cell, path, new_value) => {
 			on_edited (cell, path, new_value, column_index);

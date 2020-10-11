@@ -42,10 +42,12 @@ executable(
 	'src/Widgets/MysqlForm.vala',
 	'src/Widgets/SqliteForm.vala',
 	'src/Widgets/SourceView.vala',
+	'src/Widgets/ButtonOpt.vala',
 
 	'src/Views/DBDatabase.vala',
 	'src/Views/DBConnect.vala',
 	'src/Views/DBData.vala',
+	'src/Views/HTTP.vala',
 
 	'src/Config.vala',
 	'src/Constants.vala',

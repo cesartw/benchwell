@@ -46,28 +46,28 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		header.show_close_button =true;
 		header.show ();
 
-		var windowBtnMenu = new Gtk.MenuButton();
-		windowBtnMenu.show ();
+		var window_btn_menu = new Gtk.MenuButton();
+		window_btn_menu.show ();
 
-		var addImg = new Benchwell.Image ("add-tab", Gtk.IconSize.BUTTON);
-		addImg.show ();
-		windowBtnMenu.set_image (addImg);
+		var add_img = new Benchwell.Image ("add-tab", Gtk.IconSize.BUTTON);
+		add_img.show ();
+		window_btn_menu.set_image (add_img);
 
-		var windowMenu = new GLib.Menu ();
-		windowBtnMenu.set_menu_model (windowMenu);
+		var window_menu = new GLib.Menu ();
+		window_btn_menu.set_menu_model (window_menu);
 
-		windowMenu.append (_("Window"), "app.new");
-		windowMenu.append (_("Database"), "win.new.db");
-		windowMenu.append (_("HTTP"), "win.new.http");
+		window_menu.append (_("Window"), "app.new");
+		window_menu.append (_("Database"), "win.new.db");
+		window_menu.append (_("HTTP"), "win.new.http");
 
-		var appBtnMenu = new Gtk.MenuButton ();
-		appBtnMenu.show ();
+		var app_btn_menu = new Gtk.MenuButton ();
+		app_btn_menu.show ();
 		/////////////
 
 		set_titlebar (header);
 
-		header.pack_start (windowBtnMenu);
-		header.pack_end (appBtnMenu);
+		header.pack_start (window_btn_menu);
+		header.pack_end (app_btn_menu);
 
 		box.pack_start (notebook, true, true, 0);
 
@@ -80,7 +80,8 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 			add_database_tab ();
 		});
 
-		new_tab_menu.activate.connect (() => {
+		new_http_tab_menu.activate.connect (() => {
+			add_http_tab ();
 		});
 
 		close_menu.activate.connect (() => {
@@ -117,6 +118,27 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		if (connection_info != null) {
 			database.launch_connection (connection_info, tabledef);
 		}
+	}
+
+	public void add_http_tab () {
+		var tab  = new Benchwell.Tab ();
+		tab.show ();
+
+		var http = new Benchwell.Views.Http (this);
+		http.notify["title"].connect ((s, p) => {
+			tab.label.set_text (http.title);
+			tab.label.tooltip_text = http.title;
+		});
+		http.show ();
+
+		tab.label.set_text ( http.title );
+		tab.pack_start (http, true, true, 0);
+
+		notebook.append_page (tab, tab.header);
+		tab.btn.clicked.connect( () => {
+			notebook.remove_page (notebook.page_num (tab));
+		});
+		notebook.set_current_page (notebook.get_n_pages () - 1);
 	}
 }
 
