@@ -5,12 +5,87 @@ public errordomain Benchwell.ConfigError {
 	ENVIRONMENTS
 }
 
+
+public interface Benchwell.KeyValueI {
+	public abstract string key();
+	public abstract string val();
+	public abstract bool enabled();
+	public abstract void set_key(string n);
+	public abstract void set_val(string v);
+	public abstract void set_enabled(bool e);
+}
+
+public class Benchwell.HttpCollection : Object {
+	public int64      id;
+	public string     name;
+	public int        count;
+	public HttpItem[] items;
+}
+
+public class Benchwell.HttpItem : Object {
+	public int64  id;
+	public int64  parent_id;
+	public string name;
+	public string description;
+	public bool   is_folder;
+	public int64  http_collection_id;
+	public int    sort;
+	public int64  count;
+
+	public string             method;
+	public string             url;
+	public string             body;
+	public string             mime;
+	public Benchwell.HttpKv[] headers;
+	public Benchwell.HttpKv[] query_params;
+
+	public Benchwell.HttpItem[]?  items;
+
+	internal bool                  loaded;
+}
+
+public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
+	public int64  id;
+	public string _key;
+	public string _val;
+	public bool   _enabled;
+	public string type; // header | param
+	public int    sort;
+	public int64  http_item_id;
+
+	public string key () {
+		return _key;
+	}
+
+	public string val() {
+		return _val;
+	}
+
+	public bool enabled() {
+		return _enabled;
+	}
+
+	public void set_key(string n) {
+		_key = n;
+	}
+
+	public void set_val(string v) {
+		_val = v;
+	}
+
+	public void set_enabled(bool e) {
+		_enabled = e;
+	}
+}
+
 public class Benchwell.Config : Object {
 	private static GLib.Settings settings;
 	private static Sqlite.Database db;
 	public static List<SQL.ConnectionInfo> connections;
 	public static List<SQL.Query> queries;
 	public static Secret.Schema schema;
+
+	public static List<Benchwell.HttpCollection> http_collections;
 
 	public Config () {
 		settings = new GLib.Settings ("io.benchwell");
@@ -26,6 +101,7 @@ public class Benchwell.Config : Object {
 
 		stdout.printf ("Using config db: %s\n", dbpath);
 		load_connections ();
+		load_http_collections ();
 	}
 
 	public static int window_width() {
@@ -322,5 +398,140 @@ public class Benchwell.Config : Object {
 
         return password;
     }
-}
 
+	private static void load_http_collections () throws ConfigError {
+		string errmsg;
+		var query = """SELECT id, name, count
+					 FROM http_collections
+					 ORDER BY name
+					""";
+		var ec = db.exec (query, (n_columns, values, column_names) => {
+			var collection = new Benchwell.HttpCollection ();
+			collection.id = int.parse (values[0]);
+			collection.name = values[1];
+			collection.count = int.parse (values[2]);
+
+			http_collections.append (collection);
+			return 0;
+		}, out errmsg);
+		if ( ec != Sqlite.OK ){
+			throw new ConfigError.GET_CONNECTIONS(errmsg);
+		}
+	}
+
+	public static void load_root_items (Benchwell.HttpCollection collection) {
+		string errmsg;
+		Benchwell.HttpItem[] items = {};
+		var query = """SELECT id, name, is_folder, sort, http_collections_id, method
+						FROM http_items
+						WHERE http_collections_id = %lld AND (parent_id IS NULL OR parent_id = 0)
+						ORDER BY sort ASC
+						""".printf (collection.id);
+		var ec = db.exec (query, (n_columns, values, column_names) => {
+			var item = new Benchwell.HttpItem ();
+
+			item.id = int64.parse (values[0]);
+			item.name = values[1];
+			item.is_folder = values[2] == "1";
+			item.sort = int.parse (values[3]);
+			item.http_collection_id = int64.parse (values[4]);
+			item.method = values[5];
+
+			items += item;
+
+			return 0;
+		}, out errmsg);
+		if ( ec != Sqlite.OK ){
+			throw new ConfigError.GET_CONNECTIONS(errmsg);
+		}
+
+		collection.items = items;
+	}
+
+	public static void load_full_item (Benchwell.HttpItem item) {
+		if (item.loaded) {
+			return;
+		}
+
+		string errmsg = "";
+
+		Benchwell.HttpItem[] items = {};
+		// folder
+		if (item.is_folder) {
+			var query = """SELECT id, name, parent_id, is_folder, sort,
+										http_collections_id, method
+							FROM http_items
+							WHERE http_collections_id = %lld AND parent_id = %lld
+							ORDER BY sort ASC
+							""".printf (item.http_collection_id, item.id);
+			var ec = db.exec (query, (n_columns, values, column_names) => {
+				var subitem = new Benchwell.HttpItem ();
+
+				subitem.id = int64.parse (values[0]);
+				subitem.name = values[1];
+				subitem.parent_id = int64.parse (values[2]);
+				subitem.is_folder = values[3] == "1";
+				subitem.sort = int.parse (values[4]);
+				subitem.http_collection_id = int64.parse (values[5]);
+				subitem.method = values[6];
+
+				items += subitem;
+				return 0;
+			}, out errmsg);
+			if ( ec != Sqlite.OK ){
+				throw new ConfigError.GET_CONNECTIONS(errmsg);
+			}
+
+			item.items = items;
+			return;
+		}
+
+		// request
+		var query = """SELECT ifnull(method,""), ifnull(url,""), ifnull(body, ""), ifnull(mime,"")
+				FROM http_items
+				WHERE id = %lld""".printf (item.id);
+		var ec = db.exec (query, (n_columns, values, column_names) => {
+			item.method = values[0];
+			item.url = values[1];
+			item.body = values[2];
+			item.mime = values[3];
+			return 0;
+		}, out errmsg);
+		if ( ec != Sqlite.OK ){
+			throw new ConfigError.GET_CONNECTIONS(errmsg);
+		}
+
+		Benchwell.HttpKv[] kvs = {};
+		query = """SELECT id, ifnull(key, ""), ifnull(value, ""), type, sort, enabled
+			FROM http_kvs
+			WHERE http_items_id = %lld
+			ORDER BY sort ASC""".printf (item.id);
+		ec = db.exec (query, (n_columns, values, column_names) => {
+			var kv = new Benchwell.HttpKv ();
+			kv.id = int64.parse (values[0]);
+			kv._key = values[1];
+			kv._val = values[2];
+			kv.type = values[3];
+			kv.sort = int.parse (values[4]);
+			kv._enabled = values[5] == "1";
+			kvs += kv;
+			return 0;
+		}, out errmsg);
+		if ( ec != Sqlite.OK ){
+			throw new ConfigError.GET_CONNECTIONS(errmsg);
+		}
+
+		Benchwell.HttpKv[] headers = {};
+		Benchwell.HttpKv[] query_params = {};
+		foreach (var kv in kvs) {
+			if (kv.type == "header") {
+				headers += kv;
+				continue;
+			}
+			query_params += kv;
+		}
+		item.headers = headers;
+		item.query_params = query_params;
+		item.loaded = true;
+	}
+}

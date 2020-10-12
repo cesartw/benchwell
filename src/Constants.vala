@@ -91,9 +91,11 @@ public enum Benchwell.Colors {
 		return colors[this];
 	}
 
-	public static Benchwell.Colors parse(string s) {
+	public static Benchwell.Colors? parse(string s) {
 		// NOTE: "".casefold is not supported as `case` option
 		switch (s.casefold ()) {
+			case "POST", "post":
+				return POST;
 			case "PATCH", "patch":
 				return PATCH;
 			case "PUT", "put":
@@ -108,6 +110,6 @@ public enum Benchwell.Colors {
 				return OPTIONS;
 		}
 
-		return MAIN;
+		return null;
 	}
 }

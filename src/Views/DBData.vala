@@ -289,6 +289,10 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 
 	private void on_field_change(Benchwell.SQL.ColDef[] columns, string[] row) {
 		result_view.hide_alert ();
+		if (table_def == null) {
+			result_view.show_alert (_("No table selected"), Gtk.MessageType.ERROR);
+			return;
+		}
 		try {
 			connection.update_field (table_def.name, columns, row);
 		} catch (Benchwell.SQL.Error err) {
@@ -298,8 +302,9 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 		result_view.show_alert (_("Updated"), Gtk.MessageType.INFO, true);
 	}
 
-	private void on_load_table (Benchwell.SQL.TableDef table_def) {
+	private void on_load_table (Benchwell.SQL.TableDef _table_def) {
 		result_view.hide_alert ();
+		table_def = _table_def;
 
 		current_page = 0;
 		try {

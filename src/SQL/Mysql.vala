@@ -300,7 +300,6 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 
 		var new_value = sanitize_string (row[row.length - 1]);
 		var query = @"UPDATE `$table` SET `$(columns[columns.length -1].name)` = $new_value WHERE $(string.joinv (" AND ", wheres))";
-
 		var rc = db.query (query);
 		if ( rc != 0 ) {
 			throw new Benchwell.SQL.Error.QUERY (db.error());
