@@ -1,25 +1,25 @@
-public class Benchwell.Views.DBData : Gtk.Paned {
+public class Benchwell.Database.Data : Gtk.Paned {
 	public Benchwell.ApplicationWindow window { get; construct; }
-	public Benchwell.SQL.Connection connection { get; construct; }
-	public Benchwell.SQL.ConnectionInfo connection_info { get; construct; }
+	public Benchwell.Backend.Sql.Connection connection { get; construct; }
+	public Benchwell.Backend.Sql.ConnectionInfo connection_info { get; construct; }
 
 	public Gtk.SearchEntry table_search;
 	public Gtk.ComboBoxText database_combo;
-	public Benchwell.Views.DBTables tables;
-	public Benchwell.Views.DBResultView result_view;
+	public Benchwell.Database.Tables tables;
+	public Benchwell.Database.ResultView result_view;
 
 	private Benchwell.Views.CancelOverlay overlay;
 	private List<string> databases;
-	private Benchwell.SQL.TableDef? table_def;
+	private Benchwell.Backend.Sql.TableDef? table_def;
 
 	private int current_page = 0;
 	private int page_size = 100;
 
 	public signal void database_selected(string dbname);
 
-	public DBData (Benchwell.ApplicationWindow window,
-				   Benchwell.SQL.Connection connection,
-				   Benchwell.SQL.ConnectionInfo connection_info)
+	public Data (Benchwell.ApplicationWindow window,
+				   Benchwell.Backend.Sql.Connection connection,
+				   Benchwell.Backend.Sql.ConnectionInfo connection_info)
 	{
 		Object(
 			window: window,
@@ -114,13 +114,13 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 
 		result_view.hide_alert ();
 		try {
-			if (tabledef.ttype == Benchwell.SQL.TableType.Dummy) {
+			if (tabledef.ttype == Benchwell.Backend.Sql.TableType.Dummy) {
 				//Config.delete_query (tabledef);
 			} else {
 				connection.delete_table (tabledef);
 			}
 			tables.remove_selected ();
-		} catch (Benchwell.SQL.Error err) {
+		} catch (Benchwell.Backend.Sql.Error err) {
 			result_view.show_alert (err.message);
 			return;
 		}
@@ -136,7 +136,7 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 
 		try {
 			connection.truncate_table (tabledef);
-		} catch (Benchwell.SQL.Error err) {
+		} catch (Benchwell.Backend.Sql.Error err) {
 			result_view.show_alert (err.message);
 			return;
 		}
@@ -157,7 +157,7 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 		table_search.set_placeholder_text (_("Filter table: .*"));
 		table_search.show ();
 
-		tables = new Benchwell.Views.DBTables ();
+		tables = new Benchwell.Database.Tables ();
 		tables.activate_on_single_click = false;
 		tables.show ();
 
@@ -177,7 +177,7 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 		var main_section = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
 		main_section.show ();
 
-		result_view = new Benchwell.Views.DBResultView (window);
+		result_view = new Benchwell.Database.ResultView (window);
 		result_view.show ();
 
 		main_section.add (result_view);
@@ -208,7 +208,7 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 			try {
 				data = connection.insert_record (table_def.name, result_view.table.columns, data);
 				result_view.table.update_selected_row (data);
-			} catch (Benchwell.SQL.Error err) {
+			} catch (Benchwell.Backend.Sql.Error err) {
 				result_view.show_alert (err.message);
 				return;
 			}
@@ -224,7 +224,7 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 			try {
 				connection.delete_record (table_def.name, result_view.table.columns, data);
 				result_view.table.delete_selected_row ();
-			} catch (Benchwell.SQL.Error err) {
+			} catch (Benchwell.Backend.Sql.Error err) {
 				result_view.show_alert (err.message);
 				return;
 			}
@@ -238,15 +238,15 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 				List<List<string?>>data;
 				connection.query(query, out columns, out data);
 
-				Benchwell.SQL.ColDef[] cols = {};
+				Benchwell.Backend.Sql.ColDef[] cols = {};
 				foreach (var column in columns) {
-					cols += new Benchwell.SQL.ColDef.with_name (column);
+					cols += new Benchwell.Backend.Sql.ColDef.with_name (column);
 				}
 
 				result_view.table.columns = cols;
 				result_view.table.data = data;
 				result_view.table.raw_mode = true;
-			} catch (Benchwell.SQL.Error err) {
+			} catch (Benchwell.Backend.Sql.Error err) {
 				result_view.show_alert (err.message);
 				return;
 			}
@@ -272,14 +272,14 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 			var tt = connection.tables ();
 
 			foreach (var q in connection_info.queries) {
-				var t = new Benchwell.SQL.TableDef.with_name (q.name);
-				t.ttype = Benchwell.SQL.TableType.Dummy;
+				var t = new Benchwell.Backend.Sql.TableDef.with_name (q.name);
+				t.ttype = Benchwell.Backend.Sql.TableType.Dummy;
 				tt += t;
 			}
 
 			tables.update_items (tt);
 			database_selected (dbname);
-		} catch (Benchwell.SQL.Error err) {
+		} catch (Benchwell.Backend.Sql.Error err) {
 			result_view.show_alert (err.message);
 			return;
 		}
@@ -287,7 +287,7 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 		result_view.show_alert (_("Using %s").printf (dbname), Gtk.MessageType.INFO, true);
 	}
 
-	private void on_field_change(Benchwell.SQL.ColDef[] columns, string[] row) {
+	private void on_field_change(Benchwell.Backend.Sql.ColDef[] columns, string[] row) {
 		result_view.hide_alert ();
 		if (table_def == null) {
 			result_view.show_alert (_("No table selected"), Gtk.MessageType.ERROR);
@@ -295,14 +295,14 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 		}
 		try {
 			connection.update_field (table_def.name, columns, row);
-		} catch (Benchwell.SQL.Error err) {
+		} catch (Benchwell.Backend.Sql.Error err) {
 			result_view.show_alert (err.message);
 			return;
 		}
 		result_view.show_alert (_("Updated"), Gtk.MessageType.INFO, true);
 	}
 
-	private void on_load_table (Benchwell.SQL.TableDef _table_def) {
+	private void on_load_table (Benchwell.Backend.Sql.TableDef _table_def) {
 		result_view.hide_alert ();
 		table_def = _table_def;
 
@@ -314,7 +314,7 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 															 result_view.table.get_sort_options (),
 															 page_size, current_page*page_size);
 			result_view.table.raw_mode = false;
-		} catch (Benchwell.SQL.Error err) {
+		} catch (Benchwell.Backend.Sql.Error err) {
 			result_view.show_alert (err.message);
 			return;
 		}
@@ -337,7 +337,7 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 															 result_view.table.get_conditions (),
 															 result_view.table.get_sort_options (),
 															 page_size, current_page*page_size);
-			} catch (Benchwell.SQL.Error err) {
+			} catch (Benchwell.Backend.Sql.Error err) {
 				result_view.show_alert (err.message);
 				return;
 			}
@@ -361,10 +361,10 @@ public class Benchwell.Views.DBData : Gtk.Paned {
 	}
 }
 
-public class Benchwell.Views.DBResultView : Gtk.Paned {
+public class Benchwell.Database.ResultView : Gtk.Paned {
 	public Benchwell.ApplicationWindow window { get; construct; }
 	public Gtk.SourceView editor;
-	public Benchwell.Views.DBTable table;
+	public Benchwell.Database.Table table;
 	public Gtk.Button btn_load_query;
 	public Gtk.MenuButton save_menu;
 	public Gtk.InfoBar infobar;
@@ -376,13 +376,13 @@ public class Benchwell.Views.DBResultView : Gtk.Paned {
 		set { table.data = value; }
 	}
 
-	public DBResultView (Benchwell.ApplicationWindow window) {
+	public ResultView (Benchwell.ApplicationWindow window) {
 		Object (
 			window: window,
 			orientation: Gtk.Orientation.VERTICAL
 		);
 
-		table = new Benchwell.Views.DBTable (window);
+		table = new Benchwell.Database.Table (window);
 		table.show ();
 
 		// editor
@@ -601,7 +601,7 @@ public class Benchwell.Views.DBResultView : Gtk.Paned {
 	}
 }
 
-public class Benchwell.Views.DBTable : Gtk.Box {
+public class Benchwell.Database.Table : Gtk.Box {
 	public Benchwell.ApplicationWindow window { get; construct; }
 	private bool _raw_mode = false;
 	public bool raw_mode {
@@ -631,8 +631,8 @@ public class Benchwell.Views.DBTable : Gtk.Box {
 	public Gtk.Button btn_delete_row;
 	public Gtk.Button btn_save_row;
 	public Gtk.SearchEntry search;
-	public Benchwell.Views.DBConditions conditions;
-	public Benchwell.SQL.ColDef[] columns {
+	public Benchwell.Database.Conditions conditions;
+	public Benchwell.Backend.Sql.ColDef[] columns {
 		get { return _columns; }
 		set { _columns = value; _update_columns (); }
 	}
@@ -641,11 +641,11 @@ public class Benchwell.Views.DBTable : Gtk.Box {
 			_update_data (value);
 		}
 	}
-	private Benchwell.SQL.ColDef[] _columns;
+	private Benchwell.Backend.Sql.ColDef[] _columns;
 
-	public signal void field_change (Benchwell.SQL.ColDef[] column, string[] row);
+	public signal void field_change (Benchwell.Backend.Sql.ColDef[] column, string[] row);
 
-	public DBTable (Benchwell.ApplicationWindow window) {
+	public Table (Benchwell.ApplicationWindow window) {
 		Object (
 			window: window,
 			orientation: Gtk.Orientation.VERTICAL
@@ -716,7 +716,7 @@ public class Benchwell.Views.DBTable : Gtk.Box {
 		table_actionbar.pack_end (btn_prev);
 		////////////
 
-		conditions = new Benchwell.Views.DBConditions ();
+		conditions = new Benchwell.Database.Conditions ();
 
 		pack_start (table_actionbar, false, false, 0);
 		pack_start (conditions, false,false, 5);
@@ -846,8 +846,8 @@ public class Benchwell.Views.DBTable : Gtk.Box {
 		store.set (iter, i, 0);
 	}
 
-	public Benchwell.SQL.SortOption[] get_sort_options () {
-		Benchwell.SQL.SortOption[] sorts = {};
+	public Benchwell.Backend.Sql.SortOption[] get_sort_options () {
+		Benchwell.Backend.Sql.SortOption[] sorts = {};
 
 		for (var i = 0; i < table.get_n_columns (); i++) {
 			var col = table.get_column (i);
@@ -858,10 +858,10 @@ public class Benchwell.Views.DBTable : Gtk.Box {
 
 			switch (col.get_sort_order ()) {
 			case Gtk.SortType.DESCENDING:
-				sorts += new Benchwell.SQL.SortOption(columns[i], Benchwell.SQL.SortType.Asc);
+				sorts += new Benchwell.Backend.Sql.SortOption(columns[i], Benchwell.Backend.Sql.SortType.Asc);
 				break;
 			case Gtk.SortType.ASCENDING:
-				sorts += new Benchwell.SQL.SortOption(columns[i], Benchwell.SQL.SortType.Desc);
+				sorts += new Benchwell.Backend.Sql.SortOption(columns[i], Benchwell.Backend.Sql.SortType.Desc);
 				break;
 			}
 		}
@@ -876,7 +876,7 @@ public class Benchwell.Views.DBTable : Gtk.Box {
 		columns = {};
 	}
 
-	private Gtk.TreeViewColumn build_column(SQL.ColDef column, int column_index) {
+	private Gtk.TreeViewColumn build_column(Benchwell.Backend.Sql.ColDef column, int column_index) {
 		var renderer = new Gtk.CellRendererText ();
 		renderer.editable = true;
 		renderer.xpad = 10;
@@ -1014,7 +1014,7 @@ public class Benchwell.Views.DBTable : Gtk.Box {
 		}
 	}
 
-	public Benchwell.SQL.CondStmt[] get_conditions () {
+	public Benchwell.Backend.Sql.CondStmt[] get_conditions () {
 		return conditions.get_conditions ();
 	}
 
@@ -1035,7 +1035,7 @@ public class Benchwell.Views.DBTable : Gtk.Box {
 
 
 		// update record
-		Benchwell.SQL.ColDef[] pks = {};
+		Benchwell.Backend.Sql.ColDef[] pks = {};
 		string[] values = {};
 		var col_id = 0;
 
@@ -1085,15 +1085,15 @@ public class Benchwell.Views.DBTable : Gtk.Box {
 	}
 }
 
-public class Benchwell.Views.DBCondition {
+public class Benchwell.Database.Condition {
 	public Gtk.Switch active_switch;
 	public Gtk.ListStore store;
 	public Gtk.ComboBox field_combo;
 	public Gtk.ComboBoxText operator_combo;
 	public Gtk.Entry value_entry;
 	public Benchwell.Button remove_btn;
-	private Benchwell.SQL.ColDef[] _columns;
-	public Benchwell.SQL.ColDef[] columns {
+	private Benchwell.Backend.Sql.ColDef[] _columns;
+	public Benchwell.Backend.Sql.ColDef[] columns {
 		get { return _columns; }
 		set {
 			// keep active field before replace columns
@@ -1120,7 +1120,7 @@ public class Benchwell.Views.DBCondition {
 
 	public signal void search();
 
-	public DBCondition () {
+	public Condition () {
 		store = new Gtk.ListStore (1, GLib.Type.STRING);
 		Gtk.TreeIter iter;
 		store.append (out iter);
@@ -1148,7 +1148,7 @@ public class Benchwell.Views.DBCondition {
 		entry.set_completion (completion);
 
 		operator_combo = new Gtk.ComboBoxText ();
-		foreach (var op in Benchwell.SQL.Operator.all ()) {
+		foreach (var op in Benchwell.Backend.Sql.Operator.all ()) {
 			operator_combo.append (op.to_string(), op.to_string ());
 		}
 		operator_combo.set_active (0);
@@ -1161,13 +1161,13 @@ public class Benchwell.Views.DBCondition {
 		remove_btn.show ();
 
 		operator_combo.changed.connect (() => {
-			var op = Benchwell.SQL.Operator.parse (operator_combo.get_active_text ());
+			var op = Benchwell.Backend.Sql.Operator.parse (operator_combo.get_active_text ());
 			value_entry.sensitive = true;
 
-			if (op == Benchwell.SQL.Operator.IsNull) {
+			if (op == Benchwell.Backend.Sql.Operator.IsNull) {
 				value_entry.sensitive = false;
 			}
-			if (op == Benchwell.SQL.Operator.IsNotNull) {
+			if (op == Benchwell.Backend.Sql.Operator.IsNotNull) {
 				value_entry.sensitive = false;
 			}
 		});
@@ -1176,7 +1176,7 @@ public class Benchwell.Views.DBCondition {
 		value_entry.activate.connect( () => { search (); });
 	}
 
-	public Benchwell.SQL.CondStmt? get_condition () {
+	public Benchwell.Backend.Sql.CondStmt? get_condition () {
 		if (!active_switch.get_active () || !active_switch.sensitive) {
 			return null;
 		}
@@ -1192,7 +1192,7 @@ public class Benchwell.Views.DBCondition {
 		if (column_name == "" || column_name == null) {
 			return null;
 		}
-		Benchwell.SQL.ColDef? column = null;
+		Benchwell.Backend.Sql.ColDef? column = null;
 		foreach (var c in columns) {
 			if (c.name == column_name) {
 				column = c;
@@ -1207,17 +1207,17 @@ public class Benchwell.Views.DBCondition {
 		if (op == null || op == "") {
 			return null;
 		}
-		var operator = Benchwell.SQL.Operator.parse (op);
+		var operator = Benchwell.Backend.Sql.Operator.parse (op);
 		if (operator == null) {
 			return null;
 		}
 
 		var cvalue = value_entry.get_text ();
-		if (cvalue == null && operator != Benchwell.SQL.Operator.IsNull && operator != Benchwell.SQL.Operator.IsNotNull) {
+		if (cvalue == null && operator != Benchwell.Backend.Sql.Operator.IsNull && operator != Benchwell.Backend.Sql.Operator.IsNotNull) {
 			return null;
 		}
 
-		var stmt = new Benchwell.SQL.CondStmt ();
+		var stmt = new Benchwell.Backend.Sql.CondStmt ();
 		stmt.field = column;
 		stmt.op = operator;
 		stmt.val = cvalue;
@@ -1246,10 +1246,10 @@ public class Benchwell.Views.DBCondition {
 	}
 }
 
-public class Benchwell.Views.DBConditions : Gtk.Grid {
-	private List<Benchwell.Views.DBCondition> conditions;
-	private Benchwell.SQL.ColDef[] _columns;
-	public Benchwell.SQL.ColDef[] columns {
+public class Benchwell.Database.Conditions : Gtk.Grid {
+	private List<Benchwell.Database.Condition> conditions;
+	private Benchwell.Backend.Sql.ColDef[] _columns;
+	public Benchwell.Backend.Sql.ColDef[] columns {
 		get { return _columns; }
 		set {
 			_columns = value;
@@ -1261,7 +1261,7 @@ public class Benchwell.Views.DBConditions : Gtk.Grid {
 
 	public signal void search();
 
-	public DBConditions () {
+	public Conditions () {
 		Object (
 			row_spacing: 5,
 			column_spacing: 5
@@ -1271,7 +1271,7 @@ public class Benchwell.Views.DBConditions : Gtk.Grid {
 	}
 
 	public void add_condition () {
-		var cond = new Benchwell.Views.DBCondition ();
+		var cond = new Benchwell.Database.Condition ();
 		cond.columns = _columns;
 
 		var y = (int) conditions.length ();
@@ -1323,8 +1323,8 @@ public class Benchwell.Views.DBConditions : Gtk.Grid {
 		});
 	}
 
-	public Benchwell.SQL.CondStmt[] get_conditions () {
-		Benchwell.SQL.CondStmt[] stmts = {};
+	public Benchwell.Backend.Sql.CondStmt[] get_conditions () {
+		Benchwell.Backend.Sql.CondStmt[] stmts = {};
 
 		conditions.foreach( (condition) => {
 			var c = condition.get_condition ();
@@ -1337,7 +1337,7 @@ public class Benchwell.Views.DBConditions : Gtk.Grid {
 	}
 }
 
-public class Benchwell.Views.DBTables : Gtk.ListBox {
+public class Benchwell.Database.Tables : Gtk.ListBox {
 	private Gtk.Menu menu;
 	public Gtk.MenuItem edit_menu;
 	public Gtk.MenuItem new_tab_menu;
@@ -1346,9 +1346,9 @@ public class Benchwell.Views.DBTables : Gtk.ListBox {
 	public Gtk.MenuItem delete_menu;
 	public Gtk.MenuItem refresh_menu;
 	//public Gtk.MenuItem copy_select_menu;
-	public Benchwell.SQL.TableDef[] _tables;
+	public Benchwell.Backend.Sql.TableDef[] _tables;
 	public Regex? filter;
-	public Benchwell.SQL.TableDef? selected_tabledef {
+	public Benchwell.Backend.Sql.TableDef? selected_tabledef {
 		get {
 			var row = get_selected_row ();
 			if (row.get_index () < 0) {
@@ -1371,9 +1371,9 @@ public class Benchwell.Views.DBTables : Gtk.ListBox {
 			}
 		}
 	}
-	public signal void table_selected (Benchwell.SQL.TableDef tabledef);
+	public signal void table_selected (Benchwell.Backend.Sql.TableDef tabledef);
 
-	public DBTables () {
+	public Tables () {
 		Object ();
 
 		menu = new Gtk.Menu ();
@@ -1441,7 +1441,7 @@ public class Benchwell.Views.DBTables : Gtk.ListBox {
 		table_selected (get_selected_table ());
 	}
 
-	public void update_items (owned Benchwell.SQL.TableDef[] tables, string name = "") {
+	public void update_items (owned Benchwell.Backend.Sql.TableDef[] tables, string name = "") {
 		_tables = (owned) tables;
 
 		get_children().foreach( (row) => {
@@ -1457,7 +1457,7 @@ public class Benchwell.Views.DBTables : Gtk.ListBox {
 		};
 	}
 
-	private Gtk.ListBoxRow build_row (Benchwell.SQL.TableDef def) {
+	private Gtk.ListBoxRow build_row (Benchwell.Backend.Sql.TableDef def) {
 		var row = new Gtk.ListBoxRow ();
 		row.show ();
 
@@ -1469,7 +1469,7 @@ public class Benchwell.Views.DBTables : Gtk.ListBox {
 		label.show ();
 
 		var icon_name = "table";
-		if (def.ttype == Benchwell.SQL.TableType.Dummy) {
+		if (def.ttype == Benchwell.Backend.Sql.TableType.Dummy) {
 			icon_name = "table-v";
 		}
 		var image = new Benchwell.Image (icon_name, Gtk.IconSize.BUTTON);
@@ -1494,7 +1494,7 @@ public class Benchwell.Views.DBTables : Gtk.ListBox {
 		return filter.match (lbl.get_label ());
 	}
 
-	public unowned Benchwell.SQL.TableDef get_selected_table () {
+	public unowned Benchwell.Backend.Sql.TableDef get_selected_table () {
 		var row = get_selected_row ();
 		return _tables[row.get_index ()];
 	}
@@ -1508,7 +1508,7 @@ public class Benchwell.Views.DBTables : Gtk.ListBox {
 
 		remove (row);
 
-		Benchwell.SQL.TableDef[] new_tables = {};
+		Benchwell.Backend.Sql.TableDef[] new_tables = {};
 		for (var i = 0; i < _tables.length; i++ ){
 			if (i == index) {
 				continue;

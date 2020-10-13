@@ -1,6 +1,6 @@
-public class Benchwell.Views.DBConnect : Gtk.Paned {
+public class Benchwell.Database.Connect : Gtk.Paned {
 	public Benchwell.ApplicationWindow window { get; construct; }
-	public Benchwell.Views.DBConnectionList connections;
+	public Benchwell.Database.ConnectionList connections;
 	public string title;
 
 	// form buttons
@@ -12,9 +12,9 @@ public class Benchwell.Views.DBConnect : Gtk.Paned {
 	private MysqlForm mysql;
 	private SQLiteForm sqlite;
 
-	public signal void dbconnect(Benchwell.SQL.ConnectionInfo c);
+	public signal void dbconnect(Benchwell.Backend.Sql.ConnectionInfo c);
 
-	public DBConnect (Benchwell.ApplicationWindow window) {
+	public Connect (Benchwell.ApplicationWindow window) {
 		Object(
 			window: window,
 			orientation: Gtk.Orientation.HORIZONTAL
@@ -29,7 +29,7 @@ public class Benchwell.Views.DBConnect : Gtk.Paned {
 		var leftsw = new Gtk.ScrolledWindow (null, null);
 		leftsw.show ();
 
-		connections = new Benchwell.Views.DBConnectionList ();
+		connections = new Benchwell.Database.ConnectionList ();
 		connections.set_hexpand (true);
 		connections.set_vexpand (true);
 		connections.show ();
@@ -95,7 +95,7 @@ public class Benchwell.Views.DBConnect : Gtk.Paned {
 		enable_buttons (false);
 
 		mysql.changed.connect ((conn) => {
-			var ok = SQL.MysqlDB.validate_connection (conn);
+			var ok = Benchwell.Backend.Sql.MysqlDB.validate_connection (conn);
 			enable_buttons (ok);
 		});
 
@@ -104,7 +104,7 @@ public class Benchwell.Views.DBConnect : Gtk.Paned {
 			dbconnect (c);
 		});
 
-		var engine = new SQL.Engine ();
+		var engine = new Benchwell.Backend.Sql.Engine ();
 		btn_test.clicked.connect (() => {
 			var c = get_connection ();
 			if (c == null) {
@@ -113,7 +113,7 @@ public class Benchwell.Views.DBConnect : Gtk.Paned {
 
 			try {
 				engine.connect (c);
-			} catch (Benchwell.SQL.Error e) {
+			} catch (Benchwell.Backend.Sql.Error e) {
 				//info_message (e.message, Gtk.MessageType.ERROR);
 			}
 		});
@@ -124,7 +124,7 @@ public class Benchwell.Views.DBConnect : Gtk.Paned {
 		});
 	}
 
-	public SQL.ConnectionInfo? get_connection () {
+	public Benchwell.Backend.Sql.ConnectionInfo? get_connection () {
 		switch (stack.get_visible_child_name ()) {
 			case "mysql":
 				return mysql.get_connection ();
@@ -163,7 +163,7 @@ public class Benchwell.Views.DBConnect : Gtk.Paned {
 				break;
 		}
 
-		var ok = SQL.MysqlDB.validate_connection (conn);
+		var ok = Benchwell.Backend.Sql.MysqlDB.validate_connection (conn);
 		enable_buttons (ok);
 	}
 
@@ -184,7 +184,7 @@ public class Benchwell.Views.DBConnect : Gtk.Paned {
 	}
 }
 
-public class Benchwell.Views.DBConnectionList : Gtk.ListBox {
+public class Benchwell.Database.ConnectionList : Gtk.ListBox {
 	// connection menu
 	private Gtk.Menu menu;
 	private Gtk.MenuItem menu_new;
@@ -194,7 +194,7 @@ public class Benchwell.Views.DBConnectionList : Gtk.ListBox {
 
 	//public Regex? filter { get; set; }
 
-	public DBConnectionList () {
+	public ConnectionList () {
 		Object();
 
 		set_property ("activate-on-single-click", false);
@@ -252,7 +252,7 @@ public class Benchwell.Views.DBConnectionList : Gtk.ListBox {
 		});
 	}
 
-	private Gtk.ListBoxRow build_row (SQL.ConnectionInfo item) {
+	private Gtk.ListBoxRow build_row (Benchwell.Backend.Sql.ConnectionInfo item) {
 		var row = new Gtk.ListBoxRow ();
 		row.show ();
 
@@ -275,7 +275,7 @@ public class Benchwell.Views.DBConnectionList : Gtk.ListBox {
 	}
 
 	private void on_new () {
-		var c = new Benchwell.SQL.ConnectionInfo();
+		var c = new Benchwell.Backend.Sql.ConnectionInfo();
 		c.name = _("New connection");
 		c.adapter = "mysql";
 		c.ttype = "tcp";

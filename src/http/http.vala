@@ -5,18 +5,18 @@ enum Benchwell.HttpColumns {
 	METHOD
 }
 
-public class Benchwell.Views.Http : Gtk.Paned {
+public class Benchwell.Http.Http : Gtk.Paned {
 	public Benchwell.ApplicationWindow    window { get; construct; }
 	public string                         title;
-	public Benchwell.Views.HttpSideBar    sidebar;
-	public Benchwell.Views.HttpAddressBar address;
+	public Benchwell.Http.HttpSideBar    sidebar;
+	public Benchwell.Http.HttpAddressBar address;
 
 	// request
 	public Benchwell.SourceView       body;
 	public Gtk.ComboBoxText           mime;
 	public Gtk.Label                  body_size;
-	public Benchwell.Views.KeyValues  headers;
-	public Benchwell.Views.KeyValues  query_params;
+	public Benchwell.Http.KeyValues  headers;
+	public Benchwell.Http.KeyValues  query_params;
 	//////////
 
 	// response
@@ -35,10 +35,10 @@ public class Benchwell.Views.Http : Gtk.Paned {
 
 		title = _("HTTP");
 
-		sidebar = new Benchwell.Views.HttpSideBar ();
+		sidebar = new Benchwell.Http.HttpSideBar ();
 		sidebar.show ();
 
-		address = new Benchwell.Views.HttpAddressBar ();
+		address = new Benchwell.Http.HttpAddressBar ();
 		address.show ();
 
 		// request
@@ -72,10 +72,10 @@ public class Benchwell.Views.Http : Gtk.Paned {
 		body_size = new Gtk.Label ("0KB");
 		body_size.show ();
 
-		headers = new Benchwell.Views.KeyValues ();
+		headers = new Benchwell.Http.KeyValues ();
 		headers.show ();
 
-		query_params = new Benchwell.Views.KeyValues ();
+		query_params = new Benchwell.Http.KeyValues ();
 		query_params.show ();
 
 		mime = new Gtk.ComboBoxText ();
@@ -221,7 +221,7 @@ public class Benchwell.Views.Http : Gtk.Paned {
 	}
 }
 
-public class Benchwell.Views.HttpSideBar : Gtk.Box {
+public class Benchwell.Http.HttpSideBar : Gtk.Box {
 	public Gtk.TreeView treeview;
 	public Gtk.TreeStore store;
 	public Gtk.ComboBoxText collections_combo;
@@ -366,7 +366,7 @@ public class Benchwell.Views.HttpSideBar : Gtk.Box {
 
 			try {
 				Config.load_root_items (collection);
-			} catch (Benchwell.SQL.Error err) {
+			} catch (Benchwell.Backend.Sql.Error err) {
 				//result_view.show_alert (err.message);
 				stderr.printf (err.message);
 				return;
@@ -430,7 +430,7 @@ public class Benchwell.Views.HttpSideBar : Gtk.Box {
 	}
 }
 
-public class Benchwell.Views.HttpAddressBar : Gtk.Box {
+public class Benchwell.Http.HttpAddressBar : Gtk.Box {
 	public Gtk.ComboBoxText method_combo;
 	public Gtk.Entry address;
 	public Gtk.Button send_btn;
@@ -474,7 +474,7 @@ public class Benchwell.Views.HttpAddressBar : Gtk.Box {
 	}
 }
 
-public class Benchwell.Views.KeyValues : Gtk.Box {
+public class Benchwell.Http.KeyValues : Gtk.Box {
 	public KeyValues () {
 		Object (
 			orientation: Gtk.Orientation.VERTICAL,
@@ -485,7 +485,7 @@ public class Benchwell.Views.KeyValues : Gtk.Box {
 	}
 
 	public void add (KeyValueI? kvi) {
-		var kv = new Benchwell.Views.KeyValue ();
+		var kv = new Benchwell.Http.KeyValue ();
 		kv.show ();
 
 		if (kvi != null) {
@@ -533,7 +533,7 @@ public class Benchwell.Views.KeyValues : Gtk.Box {
 	}
 }
 
-public class Benchwell.Views.KeyValue : Gtk.Box {
+public class Benchwell.Http.KeyValue : Gtk.Box {
 	public Gtk.Switch enabled;
 	public Gtk.Entry        key;
 	public Gtk.Entry        val;

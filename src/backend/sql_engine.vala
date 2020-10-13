@@ -1,6 +1,6 @@
-namespace Benchwell.SQL {
+namespace Benchwell.Backend.Sql {
 	public class Engine {
-		public Connection? connect (ConnectionInfo info) throws Error {
+		public Benchwell.Backend.Sql.Connection? connect (Benchwell.Backend.Sql.ConnectionInfo info) throws Error {
 			switch (info.adapter) {
 				case "mysql":
 					var driver = new MysqlDB ();

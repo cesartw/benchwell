@@ -95,11 +95,11 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		);
 	}
 
-	public void add_database_tab (Benchwell.SQL.ConnectionInfo? connection_info=null, Benchwell.SQL.TableDef? tabledef = null) {
+	public void add_database_tab (Benchwell.Backend.Sql.ConnectionInfo? connection_info=null, Benchwell.Backend.Sql.TableDef? tabledef = null) {
 		var tab  = new Benchwell.Tab ();
 		tab.show ();
 
-		var database = new Benchwell.Views.DBDatabase (this);
+		var database = new Benchwell.Database.Database (this);
 		database.notify["title"].connect ((s, p) => {
 			tab.label.set_text (database.title);
 			tab.label.tooltip_text = database.title;
@@ -124,7 +124,7 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		var tab  = new Benchwell.Tab ();
 		tab.show ();
 
-		var http = new Benchwell.Views.Http (this);
+		var http = new Benchwell.Http.Http (this);
 		http.notify["title"].connect ((s, p) => {
 			tab.label.set_text (http.title);
 			tab.label.tooltip_text = http.title;

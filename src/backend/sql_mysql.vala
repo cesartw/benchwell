@@ -1,9 +1,9 @@
-public class Benchwell.SQL.MysqlDB : Benchwell.SQL.Driver {
-	public Benchwell.SQL.Connection connect (Benchwell.SQL.ConnectionInfo c) throws Benchwell.SQL.Error {
+public class Benchwell.Backend.Sql.MysqlDB : Benchwell.Backend.Sql.Driver {
+	public Benchwell.Backend.Sql.Connection connect (Benchwell.Backend.Sql.ConnectionInfo c) throws Benchwell.Backend.Sql.Error {
 		return new MysqlConnection (c);
 	}
 
-	public static bool validate_connection (Benchwell.SQL.ConnectionInfo c) {
+	public static bool validate_connection (Benchwell.Backend.Sql.ConnectionInfo c) {
 		if ( c == null ) {
 			return false;
 		}
@@ -46,25 +46,25 @@ public class Benchwell.SQL.MysqlDB : Benchwell.SQL.Driver {
 	}
 }
 
-public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
+public class Benchwell.Backend.Sql.MysqlConnection : Benchwell.Backend.Sql.Connection, Object {
 	private Mysql.Database db;
-	public Benchwell.SQL.ConnectionInfo info;
+	public Benchwell.Backend.Sql.ConnectionInfo info;
 
-	public MysqlConnection (Benchwell.SQL.ConnectionInfo c) throws Benchwell.SQL.Error {
+	public MysqlConnection (Benchwell.Backend.Sql.ConnectionInfo c) throws Benchwell.Backend.Sql.Error {
 		info = c;
 		db = new Mysql.Database ();
 
 		Mysql.ClientFlag cflag = Mysql.ClientFlag.MULTI_STATEMENTS;
 		var isConnected = db.real_connect (info.host, info.user, info.password, info.database, info.port, null, cflag);
 		if ( ! isConnected ) {
-			throw new Benchwell.SQL.Error.CONNECTION (@"$(db.errno()): $(db.error())");
+			throw new Benchwell.Backend.Sql.Error.CONNECTION (@"$(db.errno()): $(db.error())");
 		}
 		db.options (Mysql.Option.OPT_RECONNECT, "1");
 	}
 
-	public List<string> databases () throws Benchwell.SQL.Error {
+	public List<string> databases () throws Benchwell.Backend.Sql.Error {
 		if (db.ping () != 0) {
-			throw new Benchwell.SQL.Error.CONNECTION (@"connection lost");
+			throw new Benchwell.Backend.Sql.Error.CONNECTION (@"connection lost");
 		}
 
 		var result = db.list_dbs ();
@@ -78,14 +78,14 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		return databases;
 	}
 
-	public void use_database (string name) throws Benchwell.SQL.Error {
+	public void use_database (string name) throws Benchwell.Backend.Sql.Error {
 		if (db.ping () != 0) {
-			throw new Benchwell.SQL.Error.CONNECTION(@"connection lost");
+			throw new Benchwell.Backend.Sql.Error.CONNECTION(@"connection lost");
 		}
 
 		var rc = db.select_db (name);
 		if ( rc != 0 ) {
-			throw new Benchwell.SQL.Error.QUERY("failed query");
+			throw new Benchwell.Backend.Sql.Error.QUERY("failed query");
 		}
 	}
 
@@ -93,12 +93,12 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		return true;
 	}
 
-	public void reconnect () throws Benchwell.SQL.Error {
+	public void reconnect () throws Benchwell.Backend.Sql.Error {
 	}
 
-	public TableDef[] tables () throws Benchwell.SQL.Error {
+	public TableDef[] tables () throws Benchwell.Backend.Sql.Error {
 		if (db.ping () != 0) {
-			throw new Benchwell.SQL.Error.QUERY(@"connection lost");
+			throw new Benchwell.Backend.Sql.Error.QUERY(@"connection lost");
 		}
 
 		var result = db.list_tables ();
@@ -111,11 +111,11 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 			};
 
 			if ( row[0] == "VIEW" ) {
-				def.ttype = Benchwell.SQL.TableType.View;
+				def.ttype = Benchwell.Backend.Sql.TableType.View;
 			}
 
 			if ( row[0] == "BASE TABLE" ) {
-				def.ttype = Benchwell.SQL.TableType.Regular;
+				def.ttype = Benchwell.Backend.Sql.TableType.Regular;
 			}
 
 			tables += def;
@@ -124,9 +124,9 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		return tables;
 	}
 
-	public owned ColDef[] table_definition(string name) throws Benchwell.SQL.Error {
+	public owned ColDef[] table_definition(string name) throws Benchwell.Backend.Sql.Error {
 		if (db.ping () != 0) {
-			throw new Benchwell.SQL.Error.CONNECTION(@"connection lost");
+			throw new Benchwell.Backend.Sql.Error.CONNECTION(@"connection lost");
 		}
 
 		var query = @"DESCRIBE $name";
@@ -135,18 +135,18 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 
 		var rc = db.query (query);
 		if ( rc != 0 ) {
-			throw new Benchwell.SQL.Error.QUERY("failed query");
+			throw new Benchwell.Backend.Sql.Error.QUERY("failed query");
 		}
 
-		Benchwell.SQL.ColDef[] cols = {};
+		Benchwell.Backend.Sql.ColDef[] cols = {};
 		var result = db.use_result ();
 		while ( ( row = result.fetch_row () ) != null ) {
-			Benchwell.SQL.ColDef col = new Benchwell.SQL.ColDef ();
+			Benchwell.Backend.Sql.ColDef col = new Benchwell.Backend.Sql.ColDef ();
 			col.name = row[0];
 			col.nullable = row[2] == "YES";
 			col.pk = row[3] == "PRI";
 
-			var coltype = Benchwell.SQL.ColType.String;
+			var coltype = Benchwell.Backend.Sql.ColType.String;
 			int precision = 0;
 			bool unsigned = false;
 			string[] options = null;
@@ -163,39 +163,39 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		return cols;
 	}
 
-	public void delete_table(Benchwell.SQL.TableDef def) throws Benchwell.SQL.Error {
+	public void delete_table(Benchwell.Backend.Sql.TableDef def) throws Benchwell.Backend.Sql.Error {
 		if (db.ping () != 0) {
-			throw new Benchwell.SQL.Error.CONNECTION(@"connection lost");
+			throw new Benchwell.Backend.Sql.Error.CONNECTION(@"connection lost");
 		}
 
 		switch ( def.ttype ) {
-			case Benchwell.SQL.TableType.Dummy:
+			case Benchwell.Backend.Sql.TableType.Dummy:
 				// TODO: delete from config;
 				break;
 			default:
 				var query = @"DROP TABLE $(def.name)";
 				var rc = db.query(query);
 				if ( rc != 0 ) {
-					throw new Benchwell.SQL.Error.QUERY("failed to drop table");
+					throw new Benchwell.Backend.Sql.Error.QUERY("failed to drop table");
 				}
 				break;
 		}
 	}
 
-	public void truncate_table(Benchwell.SQL.TableDef def) throws Benchwell.SQL.Error {
+	public void truncate_table(Benchwell.Backend.Sql.TableDef def) throws Benchwell.Backend.Sql.Error {
 		if (db.ping () != 0) {
-			throw new Benchwell.SQL.Error.CONNECTION(@"connection lost");
+			throw new Benchwell.Backend.Sql.Error.CONNECTION(@"connection lost");
 		}
 
 		switch ( def.ttype ) {
-			case Benchwell.SQL.TableType.Dummy:
+			case Benchwell.Backend.Sql.TableType.Dummy:
 				// TODO: delete from config;
 				break;
 			default:
 				var query = @"TRUNCATE TABLE `$(def.name)`";
 				var rc = db.query(query);
 				if ( rc != 0 ) {
-					throw new Benchwell.SQL.Error.QUERY("failed to truncate table");
+					throw new Benchwell.Backend.Sql.Error.QUERY("failed to truncate table");
 				}
 				break;
 		}
@@ -203,35 +203,35 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 
 	public List<List<string?>> fetch_table (
 		string name,
-		Benchwell.SQL.CondStmt[]? conditions,
-		Benchwell.SQL.SortOption[]? sorts,
+		Benchwell.Backend.Sql.CondStmt[]? conditions,
+		Benchwell.Backend.Sql.SortOption[]? sorts,
 		int limit,
 		int offset
-	) throws Benchwell.SQL.Error {
+	) throws Benchwell.Backend.Sql.Error {
 		if (db.ping () != 0) {
-			throw new Benchwell.SQL.Error.CONNECTION(@"connection lost");
+			throw new Benchwell.Backend.Sql.Error.CONNECTION(@"connection lost");
 		}
 
 		string[] wheres = {};
 		int i = 0;
 
-		foreach (Benchwell.SQL.CondStmt cond in conditions) {
+		foreach (Benchwell.Backend.Sql.CondStmt cond in conditions) {
 			if ( cond.field.name == "" ) {
 				continue;
 			}
 
 			switch ( cond.op ){
-				case Benchwell.SQL.Operator.IsNull:
+				case Benchwell.Backend.Sql.Operator.IsNull:
 					wheres += @"`$(cond.field.name)` IS NULL";
 					break;
-				case Benchwell.SQL.Operator.IsNotNull:
+				case Benchwell.Backend.Sql.Operator.IsNotNull:
 					wheres += @"`$(cond.field.name)` IS NOT NULL";
 					break;
-				case Benchwell.SQL.Operator.Nin:
+				case Benchwell.Backend.Sql.Operator.Nin:
 					var val = sanitize_string_array (cond.val);
 					wheres += @"`$(cond.field.name)` NOT IN ($val)";
 					break;
-				case Benchwell.SQL.Operator.In:
+				case Benchwell.Backend.Sql.Operator.In:
 					var val = sanitize_string_array (cond.val);
 					wheres += @"`$(cond.field.name)` IN ($val)";
 					break;
@@ -250,9 +250,9 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 
 		string[] _sorts = {};
 		i = 0;
-		foreach (Benchwell.SQL.SortOption sort in sorts) {
+		foreach (Benchwell.Backend.Sql.SortOption sort in sorts) {
 			var dir = "ASC";
-			if ( sort.dir == Benchwell.SQL.SortType.Desc ) {
+			if ( sort.dir == Benchwell.Backend.Sql.SortType.Desc ) {
 				dir = "DESC";
 			}
 			_sorts += @"`$(name)`.`$(sort.column.name)` $(dir)";
@@ -266,7 +266,7 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		var query = @"SELECT * FROM $name $whereStmt $sortStmt LIMIT $(limit) OFFSET $(offset)";
 		var rc = db.query (query);
 		if ( rc != 0 ) {
-			throw new Benchwell.SQL.Error.QUERY (db.error());
+			throw new Benchwell.Backend.Sql.Error.QUERY (db.error());
 		}
 
 		var rows = new List<List<string?>> ();
@@ -284,12 +284,12 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		return rows;
 	}
 
-	public void update_field (string table, ColDef[] columns, string[] row) throws Benchwell.SQL.Error
+	public void update_field (string table, ColDef[] columns, string[] row) throws Benchwell.Backend.Sql.Error
 		requires(columns.length == row.length)
 		requires(columns.length > 1)
 	{
 		if (db.ping () != 0) {
-			throw new Benchwell.SQL.Error.CONNECTION(@"connection lost");
+			throw new Benchwell.Backend.Sql.Error.CONNECTION(@"connection lost");
 		}
 
 		string[] wheres = {};
@@ -302,17 +302,17 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		var query = @"UPDATE `$table` SET `$(columns[columns.length -1].name)` = $new_value WHERE $(string.joinv (" AND ", wheres))";
 		var rc = db.query (query);
 		if ( rc != 0 ) {
-			throw new Benchwell.SQL.Error.QUERY (db.error());
+			throw new Benchwell.Backend.Sql.Error.QUERY (db.error());
 		}
 	}
 
-	public string[] insert_record(string name, ColDef[] columns, string[] row) throws Benchwell.SQL.Error
+	public string[] insert_record(string name, ColDef[] columns, string[] row) throws Benchwell.Backend.Sql.Error
 		requires (name != "")
 		requires (row.length > 0)
 		requires (columns.length == row.length)
 	{
 		if (db.ping () != 0) {
-			throw new Benchwell.SQL.Error.CONNECTION(@"connection lost");
+			throw new Benchwell.Backend.Sql.Error.CONNECTION(@"connection lost");
 		}
 
 		var builder = new StringBuilder ();
@@ -341,7 +341,7 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 
 		var rc = db.query (query);
 		if ( rc != 0 ) {
-			throw new Benchwell.SQL.Error.QUERY (db.error());
+			throw new Benchwell.Backend.Sql.Error.QUERY (db.error());
 		}
 
 		var id = db.insert_id ();
@@ -362,7 +362,7 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 
 		rc = db.query (query);
 		if ( rc != 0 ) {
-			throw new Benchwell.SQL.Error.QUERY (db.error());
+			throw new Benchwell.Backend.Sql.Error.QUERY (db.error());
 		}
 
 		var result = db.use_result ();
@@ -373,13 +373,13 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		return null;
 	}
 
-	public void delete_record(string name, ColDef[] columns, string[] row) throws Benchwell.SQL.Error
+	public void delete_record(string name, ColDef[] columns, string[] row) throws Benchwell.Backend.Sql.Error
 		requires (name != "")
 		requires (row.length > 0)
 		requires (columns.length == row.length)
 	{
 		if (db.ping () != 0) {
-			throw new Benchwell.SQL.Error.CONNECTION (@"connection lost");
+			throw new Benchwell.Backend.Sql.Error.CONNECTION (@"connection lost");
 		}
 
 		string[] wheres = {};
@@ -416,21 +416,21 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		var query = @"DELETE FROM `$name` WHERE $(string.joinv (" AND ", wheres))";
 		var rc = db.query (query);
 		if ( rc != 0 ) {
-			throw new Benchwell.SQL.Error.QUERY (db.error());
+			throw new Benchwell.Backend.Sql.Error.QUERY (db.error());
 		}
 
 		return;
 	}
 
-	public string get_create_table(string name) throws Benchwell.SQL.Error {
+	public string get_create_table(string name) throws Benchwell.Backend.Sql.Error {
 		if (db.ping () != 0) {
-			throw new Benchwell.SQL.Error.CONNECTION(@"connection lost");
+			throw new Benchwell.Backend.Sql.Error.CONNECTION(@"connection lost");
 		}
 
 		var query = @"SHOW CREATE TABLE `$name`";
 		var rc = db.query (query);
 		if ( rc != 0 ) {
-			throw new Benchwell.SQL.Error.QUERY (db.error());
+			throw new Benchwell.Backend.Sql.Error.QUERY (db.error());
 		}
 
 		string[] row;
@@ -442,14 +442,14 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		return "";
 	}
 
-	public void query(string query, out string[] columns, out List<List<string?>> rows) throws Benchwell.SQL.Error {
+	public void query(string query, out string[] columns, out List<List<string?>> rows) throws Benchwell.Backend.Sql.Error {
 		if (db.ping () != 0) {
-			throw new Benchwell.SQL.Error.CONNECTION (@"connection lost");
+			throw new Benchwell.Backend.Sql.Error.CONNECTION (@"connection lost");
 		}
 
 		var rc = db.query (query);
 		if ( rc != 0 ) {
-			throw new Benchwell.SQL.Error.QUERY (@"$(db.errno()): $(db.error())");
+			throw new Benchwell.Backend.Sql.Error.QUERY (@"$(db.errno()): $(db.error())");
 		}
 
 		var result = db.use_result ();
@@ -490,7 +490,7 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 
 	private void parse_type(
 		string t,
-		ref Benchwell.SQL.ColType coltype,
+		ref Benchwell.Backend.Sql.ColType coltype,
 		ref int precision,
 		ref string[] options,
 		ref bool unsigned
@@ -501,7 +501,7 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		var tt = parts[1]; // type
 		var s = parts[3];  // precision
 
-		coltype = Benchwell.SQL.ColType.String;
+		coltype = Benchwell.Backend.Sql.ColType.String;
 
 		if ( parts.length >= 5 ) {
 			unsigned = parts[4] == "unsigned"; // unsigned
@@ -509,36 +509,36 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 
 		switch (tt) {
 			case "enum":
-				coltype = Benchwell.SQL.ColType.List;
+				coltype = Benchwell.Backend.Sql.ColType.List;
 				options = s.split (",");
 				unsigned = false;
 				break;
 			case "text", "mediumtext", "longtext", "blob", "mediumblob", "longblob":
-				coltype = Benchwell.SQL.ColType.String;
+				coltype = Benchwell.Backend.Sql.ColType.String;
 				unsigned = false;
 				break;
 			case "varchar", "tinytext":
-				coltype = Benchwell.SQL.ColType.String;
+				coltype = Benchwell.Backend.Sql.ColType.String;
 				precision = int.parse(s);
 				break;
 			case "int", "smallint", "mediumint", "bigint":
-				coltype = Benchwell.SQL.ColType.Int;
+				coltype = Benchwell.Backend.Sql.ColType.Int;
 				precision = int.parse(s);
 				break;
 			case "tinyint":
 				if ( s == "1" ) {
-					coltype = Benchwell.SQL.ColType.Boolean;
+					coltype = Benchwell.Backend.Sql.ColType.Boolean;
 					break;
 				}
 
 				precision = int.parse(s);
-				coltype = Benchwell.SQL.ColType.Int;
+				coltype = Benchwell.Backend.Sql.ColType.Int;
 				break;
 			case "double precision", "double", "float", "decimal":
-				coltype = Benchwell.SQL.ColType.Float;
+				coltype = Benchwell.Backend.Sql.ColType.Float;
 				break;
 			case "time", "datetime":
-				coltype = Benchwell.SQL.ColType.Date;
+				coltype = Benchwell.Backend.Sql.ColType.Date;
 				break;
 		}
 	}
@@ -569,7 +569,7 @@ public class Benchwell.SQL.MysqlConnection : Benchwell.SQL.Connection, Object {
 		return string.joinv (",", clean);
 	}
 
-	public string get_insert_statement(string name, unowned Benchwell.SQL.ColDef[] columns, unowned string[] row)
+	public string get_insert_statement(string name, unowned Benchwell.Backend.Sql.ColDef[] columns, unowned string[] row)
 		requires(columns.length == row.length)
 		requires(columns.length > 1)
 	{

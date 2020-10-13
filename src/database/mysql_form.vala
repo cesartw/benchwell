@@ -1,9 +1,9 @@
-public class Benchwell.MysqlForm : Gtk.Box {
-	public Benchwell.MysqlTCPForm tcp_form;
-	public Benchwell.MysqlSocketForm socket_form;
-	public Benchwell.SQL.ConnectionInfo? connection;
+public class Benchwell.Database.MysqlForm : Gtk.Box {
+	public Benchwell.Database.MysqlTCPForm tcp_form;
+	public Benchwell.Database.MysqlSocketForm socket_form;
+	public Benchwell.Backend.Sql.ConnectionInfo? connection;
 
-	public signal void changed(Benchwell.SQL.ConnectionInfo c);
+	public signal void changed(Benchwell.Backend.Sql.ConnectionInfo c);
 
 	public MysqlForm() {
 		Object(
@@ -18,17 +18,17 @@ public class Benchwell.MysqlForm : Gtk.Box {
 		notebook.show ();
 		notebook.set_can_focus (true);
 
-		tcp_form = new Benchwell.MysqlTCPForm ();
+		tcp_form = new Benchwell.Database.MysqlTCPForm ();
 		tcp_form.show ();
 		notebook.append_page (tcp_form, tcp_form.tab_label);
 
-		socket_form = new Benchwell.MysqlSocketForm ();
+		socket_form = new Benchwell.Database.MysqlSocketForm ();
 		socket_form.show ();
 		notebook.append_page (socket_form, socket_form.tab_label);
 
 		tcp_form.changed.connect ((entry) =>{
 			if ( connection == null ) {
-				connection = new Benchwell.SQL.ConnectionInfo ();
+				connection = new Benchwell.Backend.Sql.ConnectionInfo ();
 			}
 			connection.name = tcp_form.name_entry.get_text ();
 			connection.host = tcp_form.host_entry.get_text ();
@@ -42,7 +42,7 @@ public class Benchwell.MysqlForm : Gtk.Box {
 
 		socket_form.changed.connect ((entry) =>{
 			if ( connection == null ) {
-				connection = new Benchwell.SQL.ConnectionInfo ();
+				connection = new Benchwell.Backend.Sql.ConnectionInfo ();
 			}
 			connection.name = socket_form.name_entry.get_text ();
 			connection.socket = socket_form.socket_entry.get_text ();
@@ -56,7 +56,7 @@ public class Benchwell.MysqlForm : Gtk.Box {
 		add (notebook);
 	}
 
-	public void set_connection(ref Benchwell.SQL.ConnectionInfo conn) {
+	public void set_connection(ref Benchwell.Backend.Sql.ConnectionInfo conn) {
 		connection = conn;
 
 		switch (conn.ttype) {
@@ -69,12 +69,12 @@ public class Benchwell.MysqlForm : Gtk.Box {
 		}
 	}
 
-	public Benchwell.SQL.ConnectionInfo? get_connection() {
+	public Benchwell.Backend.Sql.ConnectionInfo? get_connection() {
 		return connection;
 	}
 }
 
-public class Benchwell.MysqlTCPForm : Gtk.Grid {
+public class Benchwell.Database.MysqlTCPForm : Gtk.Grid {
 	public Gtk.Label tab_label;
 
 	public Gtk.Entry name_entry;
@@ -211,7 +211,7 @@ public class Benchwell.MysqlTCPForm : Gtk.Grid {
 		database_entry.set_text ("");
 	}
 
-	public void set_connection (SQL.ConnectionInfo conn) {
+	public void set_connection (Benchwell.Backend.Sql.ConnectionInfo conn) {
 		_setting_connection = true;
 		name_entry.set_text (conn.name);
 		host_entry.set_text (conn.host);
@@ -224,7 +224,7 @@ public class Benchwell.MysqlTCPForm : Gtk.Grid {
 	}
 }
 
-public class Benchwell.MysqlSocketForm : Gtk.Grid {
+public class Benchwell.Database.MysqlSocketForm : Gtk.Grid {
 	public Gtk.Label tab_label;
 
 	public Gtk.Entry name_entry;
@@ -343,7 +343,7 @@ public class Benchwell.MysqlSocketForm : Gtk.Grid {
 		database_entry.set_text ("");
 	}
 
-	public void set_connection (SQL.ConnectionInfo conn) {
+	public void set_connection (Benchwell.Backend.Sql.ConnectionInfo conn) {
 		_setting_connection = true;
 		name_entry.set_text (conn.name);
 		socket_entry.set_text (conn.socket);
