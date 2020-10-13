@@ -99,7 +99,7 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		var tab  = new Benchwell.Tab ();
 		tab.show ();
 
-		var database = new Benchwell.Database.Database (this);
+		var database = new Benchwell.Database.Database (this, new Benchwell.Services.Database ());
 		database.notify["title"].connect ((s, p) => {
 			tab.label.set_text (database.title);
 			tab.label.tooltip_text = database.title;

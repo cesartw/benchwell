@@ -1,13 +1,15 @@
 public class Benchwell.Database.Database : Gtk.Box {
 	public string title { get; set; }
 	public Benchwell.ApplicationWindow window { get; construct; }
+	public Benchwell.Services.Database service { get; construct; }
 	private Benchwell.Database.Connect? connect_view;
 	private Benchwell.Database.Data? data_view;
 	private Benchwell.Backend.Sql.Engine engine;
 
-	public Database (Benchwell.ApplicationWindow window) {
+	public Database (Benchwell.ApplicationWindow window, Benchwell.Services.Database service) {
 		Object(
 			window: window,
+			service: service,
 			orientation: Gtk.Orientation.HORIZONTAL,
 			spacing: 5
 		);
@@ -21,28 +23,30 @@ public class Benchwell.Database.Database : Gtk.Box {
 		show_connect ();
 
 		connect_view.dbconnect.connect ((c) => {
-			if (c.password != "") {
-				launch_connection (c);
-			} else {
-				Config.decrypt.begin (c, (obj, res) => {
-					c.password = Config.decrypt.end (res);
-					launch_connection (c);
-				});
-			}
+			launch_connection (c);
+			//if (c.password != "") {
+				//launch_connection (c);
+			//} else {
+				//Config.decrypt.begin (c, (obj, res) => {
+					//c.password = Config.decrypt.end (res);
+					//launch_connection (c);
+				//});
+			//}
 		});
 	}
 
-	public void launch_connection (Benchwell.Backend.Sql.ConnectionInfo c, Benchwell.Backend.Sql.TableDef? selected_tabledef = null) {
-		Benchwell.Backend.Sql.Connection connection;
+	public void launch_connection (owned Benchwell.Backend.Sql.ConnectionInfo c, Benchwell.Backend.Sql.TableDef? selected_tabledef = null) {
+		//Benchwell.Backend.Sql.Connection connection;
 
 		try {
-			connection = engine.connect (c);
+			//connection = engine.connect (c);
+			service.connect (c);
 		} catch (Benchwell.Backend.Sql.Error err) {
 			show_error_dialog (err.message);
 			return;
 		}
 
-		data_view = new Benchwell.Database.Data(window, connection, c);
+		data_view = new Benchwell.Database.Data(window, service);
 		show_data ();
 
 		title = c.name;

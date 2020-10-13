@@ -1,7 +1,6 @@
 public class Benchwell.Database.Data : Gtk.Paned {
 	public Benchwell.ApplicationWindow window { get; construct; }
-	public Benchwell.Backend.Sql.Connection connection { get; construct; }
-	public Benchwell.Backend.Sql.ConnectionInfo connection_info { get; construct; }
+	public Benchwell.Services.Database service { get; construct; }
 
 	public Gtk.SearchEntry table_search;
 	public Gtk.ComboBoxText database_combo;
@@ -10,21 +9,16 @@ public class Benchwell.Database.Data : Gtk.Paned {
 
 	private Benchwell.Views.CancelOverlay overlay;
 	private List<string> databases;
-	private Benchwell.Backend.Sql.TableDef? table_def;
 
 	private int current_page = 0;
 	private int page_size = 100;
 
 	public signal void database_selected(string dbname);
 
-	public Data (Benchwell.ApplicationWindow window,
-				   Benchwell.Backend.Sql.Connection connection,
-				   Benchwell.Backend.Sql.ConnectionInfo connection_info)
-	{
+	public Data (Benchwell.ApplicationWindow window, Benchwell.Services.Database service) {
 		Object(
 			window: window,
-			connection: connection,
-			connection_info: connection_info,
+			service: service,
 			orientation: Gtk.Orientation.VERTICAL,
 			wide_handle: true,
 			vexpand: true,
@@ -71,7 +65,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 			return;
 		}
 
-		var st = connection.get_insert_statement (table_def.name, result_view.table.columns, data);
+		var st = service.connection.get_insert_statement (service.table_def.name, result_view.table.columns, data);
 		var cb = Gtk.Clipboard.get_default (Gdk.Display.get_default ());
 		cb.set_text (st, st.length);
 	}
@@ -82,7 +76,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 			return;
 		}
 
-		var sql = connection.get_create_table (tabledef.name);
+		var sql = service.connection.get_create_table (tabledef.name);
 		var dialog = new Gtk.Dialog.with_buttons (@"$(tabledef.name) schema", window,
 								Gtk.DialogFlags.DESTROY_WITH_PARENT|Gtk.DialogFlags.MODAL,
 								"Ok", Gtk.ResponseType.OK);
@@ -117,7 +111,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 			if (tabledef.ttype == Benchwell.Backend.Sql.TableType.Dummy) {
 				//Config.delete_query (tabledef);
 			} else {
-				connection.delete_table (tabledef);
+				service.connection.delete_table (tabledef);
 			}
 			tables.remove_selected ();
 		} catch (Benchwell.Backend.Sql.Error err) {
@@ -135,7 +129,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 		}
 
 		try {
-			connection.truncate_table (tabledef);
+			service.connection.truncate_table (tabledef);
 		} catch (Benchwell.Backend.Sql.Error err) {
 			result_view.show_alert (err.message);
 			return;
@@ -206,7 +200,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 			}
 
 			try {
-				data = connection.insert_record (table_def.name, result_view.table.columns, data);
+				data = service.connection.insert_record (service.table_def.name, result_view.table.columns, data);
 				result_view.table.update_selected_row (data);
 			} catch (Benchwell.Backend.Sql.Error err) {
 				result_view.show_alert (err.message);
@@ -222,7 +216,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 				return;
 			}
 			try {
-				connection.delete_record (table_def.name, result_view.table.columns, data);
+				service.connection.delete_record (service.table_def.name, result_view.table.columns, data);
 				result_view.table.delete_selected_row ();
 			} catch (Benchwell.Backend.Sql.Error err) {
 				result_view.show_alert (err.message);
@@ -236,7 +230,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 			try {
 				string[] columns;
 				List<List<string?>>data;
-				connection.query(query, out columns, out data);
+				service.connection.query(query, out columns, out data);
 
 				Benchwell.Backend.Sql.ColDef[] cols = {};
 				foreach (var column in columns) {
@@ -254,13 +248,13 @@ public class Benchwell.Database.Data : Gtk.Paned {
 	}
 
 	private void fill () {
-		databases = connection.databases ();
+		databases = service.connection.databases ();
 		databases.foreach ( db => {
 			database_combo.append (db, db);
 		});
 
-		if ( connection_info.database != "" ) {
-			database_combo.set_active_id (connection_info.database);
+		if ( service.info.database != "" ) {
+			database_combo.set_active_id (service.info.database);
 		}
 	}
 
@@ -268,10 +262,10 @@ public class Benchwell.Database.Data : Gtk.Paned {
 		result_view.hide_alert ();
 		var dbname = database_combo.get_active_text ();
 		try {
-			connection.use_database (dbname);
-			var tt = connection.tables ();
+			service.connection.use_database (dbname);
+			var tt = service.connection.tables ();
 
-			foreach (var q in connection_info.queries) {
+			foreach (var q in service.info.queries) {
 				var t = new Benchwell.Backend.Sql.TableDef.with_name (q.name);
 				t.ttype = Benchwell.Backend.Sql.TableType.Dummy;
 				tt += t;
@@ -289,12 +283,12 @@ public class Benchwell.Database.Data : Gtk.Paned {
 
 	private void on_field_change(Benchwell.Backend.Sql.ColDef[] columns, string[] row) {
 		result_view.hide_alert ();
-		if (table_def == null) {
+		if (service.table_def == null) {
 			result_view.show_alert (_("No table selected"), Gtk.MessageType.ERROR);
 			return;
 		}
 		try {
-			connection.update_field (table_def.name, columns, row);
+			service.connection.update_field (service.table_def.name, columns, row);
 		} catch (Benchwell.Backend.Sql.Error err) {
 			result_view.show_alert (err.message);
 			return;
@@ -304,15 +298,15 @@ public class Benchwell.Database.Data : Gtk.Paned {
 
 	private void on_load_table (Benchwell.Backend.Sql.TableDef _table_def) {
 		result_view.hide_alert ();
-		table_def = _table_def;
+		service.table_def = _table_def;
 
 		current_page = 0;
 		try {
-			result_view.table.columns = connection.table_definition (table_def.name);
-			result_view.table.data = connection.fetch_table (table_def.name,
-															 result_view.table.get_conditions (),
-															 result_view.table.get_sort_options (),
-															 page_size, current_page*page_size);
+			result_view.table.columns = service.connection.table_definition (service.table_def.name);
+			result_view.table.data = service.connection.fetch_table (service.table_def.name,
+																	 result_view.table.get_conditions (),
+																	 result_view.table.get_sort_options (),
+																	 page_size, current_page*page_size);
 			result_view.table.raw_mode = false;
 		} catch (Benchwell.Backend.Sql.Error err) {
 			result_view.show_alert (err.message);
@@ -328,15 +322,15 @@ public class Benchwell.Database.Data : Gtk.Paned {
 		if (result_view.table.raw_mode) {
 			result_view._exec_query ();
 		} else {
-			if (table_def == null ) {
+			if (service.table_def == null ) {
 				return;
 			}
 
 			try {
-				result_view.table.data = connection.fetch_table (table_def.name,
-															 result_view.table.get_conditions (),
-															 result_view.table.get_sort_options (),
-															 page_size, current_page*page_size);
+				result_view.table.data = service.connection.fetch_table (service.table_def.name,
+																		 result_view.table.get_conditions (),
+																		 result_view.table.get_sort_options (),
+																		 page_size, current_page*page_size);
 			} catch (Benchwell.Backend.Sql.Error err) {
 				result_view.show_alert (err.message);
 				return;

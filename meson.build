@@ -50,6 +50,8 @@ executable(
 
 	'src/http/http.vala',
 
+	'src/services/database.vala',
+
 	'src/config.vala',
 	'src/constants.vala',
 	'src/application.vala',
