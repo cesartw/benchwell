@@ -1,10 +1,76 @@
 public errordomain Benchwell.ConfigError {
 	GET_CONNECTIONS,
+	GET_ENVIRONMENTS,
 	SAVE_CONNECTION,
 	DELETE_CONNECTION,
 	ENVIRONMENTS
 }
 
+public class Benchwell.Environment : Object {
+	public int64  id;
+	public string name;
+	public Benchwell.EnvVar[] variables;
+
+	public Regex regex;
+
+	public Environment () {
+		regex = /({{\s*([a-zA-Z0-9]+)\s*}})/;
+	}
+
+	public string interpolate (string s) {
+		MatchInfo info;
+		string result = s;
+
+		for (regex.match (s, 0, out info); info.matches () ; info.next ()) {
+			for (var i = info.get_match_count () - 1; i > 0; i-=2) {
+				var var_name = info.fetch (i);
+				var to_replace = info.fetch (i-1);
+
+				foreach (var envar in variables) {
+					if (envar._key == var_name) {
+						result = result.replace (to_replace, envar._val);
+					}
+				}
+			}
+		}
+
+		return result;
+	}
+}
+
+public class Benchwell.EnvVar : Object, Benchwell.KeyValueI {
+	public int64  id;
+	public string _key;
+	public string _val;
+	public bool   _enabled;
+	public string type; // header | param
+	public int    sort;
+	public int64  environment_id;
+
+	public string key () {
+		return _key;
+	}
+
+	public string val() {
+		return _val;
+	}
+
+	public bool enabled() {
+		return _enabled;
+	}
+
+	public void set_key(string n) {
+		_key = n;
+	}
+
+	public void set_val(string v) {
+		_val = v;
+	}
+
+	public void set_enabled(bool e) {
+		_enabled = e;
+	}
+}
 
 public interface Benchwell.KeyValueI {
 	public abstract string key();
@@ -81,15 +147,15 @@ public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
 public class Benchwell.Config : Object {
 	private static GLib.Settings settings;
 	private static Sqlite.Database db;
+	public static List<Benchwell.Environment> environments;
 	public static List<Benchwell.Backend.Sql.ConnectionInfo> connections;
 	public static List<Benchwell.Backend.Sql.Query> queries;
-	public static Secret.Schema schema;
-
 	public static List<Benchwell.HttpCollection> http_collections;
+	public static Secret.Schema schema;
 
 	public Config () {
 		settings = new GLib.Settings ("io.benchwell");
-		string dbpath = Environment.get_user_config_dir () + "/benchwell/config.db";
+		string dbpath = GLib.Environment.get_user_config_dir () + "/benchwell/config.db";
 		int ec = Sqlite.Database.open_v2 (dbpath, out db, Sqlite.OPEN_READWRITE);
 		if (ec != Sqlite.OK) {
 			stderr.printf ("could not open config database: %d: %s\n", db.errcode (), db.errmsg ());
@@ -100,6 +166,8 @@ public class Benchwell.Config : Object {
                                  "schema", Secret.SchemaAttributeType.STRING);
 
 		stdout.printf ("Using config db: %s\n", dbpath);
+
+		load_environments ();
 		load_connections ();
 		load_http_collections ();
 	}
@@ -350,7 +418,7 @@ public class Benchwell.Config : Object {
 		info.host = values[5];
 		info.user = values[7];
 		info.port = int.parse(values[8]);
-		info.encrypted = bool.parse(values[9]);
+		info.encrypted = values[9] == "1";
 		info.socket = values[10];
 		info.file = values[11];
 
@@ -427,6 +495,7 @@ public class Benchwell.Config : Object {
 						WHERE http_collections_id = %lld AND (parent_id IS NULL OR parent_id = 0)
 						ORDER BY sort ASC
 						""".printf (collection.id);
+
 		var ec = db.exec (query, (n_columns, values, column_names) => {
 			var item = new Benchwell.HttpItem ();
 
@@ -441,6 +510,7 @@ public class Benchwell.Config : Object {
 
 			return 0;
 		}, out errmsg);
+
 		if ( ec != Sqlite.OK ){
 			throw new ConfigError.GET_CONNECTIONS(errmsg);
 		}
@@ -533,5 +603,58 @@ public class Benchwell.Config : Object {
 		item.headers = headers;
 		item.query_params = query_params;
 		item.loaded = true;
+	}
+
+	public static void load_environments () {
+		string errmsg;
+		var query = """SELECT *
+						FROM environments
+						""";
+
+		var ec = db.exec (query, (n_columns, values, column_names) => {
+			var item = new Benchwell.Environment ();
+
+			item.id = int64.parse (values[0]);
+			item.name = values[1];
+
+			environments.append (item);
+			return 0;
+		}, out errmsg);
+
+		if ( ec != Sqlite.OK ){
+			throw new ConfigError.GET_ENVIRONMENTS(errmsg);
+		}
+
+		query = """SELECT *
+						FROM environment_variables
+						""";
+
+		Benchwell.EnvVar[] variables = {};
+		ec = db.exec (query, (n_columns, values, column_names) => {
+			var item = new Benchwell.EnvVar ();
+
+			item.id = int64.parse (values[0]);
+			item._key = values[1];
+			item._val = values[2];
+			item._enabled = values[3] == "1";
+			item.environment_id = int64.parse (values[4]);
+
+			variables  += item;
+			return 0;
+		}, out errmsg);
+
+		if ( ec != Sqlite.OK ){
+			throw new ConfigError.GET_ENVIRONMENTS(errmsg);
+		}
+
+		environments.foreach ((env) => {
+			Benchwell.EnvVar[] envvars = {};
+			foreach (var v in variables) {
+				if (env.id == v.environment_id) {
+					envvars += v;
+				}
+			}
+			env.variables = envvars;
+		});
 	}
 }

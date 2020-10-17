@@ -41,14 +41,21 @@ executable(
 	'src/widgets/tab.vala',
 	'src/widgets/source_view.vala',
 	'src/widgets/button_opt.vala',
+	'src/widgets/keyvalues.vala',
 
 	'src/database/mysql_form.vala',
 	'src/database/sqlite_form.vala',
 	'src/database/database.vala',
 	'src/database/connect.vala',
 	'src/database/data.vala',
+	'src/database/condition.vala',
+	'src/database/result_view.vala',
+	'src/database/table.vala',
+	'src/database/tables.vala',
 
 	'src/http/http.vala',
+	'src/http/addressbar.vala',
+	'src/http/sidebar.vala',
 
 	'src/services/database.vala',
 
@@ -56,6 +63,9 @@ executable(
 	'src/constants.vala',
 	'src/application.vala',
 	'src/application_window.vala',
+	'src/environment.vala',
+
+	#'src/main.vala',
 
 	config_headers,
 	asresources,

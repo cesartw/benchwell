@@ -1,55 +1,137 @@
 namespace Benchwell {
-	public static int main(string[] args) {
-		var info = new Benchwell.SQLEngine.ConnectionInfo ();
-		info.host = "db";
-		info.user = "root";
-		info.password = "dev";
-		info.database = "teamworkdesk_shard6";
+	class Lexer {
+		static string[] whitespaces = {"\n", " ", "\t", "\r"};
 
-		var c = new Benchwell.SQLEngine.MysqlConnection (info);
-		var dbs = c.Databases ();
-		dbs.foreach ((entry) => {
-			print (@"Database: $entry\n");
-		});
-
-		c.UseDatabase ("teamworkdesk_shard6");
-		var tables = c.Tables ();
-		tables.foreach ((table) => {
-			var name = table.name;
-			print (@"	Table: $name\n");
-		});
-
-		var fields = c.TableDefinition ("customers");
-		fields.foreach ((field) => {
-			print ("		field:");
-			print (@"name: $(field.name) ");
-			print (@"pk: $(field.pk) ");
-			print (@"fk: $(field.fk) ");
-			print (@"precision: $(field.precision) ");
-			print (@"nullable: $(field.nullable) ");
-			print (@"type: $(field.ttype) ");
-			for ( int i = 0; i < field.values.length; i++ ) {
-				print (@"opts: $(field.values[i])");
+		protected string _input;
+		public string input {
+			get {
+				return _input;
 			}
-			print("\n");
-		});
+		}
 
+		protected int _position;
+		public int position {
+			get {
+				return _position;
+			}
+		}
 
-		var rows = new List<List<string?>>();
-		var opts = new Benchwell.SQLEngine.FetchTableOptions();
-		c.FetchTable("customers", opts, ref rows);
+		public Lexer (string input) {
+			_input = input;
+		}
 
-		rows.foreach((row) => {
-			print("==========\n");
-			var i = 0;
-			row.foreach((s) => {
-				if ( s == null || s == "" ) {
-					s = "NULL";
+		public bool is_end_reached () {
+			return _position == _input.length;
+		}
+
+		public string peek (int length = 1, int offset = 0) {
+			var total_offset = offset + _position;
+
+			if (!is_end_reached () && total_offset + length <= _input.length) {
+				return _input.substring(total_offset, length);
+			} else {
+				return "";
+			}
+		}
+
+		public string next (int length = 1, int offset = 0) {
+			var str = peek (length, offset);
+
+			if (str != "") {
+				_position = _position + length + offset;
+			}
+
+			return str;
+		}
+
+		public void consume_whitespaces () {
+			while(true) {
+				if (is_end_reached() || !(peek (1) in Lexer.whitespaces)) {
+					break;
+				} else {
+					next (1);
 				}
-				print(@"$(fields.nth_data(i).name) = $s\n");
-				i++;
-			});
-			print("==========\n");
+			}
+		}
+
+		public bool expect (string wish, int offset = 0) {
+			if (peek (wish.length, offset) == wish) {
+				next (wish.length, offset);
+				return true;
+			}
+
+			return false;
+		}
+
+		public bool expect_multiple (string[] wish) {
+			foreach(string single in wish) {
+				var matches = expect (single);
+
+				if (matches) {
+					return true;
+				}
+			}
+
+			return false;
+		}
+	}
+
+	enum NodeType {
+		O_BRACKET,
+		E_BRACKET,
+		VAR,
+		STRING;
+	}
+
+	class Node {
+		public int start_at;
+		public int end_at;
+		public NodeType type;
+	}
+
+	class Parse {
+		public Lexer lexer;
+		public List<Node> tree;
+
+		public void parse (string input) {
+			lexer = new Lexer (input);
+
+			while (!lexer.is_end_reached ()){
+				var node = new Node ();
+				var last_node = tree.last ();
+				node.start_at = lexer.position;
+
+				if (is_o_bracket ()) {
+					node.type = NodeType.O_BRACKET;
+					node.end_at = node.start_at + 2;
+					tree.append (node);
+				}
+
+				if (is_e_bracket ()) {
+					node.type = NodeType.E_BRACKET;
+					node.end_at = node.start_at + 2;
+					tree.append (node);
+				}
+
+				lexer.next ();
+			}
+		}
+
+		private bool is_o_bracket() {
+			return lexer.peek (2) == "{{";
+		}
+
+		private bool is_e_bracket() {
+			return lexer.peek (2) == "}}";
+		}
+	}
+
+	public static int main(string[] args) {
+		var t = new Parse ();
+		t.parse ("http://{{token}}/desk/api/v1/tickets.json");
+
+		t.tree.foreach ((node) => {
+			print (@"====$(node.start_at):$(node.end_at):$(node.type)\n");
 		});
 
 		return 0;

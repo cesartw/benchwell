@@ -66,14 +66,14 @@ actions = [
 
 foreach action : actions
 	install_data(
-			join_paths('assets', 'icons', 'actions', action),
+			join_paths('assets', 'icons', 'actions', 'orange', action),
 			install_dir: join_paths(icons_dir , '24x24', 'actions'),
 			rename: 'bw-@0@'.format(action)
 	)
 	install_data(
-			join_paths('assets', 'icons', 'actions', action),
+			join_paths('assets', 'icons', 'actions', 'white', action),
 			install_dir: join_paths(icons_dir , '16x16', 'actions'),
-			rename: 'bw-@0@'.format(action)
+			rename: 'bw-white-@0@'.format(action)
 	)
 endforeach
 

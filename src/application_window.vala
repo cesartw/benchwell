@@ -1,14 +1,15 @@
 public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 	public Gtk.Notebook notebook;
-	public Gtk.ComboBox env_combo;
 	public Gtk.ListStore env_store;
 	public Gtk.Button btn_env;
+	public Gtk.ComboBox env_combo;
 
 	public SimpleAction new_connection_menu;
 	public SimpleAction new_database_tab_menu;
 	public SimpleAction new_http_tab_menu;
 	public SimpleAction new_tab_menu;
 	public SimpleAction close_menu;
+
 
 	public class ApplicationWindow(Gtk.Application app) {
 		Object (
@@ -60,14 +61,15 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		window_menu.append (_("Database"), "win.new.db");
 		window_menu.append (_("HTTP"), "win.new.http");
 
-		var app_btn_menu = new Gtk.MenuButton ();
-		app_btn_menu.show ();
+		var env = env_selector ();
+		env.show ();
 		/////////////
 
 		set_titlebar (header);
 
 		header.pack_start (window_btn_menu);
-		header.pack_end (app_btn_menu);
+		//header.pack_end (app_btn_menu);
+		header.pack_end (env);
 
 		box.pack_start (notebook, true, true, 0);
 
@@ -140,5 +142,40 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		});
 		notebook.set_current_page (notebook.get_n_pages () - 1);
 	}
-}
 
+	private Gtk.Grid env_selector () {
+		env_store = new Gtk.ListStore (2, GLib.Type.INT64, GLib.Type.STRING);
+
+		env_combo = new Gtk.ComboBox.with_model_and_entry (env_store);
+		env_combo.set_id_column (0);
+		env_combo.set_entry_text_column (1);
+		env_combo.show ();
+
+		Config.environments.foreach( (env) => {
+			Gtk.TreeIter iter;
+			env_store.append (out iter);
+
+			env_store.set_value (iter, 0, env.id);
+			env_store.set_value (iter, 1, env.name);
+		});
+
+		btn_env = new Benchwell.Button ("config", Gtk.IconSize.BUTTON);
+		btn_env.show ();
+
+		var popover = new Gtk.Popover (btn_env);
+		btn_env.clicked.connect (() => {
+			popover.show ();
+		});
+
+		var editor = new Benchwell.EnvironmentEditor ();
+		editor.show ();
+		popover.add (editor);
+
+		var grid = new Gtk.Grid ();
+		grid.attach (env_combo, 0, 0, 4, 1);
+		grid.attach (btn_env, 4, 0, 1, 1);
+		grid.get_style_context ().add_class ("link");
+
+		return grid;
+	}
+}
