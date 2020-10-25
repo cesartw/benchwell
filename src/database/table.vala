@@ -128,6 +128,8 @@ public class Benchwell.Database.Table : Gtk.Box {
 		btn_add_row.clicked.connect (add_empty_row);
 
 		btn_delete_row.clicked.connect (on_delete_row);
+
+		clone_menu.activate.connect (on_clone);
 	}
 
 	public Benchwell.Backend.Sql.SortOption[] get_sort_options () {
@@ -211,9 +213,10 @@ public class Benchwell.Database.Table : Gtk.Box {
 	}
 
 	public void clear () {
-		if (store != null) {
-			store.clear ();
+		if (store == null) {
+			return;
 		}
+		store.clear ();
 	}
 
 	public void add_empty_row () {
