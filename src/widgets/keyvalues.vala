@@ -8,6 +8,25 @@ public class Benchwell.KeyValues : Gtk.Box {
 		add (null);
 	}
 
+	public void get_kvs (out string[] keys, out string[] values) {
+		string[] ks = {};
+		string[] vs = {};
+		get_children ().foreach ( (child) => {
+			var kv = child as Benchwell.KeyValue;
+			var key = kv.key.get_text ();
+			var val = kv.val.get_text ();
+			if (key == "" || val == "") {
+				return;
+			}
+
+			ks += key;
+			vs += val;
+		});
+
+		keys = ks;
+		values = vs;
+	}
+
 	public void add (KeyValueI? kvi) {
 		var kv = new Benchwell.KeyValue ();
 		kv.show ();

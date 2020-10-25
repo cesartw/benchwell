@@ -77,6 +77,7 @@ executable(
 		dependency('gtksourceview-3.0'),
 		dependency('sqlite3'),
 		dependency('libsecret-1'),
+		dependency('json-glib-1.0'),
 		meson.get_compiler('c').find_library('mysqlclient'),
 		meson.get_compiler('c').find_library('mariadb'),
 		meson.get_compiler('vala').find_library('mysql')

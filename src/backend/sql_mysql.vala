@@ -124,7 +124,7 @@ public class Benchwell.Backend.Sql.MysqlConnection : Benchwell.Backend.Sql.Conne
 		return tables;
 	}
 
-	public owned ColDef[] table_definition(string name) throws Benchwell.Backend.Sql.Error {
+	public ColDef[] table_definition(string name) throws Benchwell.Backend.Sql.Error {
 		if (db.ping () != 0) {
 			throw new Benchwell.Backend.Sql.Error.CONNECTION(@"connection lost");
 		}
@@ -569,7 +569,7 @@ public class Benchwell.Backend.Sql.MysqlConnection : Benchwell.Backend.Sql.Conne
 		return string.joinv (",", clean);
 	}
 
-	public string get_insert_statement(string name, unowned Benchwell.Backend.Sql.ColDef[] columns, unowned string[] row)
+	public string get_insert_statement(string name, Benchwell.Backend.Sql.ColDef[] columns, string[] row)
 		requires(columns.length == row.length)
 		requires(columns.length > 1)
 	{

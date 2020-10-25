@@ -50,4 +50,12 @@ public class Benchwell.SourceView : Gtk.SourceView {
 				break;
 		}
 	}
+
+	public string get_text () {
+		Gtk.TextIter start, end;
+		var buff = get_buffer ();
+		buff.get_start_iter (out start);
+		buff.get_end_iter (out end);
+		return buff.get_text (start, end, false);
+	}
 }

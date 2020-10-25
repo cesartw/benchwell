@@ -12,7 +12,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 	public weak Benchwell.HttpCollection? selected_collection;
 	public weak Benchwell.HttpItem? selected_item;
 
-	public signal void load_request(unowned Benchwell.HttpItem item);
+	public signal void load_request(Benchwell.HttpItem item);
 
 	public HttpSideBar () {
 		Object (
@@ -162,7 +162,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		build_tree (null, collection.items);
 	}
 
-	private void build_tree (Gtk.TreeIter? iter, unowned Benchwell.HttpItem[] items) {
+	private void build_tree (Gtk.TreeIter? iter, Benchwell.HttpItem[] items) {
 		foreach (var item in items) {
 			var this_iter = add_row (iter, item);
 

@@ -36,7 +36,7 @@ public class Benchwell.Http.HttpAddressBar : Gtk.Box {
 		pack_end(send_btn, false, false, 0);
 	}
 
-	public void set_request (unowned Benchwell.HttpItem item) {
+	public void set_request (Benchwell.HttpItem item) {
 		address.set_text (item.url);
 		address.tooltip_text = Config.environments.nth_data (0).interpolate (item.url);
 		method_combo.set_active_id (item.method);

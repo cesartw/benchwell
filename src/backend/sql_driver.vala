@@ -24,7 +24,7 @@ public interface Benchwell.Backend.Sql.Connection : Object {
 	public abstract void delete_record(string name, ColDef[] defs, string[] row) throws Error;
 	public abstract string get_create_table(string name) throws Error;
 	public abstract void query(string query, out string[] columns, out List<List<string?>> rows) throws Error;
-	public abstract string get_insert_statement(string name, unowned ColDef[] columns, unowned string[] row);
+	public abstract string get_insert_statement(string name, ColDef[] columns, string[] row);
 
 	//public abstract string get_select_statement(TableDef def) throws Error;
 	//public abstract string update_record(string name, ColDef[] defs, string[] newrow, string[] oldrow) throws Error; // new, oldvalues;

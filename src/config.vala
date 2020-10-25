@@ -439,32 +439,41 @@ public class Benchwell.Config : Object {
 
 	public static async void encrypt (Benchwell.Backend.Sql.ConnectionInfo info) {
 		var attributes = new GLib.HashTable<string, string> (str_hash, str_equal);
-        attributes["id"] = info.id.to_string ();
-        attributes["schema"] = Constants.PROJECT_NAME;
+		attributes["id"] = info.id.to_string ();
+		attributes["schema"] = Constants.PROJECT_NAME;
 
-        var key_name = Constants.PROJECT_NAME + "." + info.id.to_string ();
+		var key_name = Constants.PROJECT_NAME + "." + info.id.to_string ();
 
-        bool result = yield Secret.password_storev (schema, attributes, Secret.COLLECTION_DEFAULT, key_name, info.password, null);
+		bool result = yield Secret.password_storev (schema, attributes, Secret.COLLECTION_DEFAULT, key_name, info.password, null);
 
-        if (! result) {
-            debug ("Unable to store password for \"%s\" in libsecret keyring", key_name);
-        }
+		if (! result) {
+			debug ("Unable to store password for \"%s\" in libsecret keyring", key_name);
+		}
 	}
 
 	public static async string? decrypt (Benchwell.Backend.Sql.ConnectionInfo info) throws Error {
-        var attributes = new GLib.HashTable<string, string> (str_hash, str_equal);
-        attributes["id"] = info.id.to_string ();
-        attributes["schema"] = Constants.PROJECT_NAME;
+		var attributes = new GLib.HashTable<string, string> (str_hash, str_equal);
+		attributes["id"] = info.id.to_string ();
+		attributes["schema"] = Constants.PROJECT_NAME;
 
-        var key_name = Constants.PROJECT_NAME + "." + info.id.to_string ();
+		var key_name = Constants.PROJECT_NAME + "." + info.id.to_string ();
 
-        string? password = yield Secret.password_lookupv (schema, attributes, null);
+		Secret.Service srv = yield Secret.Service.get (Secret.ServiceFlags.OPEN_SESSION, null);
+		bool ok = yield srv.ensure_session (null);
+		if (!ok) {
+			return null;
+		}
 
-        if (password == null) {
-            debug ("Unable to fetch password in libsecret keyring for %s", key_name);
-        }
+		string? password = yield Secret.password_lookupv (schema, attributes, null);
 
-        return password;
+		if (password == null) {
+			print (@"Unable to fetch password in libsecret keyring for $(key_name)\n");
+		}
+		if (password == "") {
+			print (@"no password $(key_name)\n");
+		}
+
+		return password;
     }
 
 	private static void load_http_collections () throws ConfigError {

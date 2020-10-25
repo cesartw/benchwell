@@ -54,11 +54,12 @@ public class Benchwell.Database.Condition {
 		completion.text_column = 0;
 		completion.inline_completion = true;
 		completion.inline_selection = true;
-		completion.minimum_key_length = 2;
+		completion.minimum_key_length = 1;
 		completion.set_model (store);
 
 		var entry = field_combo.get_child () as Gtk.Entry;
 		entry.set_completion (completion);
+		entry.focus_out_event.connect (on_field_focus_out);
 
 		operator_combo = new Gtk.ComboBoxText ();
 		foreach (var op in Benchwell.Backend.Sql.Operator.all ()) {
@@ -94,17 +95,11 @@ public class Benchwell.Database.Condition {
 			return null;
 		}
 
-		Gtk.TreeIter? iter;
-		field_combo.get_active_iter (out iter);
-		if (!store.iter_is_valid(iter)) {
-			return null;
-		}
-		GLib.Value val;
-		store.get_value (iter, 0, out val);
-		var column_name = val.get_string ();
+		var column_name = selected_field ();
 		if (column_name == "" || column_name == null) {
 			return null;
 		}
+
 		Benchwell.Backend.Sql.ColDef? column = null;
 		foreach (var c in columns) {
 			if (c.name == column_name) {
@@ -138,6 +133,22 @@ public class Benchwell.Database.Condition {
 		return stmt;
 	}
 
+	private string? selected_field () {
+		Gtk.TreeIter? iter;
+		field_combo.get_active_iter (out iter);
+		if (!store.iter_is_valid(iter)) {
+			return null;
+		}
+		GLib.Value val;
+		store.get_value (iter, 0, out val);
+		var column_name = val.get_string ();
+		if (column_name == "" || column_name == null) {
+			return null;
+		}
+
+		return column_name;
+	}
+
 	private void _update_fields () {
 		store.clear ();
 
@@ -156,6 +167,28 @@ public class Benchwell.Database.Condition {
 		field_combo.sensitive = enable;
 		operator_combo.sensitive = enable;
 		value_entry.sensitive = enable;
+	}
+
+	private bool on_field_focus_out () {
+		var entry = field_combo.get_child () as Gtk.Entry;
+		var written_field_name = entry.get_text ();
+		var selected_field_name = selected_field ();
+
+		if (written_field_name == selected_field_name) {
+			return false;
+		}
+
+		var i = -1;
+		foreach (var col in _columns) {
+			i++;
+
+			if (col.name != written_field_name) {
+				continue;
+			}
+
+			field_combo.set_active(i);
+		}
+		return false;
 	}
 }
 
