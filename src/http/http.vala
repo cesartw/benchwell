@@ -112,6 +112,48 @@ enum Benchwell.Http.CODES {
 	}
 }
 
+[Compact]
+private struct buffer_s
+{
+	uchar[] buffer;
+	size_t size_left;
+}
+
+[Compact]
+private struct buffer_s2
+{
+	uchar[] buffer;
+	size_t size_left;
+}
+
+private size_t WriteMemoryCallback(char* ptr, size_t size, size_t nmemb, void* data) {
+	size_t total_size = size*nmemb;
+	for(int i = 0; i<total_size; i++)
+	{
+		(( buffer_s* ) data).buffer+= ptr[i];
+	}
+	(( buffer_s* ) data).buffer+= 0;
+	return total_size;
+}
+
+private size_t ReadMemoryCallback(char* dest, size_t size, size_t nmemb, void* data) {
+	var wt = (( buffer_s2* ) data);
+	size_t buffer_size = size*nmemb;
+	if ( wt.size_left > 0) {
+		size_t copy_this_much = wt.size_left;
+		if (copy_this_much > buffer_size) {
+			copy_this_much = buffer_size;
+		}
+
+		Posix.memcpy(dest, wt.buffer, copy_this_much);
+
+		wt.buffer = wt.buffer[0:copy_this_much];
+		wt.size_left -= copy_this_much;
+		return copy_this_much;
+	}
+
+	return 0;
+}
 
 public class Benchwell.Http.Http : Gtk.Paned {
 	public Benchwell.ApplicationWindow    window { get; construct; }
@@ -292,38 +334,77 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		address.send_btn.clicked.connect (on_send);
 	}
 
+	// https://github.com/giuliopaci/ValaBindingsDevelopment/blob/master/libcurl-example.vala
 	private void on_send () {
+		var handle = new Curl.EasyHandle ();
+
 		var url = env.interpolate (address.address.get_text ());
 		var method = address.method_combo.get_active_id ();
 
-		var session = new Soup.Session ();
-		var message = new Soup.Message (method, url);
-		if (message == null) {
-			return;
+		if ( method == "POST") {
+			handle.setopt (Curl.Option.POST, true);
 		}
 
-		string raw_body = body.get_text ();
-		var request_body = new Soup.MessageBody ();
-		if (raw_body != "") {
-			// NOTE: Soup.MemoryUse.TEMPORARY is the only method that i could make work
-			message.set_request ("application/json", Soup.MemoryUse.TEMPORARY, (uint8[]) raw_body);
-		}
+		handle.setopt (Curl.Option.URL, url);
+		handle.setopt (Curl.Option.FOLLOWLOCATION, true);
 
-		string[] keys;
-		string[] values;
+		buffer_s tmp = buffer_s(){ buffer = new uchar[0] };
+		handle.setopt(Curl.Option.WRITEFUNCTION, WriteMemoryCallback);
+		handle.setopt(Curl.Option.WRITEDATA, ref tmp);
+
+		string[] keys = {};
+		string[] values = {};
 		headers.get_kvs (out keys, out values);
 
-		var request_headers = new Soup.MessageHeaders (Soup.MessageHeadersType.REQUEST);
+		Curl.SList headers = null;
 		for (var i = 0; i < keys.length; i++) {
-			request_headers.append (keys[i], env.interpolate (values[i]));
+			var val = env.interpolate (values[i]);
+			headers = Curl.SList.append ((owned) headers, @"$(keys[i]): $(val)");
 		}
-		message.request_headers = request_headers;
+		handle.setopt (Curl.Option.HTTPHEADER, headers);
+
+		// BODY
+		string raw_body = body.get_text ();
+		buffer_s2 tmp_body = buffer_s2 () {
+			buffer = new uchar[0],
+			size_left = Posix.strlen (raw_body)
+		};
+
+		if (raw_body != "") {
+			for (var i = 0; i<raw_body.length;i++){
+				tmp_body.buffer += raw_body[i];
+			}
+
+			handle.setopt(Curl.Option.READFUNCTION, ReadMemoryCallback);
+			handle.setopt(Curl.Option.READDATA, ref tmp_body);
+		}
+
+		// only connects to the host
+		var now = get_real_time ();
+		var code = handle.perform ();
+		var then = get_real_time ();
+
+		int http_code;
+		weak string content_type; // otherwise causes double free
+		handle.getinfo(Curl.Info.RESPONSE_CODE, out http_code);
+		handle.getinfo(Curl.Info.CONTENT_TYPE, out content_type);
+		var content = (string)tmp.buffer;
+		var s = content_type.split(";")[0];
+
+		/*
+		var x = (uint8[]) "{}";
+		if (raw_body != "") {
+			// NOTE: Soup.MemoryUse.TEMPORARY is the only method that i could make work
+			var buff = new Soup.Buffer.take (x);
+			//message.request_body.append_buffer (buff);
+			//message.request_body.flatten ();
+			message.set_request ("application/json", Soup.MemoryUse.COPY, x);
+		}
 
 		var now = get_real_time ();
 		session.send_message (message);
 		var then = get_real_time ();
 
-		//var duration = then - now;
 
 		//string content_type = "";
 		//message.response_headers.foreach ((k,v) => {
@@ -333,8 +414,10 @@ public class Benchwell.Http.Http : Gtk.Paned {
 					//break;
 			//}
 		//});
+		*/
 
-		//set_response (message.status_code, (string) message.response_body.flatten ().data, content_type, duration);
+		var duration = then - now;
+		set_response (http_code, (string) content, s, duration);
 	}
 
 	private void on_load_request (unowned Benchwell.HttpItem item) {
@@ -361,6 +444,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	}
 
 	public void set_response(uint status, string raw_data, string content_type, int64 duration) {
+		print(content_type);
+
 		switch (content_type) {
 			case "application/json":
 				var json = new Json.Parser ();

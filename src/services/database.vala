@@ -12,8 +12,10 @@ public class Benchwell.Services.Database : Object {
 		engine = new Benchwell.Backend.Sql.Engine ();
 	}
 
-	public void connect (Benchwell.Backend.Sql.ConnectionInfo _info) throws Benchwell.Backend.Sql.Error {
+	public async void connect (Benchwell.Backend.Sql.ConnectionInfo _info) throws Benchwell.Backend.Sql.Error {
 		info = _info;
+
+		yield Config.ping_dbus ();
 
 		if (info.password == "") {
 			var loop = new MainLoop ();

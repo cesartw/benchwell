@@ -24,23 +24,15 @@ public class Benchwell.Database.Database : Gtk.Box {
 
 		connect_view.dbconnect.connect ((c) => {
 			launch_connection (c);
-			//if (c.password != "") {
-				//launch_connection (c);
-			//} else {
-				//Config.decrypt.begin (c, (obj, res) => {
-					//c.password = Config.decrypt.end (res);
-					//launch_connection (c);
-				//});
-			//}
 		});
 	}
 
-	public void launch_connection (owned Benchwell.Backend.Sql.ConnectionInfo c, Benchwell.Backend.Sql.TableDef? selected_tabledef = null) {
+	public async void launch_connection (owned Benchwell.Backend.Sql.ConnectionInfo c, Benchwell.Backend.Sql.TableDef? selected_tabledef = null) {
 		//Benchwell.Backend.Sql.Connection connection;
 
 		try {
 			//connection = engine.connect (c);
-			service.connect (c);
+			yield service.connect (c);
 		} catch (Benchwell.Backend.Sql.Error err) {
 			show_error_dialog (err.message);
 			return;

@@ -476,6 +476,21 @@ public class Benchwell.Config : Object {
 		return password;
     }
 
+	// hack because password_lookpv doesn't trigger the unlock keychain popup
+	public static async void ping_dbus () throws Error {
+		var attributes = new GLib.HashTable<string, string> (str_hash, str_equal);
+		attributes["id"] = "0";
+		attributes["schema"] = Constants.PROJECT_NAME;
+
+		var key_name = Constants.PROJECT_NAME + ".0";
+
+		bool result = yield Secret.password_storev (schema, attributes, Secret.COLLECTION_DEFAULT, key_name, "none", null);
+
+		if (! result) {
+			debug ("Unable to store password for \"%s\" in libsecret keyring", key_name);
+		}
+    }
+
 	private static void load_http_collections () throws ConfigError {
 		string errmsg;
 		var query = """SELECT id, name, count
