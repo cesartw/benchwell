@@ -2,16 +2,12 @@ public class Benchwell.Application : Gtk.Application {
 	private SimpleAction new_window_action;
 	private SimpleAction preference_action;
 	private SimpleAction dark_mode_action;
-	private Config config;
 
 	public Application () {
 		Object(
 			application_id: "io.benchwell",
 			flags: ApplicationFlags.FLAGS_NONE
 		);
-
-		// config initialization
-		config = new Config ();
 
 		new_window_action = new SimpleAction ("new", null);
 		preference_action = new SimpleAction ("preference", null);
@@ -37,6 +33,9 @@ public class Benchwell.Application : Gtk.Application {
 
 public static int main(string[] args) {
 	Gtk.init (ref args);
+
+	// config initialization
+	Benchwell.Config = new Benchwell._Config ();
 
 	var app = new Benchwell.Application ();
 

@@ -341,8 +341,25 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		var url = env.interpolate (address.address.get_text ());
 		var method = address.method_combo.get_active_id ();
 
-		if ( method == "POST") {
-			handle.setopt (Curl.Option.POST, true);
+		switch (method) {
+			case "HEAD":
+				handle.setopt (Curl.Option.HTTPGET, true);
+				handle.setopt (Curl.Option.CUSTOMREQUEST, "HEAD");
+				break;
+			case "GET":
+				handle.setopt (Curl.Option.HTTPGET, true);
+				break;
+			case "POST":
+				handle.setopt (Curl.Option.HTTPPOST, true);
+				break;
+			case "PATCH":
+				handle.setopt (Curl.Option.HTTPPOST, true);
+				handle.setopt (Curl.Option.CUSTOMREQUEST, "PATCH");
+				break;
+			case "DELETE":
+				handle.setopt (Curl.Option.HTTPPOST, true);
+				handle.setopt (Curl.Option.CUSTOMREQUEST, "DELETE");
+				break;
 		}
 
 		handle.setopt (Curl.Option.URL, url);
@@ -420,11 +437,12 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		set_response (http_code, (string) content, s, duration);
 	}
 
-	private void on_load_request (unowned Benchwell.HttpItem item) {
+	private void on_load_request (Benchwell.HttpItem item) {
 		address.set_request (item);
 		body.get_buffer ().set_text (item.body);
 		mime.set_active_id (item.mime);
 
+		response.get_buffer ().set_text ("");
 		headers.clear ();
 		query_params.clear ();
 		foreach (var h in item.headers) {

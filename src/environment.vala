@@ -1,3 +1,6 @@
+// modules: gtk+-3.0
+// vapidirs: vapi
+
 public class Benchwell.EnvironmentEditor : Gtk.Box {
 	public Benchwell.Button btn_add;
 
@@ -49,32 +52,22 @@ public class Benchwell.EnvironmentEditor : Gtk.Box {
 }
 
 public class Benchwell.EnvironmentPanel : Gtk.Box {
-	public Gtk.Entry name;
+	public Gtk.Entry entry_name;
 	public Gtk.Button btn_save;
 	public Gtk.Button btn_remove;
+	public Benchwell.Environment environment { get; construct; }
 
 	public EnvironmentPanel (Benchwell.Environment env) {
 		Object (
 			orientation: Gtk.Orientation.HORIZONTAL,
-			spacing: 5
+			spacing: 5,
+			environment: env
 		);
 
-		name = new Gtk.Entry ();
-		name.set_text (env.name);
-		name.set_placeholder_text ("Name");
-		name.show ();
-
-		btn_save = new Gtk.Button.with_label (_("Save"));
-		btn_save.show ();
-
-		btn_remove = new Gtk.Button.with_label (_("Remove"));
-		btn_remove.get_style_context ().add_class ("destructive-action");
-		btn_remove.show ();
-
-		var btn_box = new Gtk.ButtonBox (Gtk.Orientation.HORIZONTAL);
-		btn_box.pack_end(btn_remove, false, false, 5);
-		btn_box.pack_end(btn_save, false, false, 5);
-		btn_box.show ();
+		entry_name = new Gtk.Entry ();
+		entry_name.set_text (env.name);
+		entry_name.set_placeholder_text ("Name");
+		entry_name.show ();
 
 		var vbox = new Gtk.Box (Gtk.Orientation.VERTICAL, 5);
 		vbox.show ();
@@ -84,11 +77,27 @@ public class Benchwell.EnvironmentPanel : Gtk.Box {
 		foreach (var v in env.variables) {
 			vv.add (v);
 		}
-		vbox.pack_start (name, false, false, 5);
+		vbox.pack_start (entry_name, false, false, 5);
 		vbox.pack_start (vv, true, true, 5);
-		vbox.pack_end (btn_box, false, false, 5);
+		//vbox.pack_end (btn_box, false, false, 5);
 		vv.show ();
 
 		pack_start (vbox, true, true, 5);
+
+		// signals
+
+		vv.changed.connect (on_save);
+	}
+
+	private void on_save () {
+		try {
+			environment.save ();
+		} catch (Error err) {
+			stderr.printf (err.message);
+		}
+
+		if (Config.environment != null && environment.id == Config.environment.id) {
+			Config.changed ();
+		}
 	}
 }

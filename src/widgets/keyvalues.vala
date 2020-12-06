@@ -1,4 +1,7 @@
 public class Benchwell.KeyValues : Gtk.Box {
+
+	public signal void changed ();
+
 	public KeyValues () {
 		Object (
 			orientation: Gtk.Orientation.VERTICAL,
@@ -13,8 +16,8 @@ public class Benchwell.KeyValues : Gtk.Box {
 		string[] vs = {};
 		get_children ().foreach ( (child) => {
 			var kv = child as Benchwell.KeyValue;
-			var key = kv.key.get_text ();
-			var val = kv.val.get_text ();
+			var key = kv.entry_key.get_text ();
+			var val = kv.entry_val.get_text ();
 			if (key == "" || val == "") {
 				return;
 			}
@@ -27,31 +30,26 @@ public class Benchwell.KeyValues : Gtk.Box {
 		values = vs;
 	}
 
-	public void add (KeyValueI? kvi) {
+	public void add (Benchwell.KeyValueI? kvi) {
 		var kv = new Benchwell.KeyValue ();
 		kv.show ();
+		kv.keyvalue = (Benchwell.KeyValueI) kvi;
 
-		if (kvi != null) {
-			kv.key.set_text (kvi.key ());
-			kv.val.set_text (kvi.val ());
-			kv.enabled.set_active (kvi.enabled ());
-		}
-
-		kv.key.grab_focus.connect (() => {
+		kv.entry_key.grab_focus.connect (() => {
 			if (get_children ().index (kv) != get_children ().length () - 1) {
 				return;
 			}
 
 			add (null);
 		});
-		kv.val.grab_focus.connect (() => {
+		kv.entry_val.grab_focus.connect (() => {
 			if (get_children ().index (kv) != get_children ().length () - 1) {
 				return;
 			}
 
 			add (null);
 		});
-		kv.enabled.state_set.connect ((b) => {
+		kv.switch_enabled.state_set.connect ((b) => {
 			if (get_children ().index (kv) == get_children ().length () - 1) {
 				add (null);
 			}
@@ -59,7 +57,7 @@ public class Benchwell.KeyValues : Gtk.Box {
 			return false;
 		});
 
-		kv.remove_btn.clicked.connect( () => {
+		kv.btn_remove.clicked.connect( () => {
 			remove(kv);
 			if (get_children ().length () == 0) {
 				add (null);
@@ -67,6 +65,8 @@ public class Benchwell.KeyValues : Gtk.Box {
 		});
 
 		pack_start (kv, false, false, 0);
+
+		kv.changed.connect (() => { changed ();});
 	}
 
 	public void clear () {
@@ -77,10 +77,25 @@ public class Benchwell.KeyValues : Gtk.Box {
 }
 
 public class Benchwell.KeyValue : Gtk.Box {
-	public Gtk.Switch enabled;
-	public Gtk.Entry        key;
-	public Gtk.Entry        val;
-	public Benchwell.Button remove_btn;
+	public Gtk.Switch switch_enabled;
+	public Gtk.Entry        entry_key;
+	public Gtk.Entry        entry_val;
+	public Benchwell.Button btn_remove;
+	public Benchwell.KeyValueI keyvalue {
+		get { return _keyvalue; }
+		set {
+			enabled_update = false;
+			_keyvalue = value;
+			entry_key.text = _keyvalue.key ();
+			entry_val.text = _keyvalue.val ();
+			switch_enabled.state = _keyvalue.enabled ();
+			enabled_update = true;
+		}
+	}
+	private Benchwell.KeyValueI _keyvalue;
+	private bool enabled_update = true;
+
+	public signal void changed ();
 
 	public KeyValue () {
 		Object (
@@ -88,27 +103,53 @@ public class Benchwell.KeyValue : Gtk.Box {
 			spacing: 5
 		);
 
-		key = new Gtk.Entry ();
-		key.placeholder_text = _("Name");
-		key.show ();
+		entry_key = new Gtk.Entry ();
+		entry_key.placeholder_text = _("Name");
+		entry_key.show ();
 
-		val = new Gtk.Entry ();
-		val.placeholder_text = _("Value");
-		val.show ();
+		entry_val = new Gtk.Entry ();
+		entry_val.placeholder_text = _("Value");
+		entry_val.show ();
 
-		remove_btn = new Benchwell.Button ("close", Gtk.IconSize.BUTTON);
-		remove_btn.show ();
+		btn_remove = new Benchwell.Button ("close", Gtk.IconSize.BUTTON);
+		btn_remove.show ();
 
-		enabled = new Gtk.Switch ();
-		enabled.valign = Gtk.Align.CENTER;
-		enabled.vexpand = false;
-		enabled.set_active (true);
-		enabled.show ();
+		switch_enabled = new Gtk.Switch ();
+		switch_enabled.valign = Gtk.Align.CENTER;
+		switch_enabled.vexpand = false;
+		switch_enabled.set_active (true);
+		switch_enabled.show ();
 
-		pack_start (key, true, true, 0);
-		pack_start (val, true, true, 0);
-		pack_end (remove_btn, false, false, 0);
-		pack_end (enabled, false, false, 5);
+		pack_start (entry_key, true, true, 0);
+		pack_start (entry_val, true, true, 0);
+		pack_end (btn_remove, false, false, 0);
+		pack_end (switch_enabled, false, false, 5);
+
+		entry_key.changed.connect (on_change);
+		entry_val.changed.connect (on_change);
+		switch_enabled.state_set.connect (on_change_state);
+	}
+
+	private void on_change () {
+		if ( !enabled_update ) {
+			return;
+		}
+
+		keyvalue.set_key (entry_key.text);
+		keyvalue.set_val (entry_val.text);
+		keyvalue.set_enabled (switch_enabled.active);
+		changed ();
+	}
+
+	private bool on_change_state (bool state) {
+		if ( !enabled_update ) {
+			return true;
+		}
+
+		keyvalue.set_enabled (switch_enabled.active);
+		changed ();
+
+		return true;
 	}
 }
 

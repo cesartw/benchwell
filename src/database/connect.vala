@@ -281,14 +281,22 @@ public class Benchwell.Database.ConnectionList : Gtk.ListBox {
 		c.ttype = "tcp";
 		c.port = 3306;
 
-		Config.save_connection (ref c);
+		try {
+			Benchwell.Config.save_connection (ref c);
+		} catch (Benchwell.ConfigError err) {
+			stderr.printf (err.message);
+		}
 		update_items (c.id);
 	}
 
 	private void on_delete () {
 		var row = get_selected_row ();
 		var conn = Benchwell.Config.connections.nth_data (row.get_index ());
-		Benchwell.Config.delete_connection (conn);
+		try {
+			Benchwell.Config.delete_connection (conn);
+		} catch (Benchwell.ConfigError err) {
+			stderr.printf (err.message);
+		}
 		update_items ();
 	}
 }

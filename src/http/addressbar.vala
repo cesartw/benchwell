@@ -3,6 +3,7 @@ public class Benchwell.Http.HttpAddressBar : Gtk.Box {
 	public Gtk.Entry address;
 	public Gtk.Button send_btn;
 	public Benchwell.OptButton save_btn;
+	public Benchwell.HttpItem? item;
 
 	public HttpAddressBar () {
 		Object (
@@ -26,7 +27,6 @@ public class Benchwell.Http.HttpAddressBar : Gtk.Box {
 		send_btn.show ();
 
 		// TODO: add to window
-		var save_as_action = new GLib.SimpleAction ("win.saveas", null);
 		save_btn = new Benchwell.OptButton(_("SAVE"), _("Save as"), "win.saveas");
 		save_btn.show ();
 
@@ -34,11 +34,20 @@ public class Benchwell.Http.HttpAddressBar : Gtk.Box {
 		pack_start(address, true, true, 0);
 		pack_end(save_btn, false, false, 0);
 		pack_end(send_btn, false, false, 0);
+
+		Config.changed.connect (() => {
+			if (item != null && Config.environment != null) {
+				address.tooltip_text = Config.environment.interpolate (item.url);
+			}
+		});
 	}
 
 	public void set_request (Benchwell.HttpItem item) {
+		this.item = item;
 		address.set_text (item.url);
-		address.tooltip_text = Config.environments.nth_data (0).interpolate (item.url);
+		if (Config.environment != null) {
+			address.tooltip_text = Config.environment.interpolate (item.url);
+		}
 		method_combo.set_active_id (item.method);
 	}
 }

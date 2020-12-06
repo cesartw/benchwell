@@ -1,7 +1,12 @@
+namespace Benchwell {
+	public static Benchwell._Config Config;
+}
+
 public errordomain Benchwell.ConfigError {
 	GET_CONNECTIONS,
 	GET_ENVIRONMENTS,
 	SAVE_CONNECTION,
+	SAVE_ENVVAR,
 	DELETE_CONNECTION,
 	ENVIRONMENTS
 }
@@ -35,6 +40,12 @@ public class Benchwell.Environment : Object {
 		}
 
 		return result;
+	}
+
+	public void save () throws Error {
+		foreach (var envvar in variables) {
+			Config.save_envvar (envvar);
+		}
 	}
 }
 
@@ -72,7 +83,7 @@ public class Benchwell.EnvVar : Object, Benchwell.KeyValueI {
 	}
 }
 
-public interface Benchwell.KeyValueI {
+public interface Benchwell.KeyValueI : Object {
 	public abstract string key();
 	public abstract string val();
 	public abstract bool enabled();
@@ -144,16 +155,23 @@ public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
 	}
 }
 
-public class Benchwell.Config : Object {
-	private static GLib.Settings settings;
-	private static Sqlite.Database db;
-	public static List<Benchwell.Environment> environments;
-	public static List<Benchwell.Backend.Sql.ConnectionInfo> connections;
-	public static List<Benchwell.Backend.Sql.Query> queries;
-	public static List<Benchwell.HttpCollection> http_collections;
-	public static Secret.Schema schema;
+public class Benchwell._Config : Object {
+	private GLib.Settings settings;
+	private Sqlite.Database db;
+	public List<Benchwell.Environment> environments;
+	public List<Benchwell.Backend.Sql.ConnectionInfo> connections;
+	public List<Benchwell.Backend.Sql.Query> queries;
+	public List<Benchwell.HttpCollection> http_collections;
+	public Secret.Schema schema;
+	public Benchwell.Environment? _environment;
+	public Benchwell.Environment? environment {
+		set { _environment = value;  changed (); }
+		get { return _environment; }
+	}
 
-	public Config () {
+	public signal void changed ();
+
+	public _Config () throws Benchwell.ConfigError {
 		settings = new GLib.Settings ("io.benchwell");
 		string dbpath = GLib.Environment.get_user_config_dir () + "/benchwell/config.db";
 		int ec = Sqlite.Database.open_v2 (dbpath, out db, Sqlite.OPEN_READWRITE);
@@ -172,23 +190,23 @@ public class Benchwell.Config : Object {
 		load_http_collections ();
 	}
 
-	public static int window_width() {
+	public int window_width() {
 		return settings.get_int ("window-size-w");
 	}
 
-	public static int window_height() {
+	public int window_height() {
 		return settings.get_int ("window-size-h");
 	}
 
-	public static int window_position_x() {
+	public int window_position_x() {
 		return settings.get_int ("window-pos-x");
 	}
 
-	public static int window_position_y() {
+	public int window_position_y() {
 		return settings.get_int ("window-pos-y");
 	}
 
-	public static Gtk.PositionType tab_position() {
+	public Gtk.PositionType tab_position() {
 		Gtk.PositionType v;
 
 		switch (settings.get_string ("tab-position")) {
@@ -206,7 +224,7 @@ public class Benchwell.Config : Object {
 		return v;
 	}
 
-	public static void save_query (ref Benchwell.Backend.Sql.Query query) throws ConfigError {
+	public void save_query (ref Benchwell.Backend.Sql.Query query) throws ConfigError {
 		Sqlite.Statement stmt;
 		string prepared_query_str = "";
 
@@ -259,7 +277,7 @@ public class Benchwell.Config : Object {
 		}
 	}
 
-	public static void delete_query (Benchwell.Backend.Sql.Query query) throws ConfigError {
+	public void delete_query (Benchwell.Backend.Sql.Query query) throws ConfigError {
 		if (query.id == 0) {
 			return;
 		}
@@ -279,7 +297,7 @@ public class Benchwell.Config : Object {
 		});
 	}
 
-	public static void save_connection (ref Benchwell.Backend.Sql.ConnectionInfo conn) throws ConfigError {
+	public void save_connection (ref Benchwell.Backend.Sql.ConnectionInfo conn) throws ConfigError {
 		Sqlite.Statement stmt;
 		string prepared_query_str = "";
 
@@ -357,7 +375,7 @@ public class Benchwell.Config : Object {
 		encrypt (conn);
 	}
 
-	public static void delete_connection (Benchwell.Backend.Sql.ConnectionInfo c) throws ConfigError {
+	public void delete_connection (Benchwell.Backend.Sql.ConnectionInfo c) throws ConfigError {
 		if ( c.id == 0 ) {
 			return;
 		}
@@ -377,7 +395,7 @@ public class Benchwell.Config : Object {
 		});
 	}
 
-	private static void load_connections () throws ConfigError {
+	private void load_connections () throws ConfigError {
 		string errmsg;
 		var ec = db.exec ("SELECT * FROM db_connections",
 						  connections_cb,
@@ -388,7 +406,7 @@ public class Benchwell.Config : Object {
 		load_queries ();
 	}
 
-	private static void load_queries () throws ConfigError {
+	private void load_queries () throws ConfigError {
 		string errmsg;
 		var ec = db.exec ("SELECT * FROM db_queries",
 						  queries_cb,
@@ -408,7 +426,7 @@ public class Benchwell.Config : Object {
 		});
 	}
 
-	private static int connections_cb(int n_columns, string[] values, string[] column_names){
+	private int connections_cb(int n_columns, string[] values, string[] column_names){
 		var info = new Benchwell.Backend.Sql.ConnectionInfo ();
 		info.id = int.parse (values[0]);
 		info.name = values[1];
@@ -426,7 +444,7 @@ public class Benchwell.Config : Object {
 		return 0;
 	}
 
-	private static int queries_cb(int n_columns, string[] values, string[] column_names){
+	private int queries_cb(int n_columns, string[] values, string[] column_names){
 		var query = new Benchwell.Backend.Sql.Query ();
 		query.id = int.parse (values[0]);
 		query.name = values[1];
@@ -437,7 +455,7 @@ public class Benchwell.Config : Object {
 		return 0;
 	}
 
-	public static async void encrypt (Benchwell.Backend.Sql.ConnectionInfo info) {
+	public async void encrypt (Benchwell.Backend.Sql.ConnectionInfo info) {
 		var attributes = new GLib.HashTable<string, string> (str_hash, str_equal);
 		attributes["id"] = info.id.to_string ();
 		attributes["schema"] = Constants.PROJECT_NAME;
@@ -451,7 +469,7 @@ public class Benchwell.Config : Object {
 		}
 	}
 
-	public static async string? decrypt (Benchwell.Backend.Sql.ConnectionInfo info) throws Error {
+	public async string? decrypt (Benchwell.Backend.Sql.ConnectionInfo info) throws Error {
 		var attributes = new GLib.HashTable<string, string> (str_hash, str_equal);
 		attributes["id"] = info.id.to_string ();
 		attributes["schema"] = Constants.PROJECT_NAME;
@@ -477,7 +495,7 @@ public class Benchwell.Config : Object {
     }
 
 	// hack because password_lookpv doesn't trigger the unlock keychain popup
-	public static async void ping_dbus () throws Error {
+	public async void ping_dbus () throws Error {
 		var attributes = new GLib.HashTable<string, string> (str_hash, str_equal);
 		attributes["id"] = "0";
 		attributes["schema"] = Constants.PROJECT_NAME;
@@ -491,7 +509,7 @@ public class Benchwell.Config : Object {
 		}
     }
 
-	private static void load_http_collections () throws ConfigError {
+	private void load_http_collections () throws ConfigError {
 		string errmsg;
 		var query = """SELECT id, name, count
 					 FROM http_collections
@@ -511,7 +529,7 @@ public class Benchwell.Config : Object {
 		}
 	}
 
-	public static void load_root_items (Benchwell.HttpCollection collection) {
+	public void load_root_items (Benchwell.HttpCollection collection) {
 		string errmsg;
 		Benchwell.HttpItem[] items = {};
 		var query = """SELECT id, name, is_folder, sort, http_collections_id, method
@@ -542,7 +560,7 @@ public class Benchwell.Config : Object {
 		collection.items = items;
 	}
 
-	public static void load_full_item (Benchwell.HttpItem item) {
+	public void load_full_item (Benchwell.HttpItem item) {
 		if (item.loaded) {
 			return;
 		}
@@ -629,7 +647,7 @@ public class Benchwell.Config : Object {
 		item.loaded = true;
 	}
 
-	public static void load_environments () {
+	public void load_environments () {
 		string errmsg;
 		var query = """SELECT *
 						FROM environments
@@ -680,5 +698,59 @@ public class Benchwell.Config : Object {
 			}
 			env.variables = envvars;
 		});
+	}
+
+	public void save_envvar (Benchwell.EnvVar envvar) throws Error {
+		Sqlite.Statement stmt;
+		string prepared_query_str = "";
+
+		if (envvar.id > 0) {
+			 prepared_query_str = """
+				UPDATE environment_variables
+					SET key = $KEY, value = $VALUE, enabled = $ENABLED
+				WHERE ID = $ID
+			""";
+		} else {
+			 prepared_query_str = """
+				INSERT INTO environment_variables(key, value, enabled, environment_id)
+				VALUES($KEY, $VALUE, $ENABLED, $ENVIRONMENT_ID)
+			""";
+		}
+
+		var ec = db.prepare_v2 (prepared_query_str, prepared_query_str.length, out stmt);
+		if (ec != Sqlite.OK) {
+			stderr.printf ("Error: %d: %s\n", db.errcode (), db.errmsg ());
+			return;
+		}
+
+		int param_position;
+		if (envvar.id > 0) {
+			param_position = stmt.bind_parameter_index ("$ID");
+			stmt.bind_int64 (param_position, envvar.id);
+		} else {
+			param_position = stmt.bind_parameter_index ("$ENVIRONMENT_ID");
+			stmt.bind_int64 (param_position, envvar.environment_id);
+		}
+
+		param_position = stmt.bind_parameter_index ("$KEY");
+		stmt.bind_text (param_position, envvar.key ());
+
+		param_position = stmt.bind_parameter_index ("$VALUE");
+		stmt.bind_text (param_position, envvar.val ());
+
+		param_position = stmt.bind_parameter_index ("$ENABLED");
+		stmt.bind_int (param_position, envvar.enabled () ? 1 : 0);
+
+		string errmsg = "";
+		ec = db.exec (stmt.expanded_sql(), null, out errmsg);
+		if ( ec != Sqlite.OK ){
+			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
+			stderr.printf ("ERR: %s\n", errmsg);
+			throw new ConfigError.SAVE_ENVVAR(errmsg);
+		}
+
+		if (envvar.id == 0) {
+			envvar.id = db.last_insert_rowid ();
+		}
 	}
 }

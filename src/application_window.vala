@@ -176,6 +176,24 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		grid.attach (btn_env, 4, 0, 1, 1);
 		grid.get_style_context ().add_class ("link");
 
+		env_combo.changed.connect (() => {
+			Gtk.TreeIter? iter = null;
+			env_combo.get_active_iter (out iter);
+			if ( iter == null ) {
+				return;
+			}
+
+			GLib.Value val;
+			env_store.get_value (iter, 0, out val);
+			var id = val.get_int64 ();
+			foreach (var env in Config.environments) {
+				if (env.id == id) {
+					Config.environment = env;
+					break;
+				}
+			}
+		});
+
 		return grid;
 	}
 }
