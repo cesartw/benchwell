@@ -85,10 +85,13 @@ public class Benchwell.KeyValue : Gtk.Box {
 		get { return _keyvalue; }
 		set {
 			enabled_update = false;
-			_keyvalue = value;
-			entry_key.text = _keyvalue.key ();
-			entry_val.text = _keyvalue.val ();
-			switch_enabled.state = _keyvalue.enabled ();
+			if (_keyvalue != null) {
+				_keyvalue = value;
+				entry_key.text = _keyvalue.key ();
+				entry_val.text = _keyvalue.val ();
+				switch_enabled.state = _keyvalue.enabled ();
+			}
+			switch_enabled.state = true;
 			enabled_update = true;
 		}
 	}

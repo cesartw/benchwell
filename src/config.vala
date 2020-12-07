@@ -11,153 +11,9 @@ public errordomain Benchwell.ConfigError {
 	ENVIRONMENTS
 }
 
-public class Benchwell.Environment : Object {
-	public int64  id;
-	public string name;
-	public Benchwell.EnvVar[] variables;
-
-	public Regex regex;
-
-	public Environment () {
-		regex = /({{\s*([a-zA-Z0-9]+)\s*}})/;
-	}
-
-	public string interpolate (string s) {
-		MatchInfo info;
-		string result = s;
-
-		for (regex.match (s, 0, out info); info.matches () ; info.next ()) {
-			for (var i = info.get_match_count () - 1; i > 0; i-=2) {
-				var var_name = info.fetch (i);
-				var to_replace = info.fetch (i-1);
-
-				foreach (var envar in variables) {
-					if (envar._key == var_name) {
-						result = result.replace (to_replace, envar._val);
-					}
-				}
-			}
-		}
-
-		return result;
-	}
-
-	public void save () throws Error {
-		foreach (var envvar in variables) {
-			Config.save_envvar (envvar);
-		}
-	}
-}
-
-public class Benchwell.EnvVar : Object, Benchwell.KeyValueI {
-	public int64  id;
-	public string _key;
-	public string _val;
-	public bool   _enabled;
-	public string type; // header | param
-	public int    sort;
-	public int64  environment_id;
-
-	public string key () {
-		return _key;
-	}
-
-	public string val() {
-		return _val;
-	}
-
-	public bool enabled() {
-		return _enabled;
-	}
-
-	public void set_key(string n) {
-		_key = n;
-	}
-
-	public void set_val(string v) {
-		_val = v;
-	}
-
-	public void set_enabled(bool e) {
-		_enabled = e;
-	}
-}
-
-public interface Benchwell.KeyValueI : Object {
-	public abstract string key();
-	public abstract string val();
-	public abstract bool enabled();
-	public abstract void set_key(string n);
-	public abstract void set_val(string v);
-	public abstract void set_enabled(bool e);
-}
-
-public class Benchwell.HttpCollection : Object {
-	public int64      id;
-	public string     name;
-	public int        count;
-	public HttpItem[] items;
-}
-
-public class Benchwell.HttpItem : Object {
-	public int64  id;
-	public int64  parent_id;
-	public string name;
-	public string description;
-	public bool   is_folder;
-	public int64  http_collection_id;
-	public int    sort;
-	public int64  count;
-
-	public string             method;
-	public string             url;
-	public string             body;
-	public string             mime;
-	public Benchwell.HttpKv[] headers;
-	public Benchwell.HttpKv[] query_params;
-
-	public Benchwell.HttpItem[]?  items;
-
-	internal bool                  loaded;
-}
-
-public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
-	public int64  id;
-	public string _key;
-	public string _val;
-	public bool   _enabled;
-	public string type; // header | param
-	public int    sort;
-	public int64  http_item_id;
-
-	public string key () {
-		return _key;
-	}
-
-	public string val() {
-		return _val;
-	}
-
-	public bool enabled() {
-		return _enabled;
-	}
-
-	public void set_key(string n) {
-		_key = n;
-	}
-
-	public void set_val(string v) {
-		_val = v;
-	}
-
-	public void set_enabled(bool e) {
-		_enabled = e;
-	}
-}
-
 public class Benchwell._Config : Object {
-	private GLib.Settings settings;
 	private Sqlite.Database db;
+	public GLib.Settings settings;
 	public List<Benchwell.Environment> environments;
 	public List<Benchwell.Backend.Sql.ConnectionInfo> connections;
 	public List<Benchwell.Backend.Sql.Query> queries;
@@ -190,23 +46,7 @@ public class Benchwell._Config : Object {
 		load_http_collections ();
 	}
 
-	public int window_width() {
-		return settings.get_int ("window-size-w");
-	}
-
-	public int window_height() {
-		return settings.get_int ("window-size-h");
-	}
-
-	public int window_position_x() {
-		return settings.get_int ("window-pos-x");
-	}
-
-	public int window_position_y() {
-		return settings.get_int ("window-pos-y");
-	}
-
-	public Gtk.PositionType tab_position() {
+	public Gtk.PositionType tab_position () {
 		Gtk.PositionType v;
 
 		switch (settings.get_string ("tab-position")) {
@@ -647,7 +487,7 @@ public class Benchwell._Config : Object {
 		item.loaded = true;
 	}
 
-	public void load_environments () {
+	public void load_environments () throws Benchwell.ConfigError {
 		string errmsg;
 		var query = """SELECT *
 						FROM environments
@@ -752,5 +592,196 @@ public class Benchwell._Config : Object {
 		if (envvar.id == 0) {
 			envvar.id = db.last_insert_rowid ();
 		}
+	}
+
+	public void save_environment (Benchwell.Environment env) throws Error {
+		Sqlite.Statement stmt;
+		string prepared_query_str = "";
+
+		if (env.id > 0) {
+			 prepared_query_str = """
+				UPDATE environments
+					SET name = $NAME
+				WHERE ID = $ID
+			""";
+		} else {
+			 prepared_query_str = """
+				INSERT INTO environments(name)
+				VALUES($NAME)
+			""";
+		}
+
+		var ec = db.prepare_v2 (prepared_query_str, prepared_query_str.length, out stmt);
+		if (ec != Sqlite.OK) {
+			stderr.printf ("Error: %d: %s\n", db.errcode (), db.errmsg ());
+			return;
+		}
+
+		int param_position;
+		if (env.id > 0) {
+			param_position = stmt.bind_parameter_index ("$ID");
+			stmt.bind_int64 (param_position, env.id);
+		}
+
+		param_position = stmt.bind_parameter_index ("$NAME");
+		stmt.bind_text (param_position, env.name);
+
+		string errmsg = "";
+		ec = db.exec (stmt.expanded_sql(), null, out errmsg);
+		if ( ec != Sqlite.OK ){
+			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
+			stderr.printf ("ERR: %s\n", errmsg);
+			throw new ConfigError.SAVE_ENVVAR(errmsg);
+		}
+
+		if (env.id == 0) {
+			env.id = db.last_insert_rowid ();
+			Config.environments.append (env);
+			changed ();
+		}
+	}
+}
+
+public class Benchwell.Environment : Object {
+	public int64  id;
+	public string name;
+	public Benchwell.EnvVar[] variables;
+
+	public Regex regex;
+
+	public Environment () {
+		regex = /({{\s*([a-zA-Z0-9]+)\s*}})/;
+	}
+
+	public string interpolate (string s) {
+		MatchInfo info;
+		string result = s;
+
+		for (regex.match (s, 0, out info); info.matches () ; info.next ()) {
+			for (var i = info.get_match_count () - 1; i > 0; i-=2) {
+				var var_name = info.fetch (i);
+				var to_replace = info.fetch (i-1);
+
+				foreach (var envar in variables) {
+					if (envar._key == var_name) {
+						result = result.replace (to_replace, envar._val);
+					}
+				}
+			}
+		}
+
+		return result;
+	}
+
+	public void save () throws Error {
+		foreach (var envvar in variables) {
+			Config.save_envvar (envvar);
+		}
+	}
+}
+
+public class Benchwell.EnvVar : Object, Benchwell.KeyValueI {
+	public int64  id;
+	public string _key;
+	public string _val;
+	public bool   _enabled;
+	public string type; // header | param
+	public int    sort;
+	public int64  environment_id;
+
+	public string key () {
+		return _key;
+	}
+
+	public string val() {
+		return _val;
+	}
+
+	public bool enabled() {
+		return _enabled;
+	}
+
+	public void set_key(string n) {
+		_key = n;
+	}
+
+	public void set_val(string v) {
+		_val = v;
+	}
+
+	public void set_enabled(bool e) {
+		_enabled = e;
+	}
+}
+
+public interface Benchwell.KeyValueI : Object {
+	public abstract string key();
+	public abstract string val();
+	public abstract bool enabled();
+	public abstract void set_key(string n);
+	public abstract void set_val(string v);
+	public abstract void set_enabled(bool e);
+}
+
+public class Benchwell.HttpCollection : Object {
+	public int64      id;
+	public string     name;
+	public int        count;
+	public HttpItem[] items;
+}
+
+public class Benchwell.HttpItem : Object {
+	public int64  id;
+	public int64  parent_id;
+	public string name;
+	public string description;
+	public bool   is_folder;
+	public int64  http_collection_id;
+	public int    sort;
+	public int64  count;
+
+	public string             method;
+	public string             url;
+	public string             body;
+	public string             mime;
+	public Benchwell.HttpKv[] headers;
+	public Benchwell.HttpKv[] query_params;
+
+	public Benchwell.HttpItem[]?  items;
+
+	internal bool                  loaded;
+}
+
+public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
+	public int64  id;
+	public string _key;
+	public string _val;
+	public bool   _enabled;
+	public string type; // header | param
+	public int    sort;
+	public int64  http_item_id;
+
+	public string key () {
+		return _key;
+	}
+
+	public string val() {
+		return _val;
+	}
+
+	public bool enabled() {
+		return _enabled;
+	}
+
+	public void set_key(string n) {
+		_key = n;
+	}
+
+	public void set_val(string v) {
+		_val = v;
+	}
+
+	public void set_enabled(bool e) {
+		_enabled = e;
 	}
 }

@@ -26,5 +26,15 @@
 			<summary>Tab position</summary>
 			<description>The tool tab saved position</description>
 		</key>
+		<key name="environment-id" type="x">
+			<default>0</default>
+			<summary>Environment ID</summary>
+			<description>The last environment selected</description>
+		</key>
+		<key name="http-collection-id" type="x">
+			<default>0</default>
+			<summary>HTTP Collection ID</summary>
+			<description>The last http collection selected</description>
+		</key>
 	</schema>
 </schemalist>

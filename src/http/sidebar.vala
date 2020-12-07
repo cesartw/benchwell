@@ -64,6 +64,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 
 		collections_combo = new Gtk.ComboBoxText ();
 		collections_combo.append ("", "");
+
 		foreach (var collection in Config.http_collections) {
 			collections_combo.append (collection.id.to_string (), collection.name);
 		}
@@ -93,6 +94,11 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 
 		collections_combo.changed.connect (on_collection_selected);
 		treeview.row_activated.connect (on_row_activated);
+
+		var selected_collection_id = Config.settings.get_int64 (Benchwell.Settings.HTTP_COLLECTION_ID.to_string ());
+		if (selected_collection_id > 0) {
+			collections_combo.set_active_id (selected_collection_id.to_string ());
+		}
 	}
 
 	private void on_row_activated () {
@@ -141,6 +147,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 				continue;
 			}
 
+			Config.settings.set_int64 (Benchwell.Settings.HTTP_COLLECTION_ID.to_string (), collection.id);
 			try {
 				Config.load_root_items (collection);
 			} catch (Benchwell.Backend.Sql.Error err) {

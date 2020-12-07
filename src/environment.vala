@@ -3,6 +3,7 @@
 
 public class Benchwell.EnvironmentEditor : Gtk.Box {
 	public Benchwell.Button btn_add;
+	private Gtk.Stack stack;
 
 	public EnvironmentEditor () {
 		Object (
@@ -29,7 +30,7 @@ public class Benchwell.EnvironmentEditor : Gtk.Box {
 		switcher.hexpand = true;
 		switcher.show ();
 
-		var stack = new Gtk.Stack ();
+		stack = new Gtk.Stack ();
 		stack.show ();
 		stack.homogeneous = true;
 		stack.vexpand = true;
@@ -48,13 +49,28 @@ public class Benchwell.EnvironmentEditor : Gtk.Box {
 
 		pack_start (header_bar, true, true, 0);
 		pack_start (paned, false, false, 0);
+
+		btn_add.clicked.connect (on_add_env);
+	}
+
+	private void on_add_env () {
+		var env = new Benchwell.Environment ();
+		env.name = "New environment";
+		try {
+			Config.save_environment (env);
+		} catch (GLib.Error err) {
+			stderr.printf (err.message);
+		}
+
+		var panel = new Benchwell.EnvironmentPanel (env);
+		panel.show ();
+		stack.add_titled (panel, env.name, env.name);
+		stack.set_visible_child (panel);
 	}
 }
 
 public class Benchwell.EnvironmentPanel : Gtk.Box {
-	public Gtk.Entry entry_name;
-	public Gtk.Button btn_save;
-	public Gtk.Button btn_remove;
+	public Gtk.Entry  entry_name;
 	public Benchwell.Environment environment { get; construct; }
 
 	public EnvironmentPanel (Benchwell.Environment env) {
@@ -73,10 +89,13 @@ public class Benchwell.EnvironmentPanel : Gtk.Box {
 		vbox.show ();
 
 		var vv = new Benchwell.KeyValues ();
-		vv.clear ();
-		foreach (var v in env.variables) {
-			vv.add (v);
+		if (env.variables.length > 0) {
+			vv.clear ();
+			foreach (var v in env.variables) {
+				vv.add (v);
+			}
 		}
+
 		vbox.pack_start (entry_name, false, false, 5);
 		vbox.pack_start (vv, true, true, 5);
 		//vbox.pack_end (btn_box, false, false, 5);

@@ -113,3 +113,32 @@ public enum Benchwell.Colors {
 		return null;
 	}
 }
+
+public enum Benchwell.Settings {
+	WINDOW_SIZE_W,
+	WINDOW_SIZE_H,
+	WINDOW_POS_X,
+	WINDOW_POS_Y,
+	ENVIRONMENT_ID,
+	HTTP_COLLECTION_ID;
+
+
+	public string to_string () {
+		switch (this) {
+			case WINDOW_SIZE_W:
+				return "window-size-w";
+			case WINDOW_SIZE_H:
+				return "window-size-h";
+			case WINDOW_POS_X:
+				return "window-pos-x";
+			case WINDOW_POS_Y:
+				return "window-pos-y";
+			case ENVIRONMENT_ID:
+				return "environment-id";
+			case HTTP_COLLECTION_ID:
+				return "http-collection-id";
+			default:
+				return "";
+		}
+	}
+}

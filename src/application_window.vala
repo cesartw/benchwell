@@ -75,8 +75,8 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 
 		add(box);
 
-		set_default_size (Config.window_width (), Config.window_height ());
-		move (Config.window_position_x (), Config.window_position_y ());
+		set_default_size (Config.settings.get_int (Benchwell.Settings.WINDOW_SIZE_W.to_string ()), Config.settings.get_int (Benchwell.Settings.WINDOW_SIZE_H.to_string ()));
+		move (Config.settings.get_int (Benchwell.Settings.WINDOW_POS_X.to_string ()), Config.settings.get_int (Benchwell.Settings.WINDOW_POS_Y.to_string ()));
 
 		new_database_tab_menu.activate.connect (() => {
 			add_database_tab ();
@@ -95,6 +95,21 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		Gtk.StyleContext.add_provider_for_screen (
 			Gdk.Screen.get_default (), css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
 		);
+
+		delete_event.connect (before_destroy);
+	}
+
+	private bool before_destroy () {
+		int width, height, x, y;
+		get_size (out width, out height);
+		get_position (out x, out y);
+
+		Config.settings.set_int (Benchwell.Settings.WINDOW_SIZE_W.to_string (), width);
+		Config.settings.set_int (Benchwell.Settings.WINDOW_SIZE_H.to_string (), height);
+		Config.settings.set_int (Benchwell.Settings.WINDOW_POS_X.to_string (), x);
+		Config.settings.set_int (Benchwell.Settings.WINDOW_POS_Y.to_string (), y);
+
+		return false;
 	}
 
 	public void add_database_tab (Benchwell.Backend.Sql.ConnectionInfo? connection_info=null, Benchwell.Backend.Sql.TableDef? tabledef = null) {
@@ -151,12 +166,16 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		env_combo.set_entry_text_column (1);
 		env_combo.show ();
 
+		var selected_environment_id = Config.settings.get_int64 (Benchwell.Settings.ENVIRONMENT_ID.to_string ());
 		Config.environments.foreach( (env) => {
 			Gtk.TreeIter iter;
 			env_store.append (out iter);
 
 			env_store.set_value (iter, 0, env.id);
 			env_store.set_value (iter, 1, env.name);
+			if (selected_environment_id == env.id) {
+				env_combo.set_active_iter (iter);
+			}
 		});
 
 		btn_env = new Benchwell.Button ("config", Gtk.IconSize.BUTTON);
@@ -192,6 +211,8 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 					break;
 				}
 			}
+
+			Config.settings.set_int64 (Benchwell.Settings.ENVIRONMENT_ID.to_string (), Config.environment.id);
 		});
 
 		return grid;
