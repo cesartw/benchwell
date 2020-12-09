@@ -350,14 +350,14 @@ public class Benchwell.Http.Http : Gtk.Paned {
 				handle.setopt (Curl.Option.HTTPGET, true);
 				break;
 			case "POST":
-				handle.setopt (Curl.Option.HTTPPOST, true);
+				handle.setopt (Curl.Option.POST, true);
 				break;
 			case "PATCH":
-				handle.setopt (Curl.Option.HTTPPOST, true);
+				handle.setopt (Curl.Option.POST, true);
 				handle.setopt (Curl.Option.CUSTOMREQUEST, "PATCH");
 				break;
 			case "DELETE":
-				handle.setopt (Curl.Option.HTTPPOST, true);
+				handle.setopt (Curl.Option.POST, true);
 				handle.setopt (Curl.Option.CUSTOMREQUEST, "DELETE");
 				break;
 		}
@@ -407,31 +407,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		handle.getinfo(Curl.Info.CONTENT_TYPE, out content_type);
 		var content = (string)tmp.buffer;
 		var s = content_type.split(";")[0];
-
-		/*
-		var x = (uint8[]) "{}";
-		if (raw_body != "") {
-			// NOTE: Soup.MemoryUse.TEMPORARY is the only method that i could make work
-			var buff = new Soup.Buffer.take (x);
-			//message.request_body.append_buffer (buff);
-			//message.request_body.flatten ();
-			message.set_request ("application/json", Soup.MemoryUse.COPY, x);
-		}
-
-		var now = get_real_time ();
-		session.send_message (message);
-		var then = get_real_time ();
-
-
-		//string content_type = "";
-		//message.response_headers.foreach ((k,v) => {
-			//switch (k) {
-				//case "Content-Type":
-					//content_type = v.split (";")[0];
-					//break;
-			//}
-		//});
-		*/
 
 		var duration = then - now;
 		set_response (http_code, (string) content, s, duration);

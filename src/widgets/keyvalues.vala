@@ -31,7 +31,7 @@ public class Benchwell.KeyValues : Gtk.Box {
 	}
 
 	public void add (Benchwell.KeyValueI? kvi) {
-		var kv = new Benchwell.KeyValue ();
+		var kv = new Benchwell.KeyValue (kvi);
 		kv.show ();
 		kv.keyvalue = (Benchwell.KeyValueI) kvi;
 
@@ -85,11 +85,12 @@ public class Benchwell.KeyValue : Gtk.Box {
 		get { return _keyvalue; }
 		set {
 			enabled_update = false;
+			_keyvalue = value;
 			if (_keyvalue != null) {
-				_keyvalue = value;
 				entry_key.text = _keyvalue.key ();
 				entry_val.text = _keyvalue.val ();
 				switch_enabled.state = _keyvalue.enabled ();
+			} else {
 			}
 			switch_enabled.state = true;
 			enabled_update = true;
@@ -100,7 +101,7 @@ public class Benchwell.KeyValue : Gtk.Box {
 
 	public signal void changed ();
 
-	public KeyValue () {
+	public KeyValue (Benchwell.KeyValueI? kv) {
 		Object (
 			orientation: Gtk.Orientation.HORIZONTAL,
 			spacing: 5
@@ -131,6 +132,8 @@ public class Benchwell.KeyValue : Gtk.Box {
 		entry_key.changed.connect (on_change);
 		entry_val.changed.connect (on_change);
 		switch_enabled.state_set.connect (on_change_state);
+
+		keyvalue = kv;
 	}
 
 	private void on_change () {
