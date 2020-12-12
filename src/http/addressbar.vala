@@ -5,6 +5,10 @@ public class Benchwell.Http.HttpAddressBar : Gtk.Box {
 	public Benchwell.OptButton save_btn;
 	public Benchwell.HttpItem? item;
 
+	public signal void changed ();
+
+	internal bool disable_changed = false;
+
 	public HttpAddressBar () {
 		Object (
 			orientation: Gtk.Orientation.HORIZONTAL,
@@ -35,20 +39,36 @@ public class Benchwell.Http.HttpAddressBar : Gtk.Box {
 		pack_end(save_btn, false, false, 0);
 		pack_end(send_btn, false, false, 0);
 
-		Config.changed.connect (() => {
+		Config.environment_changed.connect (() => {
 			if (item != null && Config.environment != null) {
 				address.tooltip_text = Config.environment.interpolate (item.url);
 			}
 		});
+
+		method_combo.changed.connect (() => {
+			if (disable_changed || item == null) { return; }
+
+			item.method = method_combo.get_active_text ();
+			changed();
+		});
+
+		address.changed.connect (() => {
+			if (disable_changed || item == null) { return; }
+
+			item.url = address.text;
+			changed();
+		});
 	}
 
 	public void set_request (Benchwell.HttpItem item) {
+		disable_changed = true;
 		this.item = item;
 		address.set_text (item.url);
 		if (Config.environment != null) {
 			address.tooltip_text = Config.environment.interpolate (item.url);
 		}
 		method_combo.set_active_id (item.method);
+		disable_changed = false;
 	}
 }
 

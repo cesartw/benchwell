@@ -1,14 +1,12 @@
 public class Benchwell.KeyValues : Gtk.Box {
-
 	public signal void changed ();
+	public signal Benchwell.KeyValueI row_added();
 
 	public KeyValues () {
 		Object (
 			orientation: Gtk.Orientation.VERTICAL,
 			spacing: 5
 		);
-
-		add (null);
 	}
 
 	public void get_kvs (out string[] keys, out string[] values) {
@@ -30,7 +28,7 @@ public class Benchwell.KeyValues : Gtk.Box {
 		values = vs;
 	}
 
-	public void add (Benchwell.KeyValueI? kvi) {
+	public void add (Benchwell.KeyValueI kvi) {
 		var kv = new Benchwell.KeyValue (kvi);
 		kv.show ();
 		kv.keyvalue = (Benchwell.KeyValueI) kvi;
@@ -40,18 +38,20 @@ public class Benchwell.KeyValues : Gtk.Box {
 				return;
 			}
 
-			add (null);
+			add (row_added ());
 		});
+
 		kv.entry_val.grab_focus.connect (() => {
 			if (get_children ().index (kv) != get_children ().length () - 1) {
 				return;
 			}
 
-			add (null);
+			add (row_added ());
 		});
+
 		kv.switch_enabled.state_set.connect ((b) => {
 			if (get_children ().index (kv) == get_children ().length () - 1) {
-				add (null);
+				add (row_added ());
 			}
 
 			return false;
@@ -60,7 +60,7 @@ public class Benchwell.KeyValues : Gtk.Box {
 		kv.btn_remove.clicked.connect( () => {
 			remove(kv);
 			if (get_children ().length () == 0) {
-				add (null);
+				add (row_added ());
 			}
 		});
 
@@ -87,9 +87,11 @@ public class Benchwell.KeyValue : Gtk.Box {
 			enabled_update = false;
 			_keyvalue = value;
 			if (_keyvalue != null) {
-				entry_key.text = _keyvalue.key ();
-				entry_val.text = _keyvalue.val ();
-				switch_enabled.state = _keyvalue.enabled ();
+				if (_keyvalue.key != null)
+					entry_key.text = _keyvalue.key;
+				if (_keyvalue.val != null)
+					entry_val.text = _keyvalue.val;
+				switch_enabled.state = _keyvalue.enabled;
 			} else {
 			}
 			switch_enabled.state = true;
@@ -140,10 +142,13 @@ public class Benchwell.KeyValue : Gtk.Box {
 		if ( !enabled_update ) {
 			return;
 		}
+		if (keyvalue == null) {
+			return;
+		}
 
-		keyvalue.set_key (entry_key.text);
-		keyvalue.set_val (entry_val.text);
-		keyvalue.set_enabled (switch_enabled.active);
+		keyvalue.key = entry_key.text;
+		keyvalue.val = entry_val.text;
+		keyvalue.enabled = switch_enabled.active;
 		changed ();
 	}
 
@@ -151,8 +156,11 @@ public class Benchwell.KeyValue : Gtk.Box {
 		if ( !enabled_update ) {
 			return true;
 		}
+		if (keyvalue == null) {
+			return true;
+		}
 
-		keyvalue.set_enabled (switch_enabled.active);
+		keyvalue.enabled = switch_enabled.active;
 		changed ();
 
 		return true;

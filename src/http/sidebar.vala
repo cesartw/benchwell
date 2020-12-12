@@ -93,7 +93,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		pack_start( treeview_sw, true, true, 0);
 
 		collections_combo.changed.connect (on_collection_selected);
-		treeview.row_activated.connect (on_row_activated);
+		treeview.row_activated.connect (on_load_item);
 
 		var selected_collection_id = Config.settings.get_int64 (Benchwell.Settings.HTTP_COLLECTION_ID.to_string ());
 		if (selected_collection_id > 0) {
@@ -101,7 +101,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		}
 	}
 
-	private void on_row_activated () {
+	private void on_load_item () {
 		Gtk.TreeIter iter;
 		treeview.get_selection ().get_selected (null, out iter);
 
@@ -148,9 +148,10 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 			}
 
 			Config.settings.set_int64 (Benchwell.Settings.HTTP_COLLECTION_ID.to_string (), collection.id);
+
 			try {
 				Config.load_root_items (collection);
-			} catch (Benchwell.Backend.Sql.Error err) {
+			} catch (Benchwell.ConfigError err) {
 				//result_view.show_alert (err.message);
 				stderr.printf (err.message);
 				return;

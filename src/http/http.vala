@@ -177,6 +177,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	///////////
 
 	public Benchwell.Environment env;
+	public Benchwell.HttpItem? item;
 
 	public Http(Benchwell.ApplicationWindow window) {
 		Object(
@@ -184,8 +185,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			orientation: Gtk.Orientation.HORIZONTAL,
 			wide_handle: true
 		);
-
-		env = Config.environments.nth_data (0);
 
 		title = _("HTTP");
 
@@ -332,6 +331,37 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		});
 
 		address.send_btn.clicked.connect (on_send);
+		address.save_btn.btn.clicked.connect (on_save);
+
+		address.changed.connect (on_request_changed);
+		headers.changed.connect (on_request_changed);
+		query_params.changed.connect (on_request_changed);
+
+		headers.row_added.connect (() => {
+			if (item != null) {
+				return item.add_header ();
+			}
+			return new Benchwell.HttpKv ();
+		});
+
+		query_params.row_added.connect (() => {
+			if (item != null) {
+				return item.add_param ();
+			}
+			return new Benchwell.HttpKv ();
+		});
+	}
+
+	private void on_request_changed () {
+		if (item == null) {
+			return;
+		}
+
+		try {
+			item.save ();
+		} catch (ConfigError err){
+			stderr.printf (err.message);
+		}
 	}
 
 	// https://github.com/giuliopaci/ValaBindingsDevelopment/blob/master/libcurl-example.vala
@@ -412,7 +442,17 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		set_response (http_code, (string) content, s, duration);
 	}
 
+	private void on_save () {
+		if (item == null) {
+			return;
+		}
+
+		//Config.save_item (item);
+	}
+
 	private void on_load_request (Benchwell.HttpItem item) {
+		this.item = item;
+
 		address.set_request (item);
 		body.get_buffer ().set_text (item.body);
 		mime.set_active_id (item.mime);
@@ -420,32 +460,40 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		response.get_buffer ().set_text ("");
 		headers.clear ();
 		query_params.clear ();
+
 		foreach (var h in item.headers) {
-			headers.add (h);
+			headers.add ((Benchwell.KeyValueI) h);
 		}
 		foreach (var q in item.query_params) {
-			query_params.add (q);
+			query_params.add ((Benchwell.KeyValueI) q);
 		}
 
-		if (item.headers.length == 0) {
-			headers.add (null);
-		}
+		try {
+			if (item.headers.length == 0) {
+				headers.add (item.add_header ());
+			}
 
-		if (item.query_params.length == 0) {
-			query_params.add (null);
+			if (item.query_params.length == 0) {
+				query_params.add (item.add_param ());
+			}
+		} catch (ConfigError err) {
+			stderr.printf (err.message);
 		}
 	}
 
 	public void set_response(uint status, string raw_data, string content_type, int64 duration) {
-		print(content_type);
-
 		switch (content_type) {
 			case "application/json":
 				var json = new Json.Parser ();
 				var generator = new Json.Generator ();
 
 				generator.set_pretty (true);
-				json.load_from_data (raw_data);
+				try {
+					json.load_from_data (raw_data);
+				} catch (GLib.Error err) {
+					stderr.printf (err.message);
+					return;
+				}
 				generator.set_root (json.get_root ());
 
 				response.get_buffer ().set_text (generator.to_data (null));

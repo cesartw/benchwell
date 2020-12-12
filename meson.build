@@ -62,7 +62,11 @@ executable(
 
 	'src/services/database.vala',
 
-	'src/config.vala',
+	'src/config/config.vala',
+	'src/config/http.vala',
+	'src/config/environment.vala',
+	'src/config/keyvalue.vala',
+
 	'src/constants.vala',
 	'src/application.vala',
 	'src/application_window.vala',
