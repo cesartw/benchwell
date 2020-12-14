@@ -330,8 +330,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			body.set_language_by_mime_type (mime.get_active_id ());
 		});
 
-		address.send_btn.clicked.connect (on_send);
-		address.save_btn.btn.clicked.connect (on_save);
+		address.send_btn.btn.clicked.connect (on_send);
+		//address.save_btn.clicked.connect (on_save);
 
 		address.changed.connect (on_request_changed);
 		headers.changed.connect (on_request_changed);

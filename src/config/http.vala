@@ -52,13 +52,28 @@ public class Benchwell.HttpCollection : Object {
 		}
 	}
 
-	public Benchwell.HttpItem add_item () throws ConfigError {
-		var item = new Benchwell.HttpItem ();
+	public Benchwell.HttpItem add_item (owned Benchwell.HttpItem? item) throws ConfigError {
+		if (item == null) {
+			item = new Benchwell.HttpItem ();
+		}
+		item.http_collection_id = id;
+
 		item.save ();
 
-		var tmp = items;
-		tmp += item;
-		items = tmp;
+		if (item.parent_id == 0) {
+			var tmp = items;
+			tmp += item;
+			items = tmp;
+		} else {
+			for (var i = 0; i < items.length; i++) {
+				if (items[i].id == item.parent_id) {
+					var tmp = items[i].items;
+					tmp += item;
+					items[i].items = tmp;
+					break;
+				}
+			}
+		}
 
 		item_added (item);
 		return item;
@@ -91,23 +106,37 @@ public class Benchwell.HttpCollection : Object {
 
 		Config.remove_http_collection (this);
 	}
+
+	public void delete_item (Benchwell.HttpItem item) throws ConfigError {
+		item.delete ();
+
+		HttpItem[] list = {};
+		for (var i = 0; i < items.length; i++) {
+			if (item.id == items[i].id) {
+				continue;
+			}
+			list += item;
+		}
+
+		items = list;
+	}
 }
 
 public class Benchwell.HttpItem : Object {
 	public int64                id;
 	public int64                parent_id;
-	public string               name;
-	public string               description;
+	public string               name { get; set; }
+	public string               description { get; set; }
 	public bool                 is_folder;
 	public int64                http_collection_id;
-	public int                  sort;
+	public int                  sort { get; set; }
 	public int64                count;
 	public Benchwell.HttpItem[] items;
 
-	public string             method;
-	public string             url;
-	public string             body;
-	public string             mime;
+	public string             method { get; set; }
+	public string             url { get; set; }
+	public string             body { get; set; }
+	public string             mime { get; set; }
 	public Benchwell.HttpKv[] headers;
 	public Benchwell.HttpKv[] query_params;
 
@@ -117,7 +146,7 @@ public class Benchwell.HttpItem : Object {
 	public signal Benchwell.HttpKv query_param_added (Benchwell.HttpKv kv);
 
 	public void save () throws Benchwell.ConfigError {
-		save_item ();
+		simple_save ();
 		for (var i = 0; i < headers.length; i++) {
 			headers[i].save ();
 		}
@@ -126,7 +155,24 @@ public class Benchwell.HttpItem : Object {
 		}
 	}
 
-	private void save_item () throws Benchwell.ConfigError {
+	public void simple_save () throws Benchwell.ConfigError {
+		if (name == null) {
+			if (is_folder) {
+				name = _("New folder");
+			} else {
+				name = _("New request");
+			}
+		}
+		if (url == null) {
+			url = "";
+		}
+		if (method == null) {
+			method = "GET";
+		}
+		if (mime == null) {
+			mime = "";
+		}
+
 		Sqlite.Statement stmt;
 		string prepared_query_str = "";
 
@@ -144,7 +190,7 @@ public class Benchwell.HttpItem : Object {
 			 prepared_query_str = """
 				INSERT INTO http_items(name, description, parent_id, is_folder,
 					sort, http_collections_id, method, url, body, mime)
-				VALUES($NAME, $DESCRIPTION, $IS_PARENT, $IS_FOLDER, $SORT,
+				VALUES($NAME, $DESCRIPTION, $PARENT_ID, $IS_FOLDER, $SORT,
 					$HTTP_COLLECTION_ID, $METHOD, $URL, $BODY, $MIME)
 			""";
 		}
@@ -234,6 +280,52 @@ public class Benchwell.HttpItem : Object {
 
 		query_param_added (kv);
 		return kv;
+	}
+
+	public void delete () throws ConfigError {
+		if (id == 0){
+			return;
+		}
+
+		Sqlite.Statement stmt;
+		string prepared_query_str = "DELETE FROM http_items WHERE id = $ID";
+
+		var ec = Config.db.prepare_v2 (prepared_query_str, prepared_query_str.length, out stmt);
+		if (ec != Sqlite.OK) {
+			stderr.printf ("Error: %d: %s\n", Config.db.errcode (), Config.db.errmsg ());
+			return;
+		}
+
+		int param_position;
+		param_position = stmt.bind_parameter_index ("$ID");
+		stmt.bind_int64 (param_position, id);
+
+		string errmsg = "";
+		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);
+		if ( ec != Sqlite.OK ){
+			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
+			stderr.printf ("ERR: %s\n", errmsg);
+			throw new ConfigError.SAVE_ENVVAR(errmsg);
+		}
+
+		// key values
+		prepared_query_str = "DELETE FROM http_kvs WHERE http_items_id = $ID";
+
+		ec = Config.db.prepare_v2 (prepared_query_str, prepared_query_str.length, out stmt);
+		if (ec != Sqlite.OK) {
+			stderr.printf ("Error: %d: %s\n", Config.db.errcode (), Config.db.errmsg ());
+			return;
+		}
+
+		param_position = stmt.bind_parameter_index ("$ID");
+		stmt.bind_int64 (param_position, id);
+
+		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);
+		if ( ec != Sqlite.OK ){
+			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
+			stderr.printf ("ERR: %s\n", errmsg);
+			throw new ConfigError.SAVE_ENVVAR(errmsg);
+		}
 	}
 }
 

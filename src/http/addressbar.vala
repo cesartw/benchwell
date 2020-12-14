@@ -1,8 +1,7 @@
 public class Benchwell.Http.HttpAddressBar : Gtk.Box {
 	public Gtk.ComboBoxText method_combo;
 	public Gtk.Entry address;
-	public Gtk.Button send_btn;
-	public Benchwell.OptButton save_btn;
+	public Benchwell.OptButton send_btn;
 	public Benchwell.HttpItem? item;
 
 	public signal void changed ();
@@ -26,17 +25,14 @@ public class Benchwell.Http.HttpAddressBar : Gtk.Box {
 		address.placeholder_text = "http://localhost/path.json";
 		address.show ();
 
-		send_btn = new Gtk.Button.with_label (_("SEND"));
-		send_btn.get_style_context ().add_class ("suggested-action");
-		send_btn.show ();
-
 		// TODO: add to window
-		save_btn = new Benchwell.OptButton(_("SAVE"), _("Save as"), "win.saveas");
-		save_btn.show ();
+		send_btn = new Benchwell.OptButton(_("SEND"), _("Save as"), "win.saveas");
+		send_btn.btn.get_style_context ().add_class ("suggested-action");
+		send_btn.menu_btn.get_style_context ().add_class ("suggested-action");
+		send_btn.show ();
 
 		pack_start(method_combo, false, false, 0);
 		pack_start(address, true, true, 0);
-		pack_end(save_btn, false, false, 0);
 		pack_end(send_btn, false, false, 0);
 
 		Config.environment_changed.connect (() => {
