@@ -1,6 +1,7 @@
 public class Benchwell.KeyValues : Gtk.Box {
 	public signal void changed ();
-	public signal Benchwell.KeyValueI row_added();
+	public signal Benchwell.KeyValueI row_added ();
+	public signal void row_removed (Benchwell.KeyValueI kvi);
 
 	public KeyValues () {
 		Object (
@@ -28,36 +29,21 @@ public class Benchwell.KeyValues : Gtk.Box {
 		values = vs;
 	}
 
-	public void add (Benchwell.KeyValueI kvi) {
+	public new void add (Benchwell.KeyValueI kvi) {
 		var kv = new Benchwell.KeyValue (kvi);
 		kv.show ();
-		kv.keyvalue = (Benchwell.KeyValueI) kvi;
 
-		kv.entry_key.grab_focus.connect (() => {
-			if (get_children ().index (kv) != get_children ().length () - 1) {
-				return;
-			}
+		kv.entry_key.grab_focus.connect (() => { add_blank (kv); });
 
-			add (row_added ());
-		});
-
-		kv.entry_val.grab_focus.connect (() => {
-			if (get_children ().index (kv) != get_children ().length () - 1) {
-				return;
-			}
-
-			add (row_added ());
-		});
+		kv.entry_val.grab_focus.connect (() => { add_blank (kv); });
 
 		kv.switch_enabled.state_set.connect ((b) => {
-			if (get_children ().index (kv) == get_children ().length () - 1) {
-				add (row_added ());
-			}
-
+			add_blank (kv);
 			return false;
 		});
 
 		kv.btn_remove.clicked.connect( () => {
+			row_removed (kv.keyvalue);
 			remove(kv);
 			if (get_children ().length () == 0) {
 				add (row_added ());
@@ -73,6 +59,23 @@ public class Benchwell.KeyValues : Gtk.Box {
 		get_children ().foreach ( (c) => {
 			remove (c);
 		});
+	}
+
+	private void add_blank (KeyValue kv) {
+		var last = get_children ().nth_data (get_children ().length () - 1) as KeyValue;
+		if (last != null) {
+			if ((last.entry_key.text == null || last.entry_key.text == "") &&
+				(last.entry_val.text == null || last.entry_val.text == "")) {
+				return;
+			}
+		}
+
+		get_focus_child ();
+		if (get_children ().index (kv) != get_children ().length () - 1) {
+			return;
+		}
+
+		add (row_added ());
 	}
 }
 
@@ -103,7 +106,7 @@ public class Benchwell.KeyValue : Gtk.Box {
 
 	public signal void changed ();
 
-	public KeyValue (Benchwell.KeyValueI? kv) {
+	public KeyValue (Benchwell.KeyValueI kv) {
 		Object (
 			orientation: Gtk.Orientation.HORIZONTAL,
 			spacing: 5

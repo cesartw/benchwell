@@ -128,27 +128,6 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		add_folder_menu.activate.connect (on_add_folder);
 		add_request_menu.activate.connect (on_add_item);
 		delete_menu.activate.connect (on_delete_item);
-
-		var dnd = false;
-		store.row_inserted.connect (() => {
-			dnd = true;
-		});
-
-		store.row_changed.connect ((path, iter) => {
-			if (!dnd) {
-				return;
-			}
-
-			dnd = false;
-			print (@"=======$(path)\n");
-		});
-
-		treeview.drag_data_received.connect ((context, x, y, selection_data, info, time) => {
-			if (context.get_selected_action () != Gdk.DragAction.MOVE) {
-				return;
-			}
-			Gtk.drag_finish( context, false, false, time);
-		});
 	}
 
 	public unowned Benchwell.HttpItem? get_selected_item (out Gtk.TreeIter iter) {

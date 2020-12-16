@@ -403,4 +403,30 @@ public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
 			this.id = Config.db.last_insert_rowid ();
 		}
 	}
+
+	public void delete () throws ConfigError {
+		if (id == 0){
+			return;
+		}
+
+		Sqlite.Statement stmt;
+		string prepared_query_str = "DELETE FROM http_kvs WHERE id = $ID";
+
+		var ec = Config.db.prepare_v2 (prepared_query_str, prepared_query_str.length, out stmt);
+		if (ec != Sqlite.OK) {
+			stderr.printf ("Error: %d: %s\n", Config.db.errcode (), Config.db.errmsg ());
+			return;
+		}
+
+		var param_position = stmt.bind_parameter_index ("$ID");
+		stmt.bind_int64 (param_position, id);
+
+		string errmsg = "";
+		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);
+		if ( ec != Sqlite.OK ){
+			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
+			stderr.printf ("ERR: %s\n", errmsg);
+			throw new ConfigError.SAVE_ENVVAR(errmsg);
+		}
+	}
 }

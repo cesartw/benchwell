@@ -339,16 +339,61 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 		headers.row_added.connect (() => {
 			if (item != null) {
-				return item.add_header ();
+				try {
+					var kv = item.add_header ();
+					return kv;
+				} catch (ConfigError err) {
+					stderr.printf (err.message);
+				}
 			}
 			return new Benchwell.HttpKv ();
+		});
+		headers.row_removed.connect ((kvi) => {
+			if (kvi == null) {
+				return;
+			}
+
+			var kv = kvi as HttpKv;
+			if (kv == null) {
+				return;
+			}
+			try {
+				kv.delete ();
+			} catch (ConfigError err) {
+				stderr.printf (err.message);
+			}
 		});
 
 		query_params.row_added.connect (() => {
 			if (item != null) {
-				return item.add_param ();
+				try {
+					var kv = item.add_param ();
+					return kv;
+				} catch (ConfigError err) {
+					stderr.printf (err.message);
+				}
 			}
 			return new Benchwell.HttpKv ();
+		});
+
+		query_params.changed.connect (() => {
+			print ("=======values changed\n");
+		});
+
+		query_params.row_removed.connect ((kvi) => {
+			if (kvi == null) {
+				return;
+			}
+
+			var kv = kvi as HttpKv;
+			if (kv == null) {
+				return;
+			}
+			try {
+				kv.delete ();
+			} catch (ConfigError err) {
+				stderr.printf (err.message);
+			}
 		});
 	}
 
