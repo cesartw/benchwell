@@ -87,8 +87,8 @@ executable(
 		dependency('libcurl'),
 		meson.get_compiler('c').find_library('mysqlclient'),
 		meson.get_compiler('c').find_library('mariadb'),
-		meson.get_compiler('vala').find_library('mysql'),
-		meson.get_compiler('c').find_library('libcurl')
+		meson.get_compiler('vala').find_library('mysql')
+		#meson.get_compiler('c').find_library('libcurl')
 	],
 	install: true,
 	vala_args: vala_args,
