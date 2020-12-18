@@ -85,8 +85,8 @@ CREATE TABLE "http_kvs" (
     enabled BOOLEAN NOT NULL DEFAULT 1 CHECK (enabled IN (0,1))
 );
 
-INSERT INTO connections(name, adapter, type, database, host, options, user, password, port, encrypted)
-      VALUES("localhost", "mysql", "tcp", "", "localhost", "", "", "", 3306, 0);
+INSERT INTO db_connections(name, adapter, type, database, host, options, user, port, encrypted)
+      VALUES("localhost", "mysql", "tcp", "", "localhost", "", "", 3306, 0);
 
 INSERT INTO config(name, value) VALUES("gui.editor.word_wrap", "word");
 INSERT INTO config(name, value) VALUES("gui.page_size", 100);
