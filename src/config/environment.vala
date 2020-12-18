@@ -124,7 +124,7 @@ public class Benchwell.Environment : Object {
 }
 
 public class Benchwell.EnvVar : Object, Benchwell.KeyValueI {
-	public int64  id;
+	public int64  id      { get; set; }
 	public string key     { get; set; }
 	public string val     { get; set; }
 	public bool   enabled { get; set; }

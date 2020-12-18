@@ -327,10 +327,27 @@ public class Benchwell.HttpItem : Object {
 			throw new ConfigError.SAVE_ENVVAR(errmsg);
 		}
 	}
+
+	public void delete_query_param (Benchwell.HttpKv kv) {
+		HttpKv[] new_query_params = {};
+		for (var i = 0; i < query_params.length; i++) {
+			if (query_params[i].key ==	kv.key) {
+				try {
+					kv.delete ();
+				} catch (ConfigError err) {
+					stderr.printf (err.message);
+				}
+				continue;
+			}
+			new_query_params += kv;
+		}
+
+		query_params = new_query_params;
+	}
 }
 
 public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
-	public int64  id;
+	public int64  id      { get; set; }
 	public string key     { get; set; }
 	public string val     { get; set; }
 	public bool   enabled { get; set; }

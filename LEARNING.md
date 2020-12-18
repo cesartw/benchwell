@@ -1,0 +1,2 @@
+- concat string in a loop corrupts the  string. i think is related to strings being released but no segfault?
+	- R: use StringBuilder seems to be a solution

@@ -169,4 +169,3 @@ public class Benchwell.KeyValue : Gtk.Box {
 		return true;
 	}
 }
-

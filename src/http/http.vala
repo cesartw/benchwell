@@ -221,6 +221,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		body_size = new Gtk.Label ("0KB");
 		body_size.show ();
 
+		item = new Benchwell.HttpItem ();
 		headers = new Benchwell.KeyValues ();
 		headers.show ();
 
@@ -334,8 +335,12 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		//address.save_btn.clicked.connect (on_save);
 
 		address.changed.connect (on_request_changed);
+		address.changed.connect (build_interpolated_label);
+
 		headers.changed.connect (on_request_changed);
+
 		query_params.changed.connect (on_request_changed);
+		query_params.changed.connect (build_interpolated_label);
 
 		headers.row_added.connect (() => {
 			if (item != null) {
@@ -377,7 +382,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		});
 
 		query_params.changed.connect (() => {
-			print ("=======values changed\n");
+			address.update_url ();
 		});
 
 		query_params.row_removed.connect ((kvi) => {
@@ -487,18 +492,14 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		set_response (http_code, (string) content, s, duration);
 	}
 
-	private void on_save () {
-		if (item == null) {
-			return;
-		}
-
-		//Config.save_item (item);
-	}
-
 	private void on_load_request (Benchwell.HttpItem item) {
 		this.item = item;
 
+		normalize_item (item);
+
 		address.set_request (item);
+		build_interpolated_label ();
+
 		body.get_buffer ().set_text (item.body);
 		mime.set_active_id (item.mime);
 
@@ -509,9 +510,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		foreach (var h in item.headers) {
 			headers.add ((Benchwell.KeyValueI) h);
 		}
-		foreach (var q in item.query_params) {
-			query_params.add ((Benchwell.KeyValueI) q);
-		}
+
+		load_query_params ();
 
 		try {
 			if (item.headers.length == 0) {
@@ -523,6 +523,57 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			}
 		} catch (ConfigError err) {
 			stderr.printf (err.message);
+		}
+	}
+
+	delegate string Interpolator (string s);
+
+	private void build_interpolated_label () {
+		Interpolator interpolator = (s) => { return s; };
+		if (Config.environment != null) {
+			interpolator = Config.environment.interpolate;
+		}
+
+		var interpolated_url = interpolator (item.url);
+
+		var builder  = new StringBuilder ();
+		builder.append (interpolated_url);
+		if ( item.query_params.length > 0 && interpolated_url.index_of ("?") == -1) {
+			builder.append ("?");
+		}
+
+		var handle = new Curl.EasyHandle ();
+		for (var i = 0; i < item.query_params.length; i++) {
+			if (item.query_params[i].key == "") {
+				continue;
+			}
+			if (i != 0) {
+				builder.append("&");
+			}
+			var key = handle.escape(item.query_params[i].key, item.query_params[i].key.length);
+			var val = interpolator (item.query_params[i].val);
+			val = handle.escape(val, val.length);
+			builder.append ("%s=%s".printf (key, val));
+		}
+
+		interpolated_url = builder.str;
+		address.address.tooltip_text = interpolated_url;
+		address.address_label.set_text (interpolated_url);
+	}
+
+	private void load_query_params () {
+		foreach (var q in item.query_params) {
+			var found = false;
+			query_params.get_children ().foreach ((i) => {
+				var kv = i as KeyValue;
+				if (kv.keyvalue.key == q.key) {
+					kv.entry_val.text = q.val;
+					found = true;
+				}
+			});
+			if (!found) {
+				query_params.add ((Benchwell.KeyValueI) q);
+			}
 		}
 	}
 
@@ -564,5 +615,75 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		}
 
 		duration_label.set_text (@"$(duration/1000)ms");
+	}
+
+	private void normalize_item (Benchwell.HttpItem item){
+		string[] keys, values;
+		item.url = parse_url (item.url, out keys, out values);
+
+		for (var i = 0; i < keys.length; i++) {
+			var at = -1;
+			for (var ii = 0; ii < item.query_params.length; ii++) {
+				if (item.query_params[ii].key == keys[i]) {
+					at = ii;
+					break;
+				}
+			}
+			if (at != -1){
+				item.query_params[at].val = values[at];
+				try {
+					item.query_params[at].save ();
+				} catch (ConfigError err) {
+					stderr.printf (err.message);
+				}
+				continue;
+			}
+			if (keys[i] == null || keys[i] == "") {
+				continue;
+			}
+
+			try {
+				var kv = item.add_param ();
+				kv.key = keys[i];
+				kv.val = values[i];
+				kv.save ();
+			} catch (ConfigError err) {
+				stderr.printf (err.message);
+			}
+		}
+
+		try {
+			item.simple_save ();
+		} catch (ConfigError err) {
+			stderr.printf (err.message);
+		}
+	}
+
+	private string parse_url (string url, out string[] keys, out string[] values) {
+		keys = {};
+		values = {};
+		var params_at = url.index_of ("?");
+		if (params_at == -1) {
+			return url;
+		}
+
+		var base_url = url.substring (0, params_at);
+		var query_string = url.substring (params_at + 1, -1);
+
+		string[] _keys = {}, _values = {};
+		var kv_strings = query_string.split ("&");
+		for (var i = 0; i < kv_strings.length; i++) {
+			var a = kv_strings[i].split("=");
+			_keys += a[0];
+			if (a[1] == null)  {
+				_values += "";
+				continue;
+			}
+			_values += a[1];
+		}
+		keys = _keys;
+		values = _values;
+
+		return base_url;
 	}
 }
