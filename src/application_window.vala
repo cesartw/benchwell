@@ -41,9 +41,33 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		box.show ();
 
 		// header bar
+		var logo_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0);
+		logo_box.show ();
+
+		var header_logo = new Gtk.Image.from_icon_name ("io.benchwell", Gtk.IconSize.LARGE_TOOLBAR);
+		header_logo.show ();
+
+		var titles_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
+		titles_box.show ();
+
+		var header_title = new Gtk.Label ("Benchwell");
+		header_title.get_style_context ().add_class ("title");
+		header_title.show ();
+
+		var header_subtitle = new Gtk.Label ("version");
+		header_subtitle.get_style_context ().add_class ("subtitle");
+		header_subtitle.show ();
+
+		titles_box.pack_start (header_title, false, false, 0);
+		titles_box.pack_start (header_subtitle, false, false, 0);
+
+		logo_box.pack_start (header_logo, false, false, 0);
+		logo_box.pack_start (titles_box, false, false, 0);
+
 		var header = new Gtk.HeaderBar ();
-		header.title ="Benchwell";
-		header.subtitle ="version";
+		//header.title ="Benchwell";
+		//header.subtitle ="version";
+		header.custom_title = logo_box;
 		header.show_close_button =true;
 		header.show ();
 
@@ -68,7 +92,6 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		set_titlebar (header);
 
 		header.pack_start (window_btn_menu);
-		//header.pack_end (app_btn_menu);
 		header.pack_end (env);
 
 		box.pack_start (notebook, true, true, 0);
