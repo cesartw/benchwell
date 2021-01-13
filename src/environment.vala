@@ -51,6 +51,7 @@ public class Benchwell.EnvironmentEditor : Gtk.Box {
 			stack.add_titled (panel, env.name, env.name);
 			panel.entry_name.changed.connect (() => {
 				stack.child_set_property(panel, "title", panel.entry_name.text);
+				env.name = panel.entry_name.text;
 			});
 		}
 
@@ -128,7 +129,7 @@ public class Benchwell.EnvironmentPanel : Gtk.Box {
 		pack_start (vbox, true, true, 5);
 
 		// signals
-		keyvalues.changed.connect (on_save);
+		//keyvalues.changed.connect (on_save);
 		entry_name.changed.connect (on_save);
 
 		if (keyvalues.get_children ().length () == 0) {
@@ -150,10 +151,10 @@ public class Benchwell.EnvironmentPanel : Gtk.Box {
 	private void on_save () {
 		environment.name = entry_name.text;
 
-		try {
-			environment.save ();
-		} catch (Error err) {
-			stderr.printf (err.message);
-		}
+		//try {
+			//environment.save ();
+		//} catch (Error err) {
+			//stderr.printf (err.message);
+		//}
 	}
 }

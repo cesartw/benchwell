@@ -233,7 +233,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		}
 
 		try {
-			Config.load_full_item (selected_item);
+			selected_item.load_full_item ();
 		} catch (ConfigError err) {
 			stderr.printf (err.message);
 			return;

@@ -31,7 +31,8 @@ public class Benchwell.Database.Table : Gtk.Box {
 	public Gtk.SearchEntry search;
 	public Benchwell.Database.Conditions conditions;
 
-	public signal void field_change (Benchwell.Backend.Sql.ColDef[] column, string[] row);
+	public signal void field_changed (Benchwell.Backend.Sql.ColDef[] column, string[] row);
+	public signal void delete_record ();
 
 	public Table (Benchwell.ApplicationWindow window, Benchwell.Services.Database service) {
 		Object (
@@ -45,6 +46,7 @@ public class Benchwell.Database.Table : Gtk.Box {
 		table.enable_grid_lines = Gtk.TreeViewGridLines.HORIZONTAL;
 		table.activate_on_single_click = true;
 		table.enable_search = true;
+		table.get_selection ().set_mode (Gtk.SelectionMode.MULTIPLE);
 		table.show ();
 
 		var table_sw = new Gtk.ScrolledWindow (null, null);
@@ -113,6 +115,7 @@ public class Benchwell.Database.Table : Gtk.Box {
 
 		// signals
 		table.button_press_event.connect (on_button_press);
+		table.key_press_event.connect (on_table_key_press);
 
 		btn_show_filters.toggled.connect (() => {
 			if (btn_show_filters.active) {
@@ -130,6 +133,15 @@ public class Benchwell.Database.Table : Gtk.Box {
 		btn_delete_row.clicked.connect (on_delete_row);
 
 		clone_menu.activate.connect (on_clone);
+	}
+
+	private bool on_table_key_press (Gtk.Widget widget, Gdk.EventKey event) {
+		if (event.keyval != Gdk.Key.Delete) {
+			return false;
+		}
+
+		delete_rows ();
+		return true;
 	}
 
 	public Benchwell.Backend.Sql.SortOption[] get_sort_options () {
@@ -277,14 +289,15 @@ public class Benchwell.Database.Table : Gtk.Box {
 	}
 
 	public void delete_selected_row () {
-		Gtk.TreeIter? selected = null;
 		var selection = table.get_selection ();
-		selection.selected_foreach ( (model, path, iter) => {
-			if (selected != null){
-				return;
-			}
-			store.get_iter (out selected, path);
-			store.remove (ref selected);
+		var tm = store as Gtk.TreeModel;
+		var paths = selection.get_selected_rows (out tm);
+
+		paths.reverse ();
+		paths.foreach ((path) => {
+			Gtk.TreeIter iter;
+			store.get_iter (out iter, path);
+			store.remove (ref iter);
 		});
 	}
 
@@ -406,7 +419,7 @@ public class Benchwell.Database.Table : Gtk.Box {
 		values += new_value;
 
 		store.set_value (iter, column_index, new_value);
-		field_change (pks, values);
+		field_changed (pks, values);
 	}
 
 	private bool on_button_press (Gtk.Widget w, Gdk.EventButton event) {
@@ -424,21 +437,21 @@ public class Benchwell.Database.Table : Gtk.Box {
 	}
 
 	private void on_delete_row () {
-		var selection = table.get_selection ();
-		Gtk.TreeIter? iter = null;
-		selection.selected_foreach ((model, path, i) => {
-			if (iter != null) {
-				return;
-			}
-			iter = i;
-		});
+		delete_rows ();
+	}
 
-		GLib.Value val;
-		store.get_value (iter, (int) service.columns.length, out val);
-		if (val.get_int () == 1) {
-			delete_selected_row ();
-			table.unselect_all ();
-		}
+	private void delete_rows () {
+		delete_record ();
+
+		var selection = table.get_selection ();
+		selection.selected_foreach ((model, path, iter) => {
+			GLib.Value val;
+			store.get_value (iter, (int) service.columns.length, out val);
+			if (val.get_int () == 1) {
+				delete_selected_row ();
+				table.unselect_all ();
+			}
+		});
 	}
 
 	private void on_clone () {

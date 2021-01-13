@@ -329,6 +329,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		sidebar.load_request.connect (on_load_request);
 		mime.changed.connect (() => {
 			body.set_language_by_mime_type (mime.get_active_id ());
+			item.mime = mime.get_active_id ();
 		});
 
 		address.send_btn.btn.clicked.connect (on_send);
@@ -403,15 +404,15 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	}
 
 	private void on_request_changed () {
-		if (item == null) {
-			return;
-		}
+		//if (item == null) {
+			//return;
+		//}
 
-		try {
-			item.save ();
-		} catch (ConfigError err){
-			stderr.printf (err.message);
-		}
+		//try {
+			//item.save ();
+		//} catch (ConfigError err){
+			//stderr.printf (err.message);
+		//}
 	}
 
 	// https://github.com/giuliopaci/ValaBindingsDevelopment/blob/master/libcurl-example.vala
@@ -631,11 +632,11 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			}
 			if (at != -1){
 				item.query_params[at].val = values[at];
-				try {
-					item.query_params[at].save ();
-				} catch (ConfigError err) {
-					stderr.printf (err.message);
-				}
+				//try {
+					//item.query_params[at].save ();
+				//} catch (ConfigError err) {
+					//stderr.printf (err.message);
+				//}
 				continue;
 			}
 			if (keys[i] == null || keys[i] == "") {
@@ -646,7 +647,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 				var kv = item.add_param ();
 				kv.key = keys[i];
 				kv.val = values[i];
-				kv.save ();
+				//kv.save ();
 			} catch (ConfigError err) {
 				stderr.printf (err.message);
 			}

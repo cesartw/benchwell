@@ -70,7 +70,6 @@ public class Benchwell._Config : Object {
 	public Benchwell.Environment add_environment () throws ConfigError {
 		var env = new Benchwell.Environment ();
 		env.name = @"New environment #$(environments.length)";
-		env.save ();
 		var tmp = environments;
 		tmp += env;
 		environments = tmp;
@@ -438,12 +437,14 @@ public class Benchwell._Config : Object {
 		var ec = db.exec (query, (n_columns, values, column_names) => {
 			var item = new Benchwell.HttpItem ();
 
-			item.id = int64.parse (values[0]);
-			item.name = values[1];
-			item.is_folder = values[2] == "1";
-			item.sort = int.parse (values[3]);
-			item.http_collection_id = int64.parse (values[4]);
-			item.method = values[5];
+			item.touch_without_save ( () => {
+				item.id = int64.parse (values[0]);
+				item.name = values[1];
+				item.is_folder = values[2] == "1";
+				item.sort = int.parse (values[3]);
+				item.http_collection_id = int64.parse (values[4]);
+				item.method = values[5];
+			});
 
 			items += item;
 
@@ -457,94 +458,6 @@ public class Benchwell._Config : Object {
 		collection.items = items;
 	}
 
-	public void load_full_item (Benchwell.HttpItem item) throws Benchwell.ConfigError {
-		if (item.loaded) {
-			return;
-		}
-
-		string errmsg = "";
-
-		Benchwell.HttpItem[] items = {};
-		// folder
-		if (item.is_folder) {
-			var query = """SELECT id, name, parent_id, is_folder, sort,
-										http_collections_id, method
-							FROM http_items
-							WHERE http_collections_id = %lld AND parent_id = %lld
-							ORDER BY sort ASC
-							""".printf (item.http_collection_id, item.id);
-			var ec = db.exec (query, (n_columns, values, column_names) => {
-				var subitem = new Benchwell.HttpItem ();
-
-				subitem.id = int64.parse (values[0]);
-				subitem.name = values[1];
-				subitem.parent_id = int64.parse (values[2]);
-				subitem.is_folder = values[3] == "1";
-				subitem.sort = int.parse (values[4]);
-				subitem.http_collection_id = int64.parse (values[5]);
-				subitem.method = values[6];
-
-				items += subitem;
-				return 0;
-			}, out errmsg);
-			if ( ec != Sqlite.OK ){
-				throw new ConfigError.GET_CONNECTIONS(errmsg);
-			}
-
-			item.items = items;
-			return;
-		}
-
-		// request
-		var query = """SELECT ifnull(method,""), ifnull(url,""), ifnull(body, ""), ifnull(mime,"")
-				FROM http_items
-				WHERE id = %lld""".printf (item.id);
-		var ec = db.exec (query, (n_columns, values, column_names) => {
-			item.method = values[0];
-			item.url = values[1];
-			item.body = values[2];
-			item.mime = values[3];
-			return 0;
-		}, out errmsg);
-		if ( ec != Sqlite.OK ){
-			throw new ConfigError.GET_CONNECTIONS(errmsg);
-		}
-
-		Benchwell.HttpKv[] kvs = {};
-		query = """SELECT id, ifnull(key, ""), ifnull(value, ""), type, sort, enabled, http_items_id
-			FROM http_kvs
-			WHERE http_items_id = %lld
-			ORDER BY sort ASC""".printf (item.id);
-		ec = db.exec (query, (n_columns, values, column_names) => {
-			var kv = new Benchwell.HttpKv ();
-			kv.id = int64.parse (values[0]);
-			kv.key = values[1];
-			kv.val = values[2];
-			kv.type = values[3];
-			kv.sort = int.parse (values[4]);
-			kv.enabled = values[5] == "1";
-			kv.http_item_id = int64.parse (values[6]);
-			kvs += kv;
-			return 0;
-		}, out errmsg);
-		if ( ec != Sqlite.OK ){
-			throw new ConfigError.GET_CONNECTIONS(errmsg);
-		}
-
-		Benchwell.HttpKv[] headers = {};
-		Benchwell.HttpKv[] query_params = {};
-		foreach (var kv in kvs) {
-			if (kv.type == "header") {
-				headers += kv;
-				continue;
-			}
-			query_params += kv;
-		}
-		item.headers = headers;
-		item.query_params = query_params;
-		item.loaded = true;
-	}
-
 	public void load_environments () throws Benchwell.ConfigError {
 		string errmsg;
 		var query = """SELECT *
@@ -554,8 +467,10 @@ public class Benchwell._Config : Object {
 		var ec = db.exec (query, (n_columns, values, column_names) => {
 			var item = new Benchwell.Environment ();
 
-			item.id = int64.parse (values[0]);
-			item.name = values[1];
+			item.touch_without_save (() => {
+				item.id = int64.parse (values[0]);
+				item.name = values[1];
+			});
 
 			var tmp = environments;
 			tmp += item;
@@ -573,11 +488,13 @@ public class Benchwell._Config : Object {
 		ec = db.exec (query, (n_columns, values, column_names) => {
 			var item = new Benchwell.EnvVar ();
 
-			item.id = int64.parse (values[0]);
-			item.key = values[1];
-			item.val = values[2];
-			item.enabled = values[3] == "1";
-			item.environment_id = int64.parse (values[4]);
+			item.touch_without_save (() => {
+				item.id = int64.parse (values[0]);
+				item.key = values[1];
+				item.val = values[2];
+				item.enabled = values[3] == "1";
+				item.environment_id = int64.parse (values[4]);
+			});
 
 			variables  += item;
 			return 0;

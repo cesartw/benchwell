@@ -1,3 +1,5 @@
+public delegate void NoUpdateFunc ();
+
 public class Benchwell.HttpCollection : Object {
 	public int64      id;
 	public string     name;
@@ -141,21 +143,61 @@ public class Benchwell.HttpItem : Object {
 	public Benchwell.HttpKv[] query_params;
 
 	internal bool                  loaded;
+	private bool no_auto_save;
 
 	public signal Benchwell.HttpKv header_added (Benchwell.HttpKv kv);
 	public signal Benchwell.HttpKv query_param_added (Benchwell.HttpKv kv);
 
-	public void save () throws Benchwell.ConfigError {
-		simple_save ();
-		for (var i = 0; i < headers.length; i++) {
-			headers[i].save ();
+	public HttpItem () {
+		Object ();
+		notify["name"].connect (on_save);
+		notify["description"].connect (on_save);
+		notify["sort"].connect (on_save);
+		notify["method"].connect (on_save);
+		notify["url"].connect (on_save);
+		notify["body"].connect (on_save);
+		notify["mime"].connect (on_save);
+	}
+
+	public void touch_without_save (NoUpdateFunc f) {
+		no_auto_save = true;
+		f ();
+		no_auto_save = false;
+	}
+
+	private void on_save (Object obj, ParamSpec spec) {
+		if (no_auto_save) {
+			return;
 		}
-		for (var i = 0; i < query_params.length; i++) {
-			query_params[i].save ();
+
+		try {
+			save ();
+		} catch (ConfigError err) {
+			stderr.printf (err.message);
 		}
 	}
 
+	public void save () throws Benchwell.ConfigError {
+		simple_save ();
+		//for (var i = 0; i < headers.length; i++) {
+			//headers[i].save ();
+		//}
+		//for (var i = 0; i < query_params.length; i++) {
+			//query_params[i].save ();
+		//}
+	}
+
 	public void simple_save () throws Benchwell.ConfigError {
+		if (parent_id == 0 && !is_folder) {
+			stderr.printf ("a request with no parent_id\n");
+			return;
+		}
+
+		if (http_collection_id == 0) {
+			stderr.printf ("an item with no http_collection_id\n");
+			return;
+		}
+
 		if (name == null) {
 			if (is_folder) {
 				name = _("New folder");
@@ -166,10 +208,10 @@ public class Benchwell.HttpItem : Object {
 		if (url == null) {
 			url = "";
 		}
-		if (method == null) {
+		if (method == null && is_folder) {
 			method = "GET";
 		}
-		if (mime == null) {
+		if (mime == null && is_folder) {
 			mime = "";
 		}
 
@@ -344,6 +386,102 @@ public class Benchwell.HttpItem : Object {
 
 		query_params = new_query_params;
 	}
+
+	public void load_full_item () throws Benchwell.ConfigError {
+		if (loaded) {
+			return;
+		}
+
+		string errmsg = "";
+
+		Benchwell.HttpItem[] new_items = {};
+		// folder
+		if (is_folder) {
+			var query = """SELECT id, name, parent_id, is_folder, sort,
+										http_collections_id, method
+							FROM http_items
+							WHERE http_collections_id = %lld AND parent_id = %lld
+							ORDER BY sort ASC
+							""".printf (http_collection_id, id);
+			var ec = Config.db.exec (query, (n_columns, values, column_names) => {
+				var subitem = new Benchwell.HttpItem ();
+
+				subitem.touch_without_save (() => {
+					subitem.id = int64.parse (values[0]);
+					subitem.name = values[1];
+					subitem.parent_id = int64.parse (values[2]);
+					subitem.is_folder = values[3] == "1";
+					subitem.sort = int.parse (values[4]);
+					subitem.http_collection_id = int64.parse (values[5]);
+					subitem.method = values[6];
+				});
+
+				new_items += subitem;
+				return 0;
+			}, out errmsg);
+			if ( ec != Sqlite.OK ){
+				throw new ConfigError.GET_CONNECTIONS(errmsg);
+			}
+
+			items = new_items;
+			return;
+		}
+
+		// request
+		var query = """SELECT ifnull(method,""), ifnull(url,""), ifnull(body, ""), ifnull(mime,"")
+				FROM http_items
+				WHERE id = %lld""".printf (id);
+		var ec = Config.db.exec (query, (n_columns, values, column_names) => {
+			touch_without_save (() => {
+				method = values[0];
+				url = values[1];
+				body = values[2];
+				mime = values[3];
+			});
+			return 0;
+		}, out errmsg);
+		if ( ec != Sqlite.OK ){
+			throw new ConfigError.GET_CONNECTIONS(errmsg);
+		}
+
+		Benchwell.HttpKv[] kvs = {};
+		query = """SELECT id, ifnull(key, ""), ifnull(value, ""), type, sort, enabled, http_items_id
+			FROM http_kvs
+			WHERE http_items_id = %lld
+			ORDER BY sort ASC""".printf (id);
+		ec = Config.db.exec (query, (n_columns, values, column_names) => {
+			var kv = new Benchwell.HttpKv ();
+
+			kv.touch_without_save (() => {
+				kv.id = int64.parse (values[0]);
+				kv.key = values[1];
+				kv.val = values[2];
+				kv.type = values[3];
+				kv.sort = int.parse (values[4]);
+				kv.enabled = values[5] == "1";
+				kv.http_item_id = int64.parse (values[6]);
+			});
+
+			kvs += kv;
+			return 0;
+		}, out errmsg);
+		if ( ec != Sqlite.OK ){
+			throw new ConfigError.GET_CONNECTIONS(errmsg);
+		}
+
+		Benchwell.HttpKv[] new_headers = {};
+		Benchwell.HttpKv[] new_query_params = {};
+		foreach (var kv in kvs) {
+			if (kv.type == "header") {
+				new_headers += kv;
+				continue;
+			}
+			new_query_params += kv;
+		}
+		headers = new_headers;
+		query_params = new_query_params;
+		loaded = true;
+	}
 }
 
 public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
@@ -354,10 +492,48 @@ public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
 	public string type; // header | param
 	public int    sort;
 	public int64  http_item_id;
+	public bool   no_auto_save;
+
+	public HttpKv () {
+		notify["key"].connect (on_save);
+		notify["val"].connect (on_save);
+		notify["enabled"].connect (on_save);
+	}
+
+	private void on_save (Object obj, ParamSpec spec) {
+		if (no_auto_save) {
+			return;
+		}
+
+		try {
+			save ();
+		} catch (ConfigError err) {
+			stderr.printf (err.message);
+		}
+	}
+
+	public void touch_without_save (NoUpdateFunc f) {
+		no_auto_save = true;
+		f ();
+		no_auto_save = false;
+	}
 
 	public void save () throws ConfigError {
 		Sqlite.Statement stmt;
 		string prepared_query_str = "";
+
+		if (val == null) {
+			val = "";
+		}
+
+		if (key == null) {
+			stderr.printf ("a http_kv with no key\n");
+			return;
+		}
+		if (type == null) {
+			stderr.printf ("a http_kv with no type\n");
+			return;
+		}
 
 		if (this.id > 0) {
 			 prepared_query_str = """
