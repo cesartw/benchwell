@@ -59,12 +59,14 @@ executable(
 	'src/http/http.vala',
 	'src/http/addressbar.vala',
 	'src/http/sidebar.vala',
+	'src/http/plugin.vala',
 
 	'src/services/database.vala',
 
 	'src/config/config.vala',
 	'src/config/http.vala',
 	'src/config/environment.vala',
+	'src/config/keyvalue.vala',
 	'src/config/keyvalue.vala',
 
 	'src/constants.vala',
@@ -85,6 +87,8 @@ executable(
 		dependency('libsecret-1'),
 		dependency('json-glib-1.0'),
 		dependency('libcurl'),
+		dependency('javascriptcoregtk-4.0'),
+		dependency('gio-2.0'),
 		meson.get_compiler('c').find_library('mysqlclient'),
 		meson.get_compiler('c').find_library('mariadb'),
 		meson.get_compiler('vala').find_library('mysql')

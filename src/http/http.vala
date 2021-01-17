@@ -532,7 +532,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	private void build_interpolated_label () {
 		Interpolator interpolator = (s) => { return s; };
 		if (Config.environment != null) {
-			interpolator = Config.environment.interpolate;
+			interpolator = Config.environment.dry_interpolate;
 		}
 
 		var interpolated_url = interpolator (item.url);

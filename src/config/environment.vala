@@ -5,7 +5,8 @@ public class Benchwell.Environment : Object {
 
 	public signal Benchwell.EnvVar variable_added (Benchwell.EnvVar envvar);
 
-	public Regex regex = /({{\s*([a-zA-Z0-9]+)\s*}})/;
+	public Regex var_escape_regex  = /({{\s*([a-zA-Z0-9]+)\s*}})/;
+	public Regex func_escape_regex = /({%\s*([a-zA-Z0-9]+)\s*(.*)%})/;
 
 	private bool no_auto_save;
 
@@ -105,10 +106,24 @@ public class Benchwell.Environment : Object {
 	}
 
 	public string interpolate (string s) {
+		var result = interpolate_variables (s);
+		result = interpolate_functions (result);
+
+		return result;
+	}
+
+	public string dry_interpolate (string s) {
+		var result = interpolate_variables (s);
+		result = dry_interpolate_functions (result);
+
+		return result;
+	}
+
+	public string interpolate_variables (string s) {
 		MatchInfo info;
 		string result = s;
 
-		for (regex.match (s, 0, out info); info.matches () ; info.next ()) {
+		for (var_escape_regex.match (s, 0, out info); info.matches () ; info.next ()) {
 			for (var i = info.get_match_count () - 1; i > 0; i-=2) {
 				var var_name = info.fetch (i);
 				var to_replace = info.fetch (i-1);
@@ -119,6 +134,48 @@ public class Benchwell.Environment : Object {
 					}
 				}
 			}
+		}
+
+		return result;
+	}
+
+	public string interpolate_functions (string s) {
+		MatchInfo info;
+		string result = s;
+
+		for (func_escape_regex.match (s, 0, out info); info.matches () ; info.next ()) {
+			var raw_params = info.fetch (3);
+			var func_name = info.fetch (2);
+			var to_replace = info.fetch (1);
+
+			Config.plugins.plugins.foreach ((plug_name, func) => {
+				if ( plug_name != func_name ) {
+					return;
+				}
+
+				var jsparams = Config.plugins.parse_params (raw_params);
+				result = result.replace (to_replace, func.function_callv (jsparams).to_string ());
+			});
+		}
+
+		return result;
+	}
+
+	public string dry_interpolate_functions (string s) {
+		MatchInfo info;
+		string result = s;
+
+		for (func_escape_regex.match (s, 0, out info); info.matches () ; info.next ()) {
+			var func_name = info.fetch (2);
+			var to_replace = info.fetch (1);
+
+			Config.plugins.plugins.foreach ((plug_name, func) => {
+				if ( plug_name != func_name ) {
+					return;
+				}
+
+				result = result.replace (to_replace, @"{% $(func_name) %}");
+			});
 		}
 
 		return result;
