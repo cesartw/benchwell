@@ -126,7 +126,7 @@ private struct buffer_s2
 	size_t size_left;
 }
 
-private size_t WriteMemoryCallback(char* ptr, size_t size, size_t nmemb, void* data) {
+private size_t WriteMemoryCallback (char* ptr, size_t size, size_t nmemb, void* data) {
 	size_t total_size = size*nmemb;
 	for(int i = 0; i<total_size; i++)
 	{
@@ -136,7 +136,7 @@ private size_t WriteMemoryCallback(char* ptr, size_t size, size_t nmemb, void* d
 	return total_size;
 }
 
-private size_t ReadMemoryCallback(char* dest, size_t size, size_t nmemb, void* data) {
+private size_t ReadMemoryCallback (char* dest, size_t size, size_t nmemb, void* data) {
 	var wt = (( buffer_s2* ) data);
 	size_t buffer_size = size*nmemb;
 	if ( wt.size_left > 0) {
@@ -153,6 +153,20 @@ private size_t ReadMemoryCallback(char* dest, size_t size, size_t nmemb, void* d
 	}
 
 	return 0;
+}
+
+private size_t ReadHeaderCallback (char *dest, size_t size, size_t nmemb, void *data) {
+	var wt = ((HashTable<string,string>) data);
+	 //size_t numbytes = size * nmemb;
+	//printf("%.*s\n", numbytes, dest);
+	var header = (string)dest;
+	var at = header.index_of (":", 0);
+	if ( at != -1 ){
+		var key = header[0:at];
+		var val = header[at+2:header.length];
+		wt.insert (key, val);
+	}
+	return size * nmemb;
 }
 
 public class Benchwell.Http.Http : Gtk.Paned {
@@ -176,7 +190,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	public Gtk.Label            response_size_label;
 	///////////
 
-	public Benchwell.Environment env;
 	public Benchwell.HttpItem? item;
 
 	public Http(Benchwell.ApplicationWindow window) {
@@ -419,7 +432,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	private void on_send () {
 		var handle = new Curl.EasyHandle ();
 
-		var url = env.interpolate (address.address.get_text ());
+		var url = Config.environment.interpolate (address.address.get_text ());
 		var method = address.method_combo.get_active_id ();
 
 		switch (method) {
@@ -456,7 +469,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 		Curl.SList headers = null;
 		for (var i = 0; i < keys.length; i++) {
-			var val = env.interpolate (values[i]);
+			var val = Config.environment.interpolate (values[i]);
 			headers = Curl.SList.append ((owned) headers, @"$(keys[i]): $(val)");
 		}
 		handle.setopt (Curl.Option.HTTPHEADER, headers);
@@ -473,9 +486,14 @@ public class Benchwell.Http.Http : Gtk.Paned {
 				tmp_body.buffer += raw_body[i];
 			}
 
-			handle.setopt(Curl.Option.READFUNCTION, ReadMemoryCallback);
-			handle.setopt(Curl.Option.READDATA, ref tmp_body);
+			handle.setopt (Curl.Option.READFUNCTION, ReadMemoryCallback);
+			handle.setopt (Curl.Option.READDATA, ref tmp_body);
 		}
+
+		var resp_headers = new HashTable<string,string> (str_hash, str_equal);
+		handle.setopt (Curl.Option.HEADERFUNCTION, ReadHeaderCallback);
+		handle.setopt (Curl.Option.HEADERDATA, resp_headers);
+
 
 		// only connects to the host
 		var now = get_real_time ();
@@ -483,10 +501,9 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		var then = get_real_time ();
 
 		int http_code;
-		weak string content_type; // otherwise causes double free
 		handle.getinfo(Curl.Info.RESPONSE_CODE, out http_code);
-		handle.getinfo(Curl.Info.CONTENT_TYPE, out content_type);
 		var content = (string)tmp.buffer;
+		var content_type = resp_headers.get("Content-Type");
 		var s = content_type.split(";")[0];
 
 		var duration = then - now;

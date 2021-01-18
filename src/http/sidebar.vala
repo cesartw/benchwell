@@ -37,6 +37,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 
 		name_renderer = new Gtk.CellRendererText ();
 		name_column = new Gtk.TreeViewColumn.with_attributes("name", name_renderer, "text", Benchwell.Http.Columns.TEXT);
+		name_column.resizable = true;
 
 		var method_renderer = new Gtk.CellRendererText ();
 		var method_column = new Gtk.TreeViewColumn.with_attributes("method", method_renderer, "text", Benchwell.Http.Columns.METHOD);
