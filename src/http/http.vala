@@ -185,6 +185,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 	// response
 	public Benchwell.SourceView response;
+	public Benchwell.SourceView response_headers;
 	public Gtk.Label            status_label;
 	public Gtk.Label            duration_label;
 	public Gtk.Label            response_size_label;
@@ -211,12 +212,13 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		body = new Benchwell.SourceView ();
 		body.vexpand = true;
 		body.hexpand = true;
-		body.show_line_numbers = true;
+		body.show_line_numbers = false;
 		body.show_right_margin = true;
 		body.auto_indent = true;
 		body.show_line_marks = true;
 		body.show_line_marks = true;
 		body.highlight_current_line = true;
+		body.accepts_tab = true;
 		body.show ();
 
 		var buff = body.get_buffer();
@@ -281,20 +283,35 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		//////////
 
 		// response
+		var response_paned = new Gtk.Paned (Gtk.Orientation.VERTICAL);
+		response_paned.show ();
+
 		var response_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
 		response_box.show ();
+
+		response_headers         = new Benchwell.SourceView ();
+		response_headers.hexpand = true;
+		response_headers.vexpand = true;
+		response_headers.highlight_current_line = false;
+		response_headers.show_line_numbers = false;
+		response_headers.show_right_margin = true;
+		response_headers.auto_indent = true;
+		response_headers.show_line_marks = true;
+		response_headers.editable = false;
+		response_headers.show ();
+		var response_headers_sw = new Gtk.ScrolledWindow (null, null);
+		response_headers_sw.add (response_headers);
+		response_headers_sw.show ();
 
 		response  = new Benchwell.SourceView ();
 		response.hexpand = true;
 		response.vexpand = true;
-		response.highlight_current_line = true;
-		response.show_line_numbers = true;
+		response.highlight_current_line = false;
+		response.show_line_numbers = false;
 		response.show_right_margin = true;
 		response.auto_indent = true;
 		response.show_line_marks = true;
-		//response.get_buffer ().insert_text.connect (() => {
-			//return false;
-		//});
+		response.editable = false;
 		response.show ();
 		var response_sw = new Gtk.ScrolledWindow (null, null);
 		response_sw.add (response);
@@ -316,8 +333,10 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		details_box.pack_start (duration_label, false, false, 0);
 		details_box.pack_end (response_size_label, false, false, 0);
 
+		response_paned.pack1 (response_headers_sw, true, true);
+		response_paned.pack2 (response_sw, true, true);
 		response_box.pack_start (details_box, false, false, 0);
-		response_box.pack_start (response_sw, true, true, 0);
+		response_box.pack_start (response_paned, true, true, 0);
 		//////////
 
 		var ws_paned = new Gtk.Paned (Gtk.Orientation.VERTICAL);
@@ -503,11 +522,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		int http_code;
 		handle.getinfo(Curl.Info.RESPONSE_CODE, out http_code);
 		var content = (string)tmp.buffer;
-		var content_type = resp_headers.get("Content-Type");
-		var s = content_type.split(";")[0];
-
 		var duration = then - now;
-		set_response (http_code, (string) content, s, duration);
+		set_response (http_code, (string) content, resp_headers, duration);
 	}
 
 	private void on_load_request (Benchwell.HttpItem item) {
@@ -595,7 +611,18 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		}
 	}
 
-	public void set_response(uint status, string raw_data, string content_type, int64 duration) {
+	public void set_response(uint status, string raw_data, HashTable<string, string> resp_headers, int64 duration) {
+		var content_type = resp_headers.get("Content-Type").split(";")[0];
+
+		Gtk.TextIter iter;
+		response_headers.get_buffer ().get_end_iter (out iter);
+		resp_headers.foreach ((key, val) => {
+			var line = @"$key: $val";
+			response_headers.get_buffer ().insert (ref iter, line, line.length);
+		});
+		response_headers.get_buffer ().insert (ref iter, "\n", 1);
+
+		response.get_buffer ().get_end_iter (out iter);
 		switch (content_type) {
 			case "application/json":
 				var json = new Json.Parser ();
@@ -610,11 +637,18 @@ public class Benchwell.Http.Http : Gtk.Paned {
 				}
 				generator.set_root (json.get_root ());
 
-				response.get_buffer ().set_text (generator.to_data (null));
+				//response.get_buffer ().set_text (generator.to_data (null));
+				var body = generator.to_data (null);
+				//Gtk.TextIter iter;
+				//response.get_buffer ().get_end_iter (out iter);
+				response.get_buffer ().insert_text (ref iter, body, body.length);
 				response.set_language ("json");
 				break;
 			default:
-				response.get_buffer ().set_text (raw_data);
+				//response.get_buffer ().set_text (raw_data);
+				//Gtk.TextIter iter;
+				//response.get_buffer ().get_end_iter (out iter);
+				response.get_buffer ().insert_text (ref iter, raw_data, raw_data.length);
 				response.set_language (null);
 				break;
 		}
