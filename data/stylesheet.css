@@ -378,7 +378,7 @@ label:disabled selection.destructive-action:active label, label:disabled selecti
 
 .selection-mode button.circular.titlebutton label, button.circular label { padding: 0; }
 
-button.circular:not(.flat):not(button.titlebutton):not(button.sidebar-button):not(:checked):not(:active):not(:disabled):not(:backdrop) { color: #eeeeec; outline-color: rgba(238, 238, 236, 0.3); border-color: #1b1f20; border-bottom-color: #0b0c0c; background-image: linear-gradient(to bottom, #2e3436, #2a2e30 60%, #25292b); text-shadow: 0 -1px rgba(0, 0, 0, 0.827451); -gtk-icon-shadow: 0 -1px rgba(0, 0, 0, 0.827451); box-shadow: inset 0 1px rgba(255, 255, 255, 0.05); background-image: linear-gradient(to bottom, #2e3436, #2a2e30 60%, #25292b), linear-gradient(to top, #0b0c0c 25%, #1b1f20 50%); border-color: transparent; }
+button.circular:not(.flat):not(.titlebutton):not(.sidebar-button):not(:checked):not(:active):not(:disabled):not(:backdrop) { color: #eeeeec; outline-color: rgba(238, 238, 236, 0.3); border-color: #1b1f20; border-bottom-color: #0b0c0c; background-image: linear-gradient(to bottom, #2e3436, #2a2e30 60%, #25292b); text-shadow: 0 -1px rgba(0, 0, 0, 0.827451); -gtk-icon-shadow: 0 -1px rgba(0, 0, 0, 0.827451); box-shadow: inset 0 1px rgba(255, 255, 255, 0.05); background-image: linear-gradient(to bottom, #2e3436, #2a2e30 60%, #25292b), linear-gradient(to top, #0b0c0c 25%, #1b1f20 50%); border-color: transparent; }
 
 button.circular:hover:not(:checked):not(:active):not(:disabled):not(:backdrop) { color: #eeeeec; outline-color: rgba(238, 238, 236, 0.3); border-color: #1b1f20; border-bottom-color: #0b0c0c; text-shadow: 0 -1px rgba(0, 0, 0, 0.779451); -gtk-icon-shadow: 0 -1px rgba(0, 0, 0, 0.779451); box-shadow: inset 0 1px rgba(255, 255, 255, 0.05); background-image: linear-gradient(to bottom, #353c3e, #2e3436 60%, #2a2e30); background-image: linear-gradient(to bottom, #353c3e, #2e3436 60%, #2a2e30), linear-gradient(to top, #0b0c0c 25%, #1b1f20 50%); border-color: transparent; }
 
@@ -2103,3 +2103,36 @@ switch slider {
 entry.search {
 	border-radius: 20px;
 }
+
+.responsemeta {
+	padding: 5px;
+}
+
+.requestmeta label {
+	background-color: #6c6c6c;
+	color: #fff;
+	padding: 2px 5px;
+	border-radius: 3px;
+	margin: 0 5px;
+}
+
+.responsemeta label {
+	background-color: #6c6c6c;
+	color: #fff;
+	padding: 2px 5px;
+	border-radius: 3px;
+	margin: 0 5px;
+}
+
+.responsemeta label.ok {
+	background-color: #0a0;
+}
+
+.responsemeta label.bad {
+	background-color: #a00;
+}
+
+.responsemeta label.warning {
+	background-color: #ff7305;
+}
+

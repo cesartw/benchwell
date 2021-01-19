@@ -28,8 +28,7 @@
 	<developer_name>Benchwell.io</developer_name>
 	<launchable type="desktop-id">@appid@.desktop</launchable>
 	<url type="homepage">https://benchwell.io</url>
-	<url type="translate">https://hosted.weblate.org/projects/sequeler</url>
-	<update_contact>castellani.ale@gmail.com</update_contact>
+	<update_contact>dev@benchwell.io</update_contact>
 	<content_rating type="oars-1.1">
 		<content_attribute id="violence-cartoon">none</content_attribute>
 		<content_attribute id="violence-fantasy">none</content_attribute>

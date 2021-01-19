@@ -178,7 +178,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	// request
 	public Benchwell.SourceView body;
 	public Gtk.ComboBoxText     mime;
-	public Gtk.Label            body_size;
 	public Benchwell.KeyValues  headers;
 	public Benchwell.KeyValues  query_params;
 	//////////
@@ -221,20 +220,12 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		body.accepts_tab = true;
 		body.show ();
 
-		var buff = body.get_buffer();
-		buff.changed.connect (() => {
-			var txt = body.get_text ();
-			body_size.set_text (@"$(txt.length/2014)KB");
-		});
 		var body_sw = new Gtk.ScrolledWindow (null, null);
 		body_sw.add (body);
 		body_sw.show ();
 
 		mime = new Gtk.ComboBoxText ();
 		mime.show ();
-
-		body_size = new Gtk.Label ("0KB");
-		body_size.show ();
 
 		item = new Benchwell.HttpItem ();
 		headers = new Benchwell.KeyValues ();
@@ -255,8 +246,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 		var mime_options_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0);
 		mime_options_box.pack_start (mime, false, false, 0);
-		mime_options_box.pack_end (body_size, false, false, 0);
 		mime_options_box.show ();
+		mime_options_box.get_style_context ().add_class ("requestmeta");
 
 		var body_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
 		body_box.vexpand = true;
@@ -329,6 +320,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		response_size_label  = new Gtk.Label ("0KB");
 		response_size_label.show ();
 
+		details_box.get_style_context ().add_class ("responsemeta");
 		details_box.pack_start (status_label, false, false, 0);
 		details_box.pack_start (duration_label, false, false, 0);
 		details_box.pack_end (response_size_label, false, false, 0);
@@ -374,6 +366,16 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 		query_params.changed.connect (on_request_changed);
 		query_params.changed.connect (build_interpolated_label);
+
+		body.get_buffer ().changed.connect (() => {
+			if (item == null) {
+				return;
+			}
+			Gtk.TextIter start, end;
+			body.get_buffer ().get_start_iter (out start);
+			body.get_buffer ().get_end_iter (out end);
+			item.body = body.get_buffer ().get_text (start, end, false);
+		});
 
 		headers.row_added.connect (() => {
 			if (item != null) {
@@ -449,6 +451,9 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 	// https://github.com/giuliopaci/ValaBindingsDevelopment/blob/master/libcurl-example.vala
 	private void on_send () {
+		response_headers.get_buffer ().set_text ("", 0);
+		response.get_buffer ().set_text ("", 0);
+
 		var handle = new Curl.EasyHandle ();
 
 		var url = Config.environment.interpolate (address.address.get_text ());
@@ -637,17 +642,11 @@ public class Benchwell.Http.Http : Gtk.Paned {
 				}
 				generator.set_root (json.get_root ());
 
-				//response.get_buffer ().set_text (generator.to_data (null));
 				var body = generator.to_data (null);
-				//Gtk.TextIter iter;
-				//response.get_buffer ().get_end_iter (out iter);
 				response.get_buffer ().insert_text (ref iter, body, body.length);
 				response.set_language ("json");
 				break;
 			default:
-				//response.get_buffer ().set_text (raw_data);
-				//Gtk.TextIter iter;
-				//response.get_buffer ().get_end_iter (out iter);
 				response.get_buffer ().insert_text (ref iter, raw_data, raw_data.length);
 				response.set_language (null);
 				break;
@@ -664,6 +663,16 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			status_label.set_text (@"$(status)");
 		} else {
 			status_label.set_text (@"$(status) $(code)");
+		}
+
+		if (status >= 200 && status < 300) {
+			status_label.get_style_context ().add_class("ok");
+		}
+		if (status >= 300 && status < 500) {
+			status_label.get_style_context ().add_class("warning");
+		}
+		if (status >= 500) {
+			status_label.get_style_context ().add_class("bad");
 		}
 
 		duration_label.set_text (@"$(duration/1000)ms");
