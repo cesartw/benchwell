@@ -2,11 +2,29 @@ public delegate void NoUpdateFunc ();
 
 public class Benchwell.HttpCollection : Object {
 	public int64      id;
-	public string     name;
+	public string     name { get; set; }
 	public int        count;
 	public HttpItem[] items;
 
+	private bool no_auto_save;
+
 	public signal Benchwell.HttpItem item_added (Benchwell.HttpItem item);
+
+	public HttpCollection () {
+		notify["name"].connect (on_save);
+	}
+
+	private void on_save (Object obj, ParamSpec spec) {
+		if (no_auto_save) {
+			return;
+		}
+
+		try {
+			save ();
+		} catch (ConfigError err) {
+			stderr.printf (err.message);
+		}
+	}
 
 	public void save () throws ConfigError {
 		Sqlite.Statement stmt;
@@ -52,6 +70,12 @@ public class Benchwell.HttpCollection : Object {
 		if (this.id == 0) {
 			this.id = Config.db.last_insert_rowid ();
 		}
+	}
+
+	public void touch_without_save (NoUpdateFunc f) {
+		no_auto_save = true;
+		f ();
+		no_auto_save = false;
 	}
 
 	public Benchwell.HttpItem add_item (owned Benchwell.HttpItem? item) throws ConfigError {
@@ -178,26 +202,17 @@ public class Benchwell.HttpItem : Object {
 	}
 
 	public void save () throws Benchwell.ConfigError {
-		simple_save ();
-		//for (var i = 0; i < headers.length; i++) {
-			//headers[i].save ();
+		//if (parent_id == 0 && !is_folder) {
+			//stderr.printf ("a request with no parent_id\n");
+			//return;
 		//}
-		//for (var i = 0; i < query_params.length; i++) {
-			//query_params[i].save ();
-		//}
-	}
-
-	public void simple_save () throws Benchwell.ConfigError {
-		if (parent_id == 0 && !is_folder) {
-			stderr.printf ("a request with no parent_id\n");
-			return;
-		}
 
 		if (http_collection_id == 0) {
 			stderr.printf ("an item with no http_collection_id\n");
 			return;
 		}
 
+		no_auto_save = true;
 		if (name == null) {
 			if (is_folder) {
 				name = _("New folder");
@@ -208,12 +223,13 @@ public class Benchwell.HttpItem : Object {
 		if (url == null) {
 			url = "";
 		}
-		if (method == null && is_folder) {
+		if ((method == null || method == "") && !is_folder) {
 			method = "GET";
 		}
 		if (mime == null && is_folder) {
 			mime = "";
 		}
+		no_auto_save = false;
 
 		Sqlite.Statement stmt;
 		string prepared_query_str = "";
@@ -527,11 +543,9 @@ public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
 		}
 
 		if (key == null) {
-			stderr.printf ("a http_kv with no key\n");
 			return;
 		}
 		if (type == null) {
-			stderr.printf ("a http_kv with no type\n");
 			return;
 		}
 

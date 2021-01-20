@@ -28,13 +28,18 @@
 		</key>
 		<key name="environment-id" type="x">
 			<default>0</default>
-			<summary>Environment ID</summary>
-			<description>The last environment selected</description>
+			<summary>Environment</summary>
+			<description>The last environment id selected</description>
 		</key>
 		<key name="http-collection-id" type="x">
 			<default>0</default>
 			<summary>HTTP Collection ID</summary>
-			<description>The last http collection selected</description>
+			<description>The last http collection id selected</description>
+		</key>
+		<key name="http-item-id" type="x">
+			<default>0</default>
+			<summary>HTTP Item</summary>
+			<description>The last http item id selected</description>
 		</key>
 	</schema>
 </schemalist>

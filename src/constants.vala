@@ -91,7 +91,10 @@ public enum Benchwell.Colors {
 		return colors[this];
 	}
 
-	public static Benchwell.Colors? parse(string s) {
+	public static Benchwell.Colors? parse(string? s) {
+		if  (s == null)
+			return GET;
+
 		// NOTE: "".casefold is not supported as `case` option
 		switch (s.casefold ()) {
 			case "POST", "post":
@@ -120,8 +123,8 @@ public enum Benchwell.Settings {
 	WINDOW_POS_X,
 	WINDOW_POS_Y,
 	ENVIRONMENT_ID,
-	HTTP_COLLECTION_ID;
-
+	HTTP_COLLECTION_ID,
+	HTTP_ITEM_ID;
 
 	public string to_string () {
 		switch (this) {
@@ -137,6 +140,8 @@ public enum Benchwell.Settings {
 				return "environment-id";
 			case HTTP_COLLECTION_ID:
 				return "http-collection-id";
+			case HTTP_ITEM_ID:
+				return "http-item-id";
 			default:
 				return "";
 		}

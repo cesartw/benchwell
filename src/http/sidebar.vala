@@ -1,4 +1,5 @@
 public class Benchwell.Http.HttpSideBar : Gtk.Box {
+	public Benchwell.ApplicationWindow    window { get; construct; }
 	public Gtk.TreeView treeview;
 	public Gtk.TreeStore store;
 	public Gtk.ComboBoxText collections_combo;
@@ -18,9 +19,10 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 	private Gtk.CellRendererText name_renderer;
 	private Gtk.TreeViewColumn name_column;
 
-	public HttpSideBar () {
+	public HttpSideBar (Benchwell.ApplicationWindow window) {
 		Object (
-			orientation: Gtk.Orientation.VERTICAL
+			orientation: Gtk.Orientation.VERTICAL,
+			window: window
 		);
 
 		// treeview
@@ -72,8 +74,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		///////////
 
 		collections_combo = new Gtk.ComboBoxText ();
-		collections_combo.append ("", "");
-
+		collections_combo.append ("new", _("Add collection"));
 		foreach (var collection in Config.http_collections) {
 			collections_combo.append (collection.id.to_string (), collection.name);
 		}
@@ -134,6 +135,9 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 	public unowned Benchwell.HttpItem? get_selected_item (out Gtk.TreeIter iter) {
 		treeview.get_selection ().get_selected (null, out iter);
 
+		if ( !store.iter_is_valid (iter) )
+			return null;
+
 		GLib.Value val;
 		store.get_value (iter, Benchwell.Http.Columns.ITEM, out val);
 		return val.get_object () as Benchwell.HttpItem;
@@ -153,7 +157,8 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 			return;
 		}
 
-		Gtk.TreeIter sibling;
+		// NOTE: probably there's a better way to do this
+		Gtk.TreeIter? sibling;
 		get_selected_item (out sibling);
 
 		var iter = add_row (item, null, sibling);
@@ -168,11 +173,15 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		}
 
 		Gtk.TreeIter parent;
+
 		var selected_item = get_selected_item (out parent);
-		var http_item_id = selected_item.id;
+		int64? http_item_id = null;
+		if ( selected_item  != null )
+			http_item_id = selected_item.id;
+
 		Gtk.TreeIter? sibling = null;
 
-		if (!selected_item.is_folder) {
+		if (selected_item != null && !selected_item.is_folder) {
 			sibling = parent;
 			http_item_id = selected_item.parent_id;
 			store.iter_parent (out parent, parent);
@@ -180,7 +189,9 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 
 		var item = new Benchwell.HttpItem ();
 		item.is_folder = false;
-		item.parent_id = http_item_id;
+		if (http_item_id != null)
+			item.parent_id = http_item_id;
+
 		try {
 			selected_collection.add_item (item);
 		} catch (ConfigError err) {
@@ -217,7 +228,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		selected_item.name = new_text;
 
 		try {
-			selected_item.simple_save ();
+			selected_item.save ();
 		} catch (ConfigError err) {
 			stderr.printf (err.message);
 			return;
@@ -239,6 +250,8 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 			stderr.printf (err.message);
 			return;
 		}
+		if (selected_item.is_folder)
+			Config.settings.set_int64 (Benchwell.Settings.HTTP_ITEM_ID.to_string (), selected_item.id);
 
 		if (selected_item.is_folder) {
 			// unload items
@@ -265,12 +278,54 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 	}
 
 	private void on_collection_selected () {
+		if (collections_combo.get_active_id () == "new") {
+			var dialog = new Gtk.Dialog.with_buttons (_("Add collection"), window,
+										Gtk.DialogFlags.DESTROY_WITH_PARENT|Gtk.DialogFlags.MODAL,
+										_("Save"), Gtk.ResponseType.OK,
+										_("Cancel"), Gtk.ResponseType.CANCEL);
+			dialog.set_default_size (250, 130);
+
+			var label = new Gtk.Label (_("Enter collection name"));
+			label.show ();
+
+			var entry = new Gtk.Entry ();
+			entry.show ();
+
+			var box = new Gtk.Box (Gtk.Orientation.VERTICAL, 10);
+			box.show ();
+
+			box.pack_start (label, true, true, 0);
+			box.pack_start (entry, true, true, 0);
+
+			dialog.get_content_area ().add (box);
+
+			var resp = (Gtk.ResponseType) dialog.run ();
+			var name = entry.get_text ();
+			dialog.destroy ();
+
+			if (resp != Gtk.ResponseType.OK) {
+				return;
+			}
+
+			try {
+				var collection = Config.add_http_collection ();
+				collection.name = name;
+
+				collections_combo.append (collection.id.to_string (), collection.name);
+				collections_combo.set_active_id (collection.id.to_string ());
+			} catch (Benchwell.ConfigError err) {
+				stderr.printf (err.message);
+			}
+		}
+
 		var collection_id = int64.parse (collections_combo.get_active_id ());
 
 		foreach(var collection in Config.http_collections) {
 			if (collection.id != collection_id){
 				continue;
 			}
+
+			store.clear ();
 
 			Config.settings.set_int64 (Benchwell.Settings.HTTP_COLLECTION_ID.to_string (), collection.id);
 
@@ -292,20 +347,37 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 
 	private void load_collection (Benchwell.HttpCollection collection) {
 		store.clear ();
-		build_tree (null, collection.items);
+		var saved_selected_item_id = Config.settings.get_int64 (Benchwell.Settings.HTTP_ITEM_ID.to_string ());
+		build_tree (null, collection.items, saved_selected_item_id);
 	}
 
-	private void build_tree (Gtk.TreeIter? parent, Benchwell.HttpItem[] items) {
+	private void build_tree (Gtk.TreeIter? parent, Benchwell.HttpItem[] items, int64 auto_expand = 0) {
 		foreach (var item in items) {
 			var folder_parent = add_row (item, parent, null);
 
+			if (auto_expand > 0 && item.id == auto_expand) {
+				treeview.get_selection ().select_path (store.get_path (folder_parent)); // not really a folder
+				on_load_item ();
+				if (!item.is_folder)
+					load_request (item);
+			}
+
 			if (item.is_folder) {
-				build_tree (folder_parent, item.items);
+				build_tree (folder_parent, item.items, auto_expand);
+
+				if (auto_expand > 0 && item.id == auto_expand) {
+					treeview.expand_row (store.get_path(folder_parent), false);
+				}
 			}
 		}
 	}
 
 	private Gtk.TreeIter add_row (Benchwell.HttpItem item, Gtk.TreeIter? parent, Gtk.TreeIter? sibling) {
+		if ( parent != null && !store.iter_is_valid (parent) )
+			parent = null;
+		if ( sibling != null && !store.iter_is_valid (sibling) )
+			sibling = null;
+
 		Gtk.TreeIter iter;
 		store.insert_before (out iter, parent, sibling);
 

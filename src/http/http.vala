@@ -201,7 +201,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 		title = _("HTTP");
 
-		sidebar = new Benchwell.Http.HttpSideBar ();
+		sidebar = new Benchwell.Http.HttpSideBar (window);
 		sidebar.show ();
 
 		address = new Benchwell.Http.HttpAddressBar ();
@@ -451,6 +451,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 	// https://github.com/giuliopaci/ValaBindingsDevelopment/blob/master/libcurl-example.vala
 	private void on_send () {
+		address.send_btn.btn.sensitive = false;
 		response_headers.get_buffer ().set_text ("", 0);
 		response.get_buffer ().set_text ("", 0);
 
@@ -521,7 +522,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 		// only connects to the host
 		var now = get_real_time ();
-		var code = handle.perform ();
+		handle.perform ();
 		var then = get_real_time ();
 
 		int http_code;
@@ -617,6 +618,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	}
 
 	public void set_response(uint status, string raw_data, HashTable<string, string> resp_headers, int64 duration) {
+		address.send_btn.btn.sensitive = true;
 		var content_type = resp_headers.get("Content-Type").split(";")[0];
 
 		Gtk.TextIter iter;
@@ -714,7 +716,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		}
 
 		try {
-			item.simple_save ();
+			item.save ();
 		} catch (ConfigError err) {
 			stderr.printf (err.message);
 		}

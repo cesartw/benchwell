@@ -412,9 +412,11 @@ public class Benchwell._Config : Object {
 					""";
 		var ec = db.exec (query, (n_columns, values, column_names) => {
 			var collection = new Benchwell.HttpCollection ();
-			collection.id = int.parse (values[0]);
-			collection.name = values[1];
-			collection.count = int.parse (values[2]);
+			collection.touch_without_save ( () => {
+				collection.id = int.parse (values[0]);
+				collection.name = values[1];
+				collection.count = int.parse (values[2]);
+			});
 
 			HttpCollection[] tmp = http_collections;
 			tmp += collection;
