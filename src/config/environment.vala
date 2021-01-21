@@ -154,7 +154,8 @@ public class Benchwell.Environment : Object {
 				}
 
 				var jsparams = Config.plugins.parse_params (raw_params);
-				result = result.replace (to_replace, func.function_callv (jsparams).to_string ());
+				var val = func.function_callv (jsparams).to_string ();
+				result = result.replace (to_replace, val.to_string ());
 			});
 		}
 

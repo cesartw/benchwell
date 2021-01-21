@@ -150,7 +150,7 @@ public class Benchwell.Http.Plugin {
 
 				break;
 			default:
-				if ( !in_single_quote && !in_double_quote )
+				if ( !in_single_quote && !in_double_quote && !in_number )
 					in_bare_string = true;
 				current.append_unichar (c);
 				continue;

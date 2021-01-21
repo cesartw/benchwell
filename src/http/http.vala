@@ -501,6 +501,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 		// BODY
 		string raw_body = body.get_text ();
+		raw_body = Config.environment.interpolate_variables (raw_body);
+		raw_body = Config.environment.interpolate_functions (raw_body);
 		buffer_s2 tmp_body = buffer_s2 () {
 			buffer = new uchar[0],
 			size_left = Posix.strlen (raw_body)
