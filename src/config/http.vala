@@ -404,99 +404,101 @@ public class Benchwell.HttpItem : Object {
 	}
 
 	public void load_full_item () throws Benchwell.ConfigError {
-		if (loaded) {
-			return;
-		}
+		touch_without_save (() => {
+			if (loaded) {
+				return;
+			}
 
-		string errmsg = "";
+			string errmsg = "";
 
-		Benchwell.HttpItem[] new_items = {};
-		// folder
-		if (is_folder) {
-			var query = """SELECT id, name, parent_id, is_folder, sort,
-										http_collections_id, method
-							FROM http_items
-							WHERE http_collections_id = %lld AND parent_id = %lld
-							ORDER BY sort ASC
-							""".printf (http_collection_id, id);
+			Benchwell.HttpItem[] new_items = {};
+			// folder
+			if (is_folder) {
+				var query = """SELECT id, name, parent_id, is_folder, sort,
+											http_collections_id, method
+								FROM http_items
+								WHERE http_collections_id = %lld AND parent_id = %lld
+								ORDER BY sort ASC
+								""".printf (http_collection_id, id);
+				var ec = Config.db.exec (query, (n_columns, values, column_names) => {
+					var subitem = new Benchwell.HttpItem ();
+
+					subitem.touch_without_save (() => {
+						subitem.id = int64.parse (values[0]);
+						subitem.name = values[1];
+						subitem.parent_id = int64.parse (values[2]);
+						subitem.is_folder = values[3] == "1";
+						subitem.sort = int.parse (values[4]);
+						subitem.http_collection_id = int64.parse (values[5]);
+						subitem.method = values[6];
+					});
+
+					new_items += subitem;
+					return 0;
+				}, out errmsg);
+				if ( ec != Sqlite.OK ){
+					throw new ConfigError.GET_CONNECTIONS(errmsg);
+				}
+
+				items = new_items;
+				return;
+			}
+
+			// request
+			var query = """SELECT ifnull(method,""), ifnull(url,""), ifnull(body, ""), ifnull(mime,"")
+					FROM http_items
+					WHERE id = %lld""".printf (id);
 			var ec = Config.db.exec (query, (n_columns, values, column_names) => {
-				var subitem = new Benchwell.HttpItem ();
-
-				subitem.touch_without_save (() => {
-					subitem.id = int64.parse (values[0]);
-					subitem.name = values[1];
-					subitem.parent_id = int64.parse (values[2]);
-					subitem.is_folder = values[3] == "1";
-					subitem.sort = int.parse (values[4]);
-					subitem.http_collection_id = int64.parse (values[5]);
-					subitem.method = values[6];
+				touch_without_save (() => {
+					method = values[0];
+					url = values[1];
+					body = values[2];
+					mime = values[3];
 				});
-
-				new_items += subitem;
 				return 0;
 			}, out errmsg);
 			if ( ec != Sqlite.OK ){
 				throw new ConfigError.GET_CONNECTIONS(errmsg);
 			}
 
-			items = new_items;
-			return;
-		}
+			Benchwell.HttpKv[] kvs = {};
+			query = """SELECT id, ifnull(key, ""), ifnull(value, ""), type, sort, enabled, http_items_id
+				FROM http_kvs
+				WHERE http_items_id = %lld
+				ORDER BY sort ASC""".printf (id);
+			ec = Config.db.exec (query, (n_columns, values, column_names) => {
+				var kv = new Benchwell.HttpKv ();
 
-		// request
-		var query = """SELECT ifnull(method,""), ifnull(url,""), ifnull(body, ""), ifnull(mime,"")
-				FROM http_items
-				WHERE id = %lld""".printf (id);
-		var ec = Config.db.exec (query, (n_columns, values, column_names) => {
-			touch_without_save (() => {
-				method = values[0];
-				url = values[1];
-				body = values[2];
-				mime = values[3];
-			});
-			return 0;
-		}, out errmsg);
-		if ( ec != Sqlite.OK ){
-			throw new ConfigError.GET_CONNECTIONS(errmsg);
-		}
+				kv.touch_without_save (() => {
+					kv.id = int64.parse (values[0]);
+					kv.key = values[1];
+					kv.val = values[2];
+					kv.type = values[3];
+					kv.sort = int.parse (values[4]);
+					kv.enabled = values[5] == "1";
+					kv.http_item_id = int64.parse (values[6]);
+				});
 
-		Benchwell.HttpKv[] kvs = {};
-		query = """SELECT id, ifnull(key, ""), ifnull(value, ""), type, sort, enabled, http_items_id
-			FROM http_kvs
-			WHERE http_items_id = %lld
-			ORDER BY sort ASC""".printf (id);
-		ec = Config.db.exec (query, (n_columns, values, column_names) => {
-			var kv = new Benchwell.HttpKv ();
-
-			kv.touch_without_save (() => {
-				kv.id = int64.parse (values[0]);
-				kv.key = values[1];
-				kv.val = values[2];
-				kv.type = values[3];
-				kv.sort = int.parse (values[4]);
-				kv.enabled = values[5] == "1";
-				kv.http_item_id = int64.parse (values[6]);
-			});
-
-			kvs += kv;
-			return 0;
-		}, out errmsg);
-		if ( ec != Sqlite.OK ){
-			throw new ConfigError.GET_CONNECTIONS(errmsg);
-		}
-
-		Benchwell.HttpKv[] new_headers = {};
-		Benchwell.HttpKv[] new_query_params = {};
-		foreach (var kv in kvs) {
-			if (kv.type == "header") {
-				new_headers += kv;
-				continue;
+				kvs += kv;
+				return 0;
+			}, out errmsg);
+			if ( ec != Sqlite.OK ){
+				throw new ConfigError.GET_CONNECTIONS(errmsg);
 			}
-			new_query_params += kv;
-		}
-		headers = new_headers;
-		query_params = new_query_params;
-		loaded = true;
+
+			Benchwell.HttpKv[] new_headers = {};
+			Benchwell.HttpKv[] new_query_params = {};
+			foreach (var kv in kvs) {
+				if (kv.type == "header") {
+					new_headers += kv;
+					continue;
+				}
+				new_query_params += kv;
+			}
+			headers = new_headers;
+			query_params = new_query_params;
+			loaded = true;
+		});
 	}
 }
 

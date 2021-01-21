@@ -14,7 +14,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 	public weak Benchwell.HttpCollection? selected_collection;
 	public weak Benchwell.HttpItem? selected_item;
 
-	public signal void load_request(Benchwell.HttpItem item);
+	public signal void load_request(owned Benchwell.HttpItem item);
 
 	private Gtk.CellRendererText name_renderer;
 	private Gtk.TreeViewColumn name_column;
@@ -149,13 +149,15 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		}
 
 		var item = new Benchwell.HttpItem ();
-		item.is_folder = true;
-		try {
-			selected_collection.add_item (item);
-		} catch (ConfigError err) {
-			stderr.printf (err.message);
-			return;
-		}
+		item.touch_without_save (() => {
+			item.is_folder = true;
+			try {
+				selected_collection.add_item (item);
+			} catch (ConfigError err) {
+				stderr.printf (err.message);
+				return;
+			}
+		});
 
 		// NOTE: probably there's a better way to do this
 		Gtk.TreeIter? sibling;
@@ -188,16 +190,18 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		}
 
 		var item = new Benchwell.HttpItem ();
-		item.is_folder = false;
-		if (http_item_id != null)
-			item.parent_id = http_item_id;
+		item.touch_without_save (() => {
+			item.is_folder = false;
+			if (http_item_id != null)
+				item.parent_id = http_item_id;
 
-		try {
-			selected_collection.add_item (item);
-		} catch (ConfigError err) {
-			stderr.printf (err.message);
-			return;
-		}
+			try {
+				selected_collection.add_item (item);
+			} catch (ConfigError err) {
+				stderr.printf (err.message);
+				return;
+			}
+		});
 
 		var iter = add_row (item, parent, sibling);
 		var path = store.get_path (iter);
@@ -360,10 +364,11 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 				on_load_item ();
 				if (!item.is_folder)
 					load_request (item);
+				continue; // on_load_item will build the tree for us
 			}
 
 			if (item.is_folder) {
-				build_tree (folder_parent, item.items, auto_expand);
+				build_tree (folder_parent, item.items, 0);
 
 				if (auto_expand > 0 && item.id == auto_expand) {
 					treeview.expand_row (store.get_path(folder_parent), false);

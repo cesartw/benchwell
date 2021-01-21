@@ -532,34 +532,37 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		set_response (http_code, (string) content, resp_headers, duration);
 	}
 
-	private void on_load_request (Benchwell.HttpItem item) {
+	private void on_load_request (owned Benchwell.HttpItem item) {
 		this.item = item;
 
-		normalize_item (item);
+		normalize_item (this.item);
 
-		address.set_request (item);
+		address.set_request (this.item);
 		build_interpolated_label ();
 
-		body.get_buffer ().set_text (item.body);
-		mime.set_active_id (item.mime);
+		// NOTE: not sure why this thoses item.body
+		this.item.touch_without_save (() => {
+			body.get_buffer ().text = this.item.body;
+		});
+		mime.set_active_id (this.item.mime);
 
-		response.get_buffer ().set_text ("");
+		response.get_buffer ().text = "";
 		headers.clear ();
 		query_params.clear ();
 
-		foreach (var h in item.headers) {
+		foreach (var h in this.item.headers) {
 			headers.add ((Benchwell.KeyValueI) h);
 		}
 
 		load_query_params ();
 
 		try {
-			if (item.headers.length == 0) {
+			if (this.item.headers.length == 0) {
 				headers.add (item.add_header ());
 			}
 
-			if (item.query_params.length == 0) {
-				query_params.add (item.add_param ());
+			if (this.item.query_params.length == 0) {
+				query_params.add (this.item.add_param ());
 			}
 		} catch (ConfigError err) {
 			stderr.printf (err.message);
@@ -681,45 +684,43 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	}
 
 	private void normalize_item (Benchwell.HttpItem item){
-		string[] keys, values;
-		item.url = parse_url (item.url, out keys, out values);
+		string[] keys = null, values = null;
 
-		for (var i = 0; i < keys.length; i++) {
-			var at = -1;
-			for (var ii = 0; ii < item.query_params.length; ii++) {
-				if (item.query_params[ii].key == keys[i]) {
-					at = ii;
-					break;
+		item.touch_without_save (() => {
+			item.url = parse_url (item.url, out keys, out values);
+
+			for (var i = 0; i < keys.length; i++) {
+				var at = -1;
+				for (var ii = 0; ii < item.query_params.length; ii++) {
+					if (item.query_params[ii].key == keys[i]) {
+						at = ii;
+						break;
+					}
+				}
+				if (at != -1){
+					item.query_params[at].val = values[at];
+					continue;
+				}
+				if (keys[i] == null || keys[i] == "") {
+					continue;
+				}
+
+				try {
+					var kv = item.add_param ();
+					kv.key = keys[i];
+					kv.val = values[i];
+					//kv.save ();
+				} catch (ConfigError err) {
+					stderr.printf (err.message);
 				}
 			}
-			if (at != -1){
-				item.query_params[at].val = values[at];
-				//try {
-					//item.query_params[at].save ();
-				//} catch (ConfigError err) {
-					//stderr.printf (err.message);
-				//}
-				continue;
-			}
-			if (keys[i] == null || keys[i] == "") {
-				continue;
-			}
+		});
 
-			try {
-				var kv = item.add_param ();
-				kv.key = keys[i];
-				kv.val = values[i];
-				//kv.save ();
-			} catch (ConfigError err) {
-				stderr.printf (err.message);
-			}
-		}
-
-		try {
-			item.save ();
-		} catch (ConfigError err) {
-			stderr.printf (err.message);
-		}
+		//try {
+			//item.save ();
+		//} catch (ConfigError err) {
+			//stderr.printf (err.message);
+		//}
 	}
 
 	private string parse_url (string url, out string[] keys, out string[] values) {
