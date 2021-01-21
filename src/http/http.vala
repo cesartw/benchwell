@@ -126,17 +126,18 @@ private struct buffer_s2
 	size_t size_left;
 }
 
-private size_t WriteMemoryCallback (char* ptr, size_t size, size_t nmemb, void* data) {
+private size_t ReadResponseCallback (char* ptr, size_t size, size_t nmemb, void* data) {
 	size_t total_size = size*nmemb;
 	for(int i = 0; i<total_size; i++)
 	{
 		(( buffer_s* ) data).buffer+= ptr[i];
 	}
-	(( buffer_s* ) data).buffer+= 0;
+	// NOTE: this is part of the sample but large responses causes the string to terminate earlier
+	//(( buffer_s* ) data).buffer+= 0;
 	return total_size;
 }
 
-private size_t ReadMemoryCallback (char* dest, size_t size, size_t nmemb, void* data) {
+private size_t WriteRequestCallback (char* dest, size_t size, size_t nmemb, void* data) {
 	var wt = (( buffer_s2* ) data);
 	size_t buffer_size = size*nmemb;
 	if ( wt.size_left > 0) {
@@ -485,7 +486,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		handle.setopt (Curl.Option.FOLLOWLOCATION, true);
 
 		buffer_s tmp = buffer_s(){ buffer = new uchar[0] };
-		handle.setopt(Curl.Option.WRITEFUNCTION, WriteMemoryCallback);
+		handle.setopt(Curl.Option.WRITEFUNCTION, ReadResponseCallback);
 		handle.setopt(Curl.Option.WRITEDATA, ref tmp);
 
 		string[] keys = {};
@@ -513,7 +514,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 				tmp_body.buffer += raw_body[i];
 			}
 
-			handle.setopt (Curl.Option.READFUNCTION, ReadMemoryCallback);
+			handle.setopt (Curl.Option.READFUNCTION, WriteRequestCallback);
 			handle.setopt (Curl.Option.READDATA, ref tmp_body);
 		}
 
