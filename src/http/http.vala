@@ -1,10 +1,3 @@
-enum Benchwell.Http.Columns {
-	ITEM,
-	ICON,
-	TEXT,
-	METHOD
-}
-
 enum Benchwell.Http.CODES {
 	OK,
 	Created,
@@ -128,12 +121,17 @@ private struct buffer_s2
 
 private size_t ReadResponseCallback (char* ptr, size_t size, size_t nmemb, void* data) {
 	size_t total_size = size*nmemb;
+	var buffer = (( buffer_s* ) data);
+	// remove the termination char(0)
+	if (buffer.buffer.length > 0 && buffer.buffer[buffer.buffer.length - 1] == 0) {
+		buffer.buffer = buffer.buffer[:buffer.buffer.length - 2];
+	}
+
 	for(int i = 0; i<total_size; i++)
 	{
-		(( buffer_s* ) data).buffer+= ptr[i];
+		buffer.buffer+= ptr[i];
 	}
-	// NOTE: this is part of the sample but large responses causes the string to terminate earlier
-	//(( buffer_s* ) data).buffer+= 0;
+	buffer.buffer+= 0;
 	return total_size;
 }
 
