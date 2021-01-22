@@ -119,6 +119,7 @@ private struct buffer_s2
 	size_t size_left;
 }
 
+// https://github.com/giuliopaci/ValaBindingsDevelopment/blob/master/libcurl-example.vala
 private size_t ReadResponseCallback (char* ptr, size_t size, size_t nmemb, void* data) {
 	size_t total_size = size*nmemb;
 	var buffer = (( buffer_s* ) data);
@@ -288,12 +289,16 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		response_headers.auto_indent = true;
 		response_headers.show_line_marks = true;
 		response_headers.editable = false;
+		response_headers.margin_bottom = 10;
+		response_headers.margin_top = 10;
 		response_headers.show ();
 		var response_headers_sw = new Gtk.ScrolledWindow (null, null);
 		response_headers_sw.add (response_headers);
 		response_headers_sw.show ();
 
 		response  = new Benchwell.SourceView ();
+		response.margin_bottom = 10;
+		response.margin_top = 10;
 		response.hexpand = true;
 		response.vexpand = true;
 		response.highlight_current_line = false;
@@ -449,88 +454,102 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	}
 
 	// https://github.com/giuliopaci/ValaBindingsDevelopment/blob/master/libcurl-example.vala
-	private void on_send () {
+	private delegate void BlockSendFunc ();
+	private void block_send (BlockSendFunc f) {
 		address.send_btn.btn.sensitive = false;
-		response_headers.get_buffer ().set_text ("", 0);
-		response.get_buffer ().set_text ("", 0);
+		f();
+		address.send_btn.btn.sensitive = true;
+	}
 
-		var handle = new Curl.EasyHandle ();
+	private void on_send () {
+		block_send (() => {
+			response_headers.get_buffer ().set_text ("", 0);
+			response.get_buffer ().set_text ("", 0);
 
-		var url = Config.environment.interpolate (address.address.get_text ());
-		var method = address.method_combo.get_active_id ();
+			var handle = new Curl.EasyHandle ();
 
-		switch (method) {
-			case "HEAD":
-				handle.setopt (Curl.Option.HTTPGET, true);
-				handle.setopt (Curl.Option.CUSTOMREQUEST, "HEAD");
-				break;
-			case "GET":
-				handle.setopt (Curl.Option.HTTPGET, true);
-				break;
-			case "POST":
-				handle.setopt (Curl.Option.POST, true);
-				break;
-			case "PATCH":
-				handle.setopt (Curl.Option.POST, true);
-				handle.setopt (Curl.Option.CUSTOMREQUEST, "PATCH");
-				break;
-			case "DELETE":
-				handle.setopt (Curl.Option.POST, true);
-				handle.setopt (Curl.Option.CUSTOMREQUEST, "DELETE");
-				break;
-		}
+			var url = Config.environment.interpolate (address.address.get_text ());
+			var method = address.method_combo.get_active_id ();
 
-		handle.setopt (Curl.Option.URL, url);
-		handle.setopt (Curl.Option.FOLLOWLOCATION, true);
-
-		buffer_s tmp = buffer_s(){ buffer = new uchar[0] };
-		handle.setopt(Curl.Option.WRITEFUNCTION, ReadResponseCallback);
-		handle.setopt(Curl.Option.WRITEDATA, ref tmp);
-
-		string[] keys = {};
-		string[] values = {};
-		headers.get_kvs (out keys, out values);
-
-		Curl.SList headers = null;
-		for (var i = 0; i < keys.length; i++) {
-			var val = Config.environment.interpolate (values[i]);
-			headers = Curl.SList.append ((owned) headers, @"$(keys[i]): $(val)");
-		}
-		handle.setopt (Curl.Option.HTTPHEADER, headers);
-
-		// BODY
-		string raw_body = body.get_text ();
-		raw_body = Config.environment.interpolate_variables (raw_body);
-		raw_body = Config.environment.interpolate_functions (raw_body);
-		buffer_s2 tmp_body = buffer_s2 () {
-			buffer = new uchar[0],
-			size_left = Posix.strlen (raw_body)
-		};
-
-		if (raw_body != "") {
-			for (var i = 0; i<raw_body.length;i++){
-				tmp_body.buffer += raw_body[i];
+			switch (method) {
+				case "HEAD":
+					handle.setopt (Curl.Option.HTTPGET, true);
+					handle.setopt (Curl.Option.CUSTOMREQUEST, "HEAD");
+					break;
+				case "GET":
+					handle.setopt (Curl.Option.HTTPGET, true);
+					break;
+				case "POST":
+					handle.setopt (Curl.Option.POST, true);
+					break;
+				case "PATCH":
+					handle.setopt (Curl.Option.POST, true);
+					handle.setopt (Curl.Option.CUSTOMREQUEST, "PATCH");
+					break;
+				case "DELETE":
+					handle.setopt (Curl.Option.POST, true);
+					handle.setopt (Curl.Option.CUSTOMREQUEST, "DELETE");
+					break;
 			}
 
-			handle.setopt (Curl.Option.READFUNCTION, WriteRequestCallback);
-			handle.setopt (Curl.Option.READDATA, ref tmp_body);
-		}
+			handle.setopt (Curl.Option.URL, url);
+			handle.setopt (Curl.Option.FOLLOWLOCATION, true);
 
-		var resp_headers = new HashTable<string,string> (str_hash, str_equal);
-		handle.setopt (Curl.Option.HEADERFUNCTION, ReadHeaderCallback);
-		handle.setopt (Curl.Option.HEADERDATA, resp_headers);
+			buffer_s tmp = buffer_s(){ buffer = new uchar[0] };
+			handle.setopt(Curl.Option.WRITEFUNCTION, ReadResponseCallback);
+			handle.setopt(Curl.Option.WRITEDATA, ref tmp);
+
+			string[] keys = {};
+			string[] values = {};
+			headers.get_kvs (out keys, out values);
+
+			Curl.SList headers = null;
+			for (var i = 0; i < keys.length; i++) {
+				var val = Config.environment.interpolate (values[i]);
+				headers = Curl.SList.append ((owned) headers, @"$(keys[i]): $(val)");
+			}
+			handle.setopt (Curl.Option.HTTPHEADER, headers);
+
+			// BODY
+			string raw_body = body.get_text ();
+			raw_body = Config.environment.interpolate_variables (raw_body);
+			raw_body = Config.environment.interpolate_functions (raw_body);
+			buffer_s2 tmp_body = buffer_s2 () {
+				buffer = new uchar[0],
+				size_left = Posix.strlen (raw_body)
+			};
+
+			if (raw_body != "") {
+				for (var i = 0; i<raw_body.length;i++){
+					tmp_body.buffer += raw_body[i];
+				}
+
+				handle.setopt (Curl.Option.READFUNCTION, WriteRequestCallback);
+				handle.setopt (Curl.Option.READDATA, ref tmp_body);
+			}
+
+			var resp_headers = new HashTable<string,string> (str_hash, str_equal);
+			handle.setopt (Curl.Option.HEADERFUNCTION, ReadHeaderCallback);
+			handle.setopt (Curl.Option.HEADERDATA, resp_headers);
 
 
-		// only connects to the host
-		var now = get_real_time ();
-		handle.perform ();
-		var then = get_real_time ();
-
-		int http_code;
-		handle.getinfo(Curl.Info.RESPONSE_CODE, out http_code);
-		var content = (string)tmp.buffer;
-		var duration = then - now;
-		set_response (http_code, (string) content, resp_headers, duration);
+			// only connects to the host
+			var now = get_real_time ();
+			var code = handle.perform ();
+			var then = get_real_time ();
+			switch (code) {
+				case Curl.Code.OK:
+					int http_code;
+					handle.getinfo(Curl.Info.RESPONSE_CODE, out http_code);
+					var content = (string)tmp.buffer;
+					var duration = then - now;
+					set_response (http_code, (string) content, resp_headers, duration);
+					break;
+				default:
+					stderr.printf (@"========$((int)code)\n");
+					break;
+			}
+		});
 	}
 
 	private void on_load_request (owned Benchwell.HttpItem item) {
@@ -621,9 +640,14 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		}
 	}
 
-	public void set_response(uint status, string raw_data, HashTable<string, string> resp_headers, int64 duration) {
-		address.send_btn.btn.sensitive = true;
-		var content_type = resp_headers.get("Content-Type").split(";")[0];
+	public void set_response(uint status, string? raw_data, HashTable<string, string> resp_headers, int64 duration) {
+		var content_type_header = resp_headers.get("Content-Type");
+		string content_type = "";
+		if (content_type_header != null)
+			content_type = content_type_header.split(";")[0];
+
+		if (raw_data == null)
+			raw_data = "";
 
 		Gtk.TextIter iter;
 		response_headers.get_buffer ().get_end_iter (out iter);
@@ -636,21 +660,23 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		response.get_buffer ().get_end_iter (out iter);
 		switch (content_type) {
 			case "application/json":
-				var json = new Json.Parser ();
-				var generator = new Json.Generator ();
+				if ( raw_data != "" ) {
+					var json = new Json.Parser ();
+					var generator = new Json.Generator ();
 
-				generator.set_pretty (true);
-				try {
-					json.load_from_data (raw_data);
-				} catch (GLib.Error err) {
-					stderr.printf (err.message);
-					return;
+					generator.set_pretty (true);
+					try {
+						json.load_from_data (raw_data);
+					} catch (GLib.Error err) {
+						stderr.printf (err.message);
+						return;
+					}
+					generator.set_root (json.get_root ());
+
+					var body = generator.to_data (null);
+					response.get_buffer ().insert_text (ref iter, body, body.length);
+					response.set_language ("json");
 				}
-				generator.set_root (json.get_root ());
-
-				var body = generator.to_data (null);
-				response.get_buffer ().insert_text (ref iter, body, body.length);
-				response.set_language ("json");
 				break;
 			default:
 				response.get_buffer ().insert_text (ref iter, raw_data, raw_data.length);
