@@ -324,7 +324,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		details_box.pack_start (duration_label, false, false, 0);
 		details_box.pack_end (response_size_label, false, false, 0);
 
-		response_paned.pack1 (response_headers_sw, true, true);
+		response_paned.pack1 (response_headers_sw, false, false);
 		response_paned.pack2 (response_sw, true, true);
 		response_box.pack_start (details_box, false, false, 0);
 		response_box.pack_start (response_paned, true, true, 0);

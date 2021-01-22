@@ -34,10 +34,12 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 
 		// treeview
 		treeview = new Gtk.TreeView ();
-		treeview.headers_visible = false;
+		treeview.headers_visible = true;
 		treeview.show_expanders = true;
-		treeview.enable_tree_lines = false;
-		treeview.reorderable = true;
+		treeview.enable_tree_lines = true;
+		treeview.search_column = Benchwell.Http.Columns.TEXT;
+		treeview.enable_search = true;
+		treeview.reorderable = false; // would be nice
 		treeview.button_release_event.connect (on_button_release_event);
 
 		store = new Gtk.TreeStore (4, GLib.Type.OBJECT, GLib.Type.STRING, GLib.Type.STRING, GLib.Type.OBJECT);
