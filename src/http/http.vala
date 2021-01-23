@@ -297,8 +297,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		response_headers_sw.show ();
 
 		response  = new Benchwell.SourceView ();
-		response.margin_bottom = 10;
-		response.margin_top = 10;
+		//response.margin_bottom = 10;
+		//response.margin_top = 10;
 		response.hexpand = true;
 		response.vexpand = true;
 		response.highlight_current_line = false;
@@ -471,6 +471,29 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			var url = Config.environment.interpolate (address.address.get_text ());
 			var method = address.method_combo.get_active_id ();
 
+			string[] keys = {};
+			string[] values = {};
+			query_params.get_kvs (out keys, out values);
+
+			// TODO: Improve URL parsing
+			var builder = new StringBuilder ();
+			if (url.index_of ("?") == -1)
+				builder.append ("?");
+
+			for (var i = 0; i < keys.length; i++) {
+				var key = Config.environment.interpolate (keys[i]);
+				var val = Config.environment.interpolate (values[i]);
+				key = handle.escape (key, key.length);
+				val = handle.escape (val, val.length);
+				builder.append (@"$key=$val");
+				if (i < keys.length - 1)
+					builder.append ("&");
+			}
+
+			if (url.index_of ("?") != -1 && !url.has_suffix("&"))
+				builder.prepend ("&");
+			url += builder.str;
+
 			switch (method) {
 				case "HEAD":
 					handle.setopt (Curl.Option.HTTPGET, true);
@@ -499,8 +522,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			handle.setopt(Curl.Option.WRITEFUNCTION, ReadResponseCallback);
 			handle.setopt(Curl.Option.WRITEDATA, ref tmp);
 
-			string[] keys = {};
-			string[] values = {};
+			keys = {};
+			values = {};
 			headers.get_kvs (out keys, out values);
 
 			Curl.SList headers = null;

@@ -1,7 +1,7 @@
 public class Benchwell.Database.ResultView : Gtk.Paned {
 	public Benchwell.ApplicationWindow window { get; construct; }
 	public Benchwell.Services.Database service { get; construct; }
-	public Gtk.SourceView editor;
+	public Benchwell.SourceView editor;
 	public Benchwell.Database.Table table;
 	public Gtk.Button btn_load_query;
 	public Gtk.MenuButton save_menu;
@@ -22,6 +22,9 @@ public class Benchwell.Database.ResultView : Gtk.Paned {
 
 		// editor
 		editor = new Benchwell.SourceView ("sql");
+		editor.show_line_numbers = true;
+		editor.show_line_marks = true;
+		editor.margin_top = 10;
 		editor.show ();
 
 		var editor_sw = new Gtk.ScrolledWindow (null, null);
