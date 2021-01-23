@@ -12,7 +12,7 @@ public class Benchwell.Database.Connect : Gtk.Paned {
 	private MysqlForm mysql;
 	private SQLiteForm sqlite;
 
-	public signal void dbconnect(Benchwell.Backend.Sql.ConnectionInfo c);
+	public signal void dbconnect(Benchwell.ConnectionInfo c);
 
 	public Connect (Benchwell.ApplicationWindow window) {
 		Object(
@@ -95,7 +95,7 @@ public class Benchwell.Database.Connect : Gtk.Paned {
 		enable_buttons (false);
 
 		mysql.changed.connect ((conn) => {
-			var ok = Benchwell.Backend.Sql.MysqlDB.validate_connection (conn);
+			var ok = Benchwell.MysqlDB.validate_connection (conn);
 			enable_buttons (ok);
 		});
 
@@ -104,7 +104,7 @@ public class Benchwell.Database.Connect : Gtk.Paned {
 			dbconnect (c);
 		});
 
-		var engine = new Benchwell.Backend.Sql.Engine ();
+		var engine = new Benchwell.Engine ();
 		btn_test.clicked.connect (() => {
 			var c = get_connection ();
 			if (c == null) {
@@ -113,7 +113,7 @@ public class Benchwell.Database.Connect : Gtk.Paned {
 
 			try {
 				engine.connect (c);
-			} catch (Benchwell.Backend.Sql.Error e) {
+			} catch (Benchwell.Error e) {
 				//info_message (e.message, Gtk.MessageType.ERROR);
 			}
 		});
@@ -124,7 +124,7 @@ public class Benchwell.Database.Connect : Gtk.Paned {
 		});
 	}
 
-	public Benchwell.Backend.Sql.ConnectionInfo? get_connection () {
+	public Benchwell.ConnectionInfo? get_connection () {
 		switch (stack.get_visible_child_name ()) {
 			case "mysql":
 				return mysql.get_connection ();
@@ -163,7 +163,7 @@ public class Benchwell.Database.Connect : Gtk.Paned {
 				break;
 		}
 
-		var ok = Benchwell.Backend.Sql.MysqlDB.validate_connection (conn);
+		var ok = Benchwell.MysqlDB.validate_connection (conn);
 		enable_buttons (ok);
 	}
 
@@ -252,7 +252,7 @@ public class Benchwell.Database.ConnectionList : Gtk.ListBox {
 		});
 	}
 
-	private Gtk.ListBoxRow build_row (Benchwell.Backend.Sql.ConnectionInfo item) {
+	private Gtk.ListBoxRow build_row (Benchwell.ConnectionInfo item) {
 		var row = new Gtk.ListBoxRow ();
 		row.show ();
 
@@ -275,7 +275,7 @@ public class Benchwell.Database.ConnectionList : Gtk.ListBox {
 	}
 
 	private void on_new () {
-		var c = new Benchwell.Backend.Sql.ConnectionInfo();
+		var c = new Benchwell.ConnectionInfo();
 		c.name = _("New connection");
 		c.adapter = "mysql";
 		c.ttype = "tcp";

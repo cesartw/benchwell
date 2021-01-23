@@ -135,11 +135,11 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		return false;
 	}
 
-	public void add_database_tab (Benchwell.Backend.Sql.ConnectionInfo? connection_info=null, Benchwell.Backend.Sql.TableDef? tabledef = null) {
+	public void add_database_tab (Benchwell.ConnectionInfo? connection_info=null, Benchwell.TableDef? tabledef = null) {
 		var tab  = new Benchwell.Tab ();
 		tab.show ();
 
-		var database = new Benchwell.Database.Database (this, new Benchwell.Services.Database ());
+		var database = new Benchwell.Database.Database (this, new Benchwell.DatabaseService ());
 		database.notify["title"].connect ((s, p) => {
 			tab.label.set_text (database.title);
 			tab.label.tooltip_text = database.title;

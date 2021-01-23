@@ -15,8 +15,8 @@ public class Benchwell._Config : Object {
 	public Sqlite.Database db;
 	public GLib.Settings settings;
 	public Benchwell.Environment[] environments { set; get; }
-	public List<Benchwell.Backend.Sql.ConnectionInfo> connections;
-	public List<Benchwell.Backend.Sql.Query> queries;
+	public List<Benchwell.ConnectionInfo> connections;
+	public List<Benchwell.Query> queries;
 	public Benchwell.HttpCollection[] http_collections;
 	public Secret.Schema schema;
 	public Benchwell.Http.Plugin plugins;
@@ -119,7 +119,7 @@ public class Benchwell._Config : Object {
 		http_collections = tmp;
 	}
 
-	public void save_query (ref Benchwell.Backend.Sql.Query query) throws ConfigError {
+	public void save_query (ref Benchwell.Query query) throws ConfigError {
 		Sqlite.Statement stmt;
 		string prepared_query_str = "";
 
@@ -172,7 +172,7 @@ public class Benchwell._Config : Object {
 		}
 	}
 
-	public void delete_query (Benchwell.Backend.Sql.Query query) throws ConfigError {
+	public void delete_query (Benchwell.Query query) throws ConfigError {
 		if (query.id == 0) {
 			return;
 		}
@@ -192,7 +192,7 @@ public class Benchwell._Config : Object {
 		});
 	}
 
-	public void save_connection (ref Benchwell.Backend.Sql.ConnectionInfo conn) throws ConfigError {
+	public void save_connection (ref Benchwell.ConnectionInfo conn) throws ConfigError {
 		Sqlite.Statement stmt;
 		string prepared_query_str = "";
 
@@ -270,7 +270,7 @@ public class Benchwell._Config : Object {
 		encrypt (conn);
 	}
 
-	public void delete_connection (Benchwell.Backend.Sql.ConnectionInfo c) throws ConfigError {
+	public void delete_connection (Benchwell.ConnectionInfo c) throws ConfigError {
 		if ( c.id == 0 ) {
 			return;
 		}
@@ -311,7 +311,7 @@ public class Benchwell._Config : Object {
 		}
 
 		connections.foreach ((connection) => {
-			Benchwell.Backend.Sql.Query[] qq = {};
+			Benchwell.Query[] qq = {};
 			queries.foreach ((query) => {
 				if (query.connection_id == connection.id) {
 					qq += query;
@@ -322,7 +322,7 @@ public class Benchwell._Config : Object {
 	}
 
 	private int connections_cb(int n_columns, string[] values, string[] column_names){
-		var info = new Benchwell.Backend.Sql.ConnectionInfo ();
+		var info = new Benchwell.ConnectionInfo ();
 		info.id = int.parse (values[0]);
 		info.name = values[1];
 		info.adapter = values[2];
@@ -340,7 +340,7 @@ public class Benchwell._Config : Object {
 	}
 
 	private int queries_cb(int n_columns, string[] values, string[] column_names){
-		var query = new Benchwell.Backend.Sql.Query ();
+		var query = new Benchwell.Query ();
 		query.id = int.parse (values[0]);
 		query.name = values[1];
 		query.query = values[2];
@@ -350,7 +350,7 @@ public class Benchwell._Config : Object {
 		return 0;
 	}
 
-	public async void encrypt (Benchwell.Backend.Sql.ConnectionInfo info) {
+	public async void encrypt (Benchwell.ConnectionInfo info) {
 		var attributes = new GLib.HashTable<string, string> (str_hash, str_equal);
 		attributes["id"] = info.id.to_string ();
 		attributes["schema"] = Constants.PROJECT_NAME;
@@ -364,7 +364,7 @@ public class Benchwell._Config : Object {
 		}
 	}
 
-	public async string? decrypt (Benchwell.Backend.Sql.ConnectionInfo info) throws Error {
+	public async string? decrypt (Benchwell.ConnectionInfo info) throws Error {
 		var attributes = new GLib.HashTable<string, string> (str_hash, str_equal);
 		attributes["id"] = info.id.to_string ();
 		attributes["schema"] = Constants.PROJECT_NAME;

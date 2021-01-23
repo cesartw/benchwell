@@ -1,6 +1,6 @@
 public class Benchwell.Database.ResultView : Gtk.Paned {
 	public Benchwell.ApplicationWindow window { get; construct; }
-	public Benchwell.Services.Database service { get; construct; }
+	public Benchwell.DatabaseService service { get; construct; }
 	public Benchwell.SourceView editor;
 	public Benchwell.Database.Table table;
 	public Gtk.Button btn_load_query;
@@ -10,7 +10,7 @@ public class Benchwell.Database.ResultView : Gtk.Paned {
 
 	public signal void exec_query (string query);
 
-	public ResultView (Benchwell.ApplicationWindow window, Benchwell.Services.Database service) {
+	public ResultView (Benchwell.ApplicationWindow window, Benchwell.DatabaseService service) {
 		Object (
 			window: window,
 			service: service,

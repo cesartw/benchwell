@@ -1,24 +1,24 @@
-public interface Benchwell.Backend.Sql.Driver {
-	public abstract Benchwell.Backend.Sql.Connection connect(Benchwell.Backend.Sql.ConnectionInfo c) throws Benchwell.Backend.Sql.Error;
+public interface Benchwell.Driver {
+	public abstract Benchwell.Connection connect(Benchwell.ConnectionInfo c) throws Benchwell.Error;
 }
 
-public interface Benchwell.Backend.Sql.Connection : Object {
-	public abstract List<string> databases () throws Benchwell.Backend.Sql.Error;
-	public abstract void use_database (string name) throws Benchwell.Backend.Sql.Error;
+public interface Benchwell.Connection : Object {
+	public abstract List<string> databases () throws Benchwell.Error;
+	public abstract void use_database (string name) throws Benchwell.Error;
 	public abstract bool disconnect ();
-	public abstract void reconnect () throws Benchwell.Backend.Sql.Error;
+	public abstract void reconnect () throws Benchwell.Error;
 
-	public abstract Benchwell.Backend.Sql.TableDef[] tables () throws Benchwell.Backend.Sql.Error;
-	public abstract Benchwell.Backend.Sql.ColDef[] table_definition (string name) throws Benchwell.Backend.Sql.Error;
-	public abstract void delete_table(TableDef def) throws Benchwell.Backend.Sql.Error;
-	public abstract void truncate_table(TableDef def) throws Benchwell.Backend.Sql.Error;
+	public abstract Benchwell.TableDef[] tables () throws Benchwell.Error;
+	public abstract Benchwell.ColDef[] table_definition (string name) throws Benchwell.Error;
+	public abstract void delete_table(TableDef def) throws Benchwell.Error;
+	public abstract void truncate_table(TableDef def) throws Benchwell.Error;
 	public abstract List<List<string?>> fetch_table(
 		string name,
-		Benchwell.Backend.Sql.CondStmt[]? conditions,
-		Benchwell.Backend.Sql.SortOption[]? opts,
+		Benchwell.CondStmt[]? conditions,
+		Benchwell.SortOption[]? opts,
 		int limit,
 		int offset
-		) throws Benchwell.Backend.Sql.Error;
+		) throws Benchwell.Error;
 	public abstract void update_field (string name, ColDef[] defs, string[] row) throws Error;
 	public abstract string[] insert_record(string name, ColDef[] defs, string[] row) throws Error;
 	public abstract void delete_record(string name, ColDef[] defs, string[] row) throws Error;
@@ -35,12 +35,12 @@ public interface Benchwell.Backend.Sql.Connection : Object {
 	// DDL
 }
 
-public errordomain Benchwell.Backend.Sql.Error {
+public errordomain Benchwell.Error {
 	CONNECTION,
 	QUERY
 }
 
-public enum Benchwell.Backend.Sql.ColType {
+public enum Benchwell.ColType {
 	Boolean,
 	String,
 	LongString,
@@ -50,18 +50,18 @@ public enum Benchwell.Backend.Sql.ColType {
 	List
 }
 
-public enum Benchwell.Backend.Sql.TableType {
+public enum Benchwell.TableType {
 	Regular,
 	View,
 	Dummy
 }
 
-public enum Benchwell.Backend.Sql.SortType {
+public enum Benchwell.SortType {
 	Asc,
 	Desc
 }
 
-public enum Benchwell.Backend.Sql.Operator {
+public enum Benchwell.Operator {
 	Eq        , // = "=";
 	Neq       , // = "!=";
 	Gt        , // = ">";
@@ -106,7 +106,7 @@ public enum Benchwell.Backend.Sql.Operator {
 		return "";
 	}
 
-	public static Benchwell.Backend.Sql.Operator[] all () {
+	public static Benchwell.Operator[] all () {
 		return {
 			Eq        ,
 			Neq       ,
@@ -123,7 +123,7 @@ public enum Benchwell.Backend.Sql.Operator {
 		};
 	}
 
-	public static Benchwell.Backend.Sql.Operator? parse (string s) {
+	public static Benchwell.Operator? parse (string s) {
 		switch (s) {
 			case "=":
 				return Eq;
@@ -155,55 +155,9 @@ public enum Benchwell.Backend.Sql.Operator {
 	}
 }
 
-public class Benchwell.Backend.Sql.ConnectionInfo {
-	public int64  id       { get; set; }
-	public string adapter  { get; set; }
-	public string ttype    { get; set; }
+public class Benchwell.TableDef : Object {
 	public string name     { get; set; }
-	public string socket   { get; set; }
-	public string file     { get; set; }
-	public string host     { get; set; }
-	public int    port     { get; set; }
-	public string user     { get; set; }
-	public string password { get; set; }
-	public string database { get; set; }
-	public string sshhost  { get; set; }
-	public string sshagent { get; set; }
-	public string options  { get; set; }
-	public bool encrypted  { get; set; }
-	public Query[] queries { get; set; }
-
-	public ConnectionInfo () {
-		adapter     = "";
-		ttype       = "";
-		name        = "";
-		socket      = "";
-		file        = "";
-		host        = "";
-		port        = 0;
-		user        = "";
-		password    = "";
-		database    = "";
-		sshhost     = "";
-		sshagent    = "";
-		options     = "";
-		encrypted   = false;
-	}
-	public string to_string() {
-		return name;
-	}
-}
-
-public class Benchwell.Backend.Sql.Query : Object {
-	public int64 id           { get; set; }
-	public string name        { get; set; }
-	public string query       { get; set; }
-	public int64 connection_id { get; set; }
-}
-
-public class Benchwell.Backend.Sql.TableDef : Object {
-	public string name     { get; set; }
-	public Benchwell.Backend.Sql.TableType ttype { get; set; }
+	public Benchwell.TableType ttype { get; set; }
 	public string query    { get; set; }
 
 	public TableDef.with_name(string n) {
@@ -217,14 +171,14 @@ public class Benchwell.Backend.Sql.TableDef : Object {
 }
 
 // ColDef describe a column
-public class Benchwell.Backend.Sql.ColDef : Object {
+public class Benchwell.ColDef : Object {
 	public string name     { get; set; }
 	public bool pk         { get; set; }
 	public bool fk         { get; set; }
 	public int precision   { get; set; }
 	public bool unsigned   { get; set; }
 	public bool nullable   { get; set; }
-	public Benchwell.Backend.Sql.ColType ttype   { get; set; }
+	public Benchwell.ColType ttype   { get; set; }
 	public string[] values { get; set; }
 
 	public ColDef.with_name (string n) {
@@ -232,17 +186,17 @@ public class Benchwell.Backend.Sql.ColDef : Object {
 	}
 }
 
-public class Benchwell.Backend.Sql.CondStmt : Object {
-	public Benchwell.Backend.Sql.ColDef field { get; set; }
-	public Benchwell.Backend.Sql.Operator op  { get; set; }
+public class Benchwell.CondStmt : Object {
+	public Benchwell.ColDef field { get; set; }
+	public Benchwell.Operator op  { get; set; }
 	public string val   { get; set; }
 }
 
-public class Benchwell.Backend.Sql.SortOption: Object {
-	public Benchwell.Backend.Sql.ColDef column { get; construct; }
-	public Benchwell.Backend.Sql.SortType dir      { get; construct; }
+public class Benchwell.SortOption: Object {
+	public Benchwell.ColDef column { get; construct; }
+	public Benchwell.SortType dir      { get; construct; }
 
-	public SortOption(Benchwell.Backend.Sql.ColDef column, Benchwell.Backend.Sql.SortType dir){
+	public SortOption(Benchwell.ColDef column, Benchwell.SortType dir){
 		Object(
 			column: column,
 			dir: dir

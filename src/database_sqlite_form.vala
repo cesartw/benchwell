@@ -1,5 +1,5 @@
 public class Benchwell.SQLiteForm : Gtk.Grid {
-	public Benchwell.Backend.Sql.ConnectionInfo? connection;
+	public Benchwell.ConnectionInfo? connection;
 	public string filename;
 
 	public Gtk.Label tab_label;
@@ -50,7 +50,7 @@ public class Benchwell.SQLiteForm : Gtk.Grid {
 		filename = "";
 	}
 
-	public void set_connection (Benchwell.Backend.Sql.ConnectionInfo conn) {
+	public void set_connection (Benchwell.ConnectionInfo conn) {
 		connection = conn;
 
 		name_entry.set_text (connection.name);
@@ -58,8 +58,8 @@ public class Benchwell.SQLiteForm : Gtk.Grid {
 		filename = conn.file;
 	}
 
-	public Benchwell.Backend.Sql.ConnectionInfo get_connection () {
-		var conn = new Benchwell.Backend.Sql.ConnectionInfo ();
+	public Benchwell.ConnectionInfo get_connection () {
+		var conn = new Benchwell.ConnectionInfo ();
 		conn.adapter = "mysql";
 		conn.ttype = "socket";
 		conn.name = name_entry.get_text ();

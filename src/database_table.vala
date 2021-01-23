@@ -1,6 +1,6 @@
 public class Benchwell.Database.Table : Gtk.Box {
 	public Benchwell.ApplicationWindow window { get; construct; }
-	public Benchwell.Services.Database service { get; construct; }
+	public Benchwell.DatabaseService service { get; construct; }
 	private bool _raw_mode = false;
 	public bool raw_mode {
 		get { return _raw_mode; }
@@ -31,10 +31,10 @@ public class Benchwell.Database.Table : Gtk.Box {
 	public Gtk.SearchEntry search;
 	public Benchwell.Database.Conditions conditions;
 
-	public signal void field_changed (Benchwell.Backend.Sql.ColDef[] column, string[] row);
+	public signal void field_changed (Benchwell.ColDef[] column, string[] row);
 	public signal void delete_record ();
 
-	public Table (Benchwell.ApplicationWindow window, Benchwell.Services.Database service) {
+	public Table (Benchwell.ApplicationWindow window, Benchwell.DatabaseService service) {
 		Object (
 			window: window,
 			service: service,
@@ -144,8 +144,8 @@ public class Benchwell.Database.Table : Gtk.Box {
 		return true;
 	}
 
-	public Benchwell.Backend.Sql.SortOption[] get_sort_options () {
-		Benchwell.Backend.Sql.SortOption[] sorts = {};
+	public Benchwell.SortOption[] get_sort_options () {
+		Benchwell.SortOption[] sorts = {};
 
 		for (var i = 0; i < table.get_n_columns (); i++) {
 			var col = table.get_column (i);
@@ -156,10 +156,10 @@ public class Benchwell.Database.Table : Gtk.Box {
 
 			switch (col.get_sort_order ()) {
 			case Gtk.SortType.DESCENDING:
-				sorts += new Benchwell.Backend.Sql.SortOption(service.columns[i], Benchwell.Backend.Sql.SortType.Asc);
+				sorts += new Benchwell.SortOption(service.columns[i], Benchwell.SortType.Asc);
 				break;
 			case Gtk.SortType.ASCENDING:
-				sorts += new Benchwell.Backend.Sql.SortOption(service.columns[i], Benchwell.Backend.Sql.SortType.Desc);
+				sorts += new Benchwell.SortOption(service.columns[i], Benchwell.SortType.Desc);
 				break;
 			}
 		}
@@ -167,7 +167,7 @@ public class Benchwell.Database.Table : Gtk.Box {
 		return sorts;
 	}
 
-	public Benchwell.Backend.Sql.CondStmt[] get_conditions () {
+	public Benchwell.CondStmt[] get_conditions () {
 		return conditions.get_conditions ();
 	}
 
@@ -320,7 +320,7 @@ public class Benchwell.Database.Table : Gtk.Box {
 		}
 	}
 
-	private Gtk.TreeViewColumn build_column(Benchwell.Backend.Sql.ColDef column, int column_index) {
+	private Gtk.TreeViewColumn build_column(Benchwell.ColDef column, int column_index) {
 		var renderer = new Gtk.CellRendererText ();
 		renderer.editable = true;
 		renderer.xpad = 10;
@@ -387,7 +387,7 @@ public class Benchwell.Database.Table : Gtk.Box {
 
 
 		// update record
-		Benchwell.Backend.Sql.ColDef[] pks = {};
+		Benchwell.ColDef[] pks = {};
 		string[] values = {};
 		var col_id = 0;
 

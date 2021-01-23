@@ -1,5 +1,5 @@
 public class Benchwell.Database.Tables : Gtk.ListBox {
-	public Benchwell.Services.Database service { get; construct; }
+	public Benchwell.DatabaseService service { get; construct; }
 	private Gtk.Menu menu;
 	public Gtk.MenuItem edit_menu;
 	public Gtk.MenuItem new_tab_menu;
@@ -8,7 +8,7 @@ public class Benchwell.Database.Tables : Gtk.ListBox {
 	public Gtk.MenuItem delete_menu;
 	public Gtk.MenuItem refresh_menu;
 	public Regex? filter;
-	public Benchwell.Backend.Sql.TableDef? selected_tabledef {
+	public Benchwell.TableDef? selected_tabledef {
 		get {
 			var row = get_selected_row ();
 			if (row.get_index () < 0) {
@@ -31,9 +31,9 @@ public class Benchwell.Database.Tables : Gtk.ListBox {
 			}
 		}
 	}
-	public signal void table_selected (Benchwell.Backend.Sql.TableDef tabledef);
+	public signal void table_selected (Benchwell.TableDef tabledef);
 
-	public Tables (Benchwell.Services.Database service) {
+	public Tables (Benchwell.DatabaseService service) {
 		Object (
 			service: service
 		);
@@ -117,7 +117,7 @@ public class Benchwell.Database.Tables : Gtk.ListBox {
 		};
 	}
 
-	private Gtk.ListBoxRow build_row (Benchwell.Backend.Sql.TableDef def) {
+	private Gtk.ListBoxRow build_row (Benchwell.TableDef def) {
 		var row = new Gtk.ListBoxRow ();
 		row.show ();
 
@@ -129,7 +129,7 @@ public class Benchwell.Database.Tables : Gtk.ListBox {
 		label.show ();
 
 		var icon_name = "table";
-		if (def.ttype == Benchwell.Backend.Sql.TableType.Dummy) {
+		if (def.ttype == Benchwell.TableType.Dummy) {
 			icon_name = "table-v";
 		}
 		var image = new Benchwell.Image (icon_name, Gtk.IconSize.BUTTON);
@@ -154,7 +154,7 @@ public class Benchwell.Database.Tables : Gtk.ListBox {
 		return filter.match (lbl.get_label ());
 	}
 
-	public unowned Benchwell.Backend.Sql.TableDef get_selected_table () {
+	public unowned Benchwell.TableDef get_selected_table () {
 		var row = get_selected_row ();
 		return service.tables[row.get_index ()];
 	}

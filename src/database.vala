@@ -1,19 +1,19 @@
 public class Benchwell.Database.Database : Gtk.Box {
 	public string title { get; set; }
 	public Benchwell.ApplicationWindow window { get; construct; }
-	public Benchwell.Services.Database service { get; construct; }
+	public Benchwell.DatabaseService service { get; construct; }
 	private Benchwell.Database.Connect? connect_view;
 	private Benchwell.Database.Data? data_view;
-	private Benchwell.Backend.Sql.Engine engine;
+	private Benchwell.Engine engine;
 
-	public Database (Benchwell.ApplicationWindow window, Benchwell.Services.Database service) {
+	public Database (Benchwell.ApplicationWindow window, Benchwell.DatabaseService service) {
 		Object(
 			window: window,
 			service: service,
 			orientation: Gtk.Orientation.HORIZONTAL,
 			spacing: 5
 		);
-		engine = new Benchwell.Backend.Sql.Engine ();
+		engine = new Benchwell.Engine ();
 		title = _("Connect");
 
 		connect_view = new Benchwell.Database.Connect (window);
@@ -27,13 +27,13 @@ public class Benchwell.Database.Database : Gtk.Box {
 		});
 	}
 
-	public async void launch_connection (owned Benchwell.Backend.Sql.ConnectionInfo c, Benchwell.Backend.Sql.TableDef? selected_tabledef = null) {
-		//Benchwell.Backend.Sql.Connection connection;
+	public async void launch_connection (owned Benchwell.ConnectionInfo c, Benchwell.TableDef? selected_tabledef = null) {
+		//Benchwell.Connection connection;
 
 		try {
 			//connection = engine.connect (c);
 			yield service.connect (c);
-		} catch (Benchwell.Backend.Sql.Error err) {
+		} catch (Benchwell.Error err) {
 			show_error_dialog (err.message);
 			return;
 		}

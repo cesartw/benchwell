@@ -5,8 +5,8 @@ public class Benchwell.Database.Condition {
 	public Gtk.ComboBoxText operator_combo;
 	public Gtk.Entry value_entry;
 	public Benchwell.Button remove_btn;
-	private Benchwell.Backend.Sql.ColDef[] _columns;
-	public Benchwell.Backend.Sql.ColDef[] columns {
+	private Benchwell.ColDef[] _columns;
+	public Benchwell.ColDef[] columns {
 		get { return _columns; }
 		set {
 			// keep active field before replace columns
@@ -62,7 +62,7 @@ public class Benchwell.Database.Condition {
 		entry.focus_out_event.connect (on_field_focus_out);
 
 		operator_combo = new Gtk.ComboBoxText ();
-		foreach (var op in Benchwell.Backend.Sql.Operator.all ()) {
+		foreach (var op in Benchwell.Operator.all ()) {
 			operator_combo.append (op.to_string(), op.to_string ());
 		}
 		operator_combo.set_active (0);
@@ -75,13 +75,13 @@ public class Benchwell.Database.Condition {
 		remove_btn.show ();
 
 		operator_combo.changed.connect (() => {
-			var op = Benchwell.Backend.Sql.Operator.parse (operator_combo.get_active_text ());
+			var op = Benchwell.Operator.parse (operator_combo.get_active_text ());
 			value_entry.sensitive = true;
 
-			if (op == Benchwell.Backend.Sql.Operator.IsNull) {
+			if (op == Benchwell.Operator.IsNull) {
 				value_entry.sensitive = false;
 			}
-			if (op == Benchwell.Backend.Sql.Operator.IsNotNull) {
+			if (op == Benchwell.Operator.IsNotNull) {
 				value_entry.sensitive = false;
 			}
 		});
@@ -90,7 +90,7 @@ public class Benchwell.Database.Condition {
 		value_entry.activate.connect( () => { search (); });
 	}
 
-	public Benchwell.Backend.Sql.CondStmt? get_condition () {
+	public Benchwell.CondStmt? get_condition () {
 		if (!active_switch.get_active () || !active_switch.sensitive) {
 			return null;
 		}
@@ -100,7 +100,7 @@ public class Benchwell.Database.Condition {
 			return null;
 		}
 
-		Benchwell.Backend.Sql.ColDef? column = null;
+		Benchwell.ColDef? column = null;
 		foreach (var c in columns) {
 			if (c.name == column_name) {
 				column = c;
@@ -115,17 +115,17 @@ public class Benchwell.Database.Condition {
 		if (op == null || op == "") {
 			return null;
 		}
-		var operator = Benchwell.Backend.Sql.Operator.parse (op);
+		var operator = Benchwell.Operator.parse (op);
 		if (operator == null) {
 			return null;
 		}
 
 		var cvalue = value_entry.get_text ();
-		if ((cvalue == null || cvalue == "") && operator != Benchwell.Backend.Sql.Operator.IsNull && operator != Benchwell.Backend.Sql.Operator.IsNotNull) {
+		if ((cvalue == null || cvalue == "") && operator != Benchwell.Operator.IsNull && operator != Benchwell.Operator.IsNotNull) {
 			return null;
 		}
 
-		var stmt = new Benchwell.Backend.Sql.CondStmt ();
+		var stmt = new Benchwell.CondStmt ();
 		stmt.field = column;
 		stmt.op = operator;
 		stmt.val = cvalue;
@@ -194,8 +194,8 @@ public class Benchwell.Database.Condition {
 
 public class Benchwell.Database.Conditions : Gtk.Grid {
 	private List<Benchwell.Database.Condition> conditions;
-	private Benchwell.Backend.Sql.ColDef[] _columns;
-	public Benchwell.Backend.Sql.ColDef[] columns {
+	private Benchwell.ColDef[] _columns;
+	public Benchwell.ColDef[] columns {
 		get { return _columns; }
 		set {
 			_columns = value;
@@ -269,8 +269,8 @@ public class Benchwell.Database.Conditions : Gtk.Grid {
 		});
 	}
 
-	public Benchwell.Backend.Sql.CondStmt[] get_conditions () {
-		Benchwell.Backend.Sql.CondStmt[] stmts = {};
+	public Benchwell.CondStmt[] get_conditions () {
+		Benchwell.CondStmt[] stmts = {};
 
 		conditions.foreach( (condition) => {
 			var c = condition.get_condition ();
