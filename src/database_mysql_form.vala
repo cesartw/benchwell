@@ -1,14 +1,16 @@
 public class Benchwell.Database.MysqlForm : Gtk.Box {
+	public Benchwell.ApplicationWindow window { get; construct; }
 	public Benchwell.Database.MysqlTCPForm tcp_form;
 	public Benchwell.Database.MysqlSocketForm socket_form;
 	public Benchwell.ConnectionInfo? connection;
 
 	public signal void changed(Benchwell.ConnectionInfo c);
 
-	public MysqlForm() {
+	public MysqlForm(Benchwell.ApplicationWindow w) {
 		Object(
 			orientation: Gtk.Orientation.VERTICAL,
-			spacing: 5
+			spacing: 5,
+			window: w
 		);
 		set_size_request (300, 200);
 		set_valign (Gtk.Align.CENTER);
@@ -28,7 +30,7 @@ public class Benchwell.Database.MysqlForm : Gtk.Box {
 
 		tcp_form.changed.connect ((entry) =>{
 			if ( connection == null ) {
-				connection = new Benchwell.ConnectionInfo ();
+				connection = Config.add_connection ();
 			}
 			connection.name = tcp_form.name_entry.get_text ();
 			connection.host = tcp_form.host_entry.get_text ();
@@ -42,7 +44,7 @@ public class Benchwell.Database.MysqlForm : Gtk.Box {
 
 		socket_form.changed.connect ((entry) =>{
 			if ( connection == null ) {
-				connection = new Benchwell.ConnectionInfo ();
+				connection = Config.add_connection ();
 			}
 			connection.name = socket_form.name_entry.get_text ();
 			connection.socket = socket_form.socket_entry.get_text ();

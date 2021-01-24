@@ -9,6 +9,7 @@ public class Benchwell.Database.ResultView : Gtk.Paned {
 	public Gtk.Label infobar_label;
 
 	public signal void exec_query (string query);
+	public signal void fav_saved ();
 
 	public ResultView (Benchwell.ApplicationWindow window, Benchwell.DatabaseService service) {
 		Object (
@@ -144,17 +145,28 @@ public class Benchwell.Database.ResultView : Gtk.Paned {
 	}
 
 	public void on_save_fav () {
-		var filename = ask_fav_name ();
+		var query_name = ask_fav_name ();
 
-		if (filename == "") {
+		if (query_name == "") {
 			return;
 		}
+
 
 		var buffer = editor.get_buffer ();
 		Gtk.TextIter start, end;
 		buffer.get_start_iter (out start);
 		buffer.get_end_iter (out end);
-		var txt = buffer.get_text (start, end, false);
+
+		var query_text = buffer.get_text (start, end, false);
+		var query = service.info.add_query ();
+
+		query.touch_without_save (() => {
+			query.query = query_text;
+			query.query_type = "fav";
+			query.name = query_name;
+		});
+		query.save ();
+		fav_saved ();
 	}
 
 	public void show_alert (string message, Gtk.MessageType type = Gtk.MessageType.ERROR, bool autohide = false, int timeout = 0) {
@@ -189,7 +201,7 @@ public class Benchwell.Database.ResultView : Gtk.Paned {
 	}
 
 	private string ask_fav_name () {
-		var dialog = new Gtk.Dialog.with_buttons (_("Select"), window,
+		var dialog = new Gtk.Dialog.with_buttons (_("Choose"), window,
 									Gtk.DialogFlags.DESTROY_WITH_PARENT|Gtk.DialogFlags.MODAL,
 									_("Ok"), Gtk.ResponseType.OK,
 									_("Cancel"), Gtk.ResponseType.CANCEL);

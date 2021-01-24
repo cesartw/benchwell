@@ -159,6 +159,7 @@ public class Benchwell.TableDef : Object {
 	public string name     { get; set; }
 	public Benchwell.TableType ttype { get; set; }
 	public string query    { get; set; }
+	public Object source { get; set; }
 
 	public TableDef.with_name(string n) {
 		Object();

@@ -45,6 +45,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 		result_view.table.field_changed.connect (on_field_changed);
 		result_view.table.btn_refresh.clicked.connect (on_refresh_table);
 		result_view.table.conditions.search.connect (on_refresh_table);
+		result_view.fav_saved.connect (on_refresh_tables);
 
 		tables.schema_menu.activate.connect (on_show_schema);
 		tables.refresh_menu.activate.connect (on_refresh_tables);
@@ -109,7 +110,8 @@ public class Benchwell.Database.Data : Gtk.Paned {
 		result_view.hide_alert ();
 		try {
 			if (tabledef.ttype == Benchwell.TableType.Dummy) {
-				//Config.delete_query (tabledef);
+				var query = (Benchwell.Query) tabledef.source;
+				service.info.remove_query (query);
 			} else {
 				service.delete_table (tabledef);
 			}
@@ -207,7 +209,6 @@ public class Benchwell.Database.Data : Gtk.Paned {
 				return;
 			}
 		});
-
 
 		result_view.table.delete_record.connect ( () => {
 			result_view.infobar.hide ();

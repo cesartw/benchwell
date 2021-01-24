@@ -72,6 +72,34 @@ public class Benchwell.HttpCollection : Object {
 		}
 	}
 
+	public void remove () throws ConfigError {
+		if (this.id == 0) {
+			return;
+		}
+
+		Sqlite.Statement stmt;
+		string prepared_query_str = """DELETE FROM http_collections WHERE ID = $ID""";
+
+		var ec = Config.db.prepare_v2 (prepared_query_str, prepared_query_str.length, out stmt);
+		if (ec != Sqlite.OK) {
+			stderr.printf ("Error: %d: %s\n", Config.db.errcode (), Config.db.errmsg ());
+			return;
+		}
+
+		int param_position = stmt.bind_parameter_index ("$ID");
+		stmt.bind_int64 (param_position, this.id);
+
+		string errmsg = "";
+		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);
+		if ( ec != Sqlite.OK ){
+			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
+			stderr.printf ("ERR: %s\n", errmsg);
+			throw new ConfigError.SAVE_ENVVAR(errmsg);
+		}
+
+		Config.remove_http_collection (this);
+	}
+
 	public void touch_without_save (NoUpdateFunc f) {
 		no_auto_save = true;
 		f ();
@@ -103,34 +131,6 @@ public class Benchwell.HttpCollection : Object {
 
 		item_added (item);
 		return item;
-	}
-
-	public void remove () throws ConfigError {
-		if (this.id == 0) {
-			return;
-		}
-
-		Sqlite.Statement stmt;
-		string prepared_query_str = """DELETE FROM http_collections WHERE ID = $ID""";
-
-		var ec = Config.db.prepare_v2 (prepared_query_str, prepared_query_str.length, out stmt);
-		if (ec != Sqlite.OK) {
-			stderr.printf ("Error: %d: %s\n", Config.db.errcode (), Config.db.errmsg ());
-			return;
-		}
-
-		int param_position = stmt.bind_parameter_index ("$ID");
-		stmt.bind_int64 (param_position, this.id);
-
-		string errmsg = "";
-		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);
-		if ( ec != Sqlite.OK ){
-			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
-			stderr.printf ("ERR: %s\n", errmsg);
-			throw new ConfigError.SAVE_ENVVAR(errmsg);
-		}
-
-		Config.remove_http_collection (this);
 	}
 
 	public void delete_item (Benchwell.HttpItem item) throws ConfigError {

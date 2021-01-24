@@ -6,7 +6,7 @@ public class Benchwell.Database.Connect : Gtk.Paned {
 	// form buttons
 	public Gtk.Button btn_connect;
 	public Gtk.Button btn_test;
-	public Gtk.Button btn_save;
+	//public Gtk.Button btn_save;
 
 	private Gtk.Stack stack;
 	private MysqlForm mysql;
@@ -46,12 +46,12 @@ public class Benchwell.Database.Connect : Gtk.Paned {
 		btn_connect.show ();
 		btn_test = new Gtk.Button.with_label (_("Test"));
 		btn_test.show ();
-		btn_save = new Gtk.Button.with_label (_("Save"));
-		btn_save.show ();
+		//btn_save = new Gtk.Button.with_label (_("Save"));
+		//btn_save.show ();
 
 		btn_box.add (btn_connect);
 		btn_box.add (btn_test);
-		btn_box.add (btn_save);
+		//btn_box.add (btn_save);
 
 		var adapter_stack = new Gtk.StackSwitcher ();
 		adapter_stack.show ();
@@ -65,7 +65,7 @@ public class Benchwell.Database.Connect : Gtk.Paned {
 		stack.set_hexpand (true);
 		adapter_stack.set_stack (stack);
 
-		mysql = new MysqlForm();
+		mysql = new MysqlForm(window);
 		mysql.show ();
 		sqlite = new SQLiteForm();
 		sqlite.show ();
@@ -90,7 +90,7 @@ public class Benchwell.Database.Connect : Gtk.Paned {
 
 		connections.row_selected.connect (on_row_selected);
 
-		btn_save.clicked.connect (on_save);
+		//btn_save.clicked.connect (on_save);
 
 		enable_buttons (false);
 
@@ -147,7 +147,7 @@ public class Benchwell.Database.Connect : Gtk.Paned {
 			return;
 		}
 
-		var conn = Config.connections.nth_data (index);
+		var conn = Config.connections[index];
 
 		if (conn == null) {
 			return;
@@ -167,18 +167,18 @@ public class Benchwell.Database.Connect : Gtk.Paned {
 		enable_buttons (ok);
 	}
 
-	private void on_save () {
-		var c = get_connection ();
-		if ( c == null ) {
-			return;
-		}
+	//private void on_save () {
+		//var c = get_connection ();
+		//if ( c == null ) {
+			//return;
+		//}
 
-		Config.save_connection (ref c);
-		connections.update_items (c.id);
-	}
+		//Config.save_connection (ref c);
+		//connections.update_items (c.id);
+	//}
 
 	private void enable_buttons (bool ok) {
-		btn_save.set_sensitive (ok);
+		//btn_save.set_sensitive (ok);
 		btn_test.set_sensitive (ok);
 		btn_connect.set_sensitive (ok);
 	}
@@ -195,9 +195,9 @@ public class Benchwell.Database.ConnectionList : Gtk.ListBox {
 	//public Regex? filter { get; set; }
 
 	public ConnectionList () {
-		Object();
-
-		set_property ("activate-on-single-click", false);
+		Object(
+			activate_on_single_click: true
+		);
 
 		button_press_event.connect ( (list, event) => {
 			if (event.button == Gdk.BUTTON_SECONDARY) {
@@ -243,13 +243,13 @@ public class Benchwell.Database.ConnectionList : Gtk.ListBox {
 			remove (row);
 		});
 
-		Config.connections.foreach ( (item) => {
+		foreach (Benchwell.ConnectionInfo item in Config.connections) {
 			var row = build_row (item);
 			add (row);
 			if (item.id == selected_id) {
 				select_row (row);
 			}
-		});
+		}
 	}
 
 	private Gtk.ListBoxRow build_row (Benchwell.ConnectionInfo item) {
@@ -271,29 +271,28 @@ public class Benchwell.Database.ConnectionList : Gtk.ListBox {
 
 		row.add (box);
 
+		item.notify["name"].connect (() => {
+			label.set_text (item.name);
+		});
+
 		return row;
 	}
 
 	private void on_new () {
-		var c = new Benchwell.ConnectionInfo();
-		c.name = _("New connection");
+		var c = Config.add_connection ();
 		c.adapter = "mysql";
 		c.ttype = "tcp";
 		c.port = 3306;
 
-		try {
-			Benchwell.Config.save_connection (ref c);
-		} catch (Benchwell.ConfigError err) {
-			stderr.printf (err.message);
-		}
 		update_items (c.id);
 	}
 
 	private void on_delete () {
 		var row = get_selected_row ();
-		var conn = Benchwell.Config.connections.nth_data (row.get_index ());
+		var conn = Config.connections[row.get_index ()];
 		try {
-			Benchwell.Config.delete_connection (conn);
+			conn.remove ();
+			Config.remove_connection(conn);
 		} catch (Benchwell.ConfigError err) {
 			stderr.printf (err.message);
 		}

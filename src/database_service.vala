@@ -40,6 +40,7 @@ public class Benchwell.DatabaseService : Object {
 		foreach (var q in info.queries) {
 			var t = new Benchwell.TableDef.with_name (q.name);
 			t.ttype = Benchwell.TableType.Dummy;
+			t.source = q;
 			_tables += t;
 		}
 		tables = _tables;
