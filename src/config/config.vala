@@ -177,7 +177,7 @@ public class Benchwell._Config : Object {
 		}
 
 		Benchwell.Query[] queries = {};
-		ec = db.exec ("SELECT * FROM db_queries", (n_columns, values, column_names) => {
+		ec = db.exec ("SELECT * FROM db_queries WHERE query_type = 'fav'", (n_columns, values, column_names) => {
 			var query = new Benchwell.Query ();
 			query.touch_without_save (() => {
 				query.id = int.parse (values[0]);
@@ -185,6 +185,7 @@ public class Benchwell._Config : Object {
 				query.query = values[2];
 				query.query_type = values[3];
 				query.connection_id = int64.parse (values[4]);
+				query.created_at = new DateTime.from_unix_local (int64.parse (values[5]));
 			});
 
 			queries += query;

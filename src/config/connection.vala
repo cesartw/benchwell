@@ -15,6 +15,7 @@ public class Benchwell.ConnectionInfo : Object {
 	public string options  { get; set; }
 	public bool encrypted  { get; set; }
 	public Query[] queries;
+	public Query[] history;
 
 	private bool no_auto_save;
 
@@ -190,6 +191,65 @@ public class Benchwell.ConnectionInfo : Object {
 
 		queries = list;
 	}
+
+	public Benchwell.Query save_history (string query_string) throws Benchwell.ConfigError {
+		string errmsg = "";
+		var ec = Config.db.exec ("""DELETE FROM db_queries
+								 WHERE query_type = 'history'
+										AND id IN (
+											SELECT id
+											FROM db_queries
+											WHERE query_type = 'history'
+												AND connections_id = %lld
+											ORDER BY id DESC
+											LIMIT -1 OFFSET %d)""".printf (id, Config.settings.get_int("db-query-history-limit")),
+								 null,
+								 out errmsg);
+		if ( ec != Sqlite.OK ){
+			throw new Benchwell.ConfigError.DELETE_CONNECTION (errmsg);
+		}
+
+		var query = add_query ();
+		query.touch_without_save (() => {
+			query.query_type = "history";
+			query.query = query_string;
+			query.name = "";
+		});
+		query.save ();
+
+		var h = history;
+		h += query;
+		history = h;
+
+		return query;
+	}
+
+	public Benchwell.Query[] load_history () throws Benchwell.ConfigError {
+		string errmsg;
+		Benchwell.Query[] h = {};
+		var ec = Config.db.exec (@"SELECT * FROM db_queries WHERE query_type = 'history' AND connections_id = $(id)",
+			(n_columns, values, column_names) => {
+				var query = new Benchwell.Query ();
+				query.touch_without_save (() => {
+					query.id = int.parse (values[0]);
+					query.name = values[1];
+					query.query = values[2];
+					query.query_type = values[3];
+					query.connection_id = int64.parse (values[4]);
+					query.created_at = new DateTime.from_unix_local (int64.parse (values[5]));
+				});
+
+				h += query;
+				return 0;
+			},
+			out errmsg);
+		if ( ec != Sqlite.OK ){
+			throw new ConfigError.GET_CONNECTIONS(errmsg);
+		}
+		history = h;
+
+		return history;
+	}
 }
 
 public class Benchwell.Query : Object {
@@ -198,6 +258,7 @@ public class Benchwell.Query : Object {
 	public string query        { get; set; }
 	public string query_type   { get; set; }
 	public int64 connection_id { get; set; }
+	public DateTime created_at;
 
 	private bool no_auto_save;
 
@@ -243,8 +304,8 @@ public class Benchwell.Query : Object {
 			""";
 		} else {
 			 prepared_query_str = """
-				INSERT INTO db_queries(name, query, query_type, connections_id)
-				VALUES($NAME, $QUERY, $QUERY_TYPE, $CONNECTION_ID)
+				INSERT INTO db_queries(name, query, query_type, connections_id, created_at)
+				VALUES($NAME, $QUERY, $QUERY_TYPE, $CONNECTION_ID, $CREATED_AT)
 			""";
 		}
 
@@ -262,6 +323,10 @@ public class Benchwell.Query : Object {
 		} else {
 			param_position = stmt.bind_parameter_index ("$CONNECTION_ID");
 			stmt.bind_int64 (param_position, this.connection_id);
+
+			param_position = stmt.bind_parameter_index ("$CREATED_AT");
+			var now = new DateTime.now_local ();
+			stmt.bind_int64 (param_position, now.to_unix ());
 		}
 
 		param_position = stmt.bind_parameter_index ("$NAME");
@@ -283,6 +348,7 @@ public class Benchwell.Query : Object {
 
 		if (id == 0) {
 			id = Config.db.last_insert_rowid ();
+			created_at = new DateTime.now_local ();
 		}
 	}
 

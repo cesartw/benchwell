@@ -41,5 +41,10 @@
 			<summary>HTTP Item</summary>
 			<description>The last http item id selected</description>
 		</key>
+		<key name="db-query-history-limit" type="i">
+			<default>25</default>
+			<summary>Database query history</summary>
+			<description>Maximum number of queries kept in the history</description>
+		</key>
 	</schema>
 </schemalist>

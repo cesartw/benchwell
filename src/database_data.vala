@@ -6,6 +6,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 	public Gtk.ComboBoxText database_combo;
 	public Benchwell.Database.Tables tables;
 	public Benchwell.Database.ResultView result_view;
+	public Gtk.ListBox history;
 
 	private Benchwell.Views.CancelOverlay overlay;
 	private List<string> databases;
@@ -26,6 +27,16 @@ public class Benchwell.Database.Data : Gtk.Paned {
 		);
 
 		build ();
+
+		try {
+			service.info.load_history ();
+		} catch (Benchwell.ConfigError err) {
+			stderr.printf ("loading history: %s", err.message);
+		}
+
+		foreach (Benchwell.Query query in service.info.history) {
+			add_history_row (query);
+		}
 
 		table_search.search_changed.connect ( () => {
 			var expr = table_search.get_buffer ().get_text ();
@@ -161,13 +172,27 @@ public class Benchwell.Database.Data : Gtk.Paned {
 		tables_sw.show ();
 		tables_sw.add (tables);
 
+
+		history = new Gtk.ListBox ();
+		history.activate_on_single_click = false;
+		history.show ();
+
+		var history_sw = new Gtk.ScrolledWindow (null, null);
+		history_sw.add (history);
+		history_sw.show ();
+
+		var tables_and_history = new Gtk.Paned (Gtk.Orientation.VERTICAL);
+		tables_and_history.pack1 (tables_sw, true, true);
+		tables_and_history.pack2 (history_sw, false, false);
+		tables_and_history.show ();
+
 		database_combo = new Gtk.ComboBoxText ();
 		database_combo.set_id_column (0);
 		database_combo.show ();
 
 		sidebar.pack_start (database_combo, false, true, 0);
 		sidebar.pack_start (table_search, false, true, 0);
-		sidebar.pack_start (tables_sw, true, true, 0);
+		sidebar.pack_start (tables_and_history, true, true, 0);
 
 		// main section
 		var main_section = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
@@ -242,28 +267,81 @@ public class Benchwell.Database.Data : Gtk.Paned {
 			//}
 		//});
 
-		result_view.exec_query.connect ((query) => {
-			result_view.infobar.hide ();
+		result_view.exec_query.connect (on_exec_query);
 
-			try {
-				string[] columns;
-				List<List<string?>> data;
-				service.connection.query(query, out columns, out data);
+		history.row_activated.connect (on_history_activated);
+	}
 
-				Benchwell.ColDef[] cols = {};
-				foreach (var column in columns) {
-					cols += new Benchwell.ColDef.with_name (column);
-				}
+	private void on_history_activated () {
+		var row = history.get_selected_row ();
+		var query = service.info.history[service.info.history.length - row.get_index () - 1];
+		result_view.editor.get_buffer ().set_text (query.query);
+	}
 
-				service.columns = cols;
-				service.data = (owned) data;
-				result_view.table.load_table ();
-				result_view.table.raw_mode = true;
-			} catch (Benchwell.Error err) {
-				result_view.show_alert (err.message);
-				return;
+	private void on_exec_query (string raw_query) {
+		result_view.infobar.hide ();
+
+		var interpolated = raw_query;
+		interpolated = Config.environment.interpolate_variables (interpolated);
+		interpolated = Config.environment.interpolate_functions (interpolated);
+
+		try {
+			var query = service.info.save_history (interpolated);
+			add_history_row (query);
+		} catch (Benchwell.ConfigError err) {
+			stderr.printf ("saving history: %s", err.message);
+		}
+
+		try {
+			string[] columns;
+			List<List<string?>> data;
+			service.connection.query(interpolated, out columns, out data);
+
+			Benchwell.ColDef[] cols = {};
+			foreach (var column in columns) {
+				cols += new Benchwell.ColDef.with_name (column);
 			}
-		});
+
+			service.columns = cols;
+			service.data = (owned) data;
+			result_view.table.load_table ();
+			result_view.table.raw_mode = true;
+		} catch (Benchwell.Error err) {
+			result_view.show_alert (err.message);
+			return;
+		}
+	}
+
+	private void add_history_row (owned Benchwell.Query query) {
+		var row = new Gtk.ListBoxRow ();
+		row.show ();
+
+		var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0);
+		box.show ();
+
+		var time_fmt = "%Y-%m-%d %H:%M:%S";
+		var now = new DateTime.now_local ();
+		if (now.get_day_of_year () == query.created_at.get_day_of_year ())
+			time_fmt = "%H:%M:%S";
+
+		var time_lbl = new Gtk.Label (query.created_at.format (time_fmt));
+		time_lbl.set_halign (Gtk.Align.START);
+		time_lbl.show ();
+
+		var q = query.query.replace("\n", " ");
+		var length = q.length;
+		if (length > 25)
+			length = 25;
+		var query_lbl = new Gtk.Label (q.substring (0, length));
+		query_lbl.set_halign (Gtk.Align.START);
+		query_lbl.show ();
+
+		box.pack_start (time_lbl, false, false, 5);
+		box.pack_start (query_lbl, false, false, 0);
+
+		row.add (box);
+
+		history.prepend (row);
 	}
 
 	private void fill () {
