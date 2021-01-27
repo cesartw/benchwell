@@ -9,27 +9,19 @@ public class Benchwell.Database.Condition {
 	public Benchwell.ColDef[] columns {
 		get { return _columns; }
 		set {
-			// keep active field before replace columns
-			if (field_combo.sensitive) {
-				Gtk.TreeIter iter;
-				GLib.Value? val;
-				field_combo.get_active_iter (out iter);
-				if (store.iter_is_valid (iter)) {
-					store.get_value (iter, 0, out val);
-					if (val != null) {
-						_active_field = val.get_string ();
-					} else {
-						_active_field = null;
-					}
-				}
-			}
-
 			_columns = value;
-			_update_fields ();
+			store.clear ();
+
+			Gtk.TreeIter iter;
+			store.append (out iter);
+			store.set_value (iter, 0 ,"");
+
+			foreach (var column in _columns) {
+				store.append (out iter);
+				store.set_value (iter, 0, column.name);
+			}
 		}
 	}
-
-	private string? _active_field;
 
 	public signal void search();
 
@@ -149,26 +141,6 @@ public class Benchwell.Database.Condition {
 		return column_name;
 	}
 
-	private void _update_fields () {
-		store.clear ();
-
-		bool enable = _active_field == "" || _active_field == null;
-		foreach (var column in _columns) {
-			Gtk.TreeIter iter;
-			store.append (out iter);
-			store.set_value (iter, 0, column.name);
-			if (column.name == _active_field) {
-				enable = true;
-				field_combo.set_active_iter (iter);
-			}
-		}
-
-		active_switch.sensitive = enable;
-		field_combo.sensitive = enable;
-		operator_combo.sensitive = enable;
-		value_entry.sensitive = enable;
-	}
-
 	private bool on_field_focus_out () {
 		var entry = field_combo.get_child () as Gtk.Entry;
 		var written_field_name = entry.get_text ();
@@ -280,5 +252,22 @@ public class Benchwell.Database.Conditions : Gtk.Grid {
 		});
 
 		return stmts;
+	}
+
+	public void clear () {
+		while (!conditions.is_empty ()) {
+			conditions.remove (conditions.nth_data (0));
+			remove_row (0);
+		}
+
+		add_condition ();
+	}
+
+	public void rebuild (HashTable<string,string> filters) {
+		clear ();
+
+		filters.foreach ((key, val) => {
+
+		});
 	}
 }

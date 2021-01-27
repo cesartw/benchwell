@@ -19,6 +19,7 @@ public class Benchwell._Config : Object {
 	public Benchwell.HttpCollection[] http_collections;
 	public Secret.Schema schema;
 	public Benchwell.Http.Plugin plugins;
+	public Json.Node filters;
 
 	private Benchwell.Environment? _environment;
 	public Benchwell.Environment? environment {
@@ -49,6 +50,7 @@ public class Benchwell._Config : Object {
 		load_environments ();
 		load_connections ();
 		load_http_collections ();
+		load_filters ();
 	}
 
 	public Gtk.PositionType tab_position () {
@@ -376,4 +378,34 @@ public class Benchwell._Config : Object {
 			debug ("Unable to store password for \"%s\" in libsecret keyring", key_name);
 		}
     }
+
+	public HashTable<string,string> get_table_filters (ConnectionInfo info, string table_name) {
+		HashTable<string,string> result = new HashTable<string,string> (str_hash, str_equal);
+
+		if (filters == null)
+			return result;
+
+		var conn_node = filters.get_object ().get_object_member (info.id.to_string ());
+		if (conn_node == null)
+			return result;
+
+		var table_node = conn_node.get_object_member (table_name);
+		if (table_node == null)
+			return result;
+
+		table_node.get_members ().foreach ((key) => {
+			var val = table_node.get_string_member (key);
+			result.set (key, val);
+		});
+
+		return result;
+	}
+
+	public void load_filters () {
+		try {
+			filters = Json.from_string (settings.get_string ("db-filters"));
+		} catch (GLib.Error err) {
+			stderr.printf ("Loading saved filters: %s", err.message);
+		}
+	}
 }

@@ -60,8 +60,8 @@ public class Benchwell.DatabaseService : Object {
 		tables = new_tables;
 	}
 
-	public void load_table (Benchwell.CondStmt[] conditions,
-							Benchwell.SortOption[] sorts,
+	public void load_table (Benchwell.CondStmt[]? conditions,
+							Benchwell.SortOption[]? sorts,
 							int page, int page_size) throws Benchwell.Error {
 		columns = connection.table_definition (table_def.name);
 		data = connection.fetch_table (table_def.name,

@@ -391,12 +391,13 @@ public class Benchwell.Database.Data : Gtk.Paned {
 
 		current_page = 0;
 		try {
-			service.load_table(null,
-							null,
-							current_page, page_size);
+			service.load_table(null, null, current_page, page_size);
 			result_view.table.raw_mode = false;
 			result_view.table.conditions.columns = service.columns;
 			result_view.table.load_table ();
+
+			var filters = Config.get_table_filters (service.info, service.table_def.name);
+			result_view.table.conditions.rebuild (filters);
 		} catch (Benchwell.Error err) {
 			result_view.show_alert (err.message);
 			return;
@@ -416,7 +417,6 @@ public class Benchwell.Database.Data : Gtk.Paned {
 			}
 
 			try {
-				result_view.table.conditions.columns = service.columns;
 				service.load_table(result_view.table.get_conditions (),
 								result_view.table.get_sort_options (),
 								current_page, page_size);

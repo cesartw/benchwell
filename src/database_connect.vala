@@ -196,7 +196,7 @@ public class Benchwell.Database.ConnectionList : Gtk.ListBox {
 
 	public ConnectionList () {
 		Object(
-			activate_on_single_click: true
+			activate_on_single_click: false
 		);
 
 		button_press_event.connect ( (list, event) => {

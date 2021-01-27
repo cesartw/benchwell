@@ -23,15 +23,12 @@ public class Benchwell.Database.Database : Gtk.Box {
 		show_connect ();
 
 		connect_view.dbconnect.connect ((c) => {
-			launch_connection (c);
+			launch_connection.begin (c);
 		});
 	}
 
 	public async void launch_connection (owned Benchwell.ConnectionInfo c, Benchwell.TableDef? selected_tabledef = null) {
-		//Benchwell.Connection connection;
-
 		try {
-			//connection = engine.connect (c);
 			yield service.connect (c);
 		} catch (Benchwell.Error err) {
 			show_error_dialog (err.message);

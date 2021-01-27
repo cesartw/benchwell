@@ -16,6 +16,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 	public Gtk.MenuItem add_folder_menu;
 	public Gtk.MenuItem delete_menu;
 	public Gtk.MenuItem edit_menu;
+	public Gtk.MenuItem clone_request_menu;
 
 
 	public weak Benchwell.HttpCollection? selected_collection;
@@ -101,11 +102,14 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 
 		menu = new Gtk.Menu ();
 
-		add_folder_menu = new Benchwell.MenuItem(_("New folder"), "add");
+		add_folder_menu = new Benchwell.MenuItem(_("New folder"), "directory");
 		add_folder_menu.show ();
 
 		add_request_menu = new Benchwell.MenuItem(_("New request"), "add");
 		add_request_menu.show ();
+
+		clone_request_menu = new Benchwell.MenuItem(_("Clone request"), "copy");
+		clone_request_menu.show ();
 
 		delete_menu = new Benchwell.MenuItem(_("Delete"), "close");
 		delete_menu.show ();
@@ -116,6 +120,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		menu.add (add_request_menu);
 		menu.add (add_folder_menu);
 		menu.add (edit_menu);
+		menu.add (clone_request_menu);
 		menu.add (delete_menu);
 
 		pack_start (collections_combo, false, false, 0);
@@ -185,6 +190,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		var iter = add_row (item, null, sibling);
 		var path = store.get_path (iter);
 		name_renderer.editable = true;
+		treeview.expand_to_path (path);
 		treeview.set_cursor (path, name_column, true);
 	}
 
@@ -225,6 +231,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		var iter = add_row (item, parent, sibling);
 		var path = store.get_path (iter);
 		name_renderer.editable = true;
+		treeview.expand_to_path (path);
 		treeview.set_cursor (path, name_column, true);
 		load_request (item);
 	}
