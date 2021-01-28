@@ -1,9 +1,3 @@
-CREATE TABLE "config" (
-    id    INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    name  NVARCHAR(300) NOT NULL,
-    value NVARCHAR(300) NOT NULL
-);
-
 CREATE TABLE "environments" (
     id   INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     name TEXT NOT NULL
@@ -89,10 +83,3 @@ CREATE TABLE "http_kvs" (
 
 INSERT INTO db_connections(name, adapter, type, database, host, options, user, port, encrypted)
       VALUES("localhost", "mysql", "tcp", "", "localhost", "", "", 3306, 0);
-
-INSERT INTO config(name, value) VALUES("gui.editor.word_wrap", "word");
-INSERT INTO config(name, value) VALUES("gui.page_size", 100);
-INSERT INTO config(name, value) VALUES("gui.tab_position", "top");
-INSERT INTO config(name, value) VALUES("gui.cell_width", 45);
-INSERT INTO config(name, value) VALUES("gui.dark_mode", 1);
-INSERT INTO config(name, value) VALUES("encryption_mode", "DBUS");

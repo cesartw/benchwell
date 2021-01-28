@@ -22,7 +22,8 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 	public weak Benchwell.HttpCollection? selected_collection;
 	public weak Benchwell.HttpItem? selected_item;
 
-	public signal void load_request(owned Benchwell.HttpItem item);
+	public signal void item_activated (Benchwell.HttpItem item);
+	public signal void item_removed (Benchwell.HttpItem item);
 
 	private Gtk.CellRendererText name_renderer;
 	private Gtk.TreeViewColumn name_column;
@@ -42,6 +43,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		treeview.enable_search = true;
 		treeview.reorderable = false; // would be nice
 		treeview.button_release_event.connect (on_button_release_event);
+		treeview.activate_on_single_click = Config.settings.get_boolean ("http-sigle-click-activate");
 
 		store = new Gtk.TreeStore (4, GLib.Type.OBJECT, GLib.Type.STRING, GLib.Type.STRING, GLib.Type.OBJECT);
 
@@ -119,8 +121,8 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 
 		menu.add (add_request_menu);
 		menu.add (add_folder_menu);
-		menu.add (edit_menu);
 		menu.add (clone_request_menu);
+		menu.add (edit_menu);
 		menu.add (delete_menu);
 
 		pack_start (collections_combo, false, false, 0);
@@ -154,6 +156,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		add_folder_menu.activate.connect (on_add_folder);
 		add_request_menu.activate.connect (on_add_item);
 		delete_menu.activate.connect (on_delete_item);
+		clone_request_menu.activate.connect (on_clone_request);
 	}
 
 	public unowned Benchwell.HttpItem? get_selected_item (out Gtk.TreeIter iter) {
@@ -165,6 +168,38 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		GLib.Value val;
 		store.get_value (iter, Benchwell.Http.Columns.ITEM, out val);
 		return val.get_object () as Benchwell.HttpItem;
+	}
+
+	private void on_clone_request () {
+		Gtk.TreeIter iter;
+		var item = get_selected_item (out iter);
+		if (item == null || item.is_folder) {
+			return;
+		}
+
+		Gtk.TreeIter parent;
+
+		var selected_item = get_selected_item (out parent);
+		int64? http_item_id = null;
+		if ( selected_item  != null )
+			http_item_id = selected_item.id;
+
+		Gtk.TreeIter? sibling = null;
+
+		if (selected_item != null && !selected_item.is_folder) {
+			sibling = parent;
+			http_item_id = selected_item.parent_id;
+			store.iter_parent (out parent, parent);
+		}
+
+		var new_item = selected_collection.clone_item (selected_item);
+
+		iter = add_row (new_item, parent, sibling);
+		var path = store.get_path (iter);
+		name_renderer.editable = true;
+		treeview.expand_to_path (path);
+		treeview.set_cursor (path, name_column, true);
+		item_activated (new_item);
 	}
 
 	private void on_add_folder () {
@@ -233,7 +268,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		name_renderer.editable = true;
 		treeview.expand_to_path (path);
 		treeview.set_cursor (path, name_column, true);
-		load_request (item);
+		item_activated (item);
 	}
 
 	private void on_delete_item () {
@@ -246,6 +281,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 			return;
 		}
 		store.remove (ref iter);
+		item_removed (item);
 	}
 
 	private void on_save_item_name (Gtk.CellRendererText renderer, string path, string new_text) {
@@ -303,7 +339,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 			return;
 		}
 
-		load_request (selected_item);
+		item_activated (selected_item);
 	}
 
 	private void on_collection_selected () {
@@ -388,7 +424,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 				treeview.get_selection ().select_path (store.get_path (folder_parent)); // not really a folder
 				on_load_item ();
 				if (!item.is_folder)
-					load_request (item);
+					item_activated (item);
 				continue; // on_load_item will build the tree for us
 			}
 
@@ -438,8 +474,24 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 
 		Gtk.TreePath path;
 		treeview.get_path_at_pos ((int) event.x, (int) event.y , out path, null, null, null);
+		if (path == null) {
+			delete_menu.sensitive = false;
+			edit_menu.sensitive = false;
+			clone_request_menu.sensitive = false;
+			menu.popup_at_pointer (event);
+			return true;
+		}
 
 		treeview.get_selection ().select_path (path);
+
+		Gtk.TreeIter iter;
+		var item = get_selected_item (out iter);
+
+		var enabled = item != null;
+
+		delete_menu.sensitive = enabled;
+		edit_menu.sensitive = enabled;
+		clone_request_menu.sensitive = enabled && !item.is_folder;
 
 		menu.popup_at_pointer (event);
 		return true;

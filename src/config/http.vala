@@ -133,6 +133,35 @@ public class Benchwell.HttpCollection : Object {
 		return item;
 	}
 
+	public Benchwell.HttpItem clone_item (Benchwell.HttpItem? item) throws Benchwell.ConfigError {
+		item.load_full_item ();
+
+		var new_item = add_item (null);
+		new_item.touch_without_save (() => {
+			new_item.is_folder = false;
+			new_item.parent_id = item.parent_id;
+			new_item.name = item.name + _(" Copy");
+			new_item.description = item.description;
+			new_item.http_collection_id = item.http_collection_id;
+			new_item.method = item.method;
+			new_item.url = item.url;
+			new_item.body = item.body;
+			new_item.mime = item.mime;
+
+			foreach (HttpKv kv in item.headers) {
+				new_item.add_header (kv.key, kv.val);
+			}
+			foreach (HttpKv param in item.query_params) {
+				new_item.add_param (param.key, param.val);
+			}
+		});
+
+		new_item.save ();
+		new_item.load_full_item ();
+
+		return new_item;
+	}
+
 	public void delete_item (Benchwell.HttpItem item) throws ConfigError {
 		item.delete ();
 
@@ -308,12 +337,14 @@ public class Benchwell.HttpItem : Object {
 		}
 	}
 
-	public Benchwell.HttpKv add_header () throws ConfigError {
+	public Benchwell.HttpKv add_header (string key = "", string val = "") throws ConfigError {
 		var kv = new Benchwell.HttpKv ();
-		kv.key = "";
-		kv.val = "";
-		kv.type = "header";
-		kv.http_item_id = id;
+		kv.touch_without_save (() => {
+			kv.key = key;
+			kv.val = val;
+			kv.type = "header";
+			kv.http_item_id = id;
+		});
 		kv.save ();
 
 		var tmp = headers;
@@ -324,12 +355,14 @@ public class Benchwell.HttpItem : Object {
 		return kv;
 	}
 
-	public Benchwell.HttpKv add_param () throws ConfigError {
+	public Benchwell.HttpKv add_param (string key = "", string val = "") throws ConfigError {
 		var kv = new Benchwell.HttpKv ();
-		kv.key = "";
-		kv.val = "";
-		kv.type = "param";
-		kv.http_item_id = id;
+		kv.touch_without_save (() => {
+			kv.key = key;
+			kv.val = val;
+			kv.type = "param";
+			kv.http_item_id = id;
+		});
 		kv.save ();
 
 		var tmp = query_params;

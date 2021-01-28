@@ -51,5 +51,10 @@
 			<summary>Database filters</summary>
 			<description>JSON serialization of filters used</description>
 		</key>
+		<key name="http-sigle-click-activate" type="b">
+			<default>true</default>
+			<summary>Request activation</summary>
+			<description>Single click activates request</description>
+		</key>
 	</schema>
 </schemalist>

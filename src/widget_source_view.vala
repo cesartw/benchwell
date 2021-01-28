@@ -16,8 +16,9 @@ public class Benchwell.SourceView : Gtk.SourceView {
 
 	public void set_language (string? lang) {
 		var buffer = (Gtk.SourceBuffer) get_buffer ();
-		if (lang == null) {
+		if (lang == null || lang == "") {
 			buffer.set_language (null);
+			return;
 		}
 
 		var lm = Gtk.SourceLanguageManager.get_default ();

@@ -354,7 +354,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		pack1 (sidebar, false, true);
 		pack2 (ws_box, false, true);
 
-		sidebar.load_request.connect (on_load_request);
+		sidebar.item_activated.connect (on_item_activated);
+		sidebar.item_removed.connect (on_item_removed);
 		mime.changed.connect (() => {
 			body.set_language_by_mime_type (mime.get_active_id ());
 			item.mime = mime.get_active_id ();
@@ -575,7 +576,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		});
 	}
 
-	private void on_load_request (owned Benchwell.HttpItem item) {
+	private void on_item_activated (Benchwell.HttpItem item) {
 		this.item = item;
 
 		normalize_item (this.item);
@@ -583,11 +584,16 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		address.set_request (this.item);
 		build_interpolated_label ();
 
-		// NOTE: not sure why this thoses item.body
 		this.item.touch_without_save (() => {
-			body.get_buffer ().text = this.item.body;
+			if (this.item.body != null)
+				body.get_buffer ().text = this.item.body;
+			else
+				body.get_buffer ().text = "";
 		});
-		mime.set_active_id (this.item.mime);
+		if (this.item.mime != null)
+			mime.set_active_id (this.item.mime);
+		else
+			mime.set_active_id ("none");
 
 		response.get_buffer ().text = "";
 		headers.clear ();
@@ -612,9 +618,32 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		}
 	}
 
+	private void on_item_removed (Benchwell.HttpItem removed_item) {
+		if (item == null) {
+			return;
+		}
+
+		if (item.id == removed_item.id) {
+			item = null;
+
+			address.address.text = "";
+			address.method_combo.set_active_id ("GET");
+			response_headers.get_buffer ().text = "";
+			response.get_buffer ().text = "";
+			body.get_buffer ().text = "";
+			headers.clear ();
+			query_params.clear ();
+		}
+	}
+
 	delegate string Interpolator (string s);
 
 	private void build_interpolated_label () {
+		if (item == null) {
+			address.address.tooltip_text = "";
+			address.address_label.set_text ("");
+			return;
+		}
 		Interpolator interpolator = (s) => { return s; };
 		if (Config.environment != null) {
 			interpolator = Config.environment.dry_interpolate;
