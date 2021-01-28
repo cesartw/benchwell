@@ -379,26 +379,54 @@ public class Benchwell._Config : Object {
 		}
     }
 
-	public HashTable<string,string> get_table_filters (ConnectionInfo info, string table_name) {
-		HashTable<string,string> result = new HashTable<string,string> (str_hash, str_equal);
+	public string[]? get_table_filters (ConnectionInfo info, string table_name) {
+		string[] result = null;
 
 		if (filters == null)
-			return result;
+			return null;
 
 		var conn_node = filters.get_object ().get_object_member (info.id.to_string ());
 		if (conn_node == null)
-			return result;
+			return null;
 
-		var table_node = conn_node.get_object_member (table_name);
+		var table_node = conn_node.get_array_member (table_name);
 		if (table_node == null)
-			return result;
+			return null;
 
-		table_node.get_members ().foreach ((key) => {
-			var val = table_node.get_string_member (key);
-			result.set (key, val);
+		table_node.foreach_element ((array, index, node) => {
+			result += node.get_string ();
 		});
 
 		return result;
+	}
+
+	public void save_filters (ConnectionInfo info, string table_name, Benchwell.CondStmt[] stmts) {
+		var conn_node = filters.get_object ().get_object_member (info.id.to_string ());
+		if (conn_node == null) {
+			filters.get_object ().set_object_member (info.id.to_string (), new Json.Object ());
+			conn_node = filters.get_object ().get_object_member (info.id.to_string ());
+		}
+
+		// rebuild all conditions
+		conn_node.remove_member (table_name);
+		conn_node.set_array_member (table_name, new Json.Array ());
+		var table_node = conn_node.get_array_member (table_name);
+
+		foreach (Benchwell.CondStmt stmt in stmts) {
+			var name_node = new Json.Node (Json.NodeType.VALUE);
+			name_node.set_string (stmt.field.name);
+			table_node.add_element (name_node);
+
+			var op_node = new Json.Node (Json.NodeType.VALUE);
+			op_node.set_string (stmt.op.to_string ());
+			table_node.add_element (op_node);
+
+			var val_node = new Json.Node (Json.NodeType.VALUE);
+			val_node.set_string (stmt.val);
+			table_node.add_element (val_node);
+		}
+
+		Config.settings.set_string ("db-filters", Json.to_string (filters, false));
 	}
 
 	public void load_filters () {

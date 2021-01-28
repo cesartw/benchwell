@@ -24,6 +24,8 @@ public class Benchwell.Database.Condition {
 	}
 
 	public signal void search();
+	public signal void ready (Benchwell.CondStmt values);
+	public bool no_ready = false;
 
 	public Condition () {
 		store = new Gtk.ListStore (1, GLib.Type.STRING);
@@ -77,9 +79,12 @@ public class Benchwell.Database.Condition {
 				value_entry.sensitive = false;
 			}
 		});
-
 		entry.activate.connect( () => { search (); });
 		value_entry.activate.connect( () => { search (); });
+
+		operator_combo.changed.connect (on_change);
+		entry.changed.connect (on_change);
+		value_entry.changed.connect (on_change);
 	}
 
 	public Benchwell.CondStmt? get_condition () {
@@ -162,6 +167,17 @@ public class Benchwell.Database.Condition {
 		}
 		return false;
 	}
+
+	private void on_change () {
+		if (no_ready) {
+			return;
+		}
+
+		var stmt = get_condition ();
+		if (stmt != null) {
+			ready(stmt);
+		}
+	}
 }
 
 public class Benchwell.Database.Conditions : Gtk.Grid {
@@ -177,6 +193,8 @@ public class Benchwell.Database.Conditions : Gtk.Grid {
 		}
 	}
 
+	public signal void ready (Benchwell.CondStmt stmt);
+
 	public signal void search();
 
 	public Conditions () {
@@ -188,7 +206,7 @@ public class Benchwell.Database.Conditions : Gtk.Grid {
 		add_condition ();
 	}
 
-	public void add_condition () {
+	public Benchwell.Database.Condition add_condition () {
 		var cond = new Benchwell.Database.Condition ();
 		cond.columns = _columns;
 
@@ -239,6 +257,12 @@ public class Benchwell.Database.Conditions : Gtk.Grid {
 		cond.search.connect ( () => {
 			search ();
 		});
+
+		cond.ready.connect( (stmt) => {
+			ready(stmt);
+		});
+
+		return cond;
 	}
 
 	public Benchwell.CondStmt[] get_conditions () {
@@ -254,20 +278,32 @@ public class Benchwell.Database.Conditions : Gtk.Grid {
 		return stmts;
 	}
 
-	public void clear () {
+	public void clear (bool add_empty = true) {
 		while (!conditions.is_empty ()) {
 			conditions.remove (conditions.nth_data (0));
 			remove_row (0);
 		}
 
-		add_condition ();
+		if (add_empty)
+			add_condition ();
 	}
 
-	public void rebuild (HashTable<string,string> filters) {
-		clear ();
+	public void rebuild (string[] filters) {
+		clear (false);
 
-		filters.foreach ((key, val) => {
+		for (var i = 0; i < filters.length; i+=3) {
+			var key = filters[i];
+			var op = filters[i+1];
+			var val = filters[i+2];
 
-		});
+			var cond = add_condition ();
+			cond.no_ready = true;
+			cond.value_entry.set_text (val);
+			cond.operator_combo.set_active_id (op);
+			cond.field_combo.set_active_id (key);
+			cond.no_ready = false;
+		}
+
+		add_condition ();
 	}
 }

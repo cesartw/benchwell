@@ -56,6 +56,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 		result_view.table.field_changed.connect (on_field_changed);
 		result_view.table.btn_refresh.clicked.connect (on_refresh_table);
 		result_view.table.conditions.search.connect (on_refresh_table);
+		result_view.table.conditions.ready.connect (on_condition_ready);
 		result_view.fav_saved.connect (on_refresh_tables);
 
 		tables.schema_menu.activate.connect (on_show_schema);
@@ -69,6 +70,10 @@ public class Benchwell.Database.Data : Gtk.Paned {
 		result_view.table.copy_insert_menu.activate.connect (on_copy_insert);
 
 		fill ();
+	}
+
+	private void on_condition_ready (Benchwell.CondStmt stmt) {
+		Config.save_filters (service.info, service.table_def.name, result_view.table.conditions.get_conditions ());
 	}
 
 	private void on_copy_insert () {
