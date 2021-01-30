@@ -136,6 +136,31 @@ public class Benchwell.Database.Table : Gtk.Box {
 	}
 
 	private bool on_table_key_press (Gtk.Widget widget, Gdk.EventKey event) {
+		if (event.keyval == Gdk.Key.c && event.state == Gdk.ModifierType.CONTROL_MASK) {
+			var selection = table.get_selection ();
+
+			var builder = new StringBuilder ();
+			Gtk.TreeIter? iter = null;
+			selection.get_selected_rows (null).foreach ((path) => {
+				store.get_iter (out iter, path);
+				for (var i = 0; i < service.columns.length; i++) {
+					GLib.Value val;
+					store.get_value (iter, i, out val);
+					var str = val.get_string ();
+
+					str = str.replace ("\\t", "\\\\t").replace ("\t", "\\t");
+					builder.append (str);
+
+					if (i == service.columns.length - 1)
+						builder.append ("\n");
+					else
+						builder.append ("\t");
+				}
+			});
+
+			var cb = Gtk.Clipboard.get_default (Gdk.Display.get_default ());
+			cb.set_text (builder.str, builder.str.length);
+		}
 		if (event.keyval != Gdk.Key.Delete) {
 			return false;
 		}
