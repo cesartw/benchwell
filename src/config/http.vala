@@ -179,7 +179,7 @@ public class Benchwell.HttpCollection : Object {
 
 public class Benchwell.HttpItem : Object {
 	public int64                id;
-	public int64                parent_id;
+	public int64                parent_id { get; set; }
 	public string               name { get; set; }
 	public string               description { get; set; }
 	public bool                 is_folder;
@@ -207,9 +207,11 @@ public class Benchwell.HttpItem : Object {
 		notify["description"].connect (on_save);
 		notify["sort"].connect (on_save);
 		notify["method"].connect (on_save);
-		notify["url"].connect (on_save);
-		notify["body"].connect (on_save);
-		notify["mime"].connect (on_save);
+		notify["parent_id"].connect (on_save);
+
+		notify["url"].connect (on_save_body);
+		notify["body"].connect (on_save_body);
+		notify["mime"].connect (on_save_body);
 	}
 
 	public void touch_without_save (NoUpdateFunc f) {
@@ -225,6 +227,18 @@ public class Benchwell.HttpItem : Object {
 
 		try {
 			save ();
+		} catch (ConfigError err) {
+			stderr.printf (err.message);
+		}
+	}
+
+	private void on_save_body (Object obj, ParamSpec spec) {
+		if (no_auto_save || !loaded) {
+			return;
+		}
+
+		try {
+			save_body ();
 		} catch (ConfigError err) {
 			stderr.printf (err.message);
 		}
@@ -269,16 +283,15 @@ public class Benchwell.HttpItem : Object {
 					SET name = $NAME, description = $DESCRIPTION,
 						parent_id = $PARENT_ID, is_folder = $IS_FOLDER,
 						sort = $SORT, http_collections_id = $HTTP_COLLECTION_ID,
-						method = $METHOD, url = $URL,
-						body = $BODY, mime = $MIME
+						method = $METHOD
 				WHERE ID = $ID
 			""";
 		} else {
 			 prepared_query_str = """
 				INSERT INTO http_items(name, description, parent_id, is_folder,
-					sort, http_collections_id, method, url, body, mime)
+					sort, http_collections_id, method)
 				VALUES($NAME, $DESCRIPTION, $PARENT_ID, $IS_FOLDER, $SORT,
-					$HTTP_COLLECTION_ID, $METHOD, $URL, $BODY, $MIME)
+					$HTTP_COLLECTION_ID, $METHOD)
 			""";
 		}
 
@@ -314,6 +327,49 @@ public class Benchwell.HttpItem : Object {
 
 		param_position = stmt.bind_parameter_index ("$METHOD");
 		stmt.bind_text (param_position, method);
+
+		string errmsg = "";
+		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);
+		if ( ec != Sqlite.OK ){
+			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
+			stderr.printf ("ERR: %s\n", errmsg);
+			throw new ConfigError.SAVE_ENVVAR(errmsg);
+		}
+
+		if (id == 0) {
+			id = Config.db.last_insert_rowid ();
+		}
+	}
+
+	public void save_body () throws Benchwell.ConfigError {
+		no_auto_save = true;
+		if (mime == null && is_folder) {
+			mime = "";
+		}
+		no_auto_save = false;
+
+		Sqlite.Statement stmt;
+		string prepared_query_str = "";
+
+		if (id > 0) {
+			 prepared_query_str = """
+				UPDATE http_items
+				SET url = $URL, body = $BODY, mime = $MIME
+				WHERE ID = $ID
+			""";
+		}
+
+		var ec = Config.db.prepare_v2 (prepared_query_str, prepared_query_str.length, out stmt);
+		if (ec != Sqlite.OK) {
+			stderr.printf ("Error: %d: %s\n", Config.db.errcode (), Config.db.errmsg ());
+			return;
+		}
+
+		int param_position;
+		if (id > 0) {
+			param_position = stmt.bind_parameter_index ("$ID");
+			stmt.bind_int64 (param_position, id);
+		}
 
 		param_position = stmt.bind_parameter_index ("$URL");
 		stmt.bind_text (param_position, url);
@@ -444,50 +500,15 @@ public class Benchwell.HttpItem : Object {
 
 			string errmsg = "";
 
-			Benchwell.HttpItem[] new_items = {};
-			// folder
-			if (is_folder) {
-				var query = """SELECT id, name, parent_id, is_folder, sort,
-											http_collections_id, method
-								FROM http_items
-								WHERE http_collections_id = %lld AND parent_id = %lld
-								ORDER BY sort ASC
-								""".printf (http_collection_id, id);
-				var ec = Config.db.exec (query, (n_columns, values, column_names) => {
-					var subitem = new Benchwell.HttpItem ();
-
-					subitem.touch_without_save (() => {
-						subitem.id = int64.parse (values[0]);
-						subitem.name = values[1];
-						subitem.parent_id = int64.parse (values[2]);
-						subitem.is_folder = values[3] == "1";
-						subitem.sort = int.parse (values[4]);
-						subitem.http_collection_id = int64.parse (values[5]);
-						subitem.method = values[6];
-					});
-
-					new_items += subitem;
-					return 0;
-				}, out errmsg);
-				if ( ec != Sqlite.OK ){
-					throw new ConfigError.GET_CONNECTIONS(errmsg);
-				}
-
-				items = new_items;
-				return;
-			}
-
 			// request
-			var query = """SELECT ifnull(method,""), ifnull(url,""), ifnull(body, ""), ifnull(mime,"")
+			var query = """SELECT ifnull(method,"GET"), ifnull(url,""), ifnull(body, ""), ifnull(mime,"")
 					FROM http_items
 					WHERE id = %lld""".printf (id);
 			var ec = Config.db.exec (query, (n_columns, values, column_names) => {
-				touch_without_save (() => {
-					method = values[0];
-					url = values[1];
-					body = values[2];
-					mime = values[3];
-				});
+				method = values[0];
+				url = values[1];
+				body = values[2];
+				mime = values[3];
 				return 0;
 			}, out errmsg);
 			if ( ec != Sqlite.OK ){

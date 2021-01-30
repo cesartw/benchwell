@@ -233,12 +233,12 @@ public class Benchwell._Config : Object {
 		}
 	}
 
-	public void load_root_items (Benchwell.HttpCollection collection) throws ConfigError {
+	public void load_http_items (Benchwell.HttpCollection collection) throws ConfigError {
 		string errmsg;
 		Benchwell.HttpItem[] items = {};
-		var query = """SELECT id, name, is_folder, sort, http_collections_id, method
+		var query = """SELECT id, name, is_folder, sort, http_collections_id, method, parent_id
 						FROM http_items
-						WHERE http_collections_id = %lld AND (parent_id IS NULL OR parent_id = 0)
+						WHERE http_collections_id = %lld
 						ORDER BY sort ASC
 						""".printf (collection.id);
 
@@ -252,6 +252,7 @@ public class Benchwell._Config : Object {
 				item.sort = int.parse (values[3]);
 				item.http_collection_id = int64.parse (values[4]);
 				item.method = values[5];
+				item.parent_id = int64.parse (values[6]);
 			});
 
 			items += item;
@@ -263,7 +264,24 @@ public class Benchwell._Config : Object {
 			throw new ConfigError.GET_CONNECTIONS(errmsg);
 		}
 
-		collection.items = items;
+		Benchwell.HttpItem[] mapped_items = {};
+
+		foreach (var item in items) {
+			if (item.parent_id == 0) {
+				// ROOT ITEM
+				mapped_items += item;
+			}
+
+			Benchwell.HttpItem[] children = {};
+			foreach (var child in items) {
+				if (child.parent_id == item.id)
+					children += child;
+			}
+
+			item.items = children;
+		}
+
+		collection.items = mapped_items;
 	}
 
 	public void load_environments () throws Benchwell.ConfigError {

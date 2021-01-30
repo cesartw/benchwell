@@ -8,7 +8,7 @@ enum Benchwell.Http.Columns {
 public class Benchwell.Http.HttpSideBar : Gtk.Box {
 	public Benchwell.ApplicationWindow    window { get; construct; }
 	public Gtk.TreeView treeview;
-	public Gtk.TreeStore store;
+	public Benchwell.HttpStore store;
 	public Gtk.ComboBoxText collections_combo;
 
 	public Gtk.Menu menu;
@@ -36,24 +36,21 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 
 		// treeview
 		treeview = new Gtk.TreeView ();
-		treeview.headers_visible = true;
+		treeview.headers_visible = false;
 		treeview.show_expanders = true;
 		treeview.enable_tree_lines = true;
 		treeview.search_column = Benchwell.Http.Columns.TEXT;
 		treeview.enable_search = true;
-		treeview.reorderable = false; // would be nice
+		treeview.reorderable = true; // would be nice
 		treeview.button_release_event.connect (on_button_release_event);
 		treeview.activate_on_single_click = Config.settings.get_boolean ("http-sigle-click-activate");
 
-		store = new Gtk.TreeStore (4, GLib.Type.OBJECT, GLib.Type.STRING, GLib.Type.STRING, GLib.Type.OBJECT);
-
-		//var selection = treeview.get_selection ();
-		//selection.changed.connect (on_selection_changed);
+		store = new Benchwell.HttpStore.newv ({GLib.Type.OBJECT, GLib.Type.STRING, GLib.Type.STRING, GLib.Type.OBJECT});
 
 		name_renderer = new Gtk.CellRendererText ();
 		var icon_renderer = new Gtk.CellRendererPixbuf ();
 		name_column = new Gtk.TreeViewColumn ();
-		name_column.title = "Name";
+		name_column.title = _("Name");
 		// NOTE: must pack_* before add_attribute
 		name_column.pack_start (icon_renderer, false);
 		name_column.pack_start (name_renderer, true);
@@ -63,7 +60,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 
 		var method_renderer = new Gtk.CellRendererText ();
 		var method_column = new Gtk.TreeViewColumn ();
-		method_column.title = "Method";
+		method_column.title = _("Method");
 		method_column.pack_start (method_renderer, false);
 		method_column.add_attribute(method_renderer, "text", Benchwell.Http.Columns.METHOD);
 		method_column.set_cell_data_func (method_renderer, (cell_layout, cell, tree_model, iter) => {
@@ -83,10 +80,8 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 			}
 		});
 
-		//treeview.append_column (image_column);
 		treeview.append_column (name_column);
 		treeview.append_column (method_column);
-		//treeview.expander_column = image_column;
 
 		treeview.set_model (store);
 		treeview.show ();
@@ -157,6 +152,58 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		add_request_menu.activate.connect (on_add_item);
 		delete_menu.activate.connect (on_delete_item);
 		clone_request_menu.activate.connect (on_clone_request);
+
+		treeview.drag_end.connect (on_resort);
+		// see comment on row_drop_possible
+		treeview.drag_motion.connect ( (ctx, x, y, time) => {
+			int cellx, celly;
+			Gtk.TreePath path;
+			treeview.get_path_at_pos (x,y, out path, null, out cellx, out celly);
+			store.drop_path = path;
+
+			return false;
+		});
+	}
+
+	public void on_resort () {
+		GLib.MainLoop loop = new GLib.MainLoop ();
+		resort.begin ((obj, res) => {
+			loop.quit ();
+		});
+		loop.run ();
+	}
+
+	public async void resort () {
+		var sort = 0;
+		store.foreach ((model, path, iter) => {
+			GLib.Value val;
+			store.get_value (iter, Benchwell.Http.Columns.ITEM, out val);
+			var item = val.get_object () as Benchwell.HttpItem;
+
+			// PARENT CHANGE
+			Gtk.TreeIter? parent_iter = null;
+			store.iter_parent (out parent_iter, iter);
+			if (parent_iter != null && store.iter_is_valid (parent_iter)) {
+				store.get_value (parent_iter, Benchwell.Http.Columns.ITEM, out val);
+				var parent_item = val.get_object () as Benchwell.HttpItem;
+				if (parent_item != null && parent_item.is_folder) {
+					item.parent_id = parent_item.id; // notify isn't working here... why?
+				}
+			} else {
+				item.parent_id = 0;
+			}
+			////////////////
+
+			item.sort = sort;
+			try {
+				item.save ();
+			} catch (Benchwell.ConfigError err) {
+				stderr.printf ("saving item %s", err.message);
+			}
+			sort++;
+
+			return false;
+		});
 	}
 
 	public unowned Benchwell.HttpItem? get_selected_item (out Gtk.TreeIter iter) {
@@ -395,7 +442,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 			Config.settings.set_int64 (Benchwell.Settings.HTTP_COLLECTION_ID.to_string (), collection.id);
 
 			try {
-				Config.load_root_items (collection);
+				Config.load_http_items (collection);
 			} catch (Benchwell.ConfigError err) {
 				//result_view.show_alert (err.message);
 				stderr.printf (err.message);
@@ -495,5 +542,53 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 
 		menu.popup_at_pointer (event);
 		return true;
+	}
+}
+
+public class Benchwell.HttpStore : Gtk.TreeStore, Gtk.TreeDragDest {
+	// see comment on row_drop_possible
+	public Gtk.TreePath? drop_path;
+
+	public HttpStore.newv (GLib.Type[] types) {
+		Object();
+		set_column_types (types);
+	}
+
+	// NOTE: the event that calls this method seems to bubble throught the tree.
+	//       so even when it says "no drop allowed", the propagation may cause that a
+	//       parent accepts the drop thus moving the item to an unexpected place
+	//
+	//       We need a why to know what's the actual drop zone
+	public bool row_drop_possible (Gtk.TreePath dest, Gtk.SelectionData selection_data) {
+		if (drop_path == null) {
+			return false;
+		}
+
+		Gtk.TreeIter iter;
+		GLib.Value val;
+		Benchwell.HttpItem? item = null;
+
+		Gtk.TreePath path; // item being dragged
+		Gtk.tree_get_row_drag_data (selection_data, null, out path);
+
+		var ok = get_iter (out iter, dest);
+		if (!ok) {
+			dest.up ();
+			ok = get_iter (out iter, dest);
+			if (!ok) {
+				return false;
+			}
+
+			get_value (iter, Benchwell.Http.Columns.ITEM, out val);
+
+			item = val.get_object () as Benchwell.HttpItem;
+			if (item == null) {
+				return false;
+			}
+
+			return item.is_folder;
+		}
+
+		return drop_path.get_depth () == dest.get_depth ();
 	}
 }
