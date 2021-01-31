@@ -30,11 +30,10 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 
 		notebook = new Gtk.Notebook ();
 		notebook.set_name ("MainNotebook");
-		notebook.set_property ("scrollable", true);
-		notebook.set_group_name ("mainwindow");
+		notebook.scrollable = true;
+		notebook.group_name = "mainwindow";
+		notebook.tab_pos = Config.tab_position ();
 		notebook.popup_enable ();
-
-		notebook.set_property ("tab-pos", Config.tab_position());
 		notebook.show ();
 
 		var box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
@@ -65,8 +64,6 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		logo_box.pack_start (titles_box, false, false, 0);
 
 		var header = new Gtk.HeaderBar ();
-		//header.title ="Benchwell";
-		//header.subtitle ="version";
 		header.custom_title = logo_box;
 		header.show_close_button =true;
 		header.show ();
@@ -184,7 +181,13 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 	private Gtk.Grid env_selector () {
 		env_store = new Gtk.ListStore (2, GLib.Type.INT64, GLib.Type.STRING);
 
-		env_combo = new Gtk.ComboBox.with_model_and_entry (env_store);
+		var env_cell = new Gtk.CellRendererText ();
+		var env_cell_box = new Gtk.CellAreaBox ();
+		env_cell_box.pack_start (env_cell, true);
+		env_cell_box.add_attribute (env_cell, "text", 1);
+
+		env_combo = new Gtk.ComboBox.with_area (env_cell_box);
+		env_combo.set_model (env_store);
 		env_combo.set_id_column (0);
 		env_combo.set_entry_text_column (1);
 		env_combo.show ();

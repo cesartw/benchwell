@@ -16,16 +16,18 @@ public class Benchwell.EnvironmentEditor : Gtk.Box {
 		header_bar.show ();
 		header_bar.title = _("Environments");
 
-		btn_add = new Benchwell.Button ("white-add", Gtk.IconSize.BUTTON);
+		btn_add = new Benchwell.Button ("white-add", Gtk.IconSize.SMALL_TOOLBAR);
+		//btn_add.get_style_context ().add_class ("suggested-action");
+		btn_add.halign = Gtk.Align.START;
 		btn_add.show ();
-		btn_add.get_style_context ().add_class ("suggested-action");
 
-		btn_remove = new Benchwell.Button ("white-close", Gtk.IconSize.BUTTON);
+		btn_remove = new Benchwell.Button ("white-close", Gtk.IconSize.SMALL_TOOLBAR);
+		//btn_remove.get_style_context ().add_class ("destructive-action");
+		btn_remove.halign = Gtk.Align.END;
 		btn_remove.show ();
-		btn_remove.get_style_context ().add_class ("destructive-action");
 
-		header_bar.pack_end (btn_add);
-		header_bar.pack_start (btn_remove);
+		//header_bar.pack_end (btn_add);
+		//header_bar.pack_start (btn_remove);
 
 		var paned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL);
 		paned.show ();
@@ -37,10 +39,10 @@ public class Benchwell.EnvironmentEditor : Gtk.Box {
 		switcher.show ();
 
 		stack = new Gtk.Stack ();
-		stack.show ();
 		stack.homogeneous = true;
 		stack.vexpand = true;
 		stack.hexpand = true;
+		stack.show ();
 
 		switcher.stack = stack;
 
@@ -62,7 +64,19 @@ public class Benchwell.EnvironmentEditor : Gtk.Box {
 			stack.set_visible_child (panel);
 		});
 
-		paned.pack1 (switcher, false, true);
+		var btn_box = new Gtk.ButtonBox (Gtk.Orientation.HORIZONTAL);
+		btn_box.layout_style = Gtk.ButtonBoxStyle.END;
+		btn_box.pack_start (btn_add, false, false, 0);
+		btn_box.pack_start (btn_remove, false, false, 0);
+		btn_box.height_request = 5;
+		btn_box.show ();
+
+		var env_list_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
+		env_list_box.pack_start (switcher, true, true, 0);
+		env_list_box.pack_end (btn_box, false, false, 0);
+		env_list_box.show ();
+
+		paned.pack1 (env_list_box, false, true);
 		paned.pack2 (stack, true, false);
 
 		pack_start (header_bar, true, true, 0);

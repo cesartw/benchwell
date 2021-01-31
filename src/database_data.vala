@@ -166,7 +166,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 		sidebar.show ();
 
 		table_search = new Gtk.SearchEntry ();
-		table_search.set_placeholder_text (_("Filter table: .*"));
+		table_search.set_placeholder_text (_("Search table: .*"));
 		table_search.show ();
 
 		tables = new Benchwell.Database.Tables (service);
