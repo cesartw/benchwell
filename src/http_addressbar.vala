@@ -12,7 +12,8 @@ public class Benchwell.Http.HttpAddressBar : Gtk.Box {
 	public HttpAddressBar () {
 		Object (
 			orientation: Gtk.Orientation.HORIZONTAL,
-			spacing: 5
+			spacing: 5,
+			name: "HttpAddressBar"
 		);
 
 		method_combo = new Gtk.ComboBoxText ();

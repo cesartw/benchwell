@@ -29,6 +29,13 @@ public class Benchwell.Application : Gtk.Application {
 		window.add_http_tab ();
 		Gtk.Settings.get_default ().gtk_application_prefer_dark_theme = true;
 	}
+
+
+	public void get_cursor_position (out int x, out int y) {
+		var pointer = Gdk.Display.get_default ().get_default_seat ().get_pointer ();
+		Gdk.Screen screen;
+		pointer.get_position (out screen, out x, out y);
+	}
 }
 
 public static int main(string[] args) {

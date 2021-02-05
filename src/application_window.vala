@@ -10,12 +10,12 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 	public SimpleAction new_tab_menu;
 	public SimpleAction close_menu;
 
-
 	public class ApplicationWindow(Gtk.Application app) {
 		Object (
 			application: app
 		);
 
+		icon_name = "io.benchwell";
 		set_title ("Benchwell");
 
 		new_database_tab_menu = new SimpleAction("new.db", null);
@@ -147,13 +147,14 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		tab.pack_start (database, true, true, 0);
 
 		notebook.append_page (tab, tab.header);
+		notebook.set_tab_reorderable (tab, true);
 		tab.btn.clicked.connect( () => {
 			notebook.remove_page (notebook.page_num (tab));
 		});
 		notebook.set_current_page (notebook.get_n_pages () - 1);
 
 		if (connection_info != null) {
-			database.launch_connection (connection_info, tabledef);
+			database.launch_connection.begin (connection_info, tabledef);
 		}
 	}
 
@@ -172,6 +173,7 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		tab.pack_start (http, true, true, 0);
 
 		notebook.append_page (tab, tab.header);
+		notebook.set_tab_reorderable (tab, true);
 		tab.btn.clicked.connect( () => {
 			notebook.remove_page (notebook.page_num (tab));
 		});

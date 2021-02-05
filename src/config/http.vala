@@ -156,7 +156,7 @@ public class Benchwell.HttpCollection : Object {
 			}
 		});
 
-		new_item.save ();
+		new_item.save_all ();
 		new_item.load_full_item ();
 
 		return new_item;
@@ -391,6 +391,11 @@ public class Benchwell.HttpItem : Object {
 		if (id == 0) {
 			id = Config.db.last_insert_rowid ();
 		}
+	}
+
+	public void save_all () throws Benchwell.ConfigError {
+		save ();
+		save_body ();
 	}
 
 	public Benchwell.HttpKv add_header (string key = "", string val = "") throws ConfigError {

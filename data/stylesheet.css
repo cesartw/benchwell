@@ -2135,4 +2135,12 @@ entry.search {
 .responsemeta label.warning {
 	background-color: #ff7305;
 }
-
+#HttpAddressBar {
+	padding: 10px 10px 0px 10px;
+}
+#HttpCollectionSelect {
+	padding: 10px 10px 0;
+}
+#HttpOverlay .overlay-bg {
+	background: rgba(255, 115, 5, 0.3);
+}

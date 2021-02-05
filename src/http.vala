@@ -171,9 +171,10 @@ private size_t ReadHeaderCallback (char *dest, size_t size, size_t nmemb, void *
 
 public class Benchwell.Http.Http : Gtk.Paned {
 	public Benchwell.ApplicationWindow    window { get; construct; }
-	public string                         title;
+	public string                         title { get; set; }
 	public Benchwell.Http.HttpSideBar    sidebar;
 	public Benchwell.Http.HttpAddressBar address;
+	public Benchwell.HttpOverlay overlay;
 
 	// request
 	public Benchwell.SourceView body;
@@ -351,8 +352,13 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		ws_box.pack_start (address, false, false, 0);
 		ws_box.pack_start (ws_paned, true, true, 0);
 
+
+		overlay = new Benchwell.HttpOverlay ();
+		overlay.add (ws_box);
+		overlay.show ();
+
 		pack1 (sidebar, false, true);
-		pack2 (ws_box, false, true);
+		pack2 (overlay, false, true);
 
 		sidebar.item_activated.connect (on_item_activated);
 		sidebar.item_removed.connect (on_item_removed);
@@ -454,130 +460,146 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		//}
 	}
 
-	// https://github.com/giuliopaci/ValaBindingsDevelopment/blob/master/libcurl-example.vala
-	private delegate void BlockSendFunc ();
-	private void block_send (BlockSendFunc f) {
-		address.send_btn.btn.sensitive = false;
-		f();
-		address.send_btn.btn.sensitive = true;
+	private void on_send () {
+		overlay.start ();
+
+		//var task = new GLib.Task (this, null, (obj, res) => {});
+
+		//task.run_in_thread ((t, source, data, cancellable) => {
+			//var panel = source as Benchwell.Http.Http;
+			//panel.send ();
+			//panel.overlay.stop ();
+			send ();
+			overlay.stop ();
+		//});
 	}
 
-	private void on_send () {
-		block_send (() => {
-			response_headers.get_buffer ().set_text ("", 0);
-			response.get_buffer ().set_text ("", 0);
+	// https://github.com/giuliopaci/ValaBindingsDevelopment/blob/master/libcurl-example.vala
+	public void send () {
+		response_headers.get_buffer ().set_text ("", 0);
+		response.get_buffer ().set_text ("", 0);
 
-			var handle = new Curl.EasyHandle ();
+		var handle = new Curl.EasyHandle ();
 
-			var url = Config.environment.interpolate (address.address.get_text ());
-			var method = address.method_combo.get_active_id ();
+		var url = Config.environment.interpolate (address.address.get_text ());
+		var method = address.method_combo.get_active_id ();
 
-			string[] keys = {};
-			string[] values = {};
-			query_params.get_kvs (out keys, out values);
+		string[] keys = {};
+		string[] values = {};
+		query_params.get_kvs (out keys, out values);
 
-			// TODO: Improve URL parsing
-			var builder = new StringBuilder ();
-			if (url.index_of ("?") == -1)
-				builder.append ("?");
+		// TODO: Improve URL parsing
+		var builder = new StringBuilder ();
+		if (url.index_of ("?") == -1)
+			builder.append ("?");
 
-			for (var i = 0; i < keys.length; i++) {
-				var key = Config.environment.interpolate (keys[i]);
-				var val = Config.environment.interpolate (values[i]);
-				key = handle.escape (key, key.length);
-				val = handle.escape (val, val.length);
-				builder.append (@"$key=$val");
-				if (i < keys.length - 1)
-					builder.append ("&");
+		for (var i = 0; i < keys.length; i++) {
+			var key = Config.environment.interpolate (keys[i]);
+			var val = Config.environment.interpolate (values[i]);
+			key = handle.escape (key, key.length);
+			val = handle.escape (val, val.length);
+			builder.append (@"$key=$val");
+			if (i < keys.length - 1)
+				builder.append ("&");
+		}
+
+		if (url.index_of ("?") != -1 && !url.has_suffix("&"))
+			builder.prepend ("&");
+		url += builder.str;
+
+		switch (method) {
+			case "HEAD":
+				handle.setopt (Curl.Option.HTTPGET, true);
+				handle.setopt (Curl.Option.CUSTOMREQUEST, "HEAD");
+				break;
+			case "GET":
+				handle.setopt (Curl.Option.HTTPGET, true);
+				break;
+			case "POST":
+				handle.setopt (Curl.Option.POST, true);
+				break;
+			case "PATCH":
+				handle.setopt (Curl.Option.POST, true);
+				handle.setopt (Curl.Option.CUSTOMREQUEST, "PATCH");
+				break;
+			case "DELETE":
+				handle.setopt (Curl.Option.POST, true);
+				handle.setopt (Curl.Option.CUSTOMREQUEST, "DELETE");
+				break;
+		}
+
+		handle.setopt (Curl.Option.URL, url);
+		handle.setopt (Curl.Option.FOLLOWLOCATION, true);
+
+		buffer_s tmp = buffer_s(){ buffer = new uchar[0] };
+		handle.setopt(Curl.Option.WRITEFUNCTION, ReadResponseCallback);
+		handle.setopt(Curl.Option.WRITEDATA, ref tmp);
+
+		keys = {};
+		values = {};
+		headers.get_kvs (out keys, out values);
+
+		Curl.SList headers = null;
+		for (var i = 0; i < keys.length; i++) {
+			var val = Config.environment.interpolate (values[i]);
+			headers = Curl.SList.append ((owned) headers, @"$(keys[i]): $(val)");
+		}
+		handle.setopt (Curl.Option.HTTPHEADER, headers);
+
+		// BODY
+		string raw_body = body.get_text ();
+		raw_body = Config.environment.interpolate_variables (raw_body);
+		raw_body = Config.environment.interpolate_functions (raw_body);
+		buffer_s2 tmp_body = buffer_s2 () {
+			buffer = new uchar[0],
+			size_left = Posix.strlen (raw_body)
+		};
+
+		if (raw_body != "") {
+			for (var i = 0; i<raw_body.length;i++){
+				tmp_body.buffer += raw_body[i];
 			}
 
-			if (url.index_of ("?") != -1 && !url.has_suffix("&"))
-				builder.prepend ("&");
-			url += builder.str;
+			handle.setopt (Curl.Option.READFUNCTION, WriteRequestCallback);
+			handle.setopt (Curl.Option.READDATA, ref tmp_body);
+		}
 
-			switch (method) {
-				case "HEAD":
-					handle.setopt (Curl.Option.HTTPGET, true);
-					handle.setopt (Curl.Option.CUSTOMREQUEST, "HEAD");
-					break;
-				case "GET":
-					handle.setopt (Curl.Option.HTTPGET, true);
-					break;
-				case "POST":
-					handle.setopt (Curl.Option.POST, true);
-					break;
-				case "PATCH":
-					handle.setopt (Curl.Option.POST, true);
-					handle.setopt (Curl.Option.CUSTOMREQUEST, "PATCH");
-					break;
-				case "DELETE":
-					handle.setopt (Curl.Option.POST, true);
-					handle.setopt (Curl.Option.CUSTOMREQUEST, "DELETE");
-					break;
-			}
-
-			handle.setopt (Curl.Option.URL, url);
-			handle.setopt (Curl.Option.FOLLOWLOCATION, true);
-
-			buffer_s tmp = buffer_s(){ buffer = new uchar[0] };
-			handle.setopt(Curl.Option.WRITEFUNCTION, ReadResponseCallback);
-			handle.setopt(Curl.Option.WRITEDATA, ref tmp);
-
-			keys = {};
-			values = {};
-			headers.get_kvs (out keys, out values);
-
-			Curl.SList headers = null;
-			for (var i = 0; i < keys.length; i++) {
-				var val = Config.environment.interpolate (values[i]);
-				headers = Curl.SList.append ((owned) headers, @"$(keys[i]): $(val)");
-			}
-			handle.setopt (Curl.Option.HTTPHEADER, headers);
-
-			// BODY
-			string raw_body = body.get_text ();
-			raw_body = Config.environment.interpolate_variables (raw_body);
-			raw_body = Config.environment.interpolate_functions (raw_body);
-			buffer_s2 tmp_body = buffer_s2 () {
-				buffer = new uchar[0],
-				size_left = Posix.strlen (raw_body)
-			};
-
-			if (raw_body != "") {
-				for (var i = 0; i<raw_body.length;i++){
-					tmp_body.buffer += raw_body[i];
-				}
-
-				handle.setopt (Curl.Option.READFUNCTION, WriteRequestCallback);
-				handle.setopt (Curl.Option.READDATA, ref tmp_body);
-			}
-
-			var resp_headers = new HashTable<string,string> (str_hash, str_equal);
-			handle.setopt (Curl.Option.HEADERFUNCTION, ReadHeaderCallback);
-			handle.setopt (Curl.Option.HEADERDATA, resp_headers);
+		var resp_headers = new HashTable<string,string> (str_hash, str_equal);
+		handle.setopt (Curl.Option.HEADERFUNCTION, ReadHeaderCallback);
+		handle.setopt (Curl.Option.HEADERDATA, resp_headers);
 
 
-			// only connects to the host
-			var now = get_real_time ();
-			var code = handle.perform ();
-			var then = get_real_time ();
-			switch (code) {
-				case Curl.Code.OK:
-					int http_code;
-					handle.getinfo(Curl.Info.RESPONSE_CODE, out http_code);
-					var content = (string)tmp.buffer;
-					var duration = then - now;
-					set_response (http_code, (string) content, resp_headers, duration);
-					break;
-				default:
-					stderr.printf (@"========$((int)code)\n");
-					break;
-			}
-		});
+		// only connects to the host
+		var now = get_real_time ();
+		var code = handle.perform ();
+		var then = get_real_time ();
+		switch (code) {
+			case Curl.Code.OK:
+				int http_code;
+				handle.getinfo(Curl.Info.RESPONSE_CODE, out http_code);
+				var content = (string)tmp.buffer;
+				var duration = then - now;
+				set_response (http_code, (string) content, resp_headers, duration);
+				break;
+			case Curl.Code.URL_MALFORMAT:
+				stderr.printf (@"========$(url)\n");
+				break;
+			default:
+				stderr.printf (@"========$((int)code)\n");
+				break;
+		}
 	}
 
 	private void on_item_activated (Benchwell.HttpItem item) {
 		this.item = item;
+		try {
+			this.item.load_full_item ();
+		} catch (ConfigError err) {
+			stderr.printf (err.message);
+			return;
+		}
+
+		title = item.name;
 
 		normalize_item (this.item);
 
@@ -715,8 +737,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 				if ( raw_data != "" ) {
 					var json = new Json.Parser ();
 					var generator = new Json.Generator ();
-
-					generator.set_pretty (true);
+					generator.indent = 4;
+					generator.pretty = true;
 					try {
 						json.load_from_data (raw_data);
 					} catch (GLib.Error err) {
@@ -828,5 +850,61 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		values = _values;
 
 		return base_url;
+	}
+}
+
+public class Benchwell.HttpOverlay : Gtk.Overlay {
+	public Gtk.Button btn_cancel;
+	public Gtk.Spinner spinner;
+	public Gtk.Box box;
+
+	public signal void cancel ();
+
+	public HttpOverlay () {
+		Object(
+			name: "HttpOverlay"
+		);
+
+		btn_cancel = new Gtk.Button.with_label (_("Cancel"));
+		btn_cancel.set_size_request (100, 30);
+		btn_cancel.show ();
+
+		spinner = new Gtk.Spinner ();
+		spinner.show ();
+
+		box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
+		box.get_style_context ().add_class ("overlay-bg");
+
+		var center_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
+		center_box.set_size_request (100, 150);
+		center_box.valign = Gtk.Align.CENTER;
+		center_box.halign = Gtk.Align.CENTER;
+		center_box.vexpand = true;
+		center_box.hexpand = true;
+		center_box.show ();
+
+		box.add (center_box);
+
+		center_box.pack_start (spinner, true, true, 0);
+		center_box.pack_start (btn_cancel, false, false, 0);
+		add_overlay (box);
+
+		btn_cancel.clicked.connect (on_cancel);
+	}
+
+	private void on_cancel () {
+		spinner.stop ();
+		box.hide ();
+		cancel ();
+	}
+
+	public void start () {
+		box.show ();
+		spinner.start ();
+	}
+
+	public void stop () {
+		spinner.stop ();
+		box.hide ();
 	}
 }

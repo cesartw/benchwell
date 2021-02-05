@@ -70,10 +70,11 @@ executable(
 	'src/config/connection.vala',
 
 	'src/constants.vala',
-	'src/application.vala',
 	'src/application_window.vala',
 	'src/environment.vala',
 
+	'src/application.vala',
+	#'src/http_importer.vala',
 	#'src/main.vala',
 
 	config_headers,
