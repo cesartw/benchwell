@@ -14,7 +14,7 @@ public errordomain Benchwell.ConfigError {
 public class Benchwell._Config : Object {
 	public Sqlite.Database db;
 	public GLib.Settings settings;
-	public Benchwell.Environment[] environments { set; get; }
+	public Benchwell.Environment[] environments;
 	public Benchwell.ConnectionInfo[] connections;
 	public Benchwell.HttpCollection[] http_collections;
 	public Secret.Schema schema;
@@ -71,15 +71,19 @@ public class Benchwell._Config : Object {
 		return v;
 	}
 
-	public Benchwell.Environment add_environment () throws ConfigError {
-		var env = new Benchwell.Environment ();
-		env.name = @"New environment #$(environments.length)";
+	public Benchwell.Environment add_environment (Benchwell.Environment? env = null) throws ConfigError {
+		var e = env;
+		if (env == null) {
+			e = new Benchwell.Environment ();
+			e.name = @"New environment #$(environments.length)";
+		}
+
 		var tmp = environments;
-		tmp += env;
+		tmp += e;
 		environments = tmp;
 		environment_added (env);
 
-		return env;
+		return e;
 	}
 
 	public void remove_environment (Benchwell.Environment env) {

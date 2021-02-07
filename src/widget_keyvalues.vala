@@ -17,7 +17,7 @@ public class Benchwell.KeyValues : Gtk.Box {
 			var kv = child as Benchwell.KeyValue;
 			var key = kv.entry_key.get_text ();
 			var val = kv.entry_val.get_text ();
-			if (key == "" || val == "") {
+			if (key == "" || !kv.switch_enabled.active) {
 				return;
 			}
 

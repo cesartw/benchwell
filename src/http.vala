@@ -125,7 +125,7 @@ private size_t ReadResponseCallback (char* ptr, size_t size, size_t nmemb, void*
 	var buffer = (( buffer_s* ) data);
 	// remove the termination char(0)
 	if (buffer.buffer.length > 0 && buffer.buffer[buffer.buffer.length - 1] == 0) {
-		buffer.buffer = buffer.buffer[:buffer.buffer.length - 2];
+		buffer.buffer = buffer.buffer[:buffer.buffer.length - 1];
 	}
 
 	for(int i = 0; i<total_size; i++)
@@ -612,6 +612,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			else
 				body.get_buffer ().text = "";
 		});
+
 		if (this.item.mime != null)
 			mime.set_active_id (this.item.mime);
 		else
@@ -743,6 +744,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 						json.load_from_data (raw_data);
 					} catch (GLib.Error err) {
 						stderr.printf (err.message);
+						response.get_buffer ().insert_text (ref iter, raw_data, raw_data.length);
 						return;
 					}
 					generator.set_root (json.get_root ());
@@ -770,6 +772,10 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		} else {
 			status_label.set_text (@"$(status) $(code)");
 		}
+
+		status_label.get_style_context ().remove_class("ok");
+		status_label.get_style_context ().remove_class("warning");
+		status_label.get_style_context ().remove_class("bad");
 
 		if (status >= 200 && status < 300) {
 			status_label.get_style_context ().add_class("ok");

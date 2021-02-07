@@ -1,15 +1,13 @@
 [Desktop Entry]
 Name=Benchwell
 Version=1.0
-GenericName=Database Manager
+GenericName=Database/Http Client
 Comment=Benchwell - Tool kit
-Categories=Network;Application;
+Categories=Network;Development;Utility;
 Exec=@binary@
-TryExec=@binary@ %U
 Icon=@icon@
 Type=Application
 Terminal=false
-Encoding=UTF-8
 StartupWMClass=Benchwell
-Keywords=SQL;MySql;Database;MariaDB;
-MimeType=application/x-sqlite3;application/vnd.sqlite3;
+Keywords=SQL;MySql;Database;MariaDB;api;gui;
+MimeType=application/x-sqlite3;application/vnd.sqlite3;x-schema-handler/benchwell;

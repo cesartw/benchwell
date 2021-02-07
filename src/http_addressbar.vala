@@ -58,6 +58,7 @@ public class Benchwell.Http.HttpAddressBar : Gtk.Box {
 		Config.environment_changed.connect (() => {
 			if (item != null && Config.environment != null) {
 				address.tooltip_text = Config.environment.interpolate (item.url);
+				address_label.set_text (address.tooltip_text);
 			}
 		});
 

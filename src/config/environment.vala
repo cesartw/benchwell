@@ -3,7 +3,7 @@ public class Benchwell.Environment : Object {
 	public string name { get; set; }
 	public Benchwell.EnvVar[] variables;
 
-	public signal Benchwell.EnvVar variable_added (Benchwell.EnvVar envvar);
+	public signal void variable_added (Benchwell.EnvVar envvar);
 
 	public Regex var_escape_regex  = /({{\s*([a-zA-Z0-9]+)\s*}})/;
 	public Regex func_escape_regex = /({%\s*([a-zA-Z0-9]+)\s*(.*)%})/;
@@ -75,6 +75,21 @@ public class Benchwell.Environment : Object {
 		if (this.id == 0) {
 			this.id = Config.db.last_insert_rowid ();
 		}
+	}
+
+	public void clone () throws ConfigError {
+		var env = new Benchwell.Environment ();
+		env.touch_without_save (() => {
+			env.name = @"$name Copy";
+		});
+		env.save ();
+
+		foreach (var kv in variables) {
+			print (@"====$(kv.key):$(kv.val)\n");
+			env.add_variable (kv.key, kv.val);
+		}
+
+		Config.add_environment (env);
 	}
 
 	public void remove () throws ConfigError {
@@ -182,8 +197,13 @@ public class Benchwell.Environment : Object {
 		return result;
 	}
 
-	public Benchwell.EnvVar add_variable () throws ConfigError {
+	public Benchwell.EnvVar add_variable (string key = "", string val = "") throws ConfigError {
 		var envvar = new Benchwell.EnvVar ();
+		envvar.touch_without_save (() => {
+			envvar.key = key;
+			envvar.val = val;
+			envvar.environment_id = id;
+		});
 		envvar.save ();
 
 		var tmp = variables;
@@ -200,7 +220,6 @@ public class Benchwell.EnvVar : Object, Benchwell.KeyValueI {
 	public string key     { get; set; }
 	public string val     { get; set; }
 	public bool   enabled { get; set; }
-	public string type; // header | param
 	public int    sort    { get; set; }
 	public int64  environment_id;
 
