@@ -178,7 +178,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 	// request
 	public Benchwell.SourceView body;
-	public Gtk.ComboBoxText     mime;
+	//public Gtk.ComboBoxText     mime;
 	public Benchwell.KeyValues  headers;
 	public Benchwell.KeyValues  query_params;
 	//////////
@@ -225,38 +225,12 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		body_sw.add (body);
 		body_sw.show ();
 
-		mime = new Gtk.ComboBoxText ();
-		mime.show ();
-
 		item = new Benchwell.HttpItem ();
 		headers = new Benchwell.KeyValues ();
 		headers.show ();
 
 		query_params = new Benchwell.KeyValues ();
 		query_params.show ();
-
-		mime = new Gtk.ComboBoxText ();
-		mime.append ("auto", "auto");
-		mime.append ("none", "none");
-		mime.append ("application/json", "application/json");
-		mime.append ("application/html", "application/html");
-		mime.append ("application/xml", "application/xml");
-		mime.append ("application/yaml", "application/yaml");
-		mime.set_active (0);
-		mime.show ();
-
-		var mime_options_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0);
-		mime_options_box.pack_start (mime, false, false, 0);
-		mime_options_box.show ();
-		mime_options_box.get_style_context ().add_class ("requestmeta");
-
-		var body_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
-		body_box.vexpand = true;
-		body_box.hexpand = true;
-		body_box.show ();
-
-		body_box.pack_start(mime_options_box, false, false, 0);
-		body_box.pack_start(body_sw, true, true, 0);
 
 		var body_label = new Gtk.Label (_("Body"));
 		body_label.show ();
@@ -268,7 +242,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		headers_label.show ();
 
 		var body_notebook = new Gtk.Notebook ();
-		body_notebook.append_page (body_box, body_label);
+		body_notebook.append_page (body_sw, body_label);
 		body_notebook.append_page (query_params, params_label);
 		body_notebook.append_page (headers, headers_label);
 		body_notebook.show ();
@@ -362,10 +336,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 		sidebar.item_activated.connect (on_item_activated);
 		sidebar.item_removed.connect (on_item_removed);
-		mime.changed.connect (() => {
-			body.set_language_by_mime_type (mime.get_active_id ());
-			item.mime = mime.get_active_id ();
-		});
 
 		address.send_btn.btn.clicked.connect (on_send);
 		//address.save_btn.clicked.connect (on_save);
@@ -388,7 +358,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			item.body = body.get_buffer ().get_text (start, end, false);
 		});
 
-		headers.row_added.connect (() => {
+		headers.row_wanted.connect (() => {
 			if (item != null) {
 				try {
 					var kv = item.add_header ();
@@ -415,7 +385,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			}
 		});
 
-		query_params.row_added.connect (() => {
+		query_params.row_wanted.connect (() => {
 			if (item != null) {
 				try {
 					var kv = item.add_param ();
@@ -445,6 +415,20 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			} catch (ConfigError err) {
 				stderr.printf (err.message);
 			}
+		});
+
+		headers.row_added.connect ((kv) => {
+			if (kv.key.strip () .casefold () == "Content-Type".casefold ()) {
+				body.set_language_by_mime_type (kv.val);
+			}
+		});
+		headers.changed.connect (() => {
+			headers.get_children ().foreach ((w) => {
+				var kv = w as Benchwell.KeyValue;
+				if (kv.keyvalue.key.strip ().casefold () == "Content-Type".casefold ()) {
+					body.set_language_by_mime_type (kv.keyvalue.val);
+				}
+			});
 		});
 	}
 
@@ -612,11 +596,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			else
 				body.get_buffer ().text = "";
 		});
-
-		if (this.item.mime != null)
-			mime.set_active_id (this.item.mime);
-		else
-			mime.set_active_id ("none");
 
 		response.get_buffer ().text = "";
 		headers.clear ();

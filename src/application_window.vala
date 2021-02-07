@@ -33,8 +33,53 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		notebook.scrollable = true;
 		notebook.group_name = "mainwindow";
 		notebook.tab_pos = Config.tab_position ();
-		notebook.popup_enable ();
 		notebook.show ();
+		notebook.show_border = true;
+		notebook.key_press_event.connect ( (e) => {
+			var page = 0;
+			switch (e.keyval) {
+				case Gdk.Key.@1:
+					page = 1;
+					break;
+				case Gdk.Key.@2:
+					page = 2;
+					break;
+				case Gdk.Key.@3:
+					page = 3;
+					break;
+				case Gdk.Key.@4:
+					page = 4;
+					break;
+				case Gdk.Key.@5:
+					page = 5;
+					break;
+				case Gdk.Key.@6:
+					page = 6;
+					break;
+				case Gdk.Key.@7:
+					page = 7;
+					break;
+				case Gdk.Key.@8:
+					page = 8;
+					break;
+				case Gdk.Key.@9:
+					page = 9;
+					break;
+				default:
+					return true;
+			}
+
+			if (e.state != Gdk.ModifierType.MOD1_MASK) {
+				return true;
+			}
+
+			if (page <= notebook.get_n_pages ()) {
+				notebook.set_current_page (page - 1);
+				return false;
+			}
+
+			return true;
+		});
 
 		var box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
 		box.show ();

@@ -1,6 +1,7 @@
 public class Benchwell.KeyValues : Gtk.Box {
 	public signal void changed ();
-	public signal Benchwell.KeyValueI row_added ();
+	public signal Benchwell.KeyValueI row_wanted ();
+	public signal void row_added (Benchwell.KeyValueI kvi);
 	public signal void row_removed (Benchwell.KeyValueI kvi);
 
 	public KeyValues () {
@@ -46,13 +47,15 @@ public class Benchwell.KeyValues : Gtk.Box {
 			row_removed (kv.keyvalue);
 			remove(kv);
 			if (get_children ().length () == 0) {
-				add (row_added ());
+				add (row_wanted ());
 			}
 		});
 
 		pack_start (kv, false, false, 0);
 
 		kv.changed.connect (() => { changed ();});
+
+		row_added (kvi);
 	}
 
 	public void clear () {
@@ -75,7 +78,7 @@ public class Benchwell.KeyValues : Gtk.Box {
 			return;
 		}
 
-		add (row_added ());
+		add (row_wanted ());
 	}
 }
 

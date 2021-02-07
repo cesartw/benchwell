@@ -147,7 +147,7 @@ public class Benchwell.EnvironmentPanel : Gtk.Box {
 		vbox.show ();
 
 		keyvalues = new Benchwell.KeyValues ();
-		keyvalues.row_added.connect (on_row_added);
+		keyvalues.row_wanted.connect (on_row_added);
 		if (env.variables.length > 0) {
 			keyvalues.clear ();
 			foreach (var v in env.variables) {

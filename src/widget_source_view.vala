@@ -26,18 +26,12 @@ public class Benchwell.SourceView : Gtk.SourceView {
 	}
 
 	public void set_language_by_mime_type (string mime_type) {
-		switch (mime_type) {
-			case "application/json":
-				set_language ("json");
-				break;
-			case "application/html":
-				set_language ("html");
-				break;
-			case "application/xml":
-				set_language ("xml");
-				break;
-			case "application/yaml":
-				set_language ("yaml");
+		var mime = mime_type.strip ();
+		switch (mime) {
+			case "application/json", "application/html", "application/xml", "application/yaml":
+				var buffer = (Gtk.SourceBuffer) get_buffer ();
+				set_language (mime.split("/")[1]);
+				buffer.highlight_syntax = true;
 				break;
 			case "auto":
 				var buffer = (Gtk.SourceBuffer) get_buffer ();
