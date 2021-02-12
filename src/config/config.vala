@@ -81,7 +81,7 @@ public class Benchwell._Config : Object {
 		var tmp = environments;
 		tmp += e;
 		environments = tmp;
-		environment_added (env);
+		environment_added (e);
 
 		return e;
 	}
@@ -93,7 +93,7 @@ public class Benchwell._Config : Object {
 			if (environments[i].id == env.id)	 {
 				continue;
 			}
-			tmp += env;
+			tmp += environments[i];
 		}
 
 		environments = tmp;

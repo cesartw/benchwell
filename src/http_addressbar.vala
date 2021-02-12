@@ -33,8 +33,8 @@ public class Benchwell.Http.HttpAddressBar : Gtk.Box {
 		address_label.set_halign (Gtk.Align.START);
 		address_label.ellipsize = Pango.EllipsizeMode.END;
 		address_label.name = "address-tag-line";
-		address_label.show ();
 		address_label.sensitive = false;
+		address_label.show ();
 
 		var address_label_eventbox = new Gtk.EventBox ();
 		address_label_eventbox.add (address_label);
@@ -44,20 +44,21 @@ public class Benchwell.Http.HttpAddressBar : Gtk.Box {
 		send_btn = new Benchwell.OptButton(_("SEND"), _("Save as"), "win.saveas");
 		send_btn.btn.get_style_context ().add_class ("suggested-action");
 		send_btn.menu_btn.get_style_context ().add_class ("suggested-action");
+		send_btn.sensitive = false;
 		send_btn.show ();
 
 		var address_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
-		address_box.show ();
 		address_box.pack_start (address, false, false, 0);
 		address_box.pack_start (address_label_eventbox, false, false, 0);
+		address_box.show ();
 
 		pack_start(method_combo, false, false, 0);
 		pack_start(address_box, true, true, 0);
 		pack_end(send_btn, false, false, 0);
 
 		Config.environment_changed.connect (() => {
-			if (item != null && Config.environment != null) {
-				address.tooltip_text = Config.environment.interpolate (item.url);
+			if (Config.environment != null) {
+				address.tooltip_text = Config.environment.interpolate (address.text);
 				address_label.set_text (address.tooltip_text);
 			}
 		});
@@ -66,12 +67,17 @@ public class Benchwell.Http.HttpAddressBar : Gtk.Box {
 			if (disable_changed || item == null) { return; }
 
 			item.method = method_combo.get_active_text ();
+
 			changed();
 		});
 
 		address.changed.connect (() => {
-			item.url = address.text;
-			changed();
+			if (item != null) {
+				item.url = address.text;
+				changed();
+			}
+
+			send_btn.sensitive = address.text.strip () != "";
 		});
 
 		address_label_eventbox.button_press_event.connect ((w, event) => {

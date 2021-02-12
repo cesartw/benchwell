@@ -117,7 +117,8 @@ public class Benchwell.EnvironmentEditor : Gtk.Box {
 		var panel = stack.get_visible_child ();
 		var index = stack.get_children ().index (panel);
 		try {
-			Config.environments[index].remove ();
+			var env = Config.environments[index];
+			env.remove ();
 		} catch(ConfigError err) {
 			stderr.printf (err.message);
 		}

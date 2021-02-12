@@ -275,25 +275,26 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 			}
 		}
 
-		if (parent_item != null) {
-			var item = new Benchwell.HttpItem ();
-			item.touch_without_save (() => {
-				item.is_folder = true;
+		var item = new Benchwell.HttpItem ();
+		item.touch_without_save (() => {
+			item.is_folder = true;
+			if (parent_item != null) {
 				item.parent_id = parent_item.id;
-				try {
-					selected_collection.add_item (item);
-				} catch (ConfigError err) {
-					stderr.printf (err.message);
-					return;
-				}
-			});
+			}
+			try {
+				selected_collection.add_item (item);
+			} catch (ConfigError err) {
+				stderr.printf (err.message);
+				return;
+			}
+		});
 
-			var iter = add_row (item, parent, sibling);
-			path = store.get_path (iter);
-			name_renderer.editable = true;
-			treeview.expand_to_path (path);
-			treeview.set_cursor (path, name_column, true);
-		}
+		var iter = add_row (item, parent, sibling);
+		path = store.get_path (iter);
+		name_renderer.editable = true;
+		treeview.expand_to_path (path);
+		treeview.set_cursor (path, name_column, true);
+		return;
 	}
 
 	private void on_add_item () {

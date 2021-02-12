@@ -2,6 +2,15 @@ public class Benchwell.OptButton : Gtk.Grid {
 	public Gtk.MenuButton menu_btn;
 	public GLib.Menu menu;
 	public Gtk.Button btn;
+	public new bool sensitive {
+		get {
+			return menu_btn.sensitive;
+		}
+		set {
+			menu_btn.sensitive = value;
+			btn.sensitive = value;
+		}
+	}
 
 	public OptButton (string label, ...) {
 		Object();
