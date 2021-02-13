@@ -170,8 +170,8 @@ private size_t ReadHeaderCallback (char *dest, size_t size, size_t nmemb, void *
 }
 
 public class Benchwell.Http.Http : Gtk.Paned {
-	public Benchwell.ApplicationWindow    window { get; construct; }
-	public string                         title { get; set; }
+	public Benchwell.ApplicationWindow   window { get; construct; }
+	public string                        title  { get; set; }
 	public Benchwell.Http.HttpSideBar    sidebar;
 	public Benchwell.Http.HttpAddressBar address;
 	public Benchwell.HttpOverlay overlay;
@@ -543,7 +543,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			for (var i = 0; i<raw_body.length;i++){
 				tmp_body.buffer += raw_body[i];
 			}
-
+			tmp_body.buffer += 0;
 			handle.setopt (Curl.Option.READFUNCTION, WriteRequestCallback);
 			handle.setopt (Curl.Option.READDATA, ref tmp_body);
 		}
