@@ -85,7 +85,6 @@ public class Benchwell.Environment : Object {
 		env.save ();
 
 		foreach (var kv in variables) {
-			print (@"====$(kv.key):$(kv.val)\n");
 			env.add_variable (kv.key, kv.val);
 		}
 
@@ -163,15 +162,16 @@ public class Benchwell.Environment : Object {
 			var func_name = info.fetch (2);
 			var to_replace = info.fetch (1);
 
-			Config.plugins.plugins.foreach ((plug_name, func) => {
-				if ( plug_name != func_name ) {
-					return;
+			foreach (var plugin in Config.plugins) {
+				if ( plugin.name != func_name ) {
+					continue;
 				}
 
-				var jsparams = Config.plugins.parse_params (raw_params);
-				var val = func.function_callv (jsparams).to_string ();
-				result = result.replace (to_replace, val.to_string ());
-			});
+				var parameters = plugin.parse_params (raw_params);
+				var plugin_result = plugin.callv (parameters);
+				result = result.replace (to_replace, plugin_result);
+				break;
+			};
 		}
 
 		return result;
@@ -185,13 +185,14 @@ public class Benchwell.Environment : Object {
 			var func_name = info.fetch (2);
 			var to_replace = info.fetch (1);
 
-			Config.plugins.plugins.foreach ((plug_name, func) => {
-				if ( plug_name != func_name ) {
-					return;
+			foreach (var plugin in Config.plugins) {
+				if ( plugin.name != func_name ) {
+					continue;
 				}
 
 				result = result.replace (to_replace, @"{% $(func_name) %}");
-			});
+				break;
+			};
 		}
 
 		return result;

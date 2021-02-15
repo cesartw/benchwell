@@ -61,9 +61,9 @@ executable(
 	'src/http_sidebar.vala',
 
 	'src/database_service.vala',
-	'src/plugin.vala',
 
 	'src/config/config.vala',
+	'src/config/plugin.vala',
 	'src/config/http.vala',
 	'src/config/environment.vala',
 	'src/config/keyvalue.vala',

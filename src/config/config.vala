@@ -18,7 +18,7 @@ public class Benchwell._Config : Object {
 	public Benchwell.ConnectionInfo[] connections;
 	public Benchwell.HttpCollection[] http_collections;
 	public Secret.Schema schema;
-	public Benchwell.Http.Plugin plugins;
+	public Benchwell.Plugin[] plugins;
 	public Json.Node filters;
 
 	private Benchwell.Environment? _environment;
@@ -45,7 +45,12 @@ public class Benchwell._Config : Object {
                                  "schema", Secret.SchemaAttributeType.STRING);
 
 		stdout.printf ("Using config db: %s\n", dbpath);
-		plugins = new Benchwell.Http.Plugin ();
+
+		var allplugins = Benchwell.JSPlugin.load ();
+		foreach (Benchwell.Plugin p in Benchwell.BuiltinPlugin.load ()) {
+			allplugins += p;
+		}
+		plugins = allplugins;
 
 		load_environments ();
 		load_connections ();
