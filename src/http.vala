@@ -210,15 +210,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 		// request
 		body = new Benchwell.SourceView ();
-		body.vexpand = true;
-		body.hexpand = true;
-		body.show_line_numbers = false;
-		body.show_right_margin = true;
-		body.auto_indent = true;
-		body.show_line_marks = true;
-		body.show_line_marks = true;
-		body.highlight_current_line = true;
-		body.accepts_tab = true;
 		body.show ();
 
 		var body_sw = new Gtk.ScrolledWindow (null, null);
@@ -255,14 +246,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		var response_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
 		response_box.show ();
 
-		response_headers         = new Benchwell.SourceView ();
-		response_headers.hexpand = true;
-		response_headers.vexpand = true;
-		response_headers.highlight_current_line = false;
-		response_headers.show_line_numbers = false;
-		response_headers.show_right_margin = true;
-		response_headers.auto_indent = true;
-		response_headers.show_line_marks = true;
+		response_headers = new Benchwell.SourceView ();
 		response_headers.editable = false;
 		response_headers.margin_bottom = 10;
 		response_headers.margin_top = 10;
@@ -272,15 +256,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		response_headers_sw.show ();
 
 		response  = new Benchwell.SourceView ();
-		//response.margin_bottom = 10;
-		//response.margin_top = 10;
-		response.hexpand = true;
-		response.vexpand = true;
-		response.highlight_current_line = false;
-		response.show_line_numbers = false;
-		response.show_right_margin = true;
-		response.auto_indent = true;
-		response.show_line_marks = true;
 		response.editable = false;
 		response.show ();
 		var response_sw = new Gtk.ScrolledWindow (null, null);

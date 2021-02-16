@@ -11,3 +11,4 @@ Terminal=false
 StartupWMClass=Benchwell
 Keywords=SQL;MySql;Database;MariaDB;api;gui;
 MimeType=application/x-sqlite3;application/vnd.sqlite3;x-schema-handler/benchwell;
+X-GNOME-UsesNotifications=true

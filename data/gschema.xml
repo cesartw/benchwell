@@ -56,5 +56,10 @@
 			<summary>Request activation</summary>
 			<description>Single click activates request</description>
 		</key>
+		<key name="editor-theme" type="s">
+			<default>""</default>
+			<summary>Editor theme</summary>
+			<description>Text editor color theme</description>
+		</key>
 	</schema>
 </schemalist>

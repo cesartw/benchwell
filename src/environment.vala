@@ -1,7 +1,7 @@
 // modules: gtk+-3.0
 // vapidirs: vapi
 
-public class Benchwell.EnvironmentEditor : Gtk.Box {
+public class Benchwell.EnvironmentEditor : Gtk.Paned {
 	public Benchwell.Button btn_add;
 	public Benchwell.Button btn_remove;
 	public Benchwell.Button btn_clone;
@@ -9,13 +9,8 @@ public class Benchwell.EnvironmentEditor : Gtk.Box {
 
 	public EnvironmentEditor () {
 		Object (
-			orientation: Gtk.Orientation.VERTICAL,
-			spacing: 0
+			orientation: Gtk.Orientation.HORIZONTAL
 		);
-
-		var header_bar = new Gtk.HeaderBar ();
-		header_bar.show ();
-		header_bar.title = _("Environments");
 
 		btn_add = new Benchwell.Button ("white-add", Gtk.IconSize.SMALL_TOOLBAR);
 		btn_add.halign = Gtk.Align.START;
@@ -41,12 +36,6 @@ public class Benchwell.EnvironmentEditor : Gtk.Box {
 		btn_box.add (btn_remove);
 		btn_box.height_request = 5;
 		btn_box.show ();
-
-		//header_bar.pack_end (btn_add);
-		//header_bar.pack_start (btn_remove);
-
-		var paned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL);
-		paned.show ();
 
 		var switcher = new Gtk.StackSwitcher ();
 		switcher.orientation = Gtk.Orientation.VERTICAL;
@@ -85,11 +74,8 @@ public class Benchwell.EnvironmentEditor : Gtk.Box {
 		env_list_box.pack_end (btn_box, false, false, 0);
 		env_list_box.show ();
 
-		paned.pack1 (env_list_box, false, true);
-		paned.pack2 (stack, true, false);
-
-		pack_start (header_bar, true, true, 0);
-		pack_start (paned, false, false, 0);
+		pack1 (env_list_box, false, true);
+		pack2 (stack, true, false);
 
 		btn_add.clicked.connect (on_add_env);
 		btn_remove.clicked.connect (on_remove_env);

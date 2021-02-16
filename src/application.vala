@@ -28,6 +28,10 @@ public class Benchwell.Application : Gtk.Application {
 		window.add_database_tab ();
 		window.add_http_tab ();
 		Gtk.Settings.get_default ().gtk_application_prefer_dark_theme = true;
+
+		//var notification = new GLib.Notification ("Benchwell");
+		//notification.set_body (_("yolo"));
+		//send_notification ("io.benchwell", notification);
 	}
 
 

@@ -1,17 +1,28 @@
 public class Benchwell.SourceView : Gtk.SourceView {
-	public SourceView (string lang = "auto", string style = "oblivion") {
+	public SourceView (string lang = "auto") {
 		Object (
 			show_line_numbers: false,
 			show_right_margin: true,
 			hexpand: true,
-			vexpand: true
+			vexpand: true,
+			auto_indent: true,
+			accepts_tab: true,
+			highlight_current_line: false
 		);
 
 		set_language (lang);
 
 		var buffer = (Gtk.SourceBuffer) get_buffer ();
 		var sm = Gtk.SourceStyleSchemeManager.get_default ();
-		buffer.set_style_scheme (sm.get_scheme (style));
+		Config.settings.changed["editor-theme"].connect (() => {
+			if (Config.settings.get_string("editor-theme") in sm.scheme_ids) {
+				buffer.set_style_scheme (sm.get_scheme (Config.settings.get_string("editor-theme")));
+			}
+		});
+
+		if (Config.settings.get_string("editor-theme") in sm.scheme_ids) {
+			buffer.set_style_scheme (sm.get_scheme (Config.settings.get_string("editor-theme")));
+		}
 	}
 
 	public void set_language (string? lang) {

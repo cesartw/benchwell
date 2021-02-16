@@ -72,6 +72,7 @@ executable(
 	'src/constants.vala',
 	'src/application_window.vala',
 	'src/environment.vala',
+	'src/settings_panel.vala',
 
 	'src/application.vala',
 	#'src/http_importer.vala',

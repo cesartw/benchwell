@@ -262,9 +262,9 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 			popover.show ();
 		});
 
-		var editor = new Benchwell.EnvironmentEditor ();
-		editor.show ();
-		popover.add (editor);
+		var settings_panel = new Benchwell.SettingsPanel ();
+		settings_panel.show ();
+		popover.add (settings_panel);
 
 		var grid = new Gtk.Grid ();
 		grid.attach (env_combo, 0, 0, 4, 1);
