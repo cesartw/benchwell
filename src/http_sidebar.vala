@@ -20,9 +20,8 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 
 
 	public weak Benchwell.HttpCollection? selected_collection;
-	public weak Benchwell.HttpItem? selected_item;
 
-	public signal void item_activated (Benchwell.HttpItem item);
+	public signal void item_activated (Benchwell.HttpItem item, Gtk.TreeIter iter);
 	public signal void item_removed (Benchwell.HttpItem item);
 
 	private Gtk.CellRendererText name_renderer;
@@ -53,21 +52,20 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 
 		name_renderer = new Gtk.CellRendererText ();
 		var icon_renderer = new Gtk.CellRendererPixbuf ();
+		var method_renderer = new Gtk.CellRendererText ();
+
 		name_column = new Gtk.TreeViewColumn ();
 		name_column.title = _("Name");
+		name_column.resizable = true;
 		// NOTE: must pack_* before add_attribute
 		name_column.pack_start (icon_renderer, false);
+		name_column.pack_start (method_renderer, false);
 		name_column.pack_start (name_renderer, true);
 		name_column.add_attribute (icon_renderer, "pixbuf", Benchwell.Http.Columns.ICON);
+		name_column.add_attribute (method_renderer, "text", Benchwell.Http.Columns.METHOD);
 		name_column.add_attribute (name_renderer, "text", Benchwell.Http.Columns.TEXT);
-		name_column.resizable = true;
 
-		var method_renderer = new Gtk.CellRendererText ();
-		var method_column = new Gtk.TreeViewColumn ();
-		method_column.title = _("Method");
-		method_column.pack_start (method_renderer, false);
-		method_column.add_attribute(method_renderer, "text", Benchwell.Http.Columns.METHOD);
-		method_column.set_cell_data_func (method_renderer, (cell_layout, cell, tree_model, iter) => {
+		name_column.set_cell_data_func (method_renderer, (cell_layout, cell, tree_model, iter) => {
 			GLib.Value val;
 			tree_model.get_value (iter, Benchwell.Http.Columns.ITEM, out val);
 			var item = val.get_object () as Benchwell.HttpItem;
@@ -81,11 +79,27 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 					return;
 				}
 				cell.set_property ("markup", @"<span foreground=\"$color\">$(item.method)</span>");
+				cell.set_property ("visible", true);
+			} else {
+				cell.set_property ("visible", false);
+			}
+		});
+		name_column.set_cell_data_func (icon_renderer, (cell_layout, cell, tree_model, iter) => {
+			GLib.Value val;
+			tree_model.get_value (iter, Benchwell.Http.Columns.ITEM, out val);
+			var item = val.get_object () as Benchwell.HttpItem;
+			if (item == null) {
+				return;
+			}
+
+			if (item.is_folder) {
+				cell.set_property ("visible", true);
+			} else {
+				cell.set_property ("visible", false);
 			}
 		});
 
 		treeview.append_column (name_column);
-		treeview.append_column (method_column);
 
 		treeview.set_model (store);
 		treeview.show ();
@@ -248,7 +262,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		name_renderer.editable = true;
 		treeview.expand_to_path (path);
 		treeview.set_cursor (path, name_column, true);
-		item_activated (new_item);
+		item_activated (new_item, iter);
 	}
 
 	private void on_add_folder () {
@@ -361,7 +375,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 			return;
 		}
 
-		item_activated (selected_item);
+		item_activated (selected_item, iter);
 	}
 
 	private void on_collection_selected () {
@@ -447,7 +461,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 				treeview.get_selection ().select_path (store.get_path (folder_parent)); // not really a folder
 				on_load_item ();
 				if (!item.is_folder)
-					item_activated (item);
+					item_activated (item, folder_parent);
 				continue; // on_load_item will build the tree for us
 			}
 
