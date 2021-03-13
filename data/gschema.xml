@@ -56,6 +56,11 @@
 			<summary>Request activation</summary>
 			<description>Single click activates request</description>
 		</key>
+		<key name="dark-mode" type="b">
+			<default>true</default>
+			<summary>Dark Mode</summary>
+			<description>Whether to use the dark mode version of the current theme</description>
+		</key>
 		<key name="editor-theme" type="s">
 			<default>""</default>
 			<summary>Editor theme</summary>

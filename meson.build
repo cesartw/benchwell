@@ -1,4 +1,4 @@
-project('io.benchwell', 'vala', 'c')
+project('io.benchwell', 'vala', 'c', version: '0.0.1')
 
 i18n = import('i18n')
 add_global_arguments('-DGETTEXT_PACKAGE="@0@"'.format (meson.project_name()), language: 'c')

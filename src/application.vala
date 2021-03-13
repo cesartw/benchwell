@@ -1,7 +1,6 @@
 public class Benchwell.Application : Gtk.Application {
 	private SimpleAction new_window_action;
 	private SimpleAction preference_action;
-	private SimpleAction dark_mode_action;
 
 	public Application () {
 		Object(
@@ -11,7 +10,6 @@ public class Benchwell.Application : Gtk.Application {
 
 		new_window_action = new SimpleAction ("new", null);
 		preference_action = new SimpleAction ("preference", null);
-		dark_mode_action = new SimpleAction ("darkmode", null);
 
 		set_accels_for_action ("win.new.db", {"<control>D"});
 		set_accels_for_action ("win.new.http", {"<control>H"});
@@ -27,7 +25,8 @@ public class Benchwell.Application : Gtk.Application {
 
 		window.add_database_tab ();
 		window.add_http_tab ();
-		Gtk.Settings.get_default ().gtk_application_prefer_dark_theme = true;
+
+		Gtk.Settings.get_default ().gtk_application_prefer_dark_theme = Config.settings.get_boolean ("dark-mode");
 
 		//var notification = new GLib.Notification ("Benchwell");
 		//notification.set_body (_("yolo"));

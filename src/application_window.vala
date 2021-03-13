@@ -98,7 +98,7 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		header_title.get_style_context ().add_class ("title");
 		header_title.show ();
 
-		var header_subtitle = new Gtk.Label ("version");
+		var header_subtitle = new Gtk.Label (Benchwell.Constants.VERSION);
 		header_subtitle.get_style_context ().add_class ("subtitle");
 		header_subtitle.show ();
 

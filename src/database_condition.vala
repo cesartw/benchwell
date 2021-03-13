@@ -46,14 +46,18 @@ public class Benchwell.Database.Condition {
 
 		var completion = new Gtk.EntryCompletion ();
 		completion.text_column = 0;
-		completion.inline_completion = true;
+		completion.inline_completion = false;
 		completion.inline_selection = true;
 		completion.minimum_key_length = 1;
 		completion.set_model (store);
+		completion.match_selected.connect ((model, iter) => {
+			field_combo.set_active_iter (iter);
+			return true;
+		});
 
 		var entry = field_combo.get_child () as Gtk.Entry;
 		entry.set_completion (completion);
-		entry.focus_out_event.connect (on_field_focus_out);
+		//entry.focus_out_event.connect (on_field_focus_out);
 
 		operator_combo = new Gtk.ComboBoxText ();
 		foreach (var op in Benchwell.Operator.all ()) {
@@ -85,6 +89,10 @@ public class Benchwell.Database.Condition {
 		operator_combo.changed.connect (on_change);
 		entry.changed.connect (on_change);
 		value_entry.changed.connect (on_change);
+		active_switch.state_set.connect ((s) => {
+			on_change();
+			return false;
+		});
 	}
 
 	public Benchwell.CondStmt? get_condition () {
@@ -133,9 +141,6 @@ public class Benchwell.Database.Condition {
 	private string? selected_field () {
 		Gtk.TreeIter? iter;
 		field_combo.get_active_iter (out iter);
-		if (!store.iter_is_valid(iter)) {
-			return null;
-		}
 		GLib.Value val;
 		store.get_value (iter, 0, out val);
 		var column_name = val.get_string ();

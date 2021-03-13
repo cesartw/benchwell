@@ -252,35 +252,41 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 	}
 
 	private void on_add_folder () {
+		add_item (true);
+	}
+
+	private void on_add_item () {
+		add_item ();
+	}
+
+	private void add_item(bool is_folder = false) {
 		int cell_x, cell_y;
 		Gtk.TreePath? path;
-		Gtk.TreeIter? parent = null;
-		Gtk.TreeIter? sibling = null;
+		Gtk.TreeIter? parent_iter = null;
+		Gtk.TreeIter? sibling_iter = null;
 		GLib.Value val;
 		Benchwell.HttpItem? parent_item = null;
+		var item = new Benchwell.HttpItem ();
 
 		treeview.get_path_at_pos (cursor_x, cursor_y, out path, null, out cell_x, out cell_y);
 		if (path != null) {
-			var ok = store.get_iter (out parent, path);
+			var ok = store.get_iter (out parent_iter, path);
 			if (ok) {
-				store.get_value (parent, Benchwell.Http.Columns.ITEM, out val);
+				store.get_value (parent_iter, Benchwell.Http.Columns.ITEM, out val);
 				parent_item = val.get_object () as Benchwell.HttpItem;
 
 				if (!parent_item.is_folder) {
-					sibling = parent;
-					store.iter_parent (out parent, parent);
-					store.get_value (parent, Benchwell.Http.Columns.ITEM, out val);
+					sibling_iter = parent_iter;
+					store.iter_parent (out parent_iter, parent_iter);
+					store.get_value (parent_iter, Benchwell.Http.Columns.ITEM, out val);
 					parent_item = val.get_object () as Benchwell.HttpItem;
+					item.parent_id = parent_item.id;
 				}
 			}
 		}
 
-		var item = new Benchwell.HttpItem ();
 		item.touch_without_save (() => {
-			item.is_folder = true;
-			if (parent_item != null) {
-				item.parent_id = parent_item.id;
-			}
+			item.is_folder = is_folder;
 			try {
 				selected_collection.add_item (item);
 			} catch (ConfigError err) {
@@ -289,54 +295,12 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 			}
 		});
 
-		var iter = add_row (item, parent, sibling);
+		var iter = add_row (item, parent_iter, sibling_iter);
 		path = store.get_path (iter);
 		name_renderer.editable = true;
 		treeview.expand_to_path (path);
 		treeview.set_cursor (path, name_column, true);
 		return;
-	}
-
-	private void on_add_item () {
-		if (selected_collection == null) {
-			return;
-		}
-
-		Gtk.TreeIter parent;
-
-		var selected_item = get_selected_item (out parent);
-		int64? http_item_id = null;
-		if ( selected_item  != null )
-			http_item_id = selected_item.id;
-
-		Gtk.TreeIter? sibling = null;
-
-		if (selected_item != null && !selected_item.is_folder) {
-			sibling = parent;
-			http_item_id = selected_item.parent_id;
-			store.iter_parent (out parent, parent);
-		}
-
-		var item = new Benchwell.HttpItem ();
-		item.touch_without_save (() => {
-			item.is_folder = false;
-			if (http_item_id != null)
-				item.parent_id = http_item_id;
-
-			try {
-				selected_collection.add_item (item);
-			} catch (ConfigError err) {
-				stderr.printf (err.message);
-				return;
-			}
-		});
-
-		var iter = add_row (item, parent, sibling);
-		var path = store.get_path (iter);
-		name_renderer.editable = true;
-		treeview.expand_to_path (path);
-		treeview.set_cursor (path, name_column, true);
-		item_activated (item);
 	}
 
 	private void on_delete_item () {

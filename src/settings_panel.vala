@@ -2,6 +2,7 @@ public class Benchwell.SettingsPanel : Gtk.Box {
 	private Gtk.Notebook notebook;
 	private Benchwell.EnvironmentEditor env_editor;
 	private Benchwell.SettingsEditor editor_settings;
+	private Gtk.Switch dark_switch;
 
 	public SettingsPanel () {
 		Object (
@@ -13,6 +14,12 @@ public class Benchwell.SettingsPanel : Gtk.Box {
 		var header_bar = new Gtk.HeaderBar ();
 		header_bar.title = _("Settings");
 		header_bar.show ();
+
+		dark_switch = new Gtk.Switch ();
+		dark_switch.show();
+		var dark_icon = new Gtk.Image.from_icon_name ("weather-clear-night", Gtk.IconSize.SMALL_TOOLBAR);
+		dark_icon.show ();
+
 
 		notebook = new Gtk.Notebook ();
 		notebook.tab_pos = Gtk.PositionType.TOP;
@@ -27,8 +34,17 @@ public class Benchwell.SettingsPanel : Gtk.Box {
 		notebook.append_page (env_editor, new Gtk.Label (_("Environments")));
 		notebook.append_page (editor_settings, new Gtk.Label (_("Editor")));
 
+		header_bar.pack_end (dark_switch);
+		header_bar.pack_end (dark_icon);
 		pack_start (header_bar, false, false, 0);
 		pack_start (notebook, true, true, 0);
+
+		dark_switch.state = Config.settings.get_boolean ("dark-mode");
+		dark_switch.state_set.connect ((state) => {
+			Config.settings.set_boolean ("dark-mode", state);
+			Gtk.Settings.get_default ().gtk_application_prefer_dark_theme = state;
+			return false;
+		});
 	}
 }
 
@@ -43,7 +59,7 @@ public class Benchwell.SettingsEditor : Gtk.Box {
 
 		// LOOK & FEEL
 		var laf_label = new Gtk.Label ("");
-		laf_label.set_markup ("<b>Look &amp; Feel</b>");
+		laf_label.set_markup (_("<b>Look &amp; Feel</b>"));
 		laf_label.show ();
 
 		var laf_frame = new Gtk.Frame (null);
@@ -73,11 +89,11 @@ public class Benchwell.SettingsEditor : Gtk.Box {
 
 		laf_frame.add (laf_grid);
 
-		pack_start (laf_frame, false, false, 0);
 
 		laf_theme_combo.changed.connect (() => {
 			Config.settings.set_string ("editor-theme", laf_theme_combo.get_active_id ());
 		});
+		//});
 		//////////////
 	}
 }
