@@ -20,6 +20,7 @@ public class Benchwell._Config : Object {
 	public Secret.Schema schema;
 	public Benchwell.Plugin[] plugins;
 	public Json.Node filters;
+	public HashTable<int64?, bool?> http_tree_state;
 
 	private Benchwell.Environment? _environment;
 	public Benchwell.Environment? environment {
@@ -56,6 +57,7 @@ public class Benchwell._Config : Object {
 		load_connections ();
 		load_http_collections ();
 		load_filters ();
+		load_http_tree_state ();
 	}
 
 	public Gtk.PositionType tab_position () {
@@ -454,6 +456,25 @@ public class Benchwell._Config : Object {
 		}
 
 		Config.settings.set_string ("db-filters", Json.to_string (filters, false));
+	}
+
+	public void load_http_tree_state () {
+		var tree_state = Json.from_string (settings.get_string ("http-tree-state"));
+		http_tree_state = new HashTable<int64?, bool?> (int64_hash, int64_equal);
+
+		tree_state.get_object ().get_members ().foreach ((key) => {
+			http_tree_state.insert (int64.parse (key), tree_state.get_object ().get_boolean_member (key));
+		});
+	}
+
+	public void save_http_tree_state () {
+		var main_node = new Json.Node (Json.NodeType.OBJECT);
+		main_node.set_object (new Json.Object ());
+		http_tree_state.foreach ((key, val) => {
+			main_node.get_object ().set_boolean_member (key.to_string (), val);
+		});
+
+		settings.set_string ("http-tree-state", Json.to_string (main_node, false));
 	}
 
 	public void load_filters () {

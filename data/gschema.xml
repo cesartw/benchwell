@@ -36,10 +36,10 @@
 			<summary>HTTP Collection ID</summary>
 			<description>The last http collection id selected</description>
 		</key>
-		<key name="http-item-id" type="x">
-			<default>0</default>
-			<summary>HTTP Item</summary>
-			<description>The last http item id selected</description>
+		<key name="http-tree-state" type="s">
+			<default>"{}"</default>
+			<summary>HTTP tree state</summary>
+			<description>Map of items expanded</description>
 		</key>
 		<key name="db-query-history-limit" type="i">
 			<default>25</default>

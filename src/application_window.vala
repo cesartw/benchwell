@@ -173,6 +173,7 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		Config.settings.set_int (Benchwell.Settings.WINDOW_SIZE_H.to_string (), height);
 		Config.settings.set_int (Benchwell.Settings.WINDOW_POS_X.to_string (), x);
 		Config.settings.set_int (Benchwell.Settings.WINDOW_POS_Y.to_string (), y);
+		Config.save_http_tree_state ();
 
 		return false;
 	}

@@ -144,6 +144,24 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 
 		collections_combo.changed.connect (on_collection_selected);
 		treeview.row_activated.connect (on_load_item);
+		treeview.row_expanded.connect ((iter, path) => {
+			if (selected_collection == null) {
+				return;
+			}
+			GLib.Value val;
+			store.get_value (iter, Benchwell.Http.Columns.ITEM, out val);
+			var item = val as Benchwell.HttpItem;
+
+			Config.http_tree_state.insert (item.id, true);
+		});
+
+		treeview.row_collapsed.connect ((iter, path) => {
+			GLib.Value val;
+			store.get_value (iter, Benchwell.Http.Columns.ITEM, out val);
+			var item = val as Benchwell.HttpItem;
+
+			Config.http_tree_state.remove (item.id);
+		});
 
 		var selected_collection_id = Config.settings.get_int64 (Benchwell.Settings.HTTP_COLLECTION_ID.to_string ());
 		if (selected_collection_id > 0) {
@@ -215,11 +233,6 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 			////////////////
 
 			item.sort = sort;
-			//try {
-				//item.save ();
-			//} catch (Benchwell.ConfigError err) {
-				//stderr.printf ("saving item %s", err.message);
-			//}
 			sort++;
 
 			// should stop iteration
@@ -359,8 +372,6 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		}
 
 		if (selected_item.is_folder) {
-			Config.settings.set_int64 (Benchwell.Settings.HTTP_ITEM_ID.to_string (), selected_item.id);
-
 			var selected_path = store.get_path (iter);
 			if (treeview.is_row_expanded (selected_path)) {
 				treeview.collapse_row (selected_path);
@@ -450,28 +461,21 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 
 	private void load_collection (Benchwell.HttpCollection collection) {
 		store.clear ();
-		var saved_selected_item_id = Config.settings.get_int64 (Benchwell.Settings.HTTP_ITEM_ID.to_string ());
-		build_tree (null, collection.items, saved_selected_item_id);
+		build_tree (null, collection.items);
 	}
 
-	private void build_tree (Gtk.TreeIter? parent, Benchwell.HttpItem[] items, int64 auto_expand = 0) {
+	private void build_tree (Gtk.TreeIter? parent, Benchwell.HttpItem[] items) {
 		foreach (var item in items) {
 			var folder_parent = add_row (item, parent, null);
-
-			if (auto_expand > 0 && item.id == auto_expand) {
-				build_tree (folder_parent, item.items, 0);
-				treeview.get_selection ().select_path (store.get_path (folder_parent)); // not really a folder
-				on_load_item ();
-				if (!item.is_folder)
-					item_activated (item, folder_parent);
-				continue; // on_load_item will build the tree for us
-			}
+			var expanded = Config.http_tree_state.get (item.id);
+			if (expanded == null)
+				expanded = false;
 
 			if (item.is_folder) {
-				build_tree (folder_parent, item.items, 0);
+				build_tree (folder_parent, item.items);
 
-				if (auto_expand > 0 && item.id == auto_expand) {
-					treeview.expand_row (store.get_path(folder_parent), false);
+				if (expanded) {
+					treeview.expand_to_path (store.get_path(folder_parent));
 				}
 			}
 		}
