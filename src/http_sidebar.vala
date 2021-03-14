@@ -100,9 +100,9 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		});
 
 		treeview.append_column (name_column);
-
 		treeview.set_model (store);
 		treeview.show ();
+
 		var treeview_sw = new Gtk.ScrolledWindow (null, null);
 		treeview_sw.add (treeview);
 		treeview_sw.show ();
@@ -173,7 +173,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		clone_request_menu.activate.connect (on_clone_request);
 
 		treeview.drag_end.connect (on_resort);
-		// see comment on row_drop_possible
+
 		treeview.drag_motion.connect ( (ctx, x, y, time) => {
 			int cellx, celly;
 			Gtk.TreePath path;
@@ -185,14 +185,15 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 	}
 
 	public void on_resort () {
-		GLib.MainLoop loop = new GLib.MainLoop ();
-		resort.begin ((obj, res) => {
-			loop.quit ();
-		});
-		loop.run ();
+		//GLib.MainLoop loop = new GLib.MainLoop ();
+		//resort.begin ((obj, res) => {
+			//loop.quit ();
+		//});
+		//loop.run ();
+		resort ();
 	}
 
-	public async void resort () {
+	public void resort () {
 		var sort = 0;
 		store.foreach ((model, path, iter) => {
 			GLib.Value val;
@@ -201,8 +202,8 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 
 			// PARENT CHANGE
 			Gtk.TreeIter? parent_iter = null;
-			store.iter_parent (out parent_iter, iter);
-			if (parent_iter != null) {
+			var ok = store.iter_parent (out parent_iter, iter);
+			if (ok) {
 				store.get_value (parent_iter, Benchwell.Http.Columns.ITEM, out val);
 				var parent_item = val.get_object () as Benchwell.HttpItem;
 				if (parent_item != null && parent_item.is_folder) {
@@ -214,13 +215,14 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 			////////////////
 
 			item.sort = sort;
-			try {
-				item.save ();
-			} catch (Benchwell.ConfigError err) {
-				stderr.printf ("saving item %s", err.message);
-			}
+			//try {
+				//item.save ();
+			//} catch (Benchwell.ConfigError err) {
+				//stderr.printf ("saving item %s", err.message);
+			//}
 			sort++;
 
+			// should stop iteration
 			return false;
 		});
 	}
@@ -534,50 +536,49 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 	}
 }
 
-public class Benchwell.HttpStore : Gtk.TreeStore, Gtk.TreeDragDest {
-	// see comment on row_drop_possible
-	public Gtk.TreePath? drop_path;
-
+public class Benchwell.HttpStore : Gtk.TreeStore, Gtk.TreeDragDest, Gtk.TreeModel {
+	public Gtk.TreePath drop_path;
 	public HttpStore.newv (GLib.Type[] types) {
 		Object();
 		set_column_types (types);
 	}
 
-	// NOTE: the event that calls this method seems to bubble throught the tree.
-	//       so even when it says "no drop allowed", the propagation may cause that a
-	//       parent accepts the drop thus moving the item to an unexpected place
-	//
-	//       We need a why to know what's the actual drop zone
 	public bool row_drop_possible (Gtk.TreePath dest, Gtk.SelectionData selection_data) {
-		if (drop_path == null) {
+		var path = dest.copy ();
+
+		// NOTE: this method is called for each index in the path.
+		//       drop_path helps to know which was the actual drop path :shrug:
+		if (drop_path.compare (path) != 0) {
+			drop_path.append_index (0);
+			if (drop_path.compare(path) != 0) {
+				return false;
+			}
+		}
+
+		if (path.get_depth () == 0) {
 			return false;
 		}
 
-		Gtk.TreeIter iter;
-		GLib.Value val;
-		Benchwell.HttpItem? item = null;
-
-		Gtk.TreePath path; // item being dragged
-		Gtk.tree_get_row_drag_data (selection_data, null, out path);
-
-		var ok = get_iter (out iter, dest);
-		if (!ok) {
-			dest.up ();
-			ok = get_iter (out iter, dest);
+		// dropping between items. must make sure the parent is a folder
+		var indices = path.get_indices ();
+		if (indices[indices.length -1] == 0) {
+			var ok = path.up ();
 			if (!ok) {
-				return false;
+				return false; //not never reach this point as depth is checked previously
 			}
-
-			get_value (iter, Benchwell.Http.Columns.ITEM, out val);
-
-			item = val.get_object () as Benchwell.HttpItem;
-			if (item == null) {
-				return false;
-			}
-
-			return item.is_folder;
 		}
 
-		return drop_path.get_depth () == dest.get_depth ();
+		// we only care the drop area is a folder
+		Gtk.TreeIter iter;
+		var ok = get_iter (out iter, path);
+		if (!ok) {
+			return false;
+		}
+
+		GLib.Value val;
+		get_value (iter, Benchwell.Http.Columns.ITEM, out val);
+
+		var drop_item = val as Benchwell.HttpItem;
+		return drop_item.is_folder;
 	}
 }
