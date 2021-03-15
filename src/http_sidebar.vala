@@ -130,7 +130,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		delete_menu = new Benchwell.MenuItem(_("Delete"), "close");
 		delete_menu.show ();
 
-		edit_menu = new Benchwell.MenuItem(_("Edit"), "config");
+		edit_menu = new Benchwell.MenuItem(_("Rename"), "config");
 		edit_menu.show ();
 
 		menu.add (add_request_menu);
@@ -294,41 +294,46 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		Gtk.TreeIter? parent_iter = null;
 		Gtk.TreeIter? sibling_iter = null;
 		GLib.Value val;
-		Benchwell.HttpItem? parent_item = null;
+		Benchwell.HttpItem? selected_item = null;
 		var item = new Benchwell.HttpItem ();
 
-		treeview.get_path_at_pos (cursor_x, cursor_y, out path, null, out cell_x, out cell_y);
-		if (path != null) {
-			var ok = store.get_iter (out parent_iter, path);
+		var ok = treeview.get_path_at_pos (cursor_x, cursor_y, out path, null, out cell_x, out cell_y);
+		if (ok) {
+			ok = store.get_iter (out parent_iter, path);
 			if (ok) {
 				store.get_value (parent_iter, Benchwell.Http.Columns.ITEM, out val);
-				parent_item = val.get_object () as Benchwell.HttpItem;
-
-				if (!parent_item.is_folder) {
-					sibling_iter = parent_iter;
-					store.iter_parent (out parent_iter, parent_iter);
-					store.get_value (parent_iter, Benchwell.Http.Columns.ITEM, out val);
-					parent_item = val.get_object () as Benchwell.HttpItem;
-					item.parent_id = parent_item.id;
-				}
+				selected_item = val.get_object () as Benchwell.HttpItem;
 			}
 		}
 
 		item.touch_without_save (() => {
 			item.is_folder = is_folder;
+			if (selected_item != null) {
+				if (selected_item.is_folder) {
+					item.parent_id = selected_item.id;
+				 } else {
+					sibling_iter = parent_iter;
+					store.iter_parent (out parent_iter, parent_iter);
+				}
+			}
+
 			try {
 				selected_collection.add_item (item);
 			} catch (ConfigError err) {
 				stderr.printf (err.message);
 				return;
 			}
+
 		});
 
 		var iter = add_row (item, parent_iter, sibling_iter);
-		path = store.get_path (iter);
+
 		name_renderer.editable = true;
+		path = store.get_path (iter);
 		treeview.expand_to_path (path);
 		treeview.set_cursor (path, name_column, true);
+		if (item.is_folder)
+			item_activated (item, iter);
 		return;
 	}
 
