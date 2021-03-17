@@ -314,6 +314,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		sidebar.item_removed.connect (on_item_removed);
 
 		address.send_btn.btn.clicked.connect (on_send);
+		address.send_btn.menu_btn.activate.connect (on_save_as);
 		//address.save_btn.clicked.connect (on_save);
 
 		address.changed.connect (on_request_changed);
@@ -428,6 +429,10 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			send ();
 			overlay.stop ();
 		//});
+	}
+
+	private void on_save_as () {
+		print ("=======saveas\n");
 	}
 
 	// https://github.com/giuliopaci/ValaBindingsDevelopment/blob/master/libcurl-example.vala
@@ -685,10 +690,11 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		});
 		response_headers.get_buffer ().insert (ref iter, "\n", 1);
 
-		response.get_buffer ().get_end_iter (out iter);
-		switch (content_type) {
-			case "application/json":
-				if ( raw_data != "" ) {
+		Gtk.TextIter start_iter;
+		response.get_buffer ().get_start_iter (out start_iter);
+		if ( raw_data != "" ) {
+			switch (content_type) {
+				case "application/json":
 					var json = new Json.Parser ();
 					var generator = new Json.Generator ();
 					generator.indent = 4;
@@ -697,20 +703,24 @@ public class Benchwell.Http.Http : Gtk.Paned {
 						json.load_from_data (raw_data);
 					} catch (GLib.Error err) {
 						stderr.printf (err.message);
-						response.get_buffer ().insert_text (ref iter, raw_data, raw_data.length);
+						response.get_buffer ().insert_text (ref start_iter, raw_data, raw_data.length);
 						return;
 					}
 					generator.set_root (json.get_root ());
 
 					var body = generator.to_data (null);
-					response.get_buffer ().insert_text (ref iter, body, body.length);
+					response.get_buffer ().insert_text (ref start_iter, body, body.length);
 					response.set_language ("json");
-				}
-				break;
-			default:
-				response.get_buffer ().insert_text (ref iter, raw_data, raw_data.length);
-				response.set_language (null);
-				break;
+					break;
+				default:
+					response.set_language (null);
+					response.get_buffer ().insert_text (ref start_iter, raw_data, raw_data.length);
+					break;
+			}
+		} else {
+			Gtk.TextIter end_iter;
+			response.get_buffer ().get_end_iter (out end_iter);
+			response.get_buffer ().delete (ref start_iter, ref end_iter);
 		}
 
 		if (raw_data.length < 1024) {

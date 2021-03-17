@@ -240,20 +240,18 @@ public class Benchwell.Database.Data : Gtk.Paned {
 			}
 		});
 
-		result_view.table.delete_record.connect ( () => {
+		result_view.table.delete_record.connect ((data) => {
 			result_view.infobar.hide ();
 
-			var data = result_view.table.get_selected_data ();
-			if (data == null) {
-				return;
-			}
 			try {
 				service.connection.delete_record (service.table_def.name, service.columns, data);
-				result_view.table.delete_selected_row ();
+				//result_view.table.delete_selected_row ();
 			} catch (Benchwell.Error err) {
 				result_view.show_alert (err.message);
-				return;
+				return false;
 			}
+
+			return true;
 		});
 
 		//result_view.table.btn_delete_row.clicked.connect (() => {

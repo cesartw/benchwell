@@ -414,14 +414,14 @@ public class Benchwell._Config : Object {
 		if (filters == null)
 			return null;
 
+		if (!filters.get_object ().has_member (info.id.to_string ()))
+			return null;
+
 		var conn_node = filters.get_object ().get_object_member (info.id.to_string ());
-		if (conn_node == null)
+		if (!conn_node.has_member (table_name))
 			return null;
 
 		var table_node = conn_node.get_array_member (table_name);
-		if (table_node == null)
-			return null;
-
 		table_node.foreach_element ((array, index, node) => {
 			result += node.get_string ();
 		});

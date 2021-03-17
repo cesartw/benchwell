@@ -32,7 +32,7 @@ public class Benchwell.Database.Table : Gtk.Box {
 	public Benchwell.Database.Conditions conditions;
 
 	public signal void field_changed (Benchwell.ColDef[] column, string[] row);
-	public signal void delete_record ();
+	public signal bool delete_record (string[]? data);
 
 	public Table (Benchwell.ApplicationWindow window, Benchwell.DatabaseService service) {
 		Object (
@@ -313,6 +313,18 @@ public class Benchwell.Database.Table : Gtk.Box {
 		return values;
 	}
 
+	public string[]? get_data_at (Gtk.TreeIter iter) {
+		var values = new string[service.columns.length];
+		for (var i = 0; i < service.columns.length; i++) {
+			GLib.Value val;
+			store.get_value (iter, i, out val);
+
+			values[i] = val.get_string ();
+		}
+
+		return values;
+	}
+
 	public void delete_selected_row () {
 		var selection = table.get_selection ();
 		var tm = store as Gtk.TreeModel;
@@ -466,15 +478,33 @@ public class Benchwell.Database.Table : Gtk.Box {
 	}
 
 	private void delete_rows () {
-		delete_record ();
+		GLib.List<Gtk.TreeRowReference> references = null;
+		table.get_selection ().get_selected_rows (null).foreach((path) => {;
+			references.append(new Gtk.TreeRowReference (store, path));
+		});
 
-		var selection = table.get_selection ();
-		selection.selected_foreach ((model, path, iter) => {
+		references.foreach ((tref) => {
+			var path = tref.get_path ();
+			if (path == null)
+				return;
+
+			Gtk.TreeIter iter;
+			var ok = store.get_iter (out iter, path);
+			if (!ok)
+				return;
+
 			GLib.Value val;
 			store.get_value (iter, (int) service.columns.length, out val);
+
+			// new unsaved record
 			if (val.get_int () == 1) {
-				delete_selected_row ();
-				table.unselect_all ();
+				store.remove (ref iter);
+				return;
+			}
+
+			var data = get_data_at (iter);
+			if (delete_record (data)) {
+				store.remove (ref iter);
 			}
 		});
 	}
