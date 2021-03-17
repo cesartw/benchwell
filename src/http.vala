@@ -169,6 +169,13 @@ private size_t ReadHeaderCallback (char *dest, size_t size, size_t nmemb, void *
 	return size * nmemb;
 }
 
+public class Benchwell.HttpResult : Object {
+	public string Body;
+	public HashTable<string, string> Headers;
+	public int Status;
+	public int64 Duration;
+}
+
 public class Benchwell.Http.Http : Gtk.Paned {
 	public Benchwell.ApplicationWindow   window { get; construct; }
 	public string                        title  { get; set; }
@@ -417,17 +424,15 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		sidebar.store.set_value (item_iter, Benchwell.Http.Columns.ITEM, item);
 	}
 
-	private void on_send () {
-		overlay.start ();
-
-		//var task = new GLib.Task (this, null, (obj, res) => {});
-
-		//task.run_in_thread ((t, source, data, cancellable) => {
-			//var panel = source as Benchwell.Http.Http;
-			//panel.send ();
-			//panel.overlay.stop ();
-			send ();
-			overlay.stop ();
+	private void send () {
+		//send.begin ((obj, res) => {
+			//try {
+				//var result = send.end (res);
+				//set_response (result.Status, result.Body , result.Headers, result.Duration);
+			//} catch (ThreadError e) {
+				//stderr.printf (@"performing request $(e.message)");
+			//}
+			//overlay.stop ();
 		//});
 	}
 
@@ -436,7 +441,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	}
 
 	// https://github.com/giuliopaci/ValaBindingsDevelopment/blob/master/libcurl-example.vala
-	public void send () {
+	public void on_send () {
 		response_headers.get_buffer ().set_text ("", 0);
 		response.get_buffer ().set_text ("", 0);
 
@@ -468,34 +473,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			builder.prepend ("&");
 		url += builder.str;
 
-		switch (method) {
-			case "HEAD":
-				handle.setopt (Curl.Option.HTTPGET, true);
-				handle.setopt (Curl.Option.CUSTOMREQUEST, "HEAD");
-				break;
-			case "GET":
-				handle.setopt (Curl.Option.HTTPGET, true);
-				break;
-			case "POST":
-				handle.setopt (Curl.Option.POST, true);
-				break;
-			case "PATCH":
-				handle.setopt (Curl.Option.POST, true);
-				handle.setopt (Curl.Option.CUSTOMREQUEST, "PATCH");
-				break;
-			case "DELETE":
-				handle.setopt (Curl.Option.POST, true);
-				handle.setopt (Curl.Option.CUSTOMREQUEST, "DELETE");
-				break;
-		}
-
-		handle.setopt (Curl.Option.URL, url);
-		handle.setopt (Curl.Option.FOLLOWLOCATION, true);
-
-		buffer_s tmp = buffer_s(){ buffer = new uchar[0] };
-		handle.setopt(Curl.Option.WRITEFUNCTION, ReadResponseCallback);
-		handle.setopt(Curl.Option.WRITEDATA, ref tmp);
-
 		keys = {};
 		values = {};
 		headers.get_kvs (out keys, out values);
@@ -505,7 +482,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			var val = Config.environment.interpolate (values[i]);
 			headers = Curl.SList.append ((owned) headers, @"$(keys[i]): $(val)");
 		}
-		handle.setopt (Curl.Option.HTTPHEADER, headers);
 
 		// BODY
 		string raw_body = body.get_text ();
@@ -516,40 +492,97 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			size_left = Posix.strlen (raw_body)+1
 		};
 
-		if (raw_body != "") {
-			for (var i = 0; i<raw_body.length;i++){
-				tmp_body.buffer += raw_body[i];
+		overlay.start ();
+		perform.begin (method, url, raw_body, (owned) headers, (obj, res) => {
+			try {
+				var result = perform.end (res);
+				set_response (result.Status, result.Body , result.Headers, result.Duration);
+			} catch (ThreadError e) {
+				stderr.printf (@"performing request $(e.message)");
 			}
-			tmp_body.buffer += 0;
-			handle.setopt (Curl.Option.READFUNCTION, WriteRequestCallback);
-			handle.setopt (Curl.Option.READDATA, ref tmp_body);
-		}
+			overlay.stop ();
+		});
+		//set_response (http_code, (string) content, resp_headers, duration);
+	}
 
-		var resp_headers = new HashTable<string,string> (str_hash, str_equal);
-		handle.setopt (Curl.Option.HEADERFUNCTION, ReadHeaderCallback);
-		handle.setopt (Curl.Option.HEADERDATA, resp_headers);
+	public async HttpResult perform (string method, string url, string body, owned Curl.SList headers) {
+		SourceFunc callback = perform.callback;
+		HttpResult result = new HttpResult ();
 
+		ThreadFunc<bool> run = () => {
+			var handle = new Curl.EasyHandle ();
 
-		// only connects to the host
-		var now = get_real_time ();
-		var code = handle.perform ();
-		var then = get_real_time ();
-		switch (code) {
-			case Curl.Code.OK:
-				int http_code;
-				handle.getinfo(Curl.Info.RESPONSE_CODE, out http_code);
-				var content = (string)tmp.buffer;
-				var duration = then - now;
-				set_response (http_code, (string) content, resp_headers, duration);
-				break;
-			case Curl.Code.URL_MALFORMAT:
-				stderr.printf (@"========$(url)\n");
-				break;
-			default:
-				stderr.printf (@"========$((int)code)\n");
-				break;
-		}
-		//handle.cleanup ();
+			switch (method) {
+				case "HEAD":
+					handle.setopt (Curl.Option.HTTPGET, true);
+					handle.setopt (Curl.Option.CUSTOMREQUEST, "HEAD");
+					break;
+				case "GET":
+					handle.setopt (Curl.Option.HTTPGET, true);
+					break;
+				case "POST":
+					handle.setopt (Curl.Option.POST, true);
+					break;
+				case "PATCH":
+					handle.setopt (Curl.Option.POST, true);
+					handle.setopt (Curl.Option.CUSTOMREQUEST, "PATCH");
+					break;
+				case "DELETE":
+					handle.setopt (Curl.Option.POST, true);
+					handle.setopt (Curl.Option.CUSTOMREQUEST, "DELETE");
+					break;
+			}
+
+			handle.setopt (Curl.Option.URL, url);
+			handle.setopt (Curl.Option.FOLLOWLOCATION, true);
+			handle.setopt (Curl.Option.HTTPHEADER, headers);
+
+			buffer_s tmp = buffer_s(){ buffer = new uchar[0] };
+			handle.setopt(Curl.Option.WRITEFUNCTION, ReadResponseCallback);
+			handle.setopt(Curl.Option.WRITEDATA, ref tmp);
+
+			var resp_headers = new HashTable<string, string> (str_hash, str_equal);
+			handle.setopt (Curl.Option.HEADERFUNCTION, ReadHeaderCallback);
+			handle.setopt (Curl.Option.HEADERDATA, resp_headers);
+
+			buffer_s2 tmp_body = buffer_s2 () {
+				buffer = new uchar[0],
+				size_left = Posix.strlen (body)+1
+			};
+			if (body != "") {
+				for (var i = 0; i < body.length; i++){
+					tmp_body.buffer += body[i];
+				}
+				tmp_body.buffer += 0;
+				handle.setopt (Curl.Option.READFUNCTION, WriteRequestCallback);
+				handle.setopt (Curl.Option.READDATA, ref tmp_body);
+			}
+
+			var then = get_real_time ();
+			var code = handle.perform ();
+			var now = get_real_time ();
+
+			switch (code) {
+				case Curl.Code.OK:
+					handle.getinfo(Curl.Info.RESPONSE_CODE, out result.Status);
+					result.Body = (string)tmp.buffer;
+					result.Duration = now - then;
+					result.Headers = resp_headers;
+					break;
+				case Curl.Code.URL_MALFORMAT:
+					stderr.printf (@"========$(url)\n");
+					break;
+				default:
+					stderr.printf (@"========$((int)code)\n");
+					break;
+			}
+
+			Idle.add((owned) callback);
+			return true;
+		};
+		new Thread<bool>("benchwell-http", run);
+		yield;
+		return result;
 	}
 
 	private void on_item_activated (Benchwell.HttpItem item, Gtk.TreeIter iter) {
