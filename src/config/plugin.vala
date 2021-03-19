@@ -269,6 +269,21 @@ public class Benchwell.BuiltinPlugin : Object, Benchwell.Plugin {
 		});
 		/////////
 
+		// ENCODE URL
+		plugins += new Benchwell.BuiltinPlugin("url_encode", (parameters) => {
+			if (parameters.length == 0) {
+				return "";
+			}
+			if (parameters[0].type () != GLib.Type.STRING) {
+				return "";
+			}
+
+			var handle = new Curl.EasyHandle ();
+			var s = parameters[0].get_string ();
+			return handle.escape (s, s.length);
+		});
+		/////////
+
 		return plugins;
 	}
 }

@@ -5,8 +5,8 @@ public class Benchwell.Environment : Object {
 
 	public signal void variable_added (Benchwell.EnvVar envvar);
 
-	public Regex var_escape_regex  = /({{\s*([a-zA-Z0-9]+)\s*}})/;
-	public Regex func_escape_regex = /({%\s*([a-zA-Z0-9]+)\s*(.*)%})/;
+	public Regex var_escape_regex  = /({{\s*([a-zA-Z0-9_]+)\s*}})/;
+	public Regex func_escape_regex = /({%\s*([a-zA-Z0-9_]+)\s*(.*)%})/;
 
 	private bool no_auto_save;
 

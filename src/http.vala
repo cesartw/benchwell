@@ -432,18 +432,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		sidebar.store.set_value (item_iter, Benchwell.Http.Columns.ITEM, item);
 	}
 
-	private void send () {
-		//send.begin ((obj, res) => {
-			//try {
-				//var result = send.end (res);
-				//set_response (result.Status, result.Body , result.Headers, result.Duration);
-			//} catch (ThreadError e) {
-				//stderr.printf (@"performing request $(e.message)");
-			//}
-			//overlay.stop ();
-		//});
-	}
-
 	private void on_save_as () {
 		print ("=======saveas\n");
 	}
@@ -493,8 +481,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 		// BODY
 		string raw_body = body.get_text ();
-		raw_body = Config.environment.interpolate_variables (raw_body);
-		raw_body = Config.environment.interpolate_functions (raw_body);
+		raw_body = Config.environment.interpolate (raw_body);
 		buffer_s2 tmp_body = buffer_s2 () {
 			buffer = new uchar[0],
 			size_left = Posix.strlen (raw_body)+1
