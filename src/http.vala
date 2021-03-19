@@ -174,6 +174,14 @@ public class Benchwell.HttpResult : Object {
 	public HashTable<string, string> Headers;
 	public int Status;
 	public int64 Duration;
+
+	public string headers_string () {
+		var builder = new StringBuilder ();
+		Headers.foreach ((key, val) => {
+			builder.append (@"$key: $val");
+		});
+		return builder.str;
+	}
 }
 
 public class Benchwell.Http.Http : Gtk.Paned {
@@ -496,13 +504,14 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		perform.begin (method, url, raw_body, (owned) headers, (obj, res) => {
 			try {
 				var result = perform.end (res);
-				set_response (result.Status, result.Body , result.Headers, result.Duration);
+				item.response_body = set_response (result);
+				item.response_headers = result.headers_string();
+				item.save_response ();
 			} catch (ThreadError e) {
 				stderr.printf (@"performing request $(e.message)");
 			}
 			overlay.stop ();
 		});
-		//set_response (http_code, (string) content, resp_headers, duration);
 	}
 
 	public async HttpResult perform (string method, string url, string body, owned Curl.SList headers) {
@@ -609,7 +618,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 				body.get_buffer ().text = "";
 		});
 
-		response.get_buffer ().text = "";
+		response.get_buffer ().text = item.response_body;
+		response_headers.get_buffer ().text = item.response_headers;
 		headers.clear ();
 		query_params.clear ();
 
@@ -706,26 +716,27 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		}
 	}
 
-	public void set_response(uint status, string? raw_data, HashTable<string, string> resp_headers, int64 duration) {
-		var content_type_header = resp_headers.get("Content-Type");
+	public string set_response (HttpResult result) {
+		var content_type_header = result.Headers.get("Content-Type");
 		string content_type = "";
 		if (content_type_header != null)
 			content_type = content_type_header.split(";")[0];
 
-		if (raw_data == null)
-			raw_data = "";
+		if (result.Body == null)
+			result.Body = "";
 
 		Gtk.TextIter iter;
 		response_headers.get_buffer ().get_end_iter (out iter);
-		resp_headers.foreach ((key, val) => {
+		result.Headers.foreach ((key, val) => {
 			var line = @"$key: $val";
 			response_headers.get_buffer ().insert (ref iter, line, line.length);
 		});
 		response_headers.get_buffer ().insert (ref iter, "\n", 1);
 
+		var formatted_body = "";
 		Gtk.TextIter start_iter;
 		response.get_buffer ().get_start_iter (out start_iter);
-		if ( raw_data != "" ) {
+		if ( result.Body != "" ) {
 			switch (content_type) {
 				case "application/json":
 					var json = new Json.Parser ();
@@ -733,21 +744,22 @@ public class Benchwell.Http.Http : Gtk.Paned {
 					generator.indent = 4;
 					generator.pretty = true;
 					try {
-						json.load_from_data (raw_data);
+						json.load_from_data (result.Body);
+						generator.set_root (json.get_root ());
+
+						formatted_body = generator.to_data (null);
+						response.get_buffer ().insert_text (ref start_iter, formatted_body, formatted_body.length);
+						response.set_language ("json");
 					} catch (GLib.Error err) {
 						stderr.printf (err.message);
-						response.get_buffer ().insert_text (ref start_iter, raw_data, raw_data.length);
-						return;
+						formatted_body = result.Body;
+						response.get_buffer ().insert_text (ref start_iter, formatted_body, formatted_body.length);
 					}
-					generator.set_root (json.get_root ());
-
-					var body = generator.to_data (null);
-					response.get_buffer ().insert_text (ref start_iter, body, body.length);
-					response.set_language ("json");
 					break;
 				default:
 					response.set_language (null);
-					response.get_buffer ().insert_text (ref start_iter, raw_data, raw_data.length);
+					formatted_body = result.Body;
+					response.get_buffer ().insert_text (ref start_iter, formatted_body, formatted_body.length);
 					break;
 			}
 		} else {
@@ -756,34 +768,35 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			response.get_buffer ().delete (ref start_iter, ref end_iter);
 		}
 
-		if (raw_data.length < 1024) {
-			response_size_label.set_text (@"$(raw_data.length)B");
+		if (result.Body.length < 1024) {
+			response_size_label.set_text (@"$(result.Body.length)B");
 		} else {
-			response_size_label.set_text (@"$(raw_data.length/1024)kB");
+			response_size_label.set_text (@"$(result.Body.length/1024)kB");
 		}
 
-		var code = Benchwell.Http.CODES.parse (status);
+		var code = Benchwell.Http.CODES.parse (result.Status);
 		if (code == null) {
-			status_label.set_text (@"$(status)");
+			status_label.set_text (@"$(result.Status)");
 		} else {
-			status_label.set_text (@"$(status) $(code)");
+			status_label.set_text (@"$(result.Status) $(code)");
 		}
 
 		status_label.get_style_context ().remove_class("ok");
 		status_label.get_style_context ().remove_class("warning");
 		status_label.get_style_context ().remove_class("bad");
 
-		if (status >= 200 && status < 300) {
+		if (result.Status >= 200 && result.Status < 300) {
 			status_label.get_style_context ().add_class("ok");
 		}
-		if (status >= 300 && status < 500) {
+		if (result.Status >= 300 && result.Status < 500) {
 			status_label.get_style_context ().add_class("warning");
 		}
-		if (status >= 500) {
+		if (result.Status >= 500) {
 			status_label.get_style_context ().add_class("bad");
 		}
 
-		duration_label.set_text (@"$(duration/1000)ms");
+		duration_label.set_text (@"$(result.Duration/1000)ms");
+		return formatted_body;
 	}
 
 	private void normalize_item (Benchwell.HttpItem item){

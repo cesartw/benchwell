@@ -195,6 +195,9 @@ public class Benchwell.HttpItem : Object {
 	public Benchwell.HttpKv[] headers;
 	public Benchwell.HttpKv[] query_params;
 
+	public string             response_headers { get; set; }
+	public string             response_body { get; set; }
+
 	internal bool                  loaded;
 	private bool no_auto_save;
 
@@ -398,6 +401,55 @@ public class Benchwell.HttpItem : Object {
 		save_body ();
 	}
 
+	public void save_response () throws Benchwell.ConfigError {
+		no_auto_save = true;
+		if (mime == null && is_folder) {
+			mime = "";
+		}
+		no_auto_save = false;
+
+		Sqlite.Statement stmt;
+		string prepared_query_str = "";
+
+		if (id > 0) {
+			 prepared_query_str = """
+				UPDATE http_items
+				SET response_body = $RESPONSE_BODY, response_headers = $RESPONSE_HEADERS
+				WHERE ID = $ID
+			""";
+		}
+
+		var ec = Config.db.prepare_v2 (prepared_query_str, prepared_query_str.length, out stmt);
+		if (ec != Sqlite.OK) {
+			stderr.printf ("Error: %d: %s\n", Config.db.errcode (), Config.db.errmsg ());
+			return;
+		}
+
+		int param_position;
+		if (id > 0) {
+			param_position = stmt.bind_parameter_index ("$ID");
+			stmt.bind_int64 (param_position, id);
+		}
+
+		param_position = stmt.bind_parameter_index ("$RESPONSE_BODY");
+		stmt.bind_text (param_position, response_body);
+
+		param_position = stmt.bind_parameter_index ("$RESPONSE_HEADERS");
+		stmt.bind_text (param_position, response_headers);
+
+		string errmsg = "";
+		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);
+		if ( ec != Sqlite.OK ){
+			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
+			stderr.printf ("ERR: %s\n", errmsg);
+			throw new ConfigError.SAVE_ENVVAR(errmsg);
+		}
+
+		if (id == 0) {
+			id = Config.db.last_insert_rowid ();
+		}
+	}
+
 	public Benchwell.HttpKv add_header (string key = "", string val = "") throws ConfigError {
 		var kv = new Benchwell.HttpKv ();
 		kv.touch_without_save (() => {
@@ -506,7 +558,8 @@ public class Benchwell.HttpItem : Object {
 			string errmsg = "";
 
 			// request
-			var query = """SELECT ifnull(method,"GET"), ifnull(url,""), ifnull(body, ""), ifnull(mime,"")
+			var query = """SELECT ifnull(method,"GET"), ifnull(url,""), ifnull(body, ""), ifnull(mime,""),
+								 ifnull(response_body, ""), ifnull(response_headers, "")
 					FROM http_items
 					WHERE id = %lld""".printf (id);
 			var ec = Config.db.exec (query, (n_columns, values, column_names) => {
@@ -514,6 +567,8 @@ public class Benchwell.HttpItem : Object {
 				url = values[1];
 				body = values[2];
 				mime = values[3];
+				response_body = values[4];
+				response_headers = values[5];
 				return 0;
 			}, out errmsg);
 			if ( ec != Sqlite.OK ){

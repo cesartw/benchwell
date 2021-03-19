@@ -7,7 +7,6 @@ public interface Benchwell.Importer : Object {
 }
 
 public class Benchwell.InsomniaImpoter : Benchwell.Importer, Object {
-
 	public class Resource : Object {
 		public string id {get;set;}
 		public string resource_type {get;set;}

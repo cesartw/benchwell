@@ -58,7 +58,10 @@ CREATE TABLE "http_items" (
 	method TEXT DEFAULT "",
 	url    TEXT DEFAULT "",
 	body   TEXT DEFAULT "",
-	mime   TEXT DEFAULT "json"
+	mime   TEXT DEFAULT "json",
+
+	response_headers TEXT DEFAULT "",
+	response_body TEXT DEFAULT ""
 );
 
 CREATE TRIGGER increment_http_collections_count AFTER INSERT ON http_items
