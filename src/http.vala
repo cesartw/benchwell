@@ -169,6 +169,14 @@ private size_t ReadHeaderCallback (char *dest, size_t size, size_t nmemb, void *
 	return size * nmemb;
 }
 
+private int RequestProgressCallback (void *clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
+	var canceled = ((bool*) clientp);
+	if (*canceled) {
+		return 1;
+	}
+	return 0;
+}
+
 public class Benchwell.HttpResult : Object {
 	public string Body;
 	public HashTable<string, string> Headers;
@@ -487,13 +495,14 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			size_left = Posix.strlen (raw_body)+1
 		};
 
-		overlay.start ();
 		perform.begin (method, url, raw_body, (owned) headers, (obj, res) => {
 			try {
 				var result = perform.end (res);
-				item.response_body = set_response (result);
-				item.response_headers = result.headers_string();
-				item.save_response ();
+				if (result != null) {
+					item.response_body = set_response (result);
+					item.response_headers = result.headers_string();
+					item.save_response ();
+				}
 			} catch (ThreadError e) {
 				stderr.printf (@"performing request $(e.message)");
 			}
@@ -501,9 +510,15 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		});
 	}
 
-	public async HttpResult perform (string method, string url, string body, owned Curl.SList headers) {
+	public async HttpResult? perform (string method, string url, string body, owned Curl.SList headers) {
+		overlay.start ();
+		bool canceled = false;
+		var cancel_handler_id = overlay.cancel.connect (() => {
+			canceled = true;
+		});
+
 		SourceFunc callback = perform.callback;
-		HttpResult result = new HttpResult ();
+		HttpResult? result = new HttpResult ();
 
 		ThreadFunc<bool> run = () => {
 			var handle = new Curl.EasyHandle ();
@@ -540,6 +555,9 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			var resp_headers = new HashTable<string, string> (str_hash, str_equal);
 			handle.setopt (Curl.Option.HEADERFUNCTION, ReadHeaderCallback);
 			handle.setopt (Curl.Option.HEADERDATA, resp_headers);
+			handle.setopt (Curl.Option.PROGRESSFUNCTION, RequestProgressCallback);
+			handle.setopt (Curl.Option.PROGRESSDATA, ref canceled);
+			handle.setopt (Curl.Option.NOPROGRESS, 0);
 
 			buffer_s2 tmp_body = buffer_s2 () {
 				buffer = new uchar[0],
@@ -568,6 +586,9 @@ public class Benchwell.Http.Http : Gtk.Paned {
 				case Curl.Code.URL_MALFORMAT:
 					stderr.printf (@"========$(url)\n");
 					break;
+				case Curl.Code.ABORTED_BY_CALLBACK:
+					result = null;
+					break;
 				default:
 					stderr.printf (@"========$((int)code)\n");
 					break;
@@ -578,6 +599,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		};
 		new Thread<bool>("benchwell-http", run);
 		yield;
+		overlay.disconnect (cancel_handler_id);
 		return result;
 	}
 
