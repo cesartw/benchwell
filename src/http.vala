@@ -192,6 +192,41 @@ public class Benchwell.HttpResult : Object {
 	}
 }
 
+public class Benchwell.CBNotebookTab : Gtk.Box {
+	public Gtk.ComboBoxText combo;
+	public Gtk.Label label;
+	public bool enabled  { get; set; }
+
+	public CBNotebookTab (string l, bool enabled = false) {
+		Object (
+			orientation: Gtk.Orientation.VERTICAL,
+			spacing: 0
+		);
+		combo = new Gtk.ComboBoxText ();
+		label = new Gtk.Label (l);
+
+		pack_start (combo, true, true, 0);
+		pack_start (label, true, true, 0);
+		combo.changed.connect (() => {
+			label.set_text (combo.get_active_text ());
+		});
+
+		this.enabled = enabled;
+		on_toggle ();
+		notify["enabled"].connect (on_toggle);
+	}
+
+	private void on_toggle () {
+		if (enabled) {
+			combo.show ();
+			label.hide ();
+			return;
+		}
+		combo.hide ();
+		label.show ();
+	}
+}
+
 public class Benchwell.Http.Http : Gtk.Paned {
 	public Benchwell.ApplicationWindow   window { get; construct; }
 	public string                        title  { get; set; }
@@ -201,6 +236,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 	// request
 	public Benchwell.SourceView body;
+	public Benchwell.CBNotebookTab mime_switch;
 	//public Gtk.ComboBoxText     mime;
 	public Benchwell.KeyValues  headers;
 	public Benchwell.KeyValues  query_params;
@@ -247,8 +283,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		query_params = new Benchwell.KeyValues ();
 		query_params.show ();
 
-		var body_label = new Gtk.Label (_("Body"));
-		body_label.show ();
+		//var body_label = new Gtk.Label (_("Body"));
+		//body_label.show ();
 
 		var params_label = new Gtk.Label (_("Params"));
 		params_label.show ();
@@ -256,11 +292,25 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		var headers_label = new Gtk.Label (_("Headers"));
 		headers_label.show ();
 
+		mime_switch = new Benchwell.CBNotebookTab (_("Body"), true);
+		mime_switch.combo.append("plain/text", "Other");
+		mime_switch.combo.append("application/json", "JSON");
+		mime_switch.combo.append("application/xml", "XML");
+		mime_switch.combo.append("multipart/form-data", "Multipart");
+		mime_switch.combo.append("application/x-www-form-urlencoded", "Form URL encoded");
+		mime_switch.combo.append("application/yaml", "YAML");
+		mime_switch.combo.set_active_id ("plain/text");
+		mime_switch.show ();
+
 		var body_notebook = new Gtk.Notebook ();
-		body_notebook.append_page (body_sw, body_label);
+		body_notebook.append_page (body_sw, mime_switch);
 		body_notebook.append_page (query_params, params_label);
 		body_notebook.append_page (headers, headers_label);
 		body_notebook.show ();
+
+		body_notebook.switch_page.connect ((page, page_num) => {
+			mime_switch.enabled = page_num == 0;
+		});
 		//////////
 
 		// response
@@ -333,6 +383,37 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		pack1 (sidebar, false, true);
 		pack2 (overlay, false, true);
 
+		// SIGNALS
+		mime_switch.combo.changed.connect (() => {
+			var found = false;
+			headers.get_children ().foreach ((w) => {
+				var kv = w as Benchwell.KeyValue;
+				if (kv.keyvalue.key.strip ().casefold () == "Content-Type".casefold ()) {
+					kv.entry_val.text = mime_switch.combo.get_active_id ();
+					found = true;
+				}
+			});
+
+			if (!found) {
+				Benchwell.HttpKv? kv = null;
+				if (item != null) {
+					try {
+						kv = item.add_header ();
+					} catch (ConfigError err) {
+						stderr.printf (err.message);
+					}
+				} else {
+					kv = new Benchwell.HttpKv ();
+				}
+
+				kv.key = "Content-Type";
+				kv.val = mime_switch.combo.get_active_id ();
+
+				headers.add (kv);
+			}
+			//body.set_language_by_mime_type (mime_switch.get_active_text ());
+		});
+
 		sidebar.item_activated.connect (on_item_activated);
 		sidebar.item_removed.connect (on_item_removed);
 
@@ -369,6 +450,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			}
 			return new Benchwell.HttpKv ();
 		});
+
 		headers.row_removed.connect ((kvi) => {
 			if (kvi == null) {
 				return;
@@ -418,10 +500,11 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		});
 
 		headers.row_added.connect ((kv) => {
-			if (kv.key.strip () .casefold () == "Content-Type".casefold ()) {
+			if (kv.key.strip ().casefold () == "Content-Type".casefold ()) {
 				body.set_language_by_mime_type (kv.val);
 			}
 		});
+
 		headers.changed.connect (() => {
 			headers.get_children ().foreach ((w) => {
 				var kv = w as Benchwell.KeyValue;
