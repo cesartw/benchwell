@@ -202,6 +202,7 @@ public class Benchwell.CBNotebookTab : Gtk.Box {
 			orientation: Gtk.Orientation.VERTICAL,
 			spacing: 0
 		);
+
 		combo = new Gtk.ComboBoxText ();
 		label = new Gtk.Label (l);
 
@@ -252,6 +253,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 	public Benchwell.HttpItem? item;
 	public Gtk.TreeIter? item_iter;
+
+	private bool loading = false;
 
 	public Http(Benchwell.ApplicationWindow window) {
 		Object(
@@ -385,6 +388,10 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 		// SIGNALS
 		mime_switch.combo.changed.connect (() => {
+			if (loading) {
+				return;
+			}
+
 			var found = false;
 			headers.get_children ().foreach ((w) => {
 				var kv = w as Benchwell.KeyValue;
@@ -410,6 +417,9 @@ public class Benchwell.Http.Http : Gtk.Paned {
 				kv.val = mime_switch.combo.get_active_id ();
 
 				headers.add (kv);
+			}
+			if (item != null) {
+				item.mime = mime_switch.combo.get_active_id ();
 			}
 			//body.set_language_by_mime_type (mime_switch.get_active_text ());
 		});
@@ -687,16 +697,21 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	}
 
 	private void on_item_activated (Benchwell.HttpItem item, Gtk.TreeIter iter) {
+		loading = true;
+
 		this.item = item;
 		this.item_iter = iter;
 		try {
 			this.item.load_full_item ();
 		} catch (ConfigError err) {
 			stderr.printf (err.message);
+			loading = false;
 			return;
 		}
 
 		title = item.name;
+
+		mime_switch.combo.set_active_id (item.mime);
 
 		normalize_item (this.item);
 
@@ -732,6 +747,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		} catch (ConfigError err) {
 			stderr.printf (err.message);
 		}
+		loading = false;
 	}
 
 	private void on_item_removed (Benchwell.HttpItem removed_item) {

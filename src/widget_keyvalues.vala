@@ -9,6 +9,8 @@ public class Benchwell.KeyValues : Gtk.Box {
 			orientation: Gtk.Orientation.VERTICAL,
 			spacing: 5
 		);
+
+		get_style_context ().add_class ("keyvalues");
 	}
 
 	public void get_kvs (out string[] keys, out string[] values) {
@@ -113,6 +115,8 @@ public class Benchwell.KeyValue : Gtk.Box {
 			orientation: Gtk.Orientation.HORIZONTAL,
 			spacing: 5
 		);
+
+		get_style_context ().add_class ("keyvalue");
 
 		entry_key = new Gtk.Entry ();
 		entry_key.placeholder_text = _("Name");
