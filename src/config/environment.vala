@@ -221,6 +221,7 @@ public class Benchwell.EnvVar : Object, Benchwell.KeyValueI {
 	public string key     { get; set; }
 	public string val     { get; set; }
 	public bool   enabled { get; set; }
+	public Benchwell.KEYVALUETYPES kvtype { get; set; }
 	public int    sort    { get; set; }
 	public int64  environment_id;
 
@@ -231,6 +232,7 @@ public class Benchwell.EnvVar : Object, Benchwell.KeyValueI {
 		notify["val"].connect (on_save);
 		notify["enabled"].connect (on_save);
 		notify["sort"].connect (on_save);
+		kvtype = Benchwell.KEYVALUETYPES.String;
 	}
 
 	public void touch_without_save (NoUpdateFunc f) {

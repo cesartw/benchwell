@@ -621,6 +621,8 @@ public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
 	public string key     { get; set; }
 	public string val     { get; set; }
 	public bool   enabled { get; set; }
+	public Benchwell.KEYVALUETYPES kvtype { get; set; }
+
 	public string type; // header | param
 	public int    sort;
 	public int64  http_item_id;
@@ -630,6 +632,7 @@ public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
 		notify["key"].connect (on_save);
 		notify["val"].connect (on_save);
 		notify["enabled"].connect (on_save);
+		kvtype = Benchwell.KEYVALUETYPES.String;
 	}
 
 	private void on_save (Object obj, ParamSpec spec) {
