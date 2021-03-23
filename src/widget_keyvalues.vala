@@ -8,7 +8,7 @@ public class Benchwell.KeyValues : Gtk.Box {
 	public signal void row_added (Benchwell.KeyValueI kvi);
 	public signal void row_removed (Benchwell.KeyValueI kvi);
 
-	public KeyValues (Benchwell.KeyValueTypes types = Benchwell.KeyValueTypes.FILE) {
+	public KeyValues (Benchwell.KeyValueTypes types = Benchwell.KeyValueTypes.STRING) {
 		Object (
 			orientation: Gtk.Orientation.VERTICAL,
 			spacing: 5,
@@ -117,8 +117,7 @@ public class Benchwell.KeyValue : Gtk.Box {
 			enabled_update = true;
 		}
 	}
-	public Benchwell.KeyValueTypes keyvaluetype { get; set; }
-	public int supported_types { get; construct; }
+	public Benchwell.KeyValueTypes supported_types { get; construct; }
 
 	private Gtk.Menu type_menu;
 	private Benchwell.KeyValueI _keyvalue;
@@ -161,9 +160,9 @@ public class Benchwell.KeyValue : Gtk.Box {
 		pack_end (btn_remove, false, false, 0);
 		pack_end (switch_enabled, false, false, 5);
 
-		var string_enabled = (supported_types ^ Benchwell.KeyValueTypes.STRING) != 0;
-		var multi_enabled = (supported_types ^ Benchwell.KeyValueTypes.MULTILINE) != 0;
-		var file_enabled = (supported_types ^ Benchwell.KeyValueTypes.FILE) != 0;
+		var string_enabled = (Benchwell.KeyValueTypes.STRING in supported_types);
+		var multi_enabled = (Benchwell.KeyValueTypes.MULTILINE in supported_types);
+		var file_enabled = (Benchwell.KeyValueTypes.FILE in supported_types);
 
 		Gtk.MenuItem[] menu_opts = {};
 
@@ -203,6 +202,7 @@ public class Benchwell.KeyValue : Gtk.Box {
 				kv.kvtype = Benchwell.KeyValueTypes.FILE;
 			});
 			menu_opts += m;
+			select_file_btn.clicked.connect (on_select_file);
 			sgval.add_widget (select_file_btn);
 		}
 
@@ -255,10 +255,17 @@ public class Benchwell.KeyValue : Gtk.Box {
 
 		if (show_multi) {
 			multi_edit_btn.show ();
+			if (keyvalue.val != null && keyvalue.val != "") {
+				multi_edit_btn.tooltip_text = keyvalue.val;
+			}
 		}
 
 		if (show_file) {
 			select_file_btn.show ();
+			if (keyvalue.val != null && keyvalue.val != "") {
+				select_file_btn.label = _("Selected");
+				select_file_btn.tooltip_text = keyvalue.val;
+			}
 		}
 	}
 
@@ -311,7 +318,31 @@ public class Benchwell.KeyValue : Gtk.Box {
 		var result = dialog.run ();
 		if (result == Gtk.ResponseType.OK) {
 			keyvalue.val = sv.get_buffer ().text;
+			multi_edit_btn.tooltip_text = keyvalue.val;
+			if (entry_val != null) {
+				entry_val.text = keyvalue.val;
+			}
 		}
+		dialog.destroy ();
+	}
+
+	private void on_select_file () {
+		var w = get_toplevel () as Gtk.Window;
+		var dialog = new Gtk.FileChooserDialog (_("Select file"), w,
+											 Gtk.FileChooserAction.OPEN,
+											_("Select"), Gtk.ResponseType.OK,
+											_("Cancel"), Gtk.ResponseType.CANCEL);
+		var resp = (Gtk.ResponseType) dialog.run ();
+
+		if (resp == Gtk.ResponseType.OK) {
+			keyvalue.val = dialog.get_filename ();
+			select_file_btn.label = _("Selected");
+			select_file_btn.tooltip_text = keyvalue.val;
+			if (entry_val != null) {
+				entry_val.text = keyvalue.val;
+			}
+		}
+
 		dialog.destroy ();
 	}
 }

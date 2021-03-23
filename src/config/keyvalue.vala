@@ -1,5 +1,5 @@
+[Flags]
 public enum Benchwell.KeyValueTypes {
-	_,
 	STRING,
 	MULTILINE,
 	FILE

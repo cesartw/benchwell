@@ -286,9 +286,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		query_params = new Benchwell.KeyValues (Benchwell.KeyValueTypes.STRING|Benchwell.KeyValueTypes.MULTILINE);
 		query_params.show ();
 
-		//var body_label = new Gtk.Label (_("Body"));
-		//body_label.show ();
-
 		var params_label = new Gtk.Label (_("Params"));
 		params_label.show ();
 
