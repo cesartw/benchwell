@@ -8,7 +8,8 @@ CREATE TABLE "environment_variables" (
     key            TEXT NOT NULL,
     value          TEXT NOT NULL,
     enabled        BOOLEAN NOT NULL DEFAULT 1 CHECK (enabled IN (0,1)),
-    environment_id INTEGER NOT NULL
+    environment_id INTEGER NOT NULL,
+	kvtype      INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE "db_connections" (
@@ -79,6 +80,7 @@ CREATE TABLE "http_kvs" (
     key           TEXT NOT NULL,
     value         TEXT NOT NULL,
     type          TEXT NOT NULL,
+	kvtype     INTEGER NOT NULL DEFAULT 1,
     http_items_id INTEGER NOT NULL,
     sort          INTEGER NOT NULL,
     enabled       BOOLEAN NOT NULL DEFAULT 1 CHECK (enabled IN (0,1))

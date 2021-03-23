@@ -576,7 +576,7 @@ public class Benchwell.HttpItem : Object {
 			}
 
 			Benchwell.HttpKv[] kvs = {};
-			query = """SELECT id, ifnull(key, ""), ifnull(value, ""), type, sort, enabled, http_items_id
+			query = """SELECT id, ifnull(key, ""), ifnull(value, ""), type, sort, enabled, http_items_id, kvtype
 				FROM http_kvs
 				WHERE http_items_id = %lld
 				ORDER BY sort ASC""".printf (id);
@@ -591,6 +591,7 @@ public class Benchwell.HttpItem : Object {
 					kv.sort = int.parse (values[4]);
 					kv.enabled = values[5] == "1";
 					kv.http_item_id = int64.parse (values[6]);
+					kv.kvtype = (Benchwell.KeyValueTypes)int.parse (values[7]);
 				});
 
 				kvs += kv;
@@ -621,7 +622,7 @@ public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
 	public string key     { get; set; }
 	public string val     { get; set; }
 	public bool   enabled { get; set; }
-	public Benchwell.KEYVALUETYPES kvtype { get; set; }
+	public Benchwell.KeyValueTypes kvtype { get; set; }
 
 	public string type; // header | param
 	public int    sort;
@@ -632,7 +633,7 @@ public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
 		notify["key"].connect (on_save);
 		notify["val"].connect (on_save);
 		notify["enabled"].connect (on_save);
-		kvtype = Benchwell.KEYVALUETYPES.String;
+		notify["kvtype"].connect (on_save);
 	}
 
 	private void on_save (Object obj, ParamSpec spec) {
@@ -676,13 +677,14 @@ public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
 					type = $TYPE,
 					http_items_id = $HTTP_ITEM_ID,
 					sort = $SORT,
-					enabled = $ENABLED
+					enabled = $ENABLED,
+					kvtype = $KVTYPE
 				WHERE ID = $ID
 			""";
 		} else {
 			 prepared_query_str = """
-				INSERT INTO http_kvs(key, value, type, http_items_id, sort, enabled)
-				VALUES($KEY, $VALUE, $TYPE, $HTTP_ITEM_ID, $SORT, $ENABLED)
+				INSERT INTO http_kvs(key, value, type, http_items_id, sort, enabled, kvtype)
+				VALUES($KEY, $VALUE, $TYPE, $HTTP_ITEM_ID, $SORT, $ENABLED, $KVTYPE)
 			""";
 		}
 
@@ -716,6 +718,9 @@ public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
 
 		param_position = stmt.bind_parameter_index ("$ENABLED");
 		stmt.bind_int (param_position, this.enabled ? 1 : 0);
+
+		param_position = stmt.bind_parameter_index ("$KVTYPE");
+		stmt.bind_int (param_position, kvtype);
 
 		string errmsg = "";
 		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);

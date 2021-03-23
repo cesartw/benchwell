@@ -280,10 +280,10 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		body_sw.show ();
 
 		item = new Benchwell.HttpItem ();
-		headers = new Benchwell.KeyValues ();
+		headers = new Benchwell.KeyValues (Benchwell.KeyValueTypes.STRING|Benchwell.KeyValueTypes.MULTILINE);
 		headers.show ();
 
-		query_params = new Benchwell.KeyValues ();
+		query_params = new Benchwell.KeyValues (Benchwell.KeyValueTypes.STRING|Benchwell.KeyValueTypes.MULTILINE);
 		query_params.show ();
 
 		//var body_label = new Gtk.Label (_("Body"));

@@ -96,7 +96,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 		var sql = service.connection.get_create_table (tabledef.name);
 		var dialog = new Gtk.Dialog.with_buttons (@"$(tabledef.name) schema", window,
 								Gtk.DialogFlags.DESTROY_WITH_PARENT|Gtk.DialogFlags.MODAL,
-								"Ok", Gtk.ResponseType.OK);
+								_("Ok"), Gtk.ResponseType.OK);
 		dialog.set_default_size (400, 400);
 
 		var sv = new Benchwell.SourceView ();

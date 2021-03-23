@@ -1,7 +1,8 @@
-public enum Benchwell.KEYVALUETYPES {
-	String,
-	File,
-	Multiline
+public enum Benchwell.KeyValueTypes {
+	_,
+	STRING,
+	MULTILINE,
+	FILE
 }
 
 public interface Benchwell.KeyValueI : Object {
@@ -9,6 +10,6 @@ public interface Benchwell.KeyValueI : Object {
 	public abstract string key                     { get; set; }
 	public abstract string val                     { get; set; }
 	public abstract bool   enabled                 { get; set; }
-	public abstract Benchwell.KEYVALUETYPES kvtype { get; set; }
+	public abstract Benchwell.KeyValueTypes kvtype { get; set; }
 }
 

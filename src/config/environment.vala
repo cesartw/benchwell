@@ -221,7 +221,7 @@ public class Benchwell.EnvVar : Object, Benchwell.KeyValueI {
 	public string key     { get; set; }
 	public string val     { get; set; }
 	public bool   enabled { get; set; }
-	public Benchwell.KEYVALUETYPES kvtype { get; set; }
+	public Benchwell.KeyValueTypes kvtype { get; set; }
 	public int    sort    { get; set; }
 	public int64  environment_id;
 
@@ -232,7 +232,7 @@ public class Benchwell.EnvVar : Object, Benchwell.KeyValueI {
 		notify["val"].connect (on_save);
 		notify["enabled"].connect (on_save);
 		notify["sort"].connect (on_save);
-		kvtype = Benchwell.KEYVALUETYPES.String;
+		notify["kvtype"].connect (on_save);
 	}
 
 	public void touch_without_save (NoUpdateFunc f) {
@@ -263,13 +263,13 @@ public class Benchwell.EnvVar : Object, Benchwell.KeyValueI {
 		if (this.id > 0) {
 			 prepared_query_str = """
 				UPDATE environment_variables
-					SET key = $KEY, value = $VALUE, enabled = $ENABLED
+					SET key = $KEY, value = $VALUE, enabled = $ENABLED, kvtype = $KVTYPE
 				WHERE ID = $ID
 			""";
 		} else {
 			 prepared_query_str = """
-				INSERT INTO environment_variables(key, value, enabled, environment_id)
-				VALUES($KEY, $VALUE, $ENABLED, $ENVIRONMENT_ID)
+				INSERT INTO environment_variables(key, value, enabled, environment_id, kvtype)
+				VALUES($KEY, $VALUE, $ENABLED, $ENVIRONMENT_ID, $KVTYPE)
 			""";
 		}
 
@@ -296,6 +296,9 @@ public class Benchwell.EnvVar : Object, Benchwell.KeyValueI {
 
 		param_position = stmt.bind_parameter_index ("$ENABLED");
 		stmt.bind_int (param_position, this.enabled ? 1 : 0);
+
+		param_position = stmt.bind_parameter_index ("$KVTYPE");
+		stmt.bind_int (param_position, this.kvtype);
 
 		string errmsg = "";
 		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);

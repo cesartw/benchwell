@@ -133,7 +133,7 @@ public class Benchwell.EnvironmentPanel : Gtk.Box {
 		var vbox = new Gtk.Box (Gtk.Orientation.VERTICAL, 5);
 		vbox.show ();
 
-		keyvalues = new Benchwell.KeyValues ();
+		keyvalues = new Benchwell.KeyValues (Benchwell.KeyValueTypes.STRING|Benchwell.KeyValueTypes.MULTILINE);
 		keyvalues.row_wanted.connect (on_row_added);
 		if (env.variables.length > 0) {
 			keyvalues.clear ();

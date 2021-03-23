@@ -4,9 +4,9 @@ public class Benchwell.KeyValues : Gtk.Box {
 	public signal void row_added (Benchwell.KeyValueI kvi);
 	public signal void row_removed (Benchwell.KeyValueI kvi);
 
-	public Benchwell.KEYVALUETYPES supported_types { get; construct; }
+	public Benchwell.KeyValueTypes supported_types { get; construct; }
 
-	public KeyValues (Benchwell.KEYVALUETYPES types = Benchwell.KEYVALUETYPES.String) {
+	public KeyValues (Benchwell.KeyValueTypes types = Benchwell.KeyValueTypes.FILE) {
 		Object (
 			orientation: Gtk.Orientation.VERTICAL,
 			spacing: 5,
@@ -36,7 +36,7 @@ public class Benchwell.KeyValues : Gtk.Box {
 	}
 
 	public new void add (Benchwell.KeyValueI kvi) {
-		var kv = new Benchwell.KeyValue (kvi);
+		var kv = new Benchwell.KeyValue (kvi, supported_types);
 		kv.show ();
 
 		kv.entry_key.grab_focus.connect (() => { add_blank (kv); });
@@ -110,7 +110,7 @@ public class Benchwell.KeyValue : Gtk.Box {
 			enabled_update = true;
 		}
 	}
-	public Benchwell.KEYVALUETYPES keyvaluetype { get; set; }
+	public Benchwell.KeyValueTypes keyvaluetype { get; set; }
 	public int supported_types { get; construct; }
 
 	private Gtk.Menu type_menu;
@@ -119,7 +119,7 @@ public class Benchwell.KeyValue : Gtk.Box {
 
 	public signal void changed ();
 
-	public KeyValue (Benchwell.KeyValueI kv, Benchwell.KEYVALUETYPES types = Benchwell.KEYVALUETYPES.String) {
+	public KeyValue (Benchwell.KeyValueI kv, Benchwell.KeyValueTypes types = Benchwell.KeyValueTypes.STRING) {
 		Object (
 			orientation: Gtk.Orientation.HORIZONTAL,
 			spacing: 5,
@@ -141,69 +141,81 @@ public class Benchwell.KeyValue : Gtk.Box {
 		switch_enabled.state = true;
 		switch_enabled.show ();
 
-		type_menu = new Gtk.Menu ();
-		var menu_text = new Gtk.MenuItem.with_label (_("Text"));
-		menu_text.show ();
-		var menu_mult = new Gtk.MenuItem.with_label (_("Multiline"));
-		menu_mult.show ();
-		var menu_file = new Gtk.MenuItem.with_label (_("File"));
-		menu_file.show ();
-		var type_button = new Benchwell.Button ("config", Gtk.IconSize.BUTTON);
-		type_button.show ();
-
-		type_menu = new Gtk.Menu ();
-		type_menu.add (menu_text);
-		type_menu.add (menu_mult);
-		type_menu.add (menu_file);
-		type_button.clicked.connect (() => {
-			type_menu.popup_at_widget (type_button, Gdk.Gravity.SOUTH_EAST, Gdk.Gravity.NORTH_EAST, null);
-		});
-
 		pack_start (entry_key, true, true, 0);
 		pack_end (btn_remove, false, false, 0);
 		pack_end (switch_enabled, false, false, 5);
 
-		if ((supported_types & Benchwell.KEYVALUETYPES.String) == 0) {
+		var string_enabled = (supported_types ^ Benchwell.KeyValueTypes.STRING) != 0;
+		var multi_enabled = (supported_types ^ Benchwell.KeyValueTypes.MULTILINE) != 0;
+		var file_enabled = (supported_types ^ Benchwell.KeyValueTypes.FILE) != 0;
+
+		Gtk.MenuItem[] menu_opts = {};
+
+		if (string_enabled) {
 			entry_val = new Gtk.Entry ();
 			entry_val.placeholder_text = _("Value");
 			pack_start (entry_val, true, true, 0);
 			entry_val.changed.connect (on_change);
+			var m = new Gtk.MenuItem.with_label (_("Text"));
+			m.show ();
+			m.activate.connect (() => {
+				kv.kvtype = Benchwell.KeyValueTypes.STRING;
+			});
+			menu_opts += m;
 		}
 
-		if ((supported_types & Benchwell.KEYVALUETYPES.Multiline) == 0) {
+		if (multi_enabled) {
 			multi_edit_btn = new Gtk.Button.with_label (_("Edit"));
 			pack_start (multi_edit_btn, true, true, 0);
+			var m = new Gtk.MenuItem.with_label (_("Multiline"));
+			m.show ();
+			m.activate.connect (() => {
+				kv.kvtype = Benchwell.KeyValueTypes.MULTILINE;
+			});
+			menu_opts += m;
+			multi_edit_btn.clicked.connect (on_multi_edit);
 		}
 
-		if ((supported_types & Benchwell.KEYVALUETYPES.File) == 0) {
+		if (file_enabled) {
 			select_file_btn = new Gtk.Button.with_label (_("Select"));
 			pack_start (select_file_btn, true, true, 0);
+			var m = new Gtk.MenuItem.with_label (_("File"));
+			m.show ();
+			m.activate.connect (() => {
+				kv.kvtype = Benchwell.KeyValueTypes.FILE;
+			});
+			menu_opts += m;
 		}
-		pack_start (type_button, false, false, 0);
 
-		kv.notify["kvtype"].connect (on_kvtype_changed);
+		if (menu_opts.length > 1) {
+			type_menu = new Gtk.Menu ();
+			var type_button = new Benchwell.Button ("config", Gtk.IconSize.BUTTON);
+			type_button.show ();
 
+			for (var i = 0; i < menu_opts.length; i++) {
+				type_menu.add (menu_opts[i]);
+			}
+
+			type_button.clicked.connect (() => {
+				type_menu.popup_at_widget (type_button, Gdk.Gravity.SOUTH_EAST, Gdk.Gravity.NORTH_EAST, null);
+			});
+
+			pack_start (type_button, false, false, 0);
+		}
+
+		keyvalue = kv;
+
+		keyvalue.notify["kvtype"].connect (on_kvtype_changed);
 		entry_key.changed.connect (on_change);
 		switch_enabled.state_set.connect (on_change_state);
 
-		menu_text.activate.connect (() => {
-			kv.kvtype = Benchwell.KEYVALUETYPES.String;
-		});
-		menu_mult.activate.connect (() => {
-			kv.kvtype = Benchwell.KEYVALUETYPES.Multiline;
-		});
-		menu_file.activate.connect (() => {
-			kv.kvtype = Benchwell.KEYVALUETYPES.File;
-		});
-
-		keyvalue = kv;
 		on_kvtype_changed ();
 	}
 
 	private void on_kvtype_changed () {
-		var show_string = keyvalue.kvtype == Benchwell.KEYVALUETYPES.String;
-		var show_multi = keyvalue.kvtype == Benchwell.KEYVALUETYPES.Multiline;
-		var show_file = keyvalue.kvtype == Benchwell.KEYVALUETYPES.File;
+		var show_string = keyvalue.kvtype == Benchwell.KeyValueTypes.STRING;
+		var show_multi = keyvalue.kvtype == Benchwell.KeyValueTypes.MULTILINE;
+		var show_file = keyvalue.kvtype == Benchwell.KeyValueTypes.FILE;
 
 		if (entry_val != null) {
 			entry_val.hide ();
@@ -256,5 +268,30 @@ public class Benchwell.KeyValue : Gtk.Box {
 		changed ();
 
 		return false;
+	}
+
+	private void on_multi_edit () {
+		var w = get_toplevel () as Gtk.Window;
+		var dialog = new Gtk.Dialog.with_buttons (keyvalue.key, w,
+								Gtk.DialogFlags.DESTROY_WITH_PARENT|Gtk.DialogFlags.MODAL,
+								_("Ok"), Gtk.ResponseType.OK,
+								_("Cancel"), Gtk.ResponseType.CANCEL);
+		dialog.set_default_size (400, 400);
+
+		var sv = new Benchwell.SourceView ();
+		sv.show ();
+		sv.get_buffer ().set_text (keyvalue.val);
+
+		var sw = new Gtk.ScrolledWindow (null, null);
+		sw.add (sv);
+		sw.show ();
+
+		dialog.get_content_area ().add (sw);
+
+		var result = dialog.run ();
+		if (result == Gtk.ResponseType.OK) {
+			keyvalue.val = sv.get_buffer ().text;
+		}
+		dialog.destroy ();
 	}
 }

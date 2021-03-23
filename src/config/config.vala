@@ -331,6 +331,7 @@ public class Benchwell._Config : Object {
 				item.val = values[2];
 				item.enabled = values[3] == "1";
 				item.environment_id = int64.parse (values[4]);
+				item.kvtype = (Benchwell.KeyValueTypes)int64.parse (values[5]);
 			});
 
 			variables  += item;
