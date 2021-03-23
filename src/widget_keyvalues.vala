@@ -1,10 +1,12 @@
 public class Benchwell.KeyValues : Gtk.Box {
+	public Benchwell.KeyValueTypes supported_types { get; construct; }
+	private Gtk.SizeGroup sgkey;
+	private Gtk.SizeGroup sgval;
+	private Gtk.SizeGroup sgbtn;
 	public signal void changed ();
 	public signal Benchwell.KeyValueI row_wanted ();
 	public signal void row_added (Benchwell.KeyValueI kvi);
 	public signal void row_removed (Benchwell.KeyValueI kvi);
-
-	public Benchwell.KeyValueTypes supported_types { get; construct; }
 
 	public KeyValues (Benchwell.KeyValueTypes types = Benchwell.KeyValueTypes.FILE) {
 		Object (
@@ -13,12 +15,17 @@ public class Benchwell.KeyValues : Gtk.Box {
 			supported_types: types
 		);
 
+		sgkey = new Gtk.SizeGroup (Gtk.SizeGroupMode.BOTH);
+		sgval = new Gtk.SizeGroup (Gtk.SizeGroupMode.BOTH);
+		sgbtn = new Gtk.SizeGroup (Gtk.SizeGroupMode.HORIZONTAL);
+
 		get_style_context ().add_class ("keyvalues");
 	}
 
 	public void get_kvs (out string[] keys, out string[] values) {
 		string[] ks = {};
 		string[] vs = {};
+
 		get_children ().foreach ( (child) => {
 			var kv = child as Benchwell.KeyValue;
 			var key = kv.entry_key.get_text ();
@@ -36,7 +43,7 @@ public class Benchwell.KeyValues : Gtk.Box {
 	}
 
 	public new void add (Benchwell.KeyValueI kvi) {
-		var kv = new Benchwell.KeyValue (kvi, supported_types);
+		var kv = new Benchwell.KeyValue (kvi, sgkey, sgval, sgbtn, supported_types);
 		kv.show ();
 
 		kv.entry_key.grab_focus.connect (() => { add_blank (kv); });
@@ -119,7 +126,13 @@ public class Benchwell.KeyValue : Gtk.Box {
 
 	public signal void changed ();
 
-	public KeyValue (Benchwell.KeyValueI kv, Benchwell.KeyValueTypes types = Benchwell.KeyValueTypes.STRING) {
+	public KeyValue (
+		Benchwell.KeyValueI kv,
+		Gtk.SizeGroup sgkey,
+		Gtk.SizeGroup sgval,
+		Gtk.SizeGroup sgbtn,
+		Benchwell.KeyValueTypes types = Benchwell.KeyValueTypes.STRING
+	) {
 		Object (
 			orientation: Gtk.Orientation.HORIZONTAL,
 			spacing: 5,
@@ -131,15 +144,18 @@ public class Benchwell.KeyValue : Gtk.Box {
 		entry_key = new Gtk.Entry ();
 		entry_key.placeholder_text = _("Name");
 		entry_key.show ();
+		sgkey.add_widget (entry_key);
 
 		btn_remove = new Benchwell.Button ("close", Gtk.IconSize.BUTTON);
 		btn_remove.show ();
+		sgbtn.add_widget (btn_remove);
 
 		switch_enabled = new Gtk.Switch ();
 		switch_enabled.valign = Gtk.Align.CENTER;
 		switch_enabled.vexpand = false;
 		switch_enabled.state = true;
 		switch_enabled.show ();
+		sgbtn.add_widget (switch_enabled);
 
 		pack_start (entry_key, true, true, 0);
 		pack_end (btn_remove, false, false, 0);
@@ -162,6 +178,7 @@ public class Benchwell.KeyValue : Gtk.Box {
 				kv.kvtype = Benchwell.KeyValueTypes.STRING;
 			});
 			menu_opts += m;
+			sgval.add_widget (entry_val);
 		}
 
 		if (multi_enabled) {
@@ -174,6 +191,7 @@ public class Benchwell.KeyValue : Gtk.Box {
 			});
 			menu_opts += m;
 			multi_edit_btn.clicked.connect (on_multi_edit);
+			sgval.add_widget (multi_edit_btn);
 		}
 
 		if (file_enabled) {
@@ -185,12 +203,14 @@ public class Benchwell.KeyValue : Gtk.Box {
 				kv.kvtype = Benchwell.KeyValueTypes.FILE;
 			});
 			menu_opts += m;
+			sgval.add_widget (select_file_btn);
 		}
 
 		if (menu_opts.length > 1) {
 			type_menu = new Gtk.Menu ();
 			var type_button = new Benchwell.Button ("config", Gtk.IconSize.BUTTON);
 			type_button.show ();
+			sgbtn.add_widget (type_button);
 
 			for (var i = 0; i < menu_opts.length; i++) {
 				type_menu.add (menu_opts[i]);
