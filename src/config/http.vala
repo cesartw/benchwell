@@ -194,6 +194,7 @@ public class Benchwell.HttpItem : Object {
 	public string             mime { get; set; }
 	public Benchwell.HttpKv[] headers;
 	public Benchwell.HttpKv[] query_params;
+	public Benchwell.HttpKv[] form_params;
 
 	public string             response_headers { get; set; }
 	public string             response_body { get; set; }
@@ -203,6 +204,7 @@ public class Benchwell.HttpItem : Object {
 
 	public signal Benchwell.HttpKv header_added (Benchwell.HttpKv kv);
 	public signal Benchwell.HttpKv query_param_added (Benchwell.HttpKv kv);
+	public signal Benchwell.HttpKv form_param_added (Benchwell.HttpKv kv);
 
 	public HttpItem () {
 		Object ();
@@ -486,6 +488,24 @@ public class Benchwell.HttpItem : Object {
 		return kv;
 	}
 
+	public Benchwell.HttpKv add_form_param (string key = "", string val = "") throws ConfigError {
+		var kv = new Benchwell.HttpKv ();
+		kv.touch_without_save (() => {
+			kv.key = key;
+			kv.val = val;
+			kv.type = "form_param";
+			kv.http_item_id = id;
+		});
+		kv.save ();
+
+		var tmp = form_params;
+		tmp += kv;
+		form_params = tmp;
+
+		form_param_added (kv);
+		return kv;
+	}
+
 	public void delete () throws ConfigError {
 		if (id == 0){
 			return;
@@ -603,15 +623,23 @@ public class Benchwell.HttpItem : Object {
 
 			Benchwell.HttpKv[] new_headers = {};
 			Benchwell.HttpKv[] new_query_params = {};
+			Benchwell.HttpKv[] new_form_params = {};
 			foreach (var kv in kvs) {
-				if (kv.type == "header") {
-					new_headers += kv;
-					continue;
+				switch (kv.type) {
+					case "header":
+						new_headers += kv;
+						break;
+					case "form_param":
+						new_form_params += kv;
+						break;
+					case "param":
+						new_query_params += kv;
+						break;
 				}
-				new_query_params += kv;
 			}
 			headers = new_headers;
 			query_params = new_query_params;
+			form_params = new_form_params;
 			loaded = true;
 		});
 	}
@@ -630,6 +658,9 @@ public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
 	public bool   no_auto_save;
 
 	public HttpKv () {
+		Object ();
+
+		kvtype = Benchwell.KeyValueTypes.STRING;
 		notify["key"].connect (on_save);
 		notify["val"].connect (on_save);
 		notify["enabled"].connect (on_save);

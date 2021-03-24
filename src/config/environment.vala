@@ -228,6 +228,7 @@ public class Benchwell.EnvVar : Object, Benchwell.KeyValueI {
 	private bool no_auto_save;
 
 	public EnvVar () {
+		kvtype = Benchwell.KeyValueTypes.STRING;
 		notify["key"].connect (on_save);
 		notify["val"].connect (on_save);
 		notify["enabled"].connect (on_save);
