@@ -559,14 +559,23 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			item.mime = mime_switch.combo.get_active_id ();
 		}
 
-		if (mime_switch.combo.get_active_id () == "application/x-www-form-urlencoded" ||
-			mime_switch.combo.get_active_id () == "multipart/form-data") {
-			body.hide ();
-			body_fields.show ();
-		} else {
-			body.show ();
-			body_fields.hide ();
+		switch (mime_switch.combo.get_active_id ()) {
+			case "application/x-www-form-urlencoded":
+				body.hide ();
+				body_fields.show ();
+				body_fields.supported_types = Benchwell.KeyValueTypes.STRING|Benchwell.KeyValueTypes.MULTILINE;
+				break;
+			case "multipart/form-data":
+				body.hide ();
+				body_fields.show ();
+				body_fields.supported_types = Benchwell.KeyValueTypes.STRING|Benchwell.KeyValueTypes.MULTILINE|Benchwell.KeyValueTypes.FILE;
+				break;
+			default:
+				body.show ();
+				body_fields.hide ();
+				break;
 		}
+
 	}
 
 	private void on_request_changed () {
@@ -619,7 +628,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		headers.get_kvs (out keys, out values);
 
 		Curl.SList headers = null;
-		headers = Curl.SList.append ((owned) headers, "X-Blank: nothing");
+		// NOTE: can't tranfer ownership of null
+		headers = Curl.SList.append ((owned) headers, "X-Powered-by: Benchwell");
 
 		for (var i = 0; i < keys.length; i++) {
 			var val = Config.environment.interpolate (values[i]);
