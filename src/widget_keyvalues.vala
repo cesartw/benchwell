@@ -34,24 +34,19 @@ public class Benchwell.KeyValues : Gtk.Box {
 		get_style_context ().add_class ("keyvalues");
 	}
 
-	public void get_kvs (out string[] keys, out string[] values) {
-		string[] ks = {};
-		string[] vs = {};
+	public Benchwell.KeyValueI[] get_kvs () {
+		Benchwell.KeyValueI[] items = null;
 
 		get_children ().foreach ( (child) => {
 			var kv = child as Benchwell.KeyValue;
-			var key = kv.entry_key.get_text ();
-			var val = kv.entry_val.get_text ();
-			if (key == "" || !kv.switch_enabled.state) {
+			if (kv.entry_key.get_text () == "" || !kv.switch_enabled.state) {
 				return;
 			}
 
-			ks += key;
-			vs += val;
+			items += kv.keyvalue;
 		});
 
-		keys = ks;
-		values = vs;
+		return items;
 	}
 
 	public new void add (Benchwell.KeyValueI kvi) {

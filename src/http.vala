@@ -119,6 +119,16 @@ private struct buffer_s2
 	size_t size_left;
 }
 
+public string RandomString (int length, string char_set = "abcdefghijklmnopqrstuvwxyz0123456789") {
+	var builder = new StringBuilder ();
+
+	for (var i = 0; i < length; i++) {
+		builder.append_c (char_set[Random.int_range(0, length - 1)]);
+	}
+
+	return builder.str;
+}
+
 // https://github.com/giuliopaci/ValaBindingsDevelopment/blob/master/libcurl-example.vala
 private size_t ReadResponseCallback (char* ptr, size_t size, size_t nmemb, void* data) {
 	size_t total_size = size*nmemb;
@@ -382,7 +392,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		ws_box.pack_start (address, false, false, 0);
 		ws_box.pack_start (ws_paned, true, true, 0);
 
-
 		overlay = new Benchwell.HttpOverlay ();
 		overlay.add (ws_box);
 		overlay.show ();
@@ -600,22 +609,20 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		var url = Config.environment.interpolate (address.address.get_text ());
 		var method = address.method_combo.get_active_id ();
 
-		string[] keys = {};
-		string[] values = {};
-		query_params.get_kvs (out keys, out values);
+		var kv_params = query_params.get_kvs ();
 
 		// TODO: Improve URL parsing
 		var builder = new StringBuilder ();
-		if (url.index_of ("?") == -1 && keys.length > 0)
+		if (url.index_of ("?") == -1 && kv_params.length > 0)
 			builder.append ("?");
 
-		for (var i = 0; i < keys.length; i++) {
-			var key = Config.environment.interpolate (keys[i]);
-			var val = Config.environment.interpolate (values[i]);
+		for (var i = 0; i < kv_params.length; i++) {
+			var key = Config.environment.interpolate (kv_params[i].key);
+			var val = Config.environment.interpolate (kv_params[i].val);
 			key = handle.escape (key, key.length);
 			val = handle.escape (val, val.length);
 			builder.append (@"$key=$val");
-			if (i < keys.length - 1)
+			if (i < kv_params.length - 1)
 				builder.append ("&");
 		}
 
@@ -623,38 +630,111 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			builder.prepend ("&");
 		url += builder.str;
 
-		keys = {};
-		values = {};
-		headers.get_kvs (out keys, out values);
+		var kv_headers = headers.get_kvs ();
 
 		Curl.SList headers = null;
 		// NOTE: can't tranfer ownership of null
 		headers = Curl.SList.append ((owned) headers, "X-Powered-by: Benchwell");
 
-		for (var i = 0; i < keys.length; i++) {
-			var val = Config.environment.interpolate (values[i]);
-			headers = Curl.SList.append ((owned) headers, @"$(keys[i]): $(val)");
+		var content_type = "";
+		for (var i = 0; i < kv_headers.length; i++) {
+			var key = Config.environment.interpolate (kv_headers[i].key);
+			var val = Config.environment.interpolate (kv_headers[i].val);
+			// NOTE: delayed appending content-type because multipart/form-data needs to include the bounday
+			if (key == "Content-Type") {
+				content_type = val;
+				continue;
+			}
+			headers = Curl.SList.append ((owned) headers, @"$(kv_headers[i].key): $(val)");
 		}
 
 		// BODY
 		string raw_body = "";
+		string boundary = "";
 		switch (mime_switch.combo.get_active_id ()) {
 			case "application/x-www-form-urlencoded":
-				string[] body_keys = {};
-				string[] body_values = {};
-				body_fields.get_kvs (out body_keys, out body_values);
-
+				var form_fields = body_fields.get_kvs ();
 				var body_builder = new StringBuilder ();
-				for (var i = 0; i < body_keys.length; i++) {
-					var key = Config.environment.interpolate (body_keys[i]);
-					var val = Config.environment.interpolate (body_values[i]);
+
+				for (var i = 0; i < form_fields.length; i++) {
+					var key = Config.environment.interpolate (form_fields[i].key);
+					var val = Config.environment.interpolate (form_fields[i].val);
 					key = handle.escape (key, key.length);
 					val = handle.escape (val, val.length);
 					body_builder.append (@"$key=$val");
-					if (i < body_keys.length - 1)
+					if (i < form_fields.length - 1)
 						body_builder.append ("&");
 				}
 
+				raw_body = body_builder.str;
+				break;
+			case "multipart/form-data":
+				var form_fields = body_fields.get_kvs ();
+
+				boundary = RandomString(60);
+				content_type = @"multipart/form-data; boundary=$(boundary)";
+				var body_builder = new StringBuilder ();
+
+				body_builder.append ("--");
+				body_builder.append (boundary);
+				for (var i = 0; i < form_fields.length; i++) {
+					body_builder.append ("\n");
+					var key = Config.environment.interpolate (form_fields[i].key);
+					var val = Config.environment.interpolate (form_fields[i].val);
+
+					switch (form_fields[i].kvtype) {
+						case Benchwell.KeyValueTypes.FILE:
+							var file = File.new_for_path (val);
+							if (!file.query_exists ()) {
+								stderr.printf (@"$(val) doesn't exist");
+								return;
+							}
+							if (file.query_file_type (0) == FileType.DIRECTORY) {
+								stderr.printf (@"$(val) is a directory");
+								return;
+							}
+
+							var file_info = file.query_info ("*", FileQueryInfoFlags.NONE);
+
+							uint8[] content;
+							var ok = GLib.FileUtils.get_data (val, out content);
+							if (!ok) {
+								return;
+							}
+
+							body_builder.append ("Content-Disposition: form-data; name=\"").
+								append (handle.escape (key, key.length)).
+								append ("; filename=\"").
+								append (handle.escape (file.get_basename (), file.get_basename ().length)).
+								append ("\"\n").
+								append ("Content-Type: ").
+								append (file_info.get_content_type ()).
+								append ("\n").
+								append ("Content-Transfer-Encoding: base64\n\n").
+								append (GLib.Base64.encode (content)).
+								append ("\n");
+
+
+							break;
+						default:
+							body_builder.append ("Content-Disposition: form-data; name=\"").
+								append (handle.escape (key, key.length)).
+								append ("\"\n").
+								append ("Content-Type: text/plain\n\n").
+								//append (handle.escape (val, val.length)).
+								append (val).
+								append ("\n");
+							break;
+					}
+
+					body_builder.append ("--");
+					body_builder.append (boundary);
+				}
+				body_builder.append ("--\n");
+
+				//print ("====\n");
+				//print (body_builder.str);
+				//print ("====\n");
 				raw_body = body_builder.str;
 				break;
 			default:
@@ -662,6 +742,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 				raw_body = Config.environment.interpolate (raw_body);
 				break;
 		}
+
+		headers = Curl.SList.append ((owned) headers, @"Content-Type: $(content_type)");
 
 		perform.begin (method, url, raw_body, (owned) headers, (obj, res) => {
 			try {
