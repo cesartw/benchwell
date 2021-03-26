@@ -67,6 +67,10 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 			panel.show ();
 			stack.add_titled (panel, env.name, env.name);
 			stack.set_visible_child (panel);
+			panel.entry_name.changed.connect (() => {
+				stack.child_set_property(panel, "title", panel.entry_name.text);
+				env.name = panel.entry_name.text;
+			});
 		});
 
 		var env_list_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
@@ -110,6 +114,10 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 		}
 
 		stack.remove (panel);
+	}
+
+	public void select_env (Benchwell.Environment env) {
+		stack.set_visible_child_name (env.name);
 	}
 }
 

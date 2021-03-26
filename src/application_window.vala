@@ -240,21 +240,6 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		env_combo.set_entry_text_column (1);
 		env_combo.show ();
 
-		var selected_environment_id = Config.settings.get_int64 (Benchwell.Settings.ENVIRONMENT_ID.to_string ());
-		for (var i = 0; i < Config.environments.length; i++) {
-			var env = Config.environments[i];
-			Gtk.TreeIter iter;
-			env_store.append (out iter);
-
-			env_store.set_value (iter, 0, env.id);
-			env_store.set_value (iter, 1, env.name);
-			if (selected_environment_id == env.id) {
-				env_combo.set_active_iter (iter);
-				Config.environment = env;
-			}
-
-		}
-
 		btn_env = new Benchwell.Button ("config", Gtk.IconSize.BUTTON);
 		btn_env.show ();
 
@@ -272,6 +257,21 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		grid.attach (btn_env, 4, 0, 1, 1);
 		grid.get_style_context ().add_class ("link");
 
+		var selected_environment_id = Config.settings.get_int64 (Benchwell.Settings.ENVIRONMENT_ID.to_string ());
+		for (var i = 0; i < Config.environments.length; i++) {
+			var env = Config.environments[i];
+			Gtk.TreeIter iter;
+			env_store.append (out iter);
+
+			env_store.set_value (iter, 0, env.id);
+			env_store.set_value (iter, 1, env.name);
+			if (selected_environment_id == env.id) {
+				env_combo.set_active_iter (iter);
+				Config.environment = env;
+				settings_panel.select_env (env);
+			}
+		}
+
 		env_combo.changed.connect (() => {
 			Gtk.TreeIter? iter = null;
 			env_combo.get_active_iter (out iter);
@@ -285,6 +285,7 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 			foreach (var env in Config.environments) {
 				if (env.id == id) {
 					Config.environment = env;
+					settings_panel.select_env (env);
 					break;
 				}
 			}

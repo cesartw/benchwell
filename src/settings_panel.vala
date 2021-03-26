@@ -46,6 +46,10 @@ public class Benchwell.SettingsPanel : Gtk.Box {
 			return false;
 		});
 	}
+
+	public void select_env (Benchwell.Environment env) {
+		env_editor.select_env (env);
+	}
 }
 
 public class Benchwell.SettingsEditor : Gtk.Box {
