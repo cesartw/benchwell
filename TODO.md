@@ -2,7 +2,6 @@ TABS
 
 http tab
 	- save last response mime
-	- plugin json to form encode
 
 decoding tab
 	- quoted-printable

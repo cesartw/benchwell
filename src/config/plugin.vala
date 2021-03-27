@@ -1,11 +1,20 @@
+public errordomain Benchwell.PluginError {
+	PARSE_ERROR,
+	UNKNOWN_FUNC,
+	UNKNOWN_VAR
+}
+
 public interface Benchwell.Plugin : Object {
 	public abstract string name { get; construct; }
 
 	// parse_params from text inputs
-	// {% myfunc param1 "param2" 3 'param3' true false %}
+	// {% myfunc param1 "param2" 3 'param3' true false @some_var %}
 	//    paramaters at 0(bare string), 1, 3 are strings
 	//    parameter at 2 is a double
 	//    parameter at 4 and 5 are booleans
+	//    paramter at 5 is another variable in the current environment.
+	//      plugins will get the value of the var which is an string. if the doesn't exist, "" is provided
+	//
 	// TODO: support environment variables and functions
 	// Given that the environment has the following variables
 	//     token = "123"
@@ -21,7 +30,7 @@ public interface Benchwell.Plugin : Object {
 	//
 	// // functions
 	// {% myfunc $(myotherfunc ...see param spec...) %}
-	public virtual GLib.Value[]? parse_params (string raw_params) {
+	public virtual GLib.Value[]? parse_params (string raw_params, Benchwell.Environment? env = null) throws Benchwell.PluginError {
 		GLib.Value[]? parameters = {};
 
 		bool in_single_quote = false;
@@ -29,6 +38,7 @@ public interface Benchwell.Plugin : Object {
 		bool in_number       = false;
 		bool in_bare_string  = false;
 		bool in_escape       = false;
+		bool in_var          = false;
 
 		var current = new StringBuilder ();
 		for (var i = 0; i < raw_params.length; i++) {
@@ -47,6 +57,10 @@ public interface Benchwell.Plugin : Object {
 
 			switch (c) {
 			case '"':
+				if (in_number || in_var) {
+					throw new Benchwell.PluginError.PARSE_ERROR (@"unexpected \" after `$(current.str)`");
+				}
+
 				in_double_quote = !in_double_quote;
 				if ( !in_double_quote ) {
 					var val = GLib.Value (typeof (string));
@@ -56,6 +70,10 @@ public interface Benchwell.Plugin : Object {
 				}
 				continue;
 			case '\'':
+				if (in_number) {
+					throw new Benchwell.PluginError.PARSE_ERROR (@"unexpected ' after `$(current.str)`");
+				}
+
 				in_single_quote = !in_single_quote;
 				if ( !in_single_quote ) {
 					var val = GLib.Value (typeof (string));
@@ -65,10 +83,14 @@ public interface Benchwell.Plugin : Object {
 				}
 				continue;
 			case '\\':
+				if (in_number) {
+					throw new Benchwell.PluginError.PARSE_ERROR (@"unexpected \\ after `$(current.str)`");
+				}
+
 				in_escape = true;
 				continue;
 			case '0', '1', '2', '3' ,'4', '5', '6', '7', '8', '9', '.':
-				in_number = true;
+				in_number = !in_bare_string && !in_double_quote && !in_single_quote && !in_var;
 				current.append_unichar (c);
 				continue;
 			case ' ':
@@ -110,9 +132,36 @@ public interface Benchwell.Plugin : Object {
 					continue;
 				}
 
+				if ( in_var ) {
+					var val = GLib.Value (typeof (string));
+
+					string var_name = current.str;
+					string var_val = "";
+					if (env != null) {
+						for (var envi = 0; envi < env.variables.length; envi++) {
+							if (env.variables[envi].key == var_name) {
+								var_val = env.variables[envi].val;
+								break;
+								//var_val = env.interpolate_functions(var_val);
+								//var_val = env.interpolate_variables(var_val);
+							}
+						}
+					}
+
+					val.set_string (var_val);
+					parameters += val;
+
+					current = new StringBuilder ();
+					continue;
+				}
+
+				break;
+			case '@':
+				// TODO: allow inline interpolation
+				in_var = !in_bare_string && !in_double_quote && !in_single_quote && !in_var;
 				break;
 			default:
-				if ( !in_single_quote && !in_double_quote && !in_number )
+				if ( !in_single_quote && !in_double_quote && !in_number && !in_var )
 					in_bare_string = true;
 				current.append_unichar (c);
 				continue;

@@ -47,6 +47,7 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 		stack.homogeneous = true;
 		stack.vexpand = true;
 		stack.hexpand = true;
+		stack.transition_type = Gtk.StackTransitionType.SLIDE_UP;
 		stack.show ();
 
 		switcher.stack = stack;
@@ -123,7 +124,7 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 
 public class Benchwell.EnvironmentPanel : Gtk.Box {
 	public Gtk.Entry  entry_name;
-	public Benchwell.Environment environment { get; construct; }
+	public owned Benchwell.Environment environment { get; construct; }
 	public Benchwell.KeyValues keyvalues;
 
 	public EnvironmentPanel (Benchwell.Environment env) {
@@ -141,7 +142,7 @@ public class Benchwell.EnvironmentPanel : Gtk.Box {
 		var vbox = new Gtk.Box (Gtk.Orientation.VERTICAL, 5);
 		vbox.show ();
 
-		keyvalues = new Benchwell.KeyValues (Benchwell.KeyValueTypes.STRING|Benchwell.KeyValueTypes.MULTILINE);
+		keyvalues = new Benchwell.KeyValues (Benchwell.KeyValueTypes.STRING | Benchwell.KeyValueTypes.MULTILINE);
 		keyvalues.row_wanted.connect (on_row_added);
 		if (env.variables.length > 0) {
 			keyvalues.clear ();

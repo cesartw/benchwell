@@ -128,7 +128,7 @@ public class Benchwell.Environment : Object {
 
 	public string dry_interpolate (string s) {
 		var result = interpolate_variables (s);
-		result = dry_interpolate_functions (result);
+		result = interpolate_functions (result);
 
 		return result;
 	}
@@ -167,7 +167,7 @@ public class Benchwell.Environment : Object {
 					continue;
 				}
 
-				var parameters = plugin.parse_params (raw_params);
+				var parameters = plugin.parse_params (raw_params, this);
 				var plugin_result = plugin.callv (parameters);
 				result = result.replace (to_replace, plugin_result);
 				break;
