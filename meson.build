@@ -73,6 +73,7 @@ executable(
 	'src/application_window.vala',
 	'src/environment.vala',
 	'src/settings_panel.vala',
+	'src/pomodoro.vala',
 
 	'src/application.vala',
 	#'src/http_importer.vala',

@@ -133,8 +133,12 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 
 		set_titlebar (header);
 
+		var pomodoro = new Benchwell.Pomodoro ();
+		pomodoro.show ();
+
 		header.pack_start (window_btn_menu);
 		header.pack_end (env);
+		header.pack_end (pomodoro);
 
 		box.pack_start (notebook, true, true, 0);
 

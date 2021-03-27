@@ -66,5 +66,26 @@
 			<summary>Editor theme</summary>
 			<description>Text editor color theme</description>
 		</key>
+
+		<key name="pomodoro-duration" type="x">
+			<default>1500</default>
+			<summary>Work set minutes</summary>
+			<description>Pomodoro work set duration in seconds</description>
+		</key>
+		<key name="pomodoro-break-duration" type="x">
+			<default>300</default>
+			<summary>Short break duration</summary>
+			<description>Pomodoro short break duration in seconds</description>
+		</key>
+		<key name="pomodoro-long-break-duration" type="x">
+			<default>600</default>
+			<summary>Long break duration</summary>
+			<description>Pomodoro long break duration in seconds</description>
+		</key>
+		<key name="pomodoro-set-count" type="x">
+			<default>4</default>
+			<summary>Work set count</summary>
+			<description>Pomodoro work set count before a long break</description>
+		</key>
 	</schema>
 </schemalist>
