@@ -160,3 +160,6 @@ entry.search {
 .keyvalues {
 	padding: 10px;
 }
+.pomodoro-counter {
+	font-size: 10px;
+}
