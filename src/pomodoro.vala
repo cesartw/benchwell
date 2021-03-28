@@ -5,7 +5,7 @@ public enum Benchwell.PomodoroStep {
 }
 
 public class Benchwell.PomodoroCycler : Object {
-	public Benchwell.PomodoroStep state;
+	public Benchwell.PomodoroStep state { get; set; }
 	public int pomodoro_count = 0;
 
 	// returns whether to stop
@@ -107,6 +107,24 @@ public class Benchwell.Pomodoro : Gtk.Box {
 		pack_end (pause_btn);
 
 		pause_btn.clicked.connect (on_pause);
+		cycler.notify["state"].connect ((x, y) => {
+			GLib.Notification n = null;
+			switch (cycler.state) {
+				case Benchwell.PomodoroStep.WORK:
+					n = new GLib.Notification (_("Get back to work"));
+					break;
+				case Benchwell.PomodoroStep.BREAK:
+					n = new GLib.Notification (_("Take a %lldmin break").printf(Config.settings.get_int64("pomodoro-break-duration")/60));
+					break;
+				case Benchwell.PomodoroStep.LONG_BREAK:
+					n = new GLib.Notification (_("Take a %lldmin break").printf(Config.settings.get_int64("pomodoro-long-break-duration")/60));
+					break;
+				default:
+					n = new GLib.Notification (_("WAT"));
+					break;
+			}
+			GLib.Application.get_default ().send_notification ("io.benchwell", n);
+		});
 	}
 
 	public void start () {
