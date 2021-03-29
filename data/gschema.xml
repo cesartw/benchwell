@@ -66,10 +66,19 @@
 			<summary>Editor theme</summary>
 			<description>Text editor color theme</description>
 		</key>
-
+		<key name="editor-font" type="s">
+			<default>""</default>
+			<summary>Editor font</summary>
+			<description>Text editor font</description>
+		</key>
+		<key name="editor-tab-width" type="x">
+			<default>4</default>
+			<summary>Tab width</summary>
+			<description>Text editor tab width</description>
+		</key>
 		<key name="pomodoro-duration" type="x">
 			<default>1500</default>
-			<summary>Work set minutes</summary>
+			<summary>Work set seconds</summary>
 			<description>Pomodoro work set duration in seconds</description>
 		</key>
 		<key name="pomodoro-break-duration" type="x">

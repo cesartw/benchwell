@@ -85,7 +85,7 @@ executable(
 		dependency('gobject-2.0'),
 		dependency('glib-2.0'),
 		dependency('gtk+-3.0'),
-		dependency('gtksourceview-3.0'),
+		dependency('gtksourceview-4'),
 		dependency('sqlite3'),
 		dependency('libsecret-1'),
 		dependency('json-glib-1.0'),

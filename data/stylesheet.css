@@ -1,6 +1,4 @@
 * {
-	font-size: 1em;
-	font-family: 'JetBrainsMono Nerd Font';
 	-GtkScrollbar-has-backward-stepper: true;
 	-GtkScrollbar-has-forward-stepper: true;
 }
@@ -49,14 +47,6 @@ notebook tabs tab label {
 	font-weight: 700;
 }
 
-textview {
-	/*font-size: 1em;*/
-}
-
-statusbar * {
-	/*font-size: 0.9em;*/
-}
-
 /*header*/
 treeview.view button box label {
 	padding: 0.5em;
@@ -74,9 +64,6 @@ list row image {
 	margin-left: 5px;
 }
 
-#logger {
-	/*font-size: 0.9em;*/
-}
 
 #queryactionbar box {
 	border-width: 0;

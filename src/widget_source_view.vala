@@ -7,22 +7,35 @@ public class Benchwell.SourceView : Gtk.SourceView {
 			vexpand: true,
 			auto_indent: true,
 			accepts_tab: true,
-			highlight_current_line: false
+			highlight_current_line: false,
+			tab_width: (uint)Config.settings.get_int64("editor-tab-width")
 		);
 
 		set_language (lang);
 
 		var buffer = (Gtk.SourceBuffer) get_buffer ();
 		var sm = Gtk.SourceStyleSchemeManager.get_default ();
+
+		if (Config.settings.get_string("editor-theme") in sm.scheme_ids) {
+			buffer.set_style_scheme (sm.get_scheme (Config.settings.get_string("editor-theme")));
+		}
+
+		if (Config.settings.get_string("editor-font") != "") {
+			override_font (Pango.FontDescription.from_string (Config.settings.get_string("editor-font")));
+		}
+
 		Config.settings.changed["editor-theme"].connect (() => {
 			if (Config.settings.get_string("editor-theme") in sm.scheme_ids) {
 				buffer.set_style_scheme (sm.get_scheme (Config.settings.get_string("editor-theme")));
 			}
 		});
 
-		if (Config.settings.get_string("editor-theme") in sm.scheme_ids) {
-			buffer.set_style_scheme (sm.get_scheme (Config.settings.get_string("editor-theme")));
-		}
+		Config.settings.changed["editor-font"].connect (() => {
+			override_font (Pango.FontDescription.from_string (Config.settings.get_string("editor-font")));
+		});
+		Config.settings.changed["editor-tab-width"].connect (() => {
+			tab_width = (uint)Config.settings.get_int64("editor-tab-width");
+		});
 	}
 
 	public void set_language (string? lang) {
