@@ -5,8 +5,6 @@ public class Benchwell.Database.ResultView : Gtk.Paned {
 	public Benchwell.Database.Table table;
 	public Gtk.Button btn_load_query;
 	public Gtk.MenuButton save_menu;
-	public Gtk.InfoBar infobar;
-	public Gtk.Label infobar_label;
 
 	public signal void exec_query (string query);
 	public signal void fav_saved ();
@@ -51,20 +49,6 @@ public class Benchwell.Database.ResultView : Gtk.Paned {
 		window.add_action (action_save_file);
 		window.add_action (action_save_fav);
 
-		infobar = new Gtk.InfoBar ();
-		var infobar_label_sw = new Gtk.ScrolledWindow (null, null);
-		infobar_label_sw.show ();
-		//infobar_label_sw.vexpand = true;
-		infobar_label_sw.hexpand = true;
-		infobar.no_show_all = true;
-		infobar.add_button (_("Ok"), Gtk.ResponseType.OK);
-
-		infobar_label = new Gtk.Label("");
-		infobar_label.wrap = true;
-		infobar_label.show ();
-		infobar_label_sw.add (infobar_label);
-		infobar.get_content_area ().add (infobar_label_sw);
-
 		var editor_actionbar = new Gtk.ActionBar ();
 		editor_actionbar.show ();
 		editor_actionbar.pack_end (save_menu);
@@ -81,7 +65,6 @@ public class Benchwell.Database.ResultView : Gtk.Paned {
 		table_box.vexpand = true;
 		table_box.hexpand = true;
 		table_box.pack_start (table, true, true);
-		table_box.pack_end (infobar, false, false);
 		table_box.show ();
 
 		pack1 (editor_box, false, false);
@@ -92,7 +75,6 @@ public class Benchwell.Database.ResultView : Gtk.Paned {
 		btn_load_query.clicked.connect (on_open_file);
 
 		editor.key_press_event.connect (on_editor_key_press);
-		infobar.response.connect (infobar.hide);
 	}
 
 	public void on_open_file () {
@@ -167,37 +149,6 @@ public class Benchwell.Database.ResultView : Gtk.Paned {
 		});
 		query.save ();
 		fav_saved ();
-	}
-
-	public void show_alert (string message, Gtk.MessageType type = Gtk.MessageType.ERROR, bool autohide = false, int timeout = 0) {
-		infobar_label.set_text (message);
-		infobar.message_type = type;
-		infobar.show ();
-
-		if (autohide) {
-			if (timeout == 0) {
-				switch (message.split (" ").length) {
-					case 1:
-						timeout = 1000;
-						break;
-					case 2, 3:
-						timeout = 1500;
-						break;
-					default:
-						timeout = 3000;
-						break;
-				}
-			}
-
-			Timeout.add (timeout, () => {
-				infobar.hide ();
-				return false;
-			});
-		}
-	}
-
-	public void hide_alert () {
-		infobar.hide ();
 	}
 
 	private string ask_fav_name () {

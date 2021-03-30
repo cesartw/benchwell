@@ -21,3 +21,8 @@ Feature:
 	- add polling table. dropdown menu for refresh
 
 
+Packaging/Distribution
+	- build flak
+	- build makepkg (arch-based distro)
+	- build deb (ubunto-based distro)
+	-

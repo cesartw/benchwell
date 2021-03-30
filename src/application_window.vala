@@ -10,6 +10,9 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 	public SimpleAction new_tab_menu;
 	public SimpleAction close_menu;
 
+	public Gtk.InfoBar infobar;
+	public Gtk.Label infobar_label;
+
 	public class ApplicationWindow(Gtk.Application app) {
 		Object (
 			application: app
@@ -66,19 +69,19 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 					page = 9;
 					break;
 				default:
-					return true;
+					return false;
 			}
 
 			if (e.state != Gdk.ModifierType.MOD1_MASK) {
-				return true;
+				return false;
 			}
 
 			if (page <= notebook.get_n_pages ()) {
 				notebook.set_current_page (page - 1);
-				return false;
+				return true;
 			}
 
-			return true;
+			return false;
 		});
 
 		var box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
@@ -141,6 +144,21 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		header.pack_end (pomodoro);
 
 		box.pack_start (notebook, true, true, 0);
+
+		infobar = new Gtk.InfoBar ();
+		var infobar_label_sw = new Gtk.ScrolledWindow (null, null);
+		infobar_label_sw.show ();
+		infobar_label_sw.hexpand = true;
+		infobar.no_show_all = true;
+		infobar.add_button (_("Ok"), Gtk.ResponseType.OK);
+
+		infobar_label = new Gtk.Label("");
+		infobar_label.wrap = true;
+		infobar_label.show ();
+		infobar_label_sw.add (infobar_label);
+		infobar.get_content_area ().add (infobar_label_sw);
+		infobar.response.connect (infobar.hide);
+		box.pack_end (infobar, false, false);
 
 		add(box);
 
@@ -298,5 +316,32 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		});
 
 		return grid;
+	}
+
+	public void show_alert (string message, Gtk.MessageType type = Gtk.MessageType.ERROR, bool autohide = false, int timeout = 0) {
+		infobar_label.set_text (message);
+		infobar.message_type = type;
+		infobar.show ();
+
+		if (autohide) {
+			if (timeout == 0) {
+				switch (message.split (" ").length) {
+					case 1:
+						timeout = 1000;
+						break;
+					case 2, 3:
+						timeout = 1500;
+						break;
+					default:
+						timeout = 3000;
+						break;
+				}
+			}
+
+			Timeout.add (timeout, () => {
+				infobar.hide ();
+				return false;
+			});
+		}
 	}
 }

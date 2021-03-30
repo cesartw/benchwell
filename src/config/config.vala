@@ -60,6 +60,15 @@ public class Benchwell._Config : Object {
 		load_http_tree_state ();
 	}
 
+	public void show_alert (Gtk.Widget w, string message, Gtk.MessageType type = Gtk.MessageType.ERROR, bool autohide = false, int timeout = 0) {
+		var aw = w.get_toplevel () as Gtk.Window as Gtk.ApplicationWindow as Benchwell.ApplicationWindow;
+		if (aw == null) {
+			stderr.printf (message);
+			return;
+		}
+		aw.show_alert (message, type, autohide, timeout);
+	}
+
 	public Gtk.PositionType tab_position () {
 		Gtk.PositionType v;
 

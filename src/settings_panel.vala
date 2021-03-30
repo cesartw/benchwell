@@ -63,8 +63,6 @@ public class Benchwell.SettingsPanel : Gtk.Box {
 }
 
 public class Benchwell.EditorSettings : Gtk.Grid {
-	private Gtk.SourceStyleSchemeManager stylemanager;
-
 	public EditorSettings () {
 		Object (
 			row_spacing: 5,
@@ -82,8 +80,7 @@ public class Benchwell.EditorSettings : Gtk.Grid {
 
 		// EDITOR THEME
 		var laf_theme_combo = new Gtk.ComboBoxText ();
-		stylemanager = Gtk.SourceStyleSchemeManager.get_default ();
-		foreach (var id in stylemanager.scheme_ids) {
+		foreach (var id in Gtk.SourceStyleSchemeManager.get_default ().scheme_ids) {
 			laf_theme_combo.append (id, id);
 		}
 		laf_theme_combo.set_active_id (Config.settings.get_string ("editor-theme"));

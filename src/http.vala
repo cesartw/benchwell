@@ -428,13 +428,14 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		});
 
 		headers.row_wanted.connect (() => {
-			if (item != null) {
-				try {
-					var kv = item.add_header ();
-					return kv;
-				} catch (ConfigError err) {
-					stderr.printf (err.message);
-				}
+			if (item == null) {
+				return new Benchwell.HttpKv ();
+			}
+
+			try {
+				return item.add_header ();
+			} catch (ConfigError err) {
+				Config.show_alert (this, err.message);
 			}
 			return new Benchwell.HttpKv ();
 		});
@@ -451,19 +452,21 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			try {
 				kv.delete ();
 			} catch (ConfigError err) {
-				stderr.printf (err.message);
+				Config.show_alert (this, err.message);
 			}
 		});
 
 		query_params.row_wanted.connect (() => {
-			if (item != null) {
-				try {
-					var kv = item.add_param ();
-					return kv;
-				} catch (ConfigError err) {
-					stderr.printf (err.message);
-				}
+			if (item == null) {
+				return new Benchwell.HttpKv ();
 			}
+
+			try {
+				return item.add_param ();
+			} catch (ConfigError err) {
+				Config.show_alert (this, err.message);
+			}
+
 			return new Benchwell.HttpKv ();
 		});
 
@@ -479,20 +482,22 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			try {
 				kv.delete ();
 			} catch (ConfigError err) {
-				stderr.printf (err.message);
+				Config.show_alert (this, err.message);
 			}
 		});
 
 
 		body_fields.row_wanted.connect (() => {
-			if (item != null) {
-				try {
-					var kv = item.add_form_param ();
-					return kv;
-				} catch (ConfigError err) {
-					stderr.printf (err.message);
-				}
+			if (item == null) {
+				return new Benchwell.HttpKv ();
 			}
+
+			try {
+				return item.add_form_param ();
+			} catch (ConfigError err) {
+				Config.show_alert (this, err.message);
+			}
+
 			return new Benchwell.HttpKv ();
 		});
 
@@ -508,7 +513,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			try {
 				kv.delete ();
 			} catch (ConfigError err) {
-				stderr.printf (err.message);
+				Config.show_alert (this, err.message);
 			}
 		});
 
@@ -552,7 +557,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 				try {
 					kv = item.add_header ();
 				} catch (ConfigError err) {
-					stderr.printf (err.message);
+					Config.show_alert (this, err.message);
 				}
 			} else {
 				kv = new Benchwell.HttpKv ();
@@ -753,8 +758,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 					item.response_headers = result.headers_string();
 					item.save_response ();
 				}
-			} catch (ThreadError e) {
-				stderr.printf (@"performing request $(e.message)");
+			} catch (ThreadError err) {
+				Config.show_alert (this, err.message);
 			}
 			overlay.stop ();
 		});
@@ -852,9 +857,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		return result;
 	}
 
-	private void encode_body (ref Curl.EasyHandle handle) {
-	}
-
 	private void on_item_activated (Benchwell.HttpItem item, Gtk.TreeIter iter) {
 		loading = true;
 
@@ -863,7 +865,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		try {
 			this.item.load_full_item ();
 		} catch (ConfigError err) {
-			stderr.printf (err.message);
+			Config.show_alert (this, err.message);
 			loading = false;
 			return;
 		}
@@ -913,7 +915,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 				body_fields.add (this.item.add_form_param ());
 			}
 		} catch (ConfigError err) {
-			stderr.printf (err.message);
+			Config.show_alert (this, err.message);
 		}
 
 		if (this.item.mime == "application/x-www-form-urlencoded" ||
@@ -1036,7 +1038,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 						response.get_buffer ().insert_text (ref start_iter, formatted_body, formatted_body.length);
 						response.set_language ("json");
 					} catch (GLib.Error err) {
-						stderr.printf (err.message);
+						Config.show_alert (this, err.message);
 						formatted_body = result.Body;
 						response.get_buffer ().insert_text (ref start_iter, formatted_body, formatted_body.length);
 					}
@@ -1112,7 +1114,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 					kv.val = values[i];
 					//kv.save ();
 				} catch (ConfigError err) {
-					stderr.printf (err.message);
+					Config.show_alert (this, err.message);
 				}
 			}
 		});
