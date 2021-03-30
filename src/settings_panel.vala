@@ -3,6 +3,7 @@ public class Benchwell.SettingsPanel : Gtk.Box {
 	private Benchwell.EnvironmentEditor env_editor;
 	private Benchwell.EditorSettings editor_settings;
 	private Benchwell.HttpSettings http_settings;
+	private Benchwell.PomodoroSettings pomodoro_settings;
 	private Gtk.Switch dark_switch;
 
 	public SettingsPanel () {
@@ -35,9 +36,13 @@ public class Benchwell.SettingsPanel : Gtk.Box {
 		http_settings = new Benchwell.HttpSettings ();
 		http_settings.show ();
 
+		pomodoro_settings = new Benchwell.PomodoroSettings ();
+		pomodoro_settings.show ();
+
 		notebook.append_page (env_editor, new Gtk.Label (_("Environments")));
 		notebook.append_page (editor_settings, new Gtk.Label (_("Editor")));
 		notebook.append_page (http_settings, new Gtk.Label (_("HTTP")));
+		notebook.append_page (pomodoro_settings, new Gtk.Label (_("Pomodoro")));
 
 		header_bar.pack_end (dark_switch);
 		header_bar.pack_end (dark_icon);
@@ -281,6 +286,102 @@ public class Benchwell.HttpSettings : Gtk.Grid {
 		requests_single_click_sw.state_set.connect ((state) => {
 			Config.settings.set_boolean ("http-single-click-activate", state);
 			return false;
+		});
+	}
+}
+
+public class Benchwell.PomodoroSettings : Gtk.Grid {
+	public PomodoroSettings () {
+		Object (
+			row_spacing: 5,
+			column_spacing: 5
+		);
+
+		var label_alignment = Gtk.Align.START;
+
+		var timings_label = new Gtk.Label (_("Timings")) {
+			valign = label_alignment,
+			halign = label_alignment
+		};
+		timings_label.show ();
+
+		// WORK DURATION
+		var duration_label = new Gtk.Label (_("Work session duration")) {
+			valign = label_alignment,
+			halign = label_alignment
+		};
+		duration_label.show ();
+
+		var duration_spin = new Gtk.SpinButton.with_range (20, 60, 5);
+		duration_spin.value = (double)Config.settings.get_int64 ("pomodoro-duration") / 60;
+		duration_spin.show ();
+		////////////////
+
+		// BREAK DURATION
+		var break_duration_label = new Gtk.Label (_("Short break duration")) {
+			valign = label_alignment,
+			halign = label_alignment
+		};
+		break_duration_label.show ();
+
+		var break_duration_spin = new Gtk.SpinButton.with_range (5, 10, 1);
+		break_duration_spin.value = (double)Config.settings.get_int64 ("pomodoro-break-duration") / 60;
+		break_duration_spin.show ();
+		/////////////////
+
+		// LONG BREAK DURATION
+		var long_break_duration_label = new Gtk.Label (_("Long break duration")) {
+			valign = label_alignment,
+			halign = label_alignment
+		};
+		long_break_duration_label.show ();
+
+		var long_break_duration_spin = new Gtk.SpinButton.with_range (10, 20, 1);
+		long_break_duration_spin.value = (double)Config.settings.get_int64 ("pomodoro-long-break-duration") / 60;
+		long_break_duration_spin.show ();
+		/////////////////
+
+		// SET COUNT
+		var set_count_label = new Gtk.Label (_("Sets before long break")) {
+			valign = label_alignment,
+			halign = label_alignment
+		};
+		set_count_label.show ();
+
+		var set_count_spin = new Gtk.SpinButton.with_range (10, 20, 1);
+		set_count_spin.value = (double)Config.settings.get_int64 ("pomodoro-set-count");
+		set_count_spin.show ();
+		/////////////////
+
+		attach (timings_label, 0, 0, 2, 1);
+
+		attach (duration_label, 1, 1, 1, 1);
+		attach (duration_spin, 2, 1, 1, 1);
+
+		attach (break_duration_label, 1, 2, 1, 1);
+		attach (break_duration_spin, 2, 2, 1, 1);
+
+		attach (long_break_duration_label, 1, 3, 1, 1);
+		attach (long_break_duration_spin, 2, 3, 1, 1);
+
+		attach (set_count_label, 1, 4, 1, 1);
+		attach (set_count_spin, 2, 4, 1, 1);
+
+
+		duration_spin.changed.connect (() => {
+			Config.settings.set_int64 ("pomodoro-duration", (int64)duration_spin.value*60);
+		});
+
+		break_duration_spin.changed.connect (() => {
+			Config.settings.set_int64 ("pomodoro-break-duration", (int64)break_duration_spin.value*60);
+		});
+
+		long_break_duration_spin.changed.connect (() => {
+			Config.settings.set_int64 ("pomodoro-long-break-duration", (int64)long_break_duration_spin.value*60);
+		});
+
+		set_count_spin.changed.connect (() => {
+			Config.settings.set_int64 ("pomodoro-set-count", (int64)set_count_spin.value);
 		});
 	}
 }
