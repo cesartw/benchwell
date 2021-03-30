@@ -35,6 +35,10 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 			window: window
 		);
 
+		if (Config.settings.get_string("http-font") != "") {
+			override_font (Pango.FontDescription.from_string (Config.settings.get_string("http-font")));
+		}
+
 		// treeview
 		treeview = new Gtk.TreeView ();
 		treeview.margin_top = 10;
@@ -46,7 +50,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		treeview.enable_search = true;
 		treeview.reorderable = true; // would be nice
 		treeview.button_release_event.connect (on_button_release_event);
-		treeview.activate_on_single_click = Config.settings.get_boolean ("http-sigle-click-activate");
+		treeview.activate_on_single_click = Config.settings.get_boolean ("http-single-click-activate");
 
 		store = new Benchwell.HttpStore.newv ({GLib.Type.OBJECT, GLib.Type.STRING, GLib.Type.STRING, GLib.Type.OBJECT});
 
@@ -199,6 +203,14 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 			store.drop_path = path;
 
 			return false;
+		});
+
+		Config.settings.changed["http-font"].connect (() => {
+			override_font (Pango.FontDescription.from_string (Config.settings.get_string("http-font")));
+		});
+
+		Config.settings.changed["http-single-click-activate"].connect (() => {
+			treeview.activate_on_single_click = Config.settings.get_boolean ("http-single-click-activate");
 		});
 	}
 

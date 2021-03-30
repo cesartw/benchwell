@@ -41,6 +41,11 @@
 			<summary>HTTP tree state</summary>
 			<description>Map of items expanded</description>
 		</key>
+		<key name="http-font" type="s">
+			<default>""</default>
+			<summary>Http font</summary>
+			<description>Http treeview font</description>
+		</key>
 		<key name="db-query-history-limit" type="i">
 			<default>25</default>
 			<summary>Database query history</summary>
@@ -51,7 +56,7 @@
 			<summary>Database filters</summary>
 			<description>JSON serialization of filters used</description>
 		</key>
-		<key name="http-sigle-click-activate" type="b">
+		<key name="http-single-click-activate" type="b">
 			<default>true</default>
 			<summary>Request activation</summary>
 			<description>Single click activates request</description>
@@ -75,6 +80,21 @@
 			<default>4</default>
 			<summary>Tab width</summary>
 			<description>Text editor tab width</description>
+		</key>
+		<key name="editor-line-number" type="b">
+			<default>false</default>
+			<summary>Line numbers</summary>
+			<description>Show line numbers</description>
+		</key>
+		<key name="editor-highlight-line" type="b">
+			<default>false</default>
+			<summary>Highlight line</summary>
+			<description>Highline current line</description>
+		</key>
+		<key name="editor-no-tabs" type="b">
+			<default>false</default>
+			<summary>Do not insert tabs</summary>
+			<description>Insert spaces instead of tabs</description>
 		</key>
 		<key name="pomodoro-duration" type="x">
 			<default>1500</default>

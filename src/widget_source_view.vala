@@ -1,14 +1,16 @@
 public class Benchwell.SourceView : Gtk.SourceView {
 	public SourceView (string lang = "auto") {
 		Object (
-			show_line_numbers: false,
-			show_right_margin: true,
+			show_right_margin: false,
 			hexpand: true,
 			vexpand: true,
 			auto_indent: true,
 			accepts_tab: true,
 			highlight_current_line: false,
-			tab_width: (uint)Config.settings.get_int64("editor-tab-width")
+			background_pattern: Gtk.SourceBackgroundPatternType.GRID,
+			tab_width: (uint)Config.settings.get_int64("editor-tab-width"),
+			show_line_numbers: Config.settings.get_boolean ("editor-line-number"),
+			insert_spaces_instead_of_tabs: Config.settings.get_boolean ("editor-no-tabs")
 		);
 
 		set_language (lang);
@@ -33,8 +35,21 @@ public class Benchwell.SourceView : Gtk.SourceView {
 		Config.settings.changed["editor-font"].connect (() => {
 			override_font (Pango.FontDescription.from_string (Config.settings.get_string("editor-font")));
 		});
+
 		Config.settings.changed["editor-tab-width"].connect (() => {
 			tab_width = (uint)Config.settings.get_int64("editor-tab-width");
+		});
+
+		Config.settings.changed["editor-line-number"].connect (() => {
+			show_line_numbers = Config.settings.get_boolean ("editor-line-number");
+		});
+
+		Config.settings.changed["editor-highlight-line"].connect (() => {
+			highlight_current_line = Config.settings.get_boolean ("editor-highlight-line");
+		});
+
+		Config.settings.changed["editor-no-tabs"].connect (() => {
+			insert_spaces_instead_of_tabs = Config.settings.get_boolean ("editor-no-tabs");
 		});
 	}
 

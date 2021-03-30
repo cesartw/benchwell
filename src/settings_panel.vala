@@ -1,7 +1,8 @@
 public class Benchwell.SettingsPanel : Gtk.Box {
 	private Gtk.Notebook notebook;
 	private Benchwell.EnvironmentEditor env_editor;
-	private Benchwell.SettingsEditor editor_settings;
+	private Benchwell.EditorSettings editor_settings;
+	private Benchwell.HttpSettings http_settings;
 	private Gtk.Switch dark_switch;
 
 	public SettingsPanel () {
@@ -28,11 +29,15 @@ public class Benchwell.SettingsPanel : Gtk.Box {
 		env_editor = new Benchwell.EnvironmentEditor ();
 		env_editor.show ();
 
-		editor_settings = new Benchwell.SettingsEditor ();
+		editor_settings = new Benchwell.EditorSettings ();
 		editor_settings.show ();
+
+		http_settings = new Benchwell.HttpSettings ();
+		http_settings.show ();
 
 		notebook.append_page (env_editor, new Gtk.Label (_("Environments")));
 		notebook.append_page (editor_settings, new Gtk.Label (_("Editor")));
+		notebook.append_page (http_settings, new Gtk.Label (_("HTTP")));
 
 		header_bar.pack_end (dark_switch);
 		header_bar.pack_end (dark_icon);
@@ -52,32 +57,22 @@ public class Benchwell.SettingsPanel : Gtk.Box {
 	}
 }
 
-public class Benchwell.SettingsEditor : Gtk.Box {
+public class Benchwell.EditorSettings : Gtk.Grid {
 	private Gtk.SourceStyleSchemeManager stylemanager;
 
-	public SettingsEditor () {
+	public EditorSettings () {
 		Object (
-			orientation: Gtk.Orientation.VERTICAL,
-			spacing: 5
+			row_spacing: 5,
+			column_spacing: 5
 		);
 
 		var label_alignment = Gtk.Align.START;
 
-		var laf_grid = new Gtk.Grid () {
-			orientation = Gtk.Orientation.VERTICAL,
-			margin_top = margin_bottom = 5,
-			row_spacing = 6
-		};
-		laf_grid.show ();
-
 		// LOOK & FEEL
-		var laf_label = new Gtk.Label ("") {
+		var laf_label = new Gtk.Label (_("Look & Feel")) {
 			valign = label_alignment,
 			halign = label_alignment
 		};
-		laf_label.set_markup (_("<b>Look &amp; Feel</b>"));
-		laf_label.valign = Gtk.Align.START;
-		laf_label.halign = Gtk.Align.START;
 		laf_label.show ();
 
 		// EDITOR THEME
@@ -89,19 +84,16 @@ public class Benchwell.SettingsEditor : Gtk.Box {
 		laf_theme_combo.set_active_id (Config.settings.get_string ("editor-theme"));
 		laf_theme_combo.show ();
 
-		var laf_theme_label = new Gtk.Label (_("Theme:")) {
+		var laf_theme_label = new Gtk.Label (_("Theme")) {
 			valign = label_alignment,
 			halign = label_alignment
 		};
 		laf_theme_label.show ();
 
-		laf_grid.attach (laf_label, 0, 0, 2, 1);
-		laf_grid.attach (laf_theme_label, 1, 1, 1, 1);
-		laf_grid.attach (laf_theme_combo, 2, 1, 1, 1);
 		///////////////
 
 		// FONT
-		var laf_font_label = new Gtk.Label (_("Font:")) {
+		var laf_font_label = new Gtk.Label (_("Font")) {
 			valign = label_alignment,
 			halign = label_alignment
 		};
@@ -113,27 +105,84 @@ public class Benchwell.SettingsEditor : Gtk.Box {
 		}
 		laf_font_btn.show ();
 
-		laf_grid.attach (laf_font_label, 1, 2, 1, 1);
-		laf_grid.attach (laf_font_btn, 2, 2, 1, 1);
 		///////
 
-
-		// TAB WIDTH
-		var laf_tabwidth_label = new Gtk.Label (_("Tab width:")) {
+		// EDITING
+		var editing_label = new Gtk.Label (_("Editing")) {
 			valign = label_alignment,
 			halign = label_alignment
 		};
-		laf_tabwidth_label.show ();
+		editing_label.show ();
 
-		var laf_tabwidth_spin = new Gtk.SpinButton.with_range (2, 8, 2);
-		laf_tabwidth_spin.value = (double) Config.settings.get_int64 ("editor-tab-width");
-		laf_tabwidth_spin.show ();
+		// TAB WIDTH
+		var editing_tabwidth_label = new Gtk.Label (_("Tab width")) {
+			valign = label_alignment,
+			halign = label_alignment
+		};
+		editing_tabwidth_label.show ();
 
-		laf_grid.attach (laf_tabwidth_label, 1, 3, 1, 1);
-		laf_grid.attach (laf_tabwidth_spin, 2, 3, 1, 1);
+		var editing_tabwidth_spin = new Gtk.SpinButton.with_range (2, 8, 2);
+		editing_tabwidth_spin.value = (double) Config.settings.get_int64 ("editor-tab-width");
+		editing_tabwidth_spin.show ();
 		////////////
 
-		pack_start (laf_grid, false, false, 0);
+		// SHOW LINE NUMBER
+		var editing_ln_label = new Gtk.Label (_("Show line number")) {
+			valign = label_alignment,
+			halign = label_alignment
+		};
+		editing_ln_label.show ();
+
+		var editing_ln_sw = new Gtk.Switch ();
+		editing_ln_sw.state = Config.settings.get_boolean ("editor-line-number");
+		editing_ln_sw.show ();
+		///////////////////
+
+		// HIGHLIGHT CURRENT LINE
+		var editing_hl_label = new Gtk.Label (_("Highlight current line")) {
+			valign = label_alignment,
+			halign = label_alignment
+		};
+		editing_hl_label.show ();
+
+		var editing_hl_sw = new Gtk.Switch ();
+		editing_hl_sw.state = Config.settings.get_boolean ("editor-highlight-line");
+		editing_hl_sw.show ();
+		/////////////////////////
+
+		// SPACES FOR TABS
+		var editing_notabs_label = new Gtk.Label (_("Insert spaces instead of tabs")) {
+			valign = label_alignment,
+			halign = label_alignment
+		};
+		editing_notabs_label.show ();
+
+		var editing_notabs_sw = new Gtk.Switch ();
+		editing_notabs_sw.state = Config.settings.get_boolean ("editor-no-tabs");
+		editing_notabs_sw.show ();
+		//////////////////
+
+		attach (laf_label, 0, 0, 2, 1);
+
+		attach (laf_theme_label, 1, 1, 1, 1);
+		attach (laf_theme_combo, 2, 1, 1, 1);
+
+		attach (laf_font_label, 1, 2, 1, 1);
+		attach (laf_font_btn, 2, 2, 1, 1);
+
+		attach (editing_label, 3, 0, 2, 1);
+
+		attach (editing_tabwidth_label, 4, 1, 1, 1);
+		attach (editing_tabwidth_spin, 5, 1, 1, 1);
+
+		attach (editing_ln_label, 4, 2, 1, 1);
+		attach (editing_ln_sw, 5, 2, 1, 1);
+
+		attach (editing_hl_label, 4, 3, 1, 1);
+		attach (editing_hl_sw, 5, 3, 1, 1);
+
+		attach (editing_notabs_label, 4, 4, 1, 1);
+		attach (editing_notabs_sw, 5, 4, 1, 1);
 
 		laf_theme_combo.changed.connect (() => {
 			Config.settings.set_string ("editor-theme", laf_theme_combo.get_active_id ());
@@ -142,8 +191,97 @@ public class Benchwell.SettingsEditor : Gtk.Box {
 		laf_font_btn.font_set.connect (() => {
 			Config.settings.set_string ("editor-font", laf_font_btn.font);
 		});
-		laf_tabwidth_spin.changed.connect (() => {
-			Config.settings.set_int64 ("editor-tab-width", (int64)laf_tabwidth_spin.value);
+
+		editing_tabwidth_spin.changed.connect (() => {
+			Config.settings.set_int64 ("editor-tab-width", (int64)editing_tabwidth_spin.value);
+		});
+
+		editing_ln_sw.state_set.connect ((state) => {
+			Config.settings.set_boolean ("editor-line-number", state);
+			return false;
+		});
+
+		editing_hl_sw.state_set.connect ((state) => {
+			Config.settings.set_boolean ("editor-highlight-line", state);
+			return false;
+		});
+
+		editing_notabs_sw.state_set.connect ((state) => {
+			Config.settings.set_boolean ("editor-no-tabs", state);
+			return false;
 		});
 	}
 }
+
+public class Benchwell.HttpSettings : Gtk.Grid {
+	public HttpSettings () {
+		Object (
+			row_spacing: 5,
+			column_spacing: 5
+		);
+
+		var label_alignment = Gtk.Align.START;
+
+		// LOOK & FEEL
+		var laf_label = new Gtk.Label (_("Look & Feel")) {
+			valign = label_alignment,
+			halign = label_alignment
+		};
+		laf_label.show ();
+
+		// FONT
+		var laf_font_label = new Gtk.Label (_("Font")) {
+			valign = label_alignment,
+			halign = label_alignment
+		};
+		laf_font_label.show ();
+
+		var laf_font_btn = new Gtk.FontButton ();
+		if (Config.settings.get_string ("http-font") != "") {
+			laf_font_btn.font = Config.settings.get_string ("http-font");
+		}
+		laf_font_btn.show ();
+
+		///////
+
+		// OTHER
+		var requests_label = new Gtk.Label (_("Requests")) {
+			valign = label_alignment,
+			halign = label_alignment
+		};
+		requests_label.show ();
+		////////
+
+		// ACTIVATE ON SINGLE CLICK
+		var requests_single_click_label = new Gtk.Label (_("Open on single click")) {
+			valign = label_alignment,
+			halign = label_alignment
+		};
+		requests_single_click_label.show ();
+
+		var requests_single_click_sw = new Gtk.Switch ();
+		requests_single_click_sw.state = Config.settings.get_boolean ("http-single-click-activate");
+		requests_single_click_sw.show ();
+		//////////////////
+
+
+		attach (laf_label, 0, 0, 2, 1);
+
+		attach (laf_font_label, 1, 1, 1, 1);
+		attach (laf_font_btn, 2, 1, 1, 1);
+
+		attach (requests_label, 3, 0, 2, 1);
+		attach (requests_single_click_label, 4, 1, 1, 1);
+		attach (requests_single_click_sw, 5, 1, 1, 1);
+
+		laf_font_btn.font_set.connect (() => {
+			Config.settings.set_string ("http-font", laf_font_btn.font);
+		});
+
+		requests_single_click_sw.state_set.connect ((state) => {
+			Config.settings.set_boolean ("http-single-click-activate", state);
+			return false;
+		});
+	}
+}
+
