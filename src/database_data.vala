@@ -163,6 +163,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 		hpaned.show ();
 
 		var sidebar = new Gtk.Box (Gtk.Orientation.VERTICAL, 5);
+		sidebar.get_style_context ().add_class ("bw-spacing");
 		sidebar.show ();
 
 		table_search = new Gtk.SearchEntry ();

@@ -208,6 +208,7 @@ public class Benchwell.Database.ConnectionList : Gtk.ListBox {
 			return false;
 		});
 
+		get_style_context ().add_class ("bw-spacing");
 		// connection menu
 		menu = new Gtk.Menu ();
 		menu_new = new Benchwell.MenuItem (_("New"), "connection");
