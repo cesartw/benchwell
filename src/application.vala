@@ -45,7 +45,13 @@ public static int main(string[] args) {
 	Gtk.init (ref args);
 
 	// config initialization
-	Benchwell.Config = new Benchwell._Config ();
+	try {
+		Benchwell.Config = new Benchwell._Config ();
+	} catch (Benchwell.ConfigError err) {
+		stderr.printf (err.message);
+		return 1;
+	}
+
 
 	var app = new Benchwell.Application ();
 

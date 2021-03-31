@@ -3,12 +3,7 @@ namespace Benchwell {
 }
 
 public errordomain Benchwell.ConfigError {
-	GET_CONNECTIONS,
-	GET_ENVIRONMENTS,
-	SAVE_CONNECTION,
-	SAVE_ENVVAR,
-	DELETE_CONNECTION,
-	ENVIRONMENTS
+	STORE
 }
 
 public class Benchwell._Config : Object {
@@ -29,6 +24,7 @@ public class Benchwell._Config : Object {
 	}
 
 	public signal void environment_added (Benchwell.Environment env);
+	public signal void environment_removed (Benchwell.Environment env);
 	public signal void environment_changed ();
 	public signal void http_collection_added(HttpCollection collection);
 	public signal void connection_added(ConnectionInfo connection);
@@ -60,7 +56,12 @@ public class Benchwell._Config : Object {
 		load_http_tree_state ();
 	}
 
-	public void show_alert (Gtk.Widget w, string message, Gtk.MessageType type = Gtk.MessageType.ERROR, bool autohide = false, int timeout = 0) {
+	public void show_alert (Gtk.Widget? w, string message, Gtk.MessageType type = Gtk.MessageType.ERROR, bool autohide = false, int timeout = 0) {
+		if (w == null) {
+		// TODO: show dialog
+			stderr.printf (message);
+			return;
+		}
 		var aw = w.get_toplevel () as Gtk.Window as Gtk.ApplicationWindow as Benchwell.ApplicationWindow;
 		if (aw == null) {
 			stderr.printf (message);
@@ -112,6 +113,7 @@ public class Benchwell._Config : Object {
 			tmp += environments[i];
 		}
 
+		environment_removed (env);
 		environments = tmp;
 	}
 
@@ -195,7 +197,7 @@ public class Benchwell._Config : Object {
 
 
 		if ( ec != Sqlite.OK ){
-			throw new ConfigError.GET_CONNECTIONS(errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 
 		Benchwell.Query[] queries = {};
@@ -214,7 +216,7 @@ public class Benchwell._Config : Object {
 			return 0;
 		}, out errmsg);
 		if ( ec != Sqlite.OK ){
-			throw new ConfigError.GET_CONNECTIONS(errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 
 		foreach (Benchwell.ConnectionInfo conn in connections) {
@@ -249,7 +251,7 @@ public class Benchwell._Config : Object {
 			return 0;
 		}, out errmsg);
 		if ( ec != Sqlite.OK ){
-			throw new ConfigError.GET_CONNECTIONS(errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 	}
 
@@ -281,7 +283,7 @@ public class Benchwell._Config : Object {
 		}, out errmsg);
 
 		if ( ec != Sqlite.OK ){
-			throw new ConfigError.GET_CONNECTIONS(errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 
 		Benchwell.HttpItem[] mapped_items = {};
@@ -325,7 +327,7 @@ public class Benchwell._Config : Object {
 		}, out errmsg);
 
 		if ( ec != Sqlite.OK ){
-			throw new ConfigError.GET_ENVIRONMENTS(errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 
 		query = """SELECT * FROM environment_variables""";
@@ -348,7 +350,7 @@ public class Benchwell._Config : Object {
 		}, out errmsg);
 
 		if ( ec != Sqlite.OK ){
-			throw new ConfigError.GET_ENVIRONMENTS(errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 
 		for (var i = 0; i < environments.length; i++) {

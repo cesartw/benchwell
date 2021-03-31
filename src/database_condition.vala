@@ -151,28 +151,6 @@ public class Benchwell.Database.Condition {
 		return column_name;
 	}
 
-	private bool on_field_focus_out () {
-		var entry = field_combo.get_child () as Gtk.Entry;
-		var written_field_name = entry.get_text ();
-		var selected_field_name = selected_field ();
-
-		if (written_field_name == selected_field_name) {
-			return false;
-		}
-
-		var i = -1;
-		foreach (var col in _columns) {
-			i++;
-
-			if (col.name != written_field_name) {
-				continue;
-			}
-
-			field_combo.set_active(i);
-		}
-		return false;
-	}
-
 	private void on_change () {
 		if (no_ready) {
 			return;

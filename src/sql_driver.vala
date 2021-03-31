@@ -20,7 +20,7 @@ public interface Benchwell.Connection : Object {
 		int offset
 		) throws Benchwell.Error;
 	public abstract void update_field (string name, ColDef[] defs, string[] row) throws Error;
-	public abstract string[] insert_record(string name, ColDef[] defs, string[] row) throws Error;
+	public abstract string[]? insert_record(string name, ColDef[] defs, string[] row) throws Error;
 	public abstract void delete_record(string name, ColDef[] defs, string[] row) throws Error;
 	public abstract string get_create_table(string name) throws Error;
 	public abstract void query(string query, out string[] columns, out List<List<string?>> rows) throws Error;

@@ -109,7 +109,6 @@ enum Benchwell.Http.CODES {
 private struct buffer_s
 {
 	uchar[] buffer;
-	size_t size_left;
 }
 
 [Compact]
@@ -172,7 +171,7 @@ private size_t ReadHeaderCallback (char *dest, size_t size, size_t nmemb, void *
 	var header = (string)dest;
 	var at = header.index_of (":", 0);
 	if ( at != -1 ){
-		var key = header[0:at];
+		var key = header[0:at].strip ().casefold ();
 		var val = header[at+2:header.length];
 		wt.insert (key, val);
 	}
@@ -646,7 +645,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			var key = Config.environment.interpolate (kv_headers[i].key);
 			var val = Config.environment.interpolate (kv_headers[i].val);
 			// NOTE: delayed appending content-type because multipart/form-data needs to include the bounday
-			if (key == "Content-Type") {
+			if (key.strip ().casefold () == "Content-Type".casefold ()) {
 				content_type = val;
 				continue;
 			}
@@ -1004,7 +1003,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	}
 
 	public string set_response (HttpResult result) {
-		var content_type_header = result.Headers.get("Content-Type");
+		var content_type_header = result.Headers.get("Content-Type".casefold ());
 		string content_type = "";
 		if (content_type_header != null)
 			content_type = content_type_header.split(";")[0];

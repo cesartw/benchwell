@@ -185,30 +185,19 @@ public class Benchwell.Database.Connect : Gtk.Paned {
 }
 
 public class Benchwell.Database.ConnectionList : Gtk.ListBox {
-	// connection menu
 	private Gtk.Menu menu;
 	private Gtk.MenuItem menu_new;
 	private Gtk.MenuItem menu_connect;
 	private Gtk.MenuItem menu_test;
 	private Gtk.MenuItem menu_del;
 
-	//public Regex? filter { get; set; }
-
 	public ConnectionList () {
 		Object(
 			activate_on_single_click: false
 		);
 
-		button_press_event.connect ( (list, event) => {
-			if (event.button == Gdk.BUTTON_SECONDARY) {
-				grab_focus ();
-				select_row (get_row_at_y ((int)event.y));
-			}
-
-			return false;
-		});
-
 		get_style_context ().add_class ("bw-spacing");
+
 		// connection menu
 		menu = new Gtk.Menu ();
 		menu_new = new Benchwell.MenuItem (_("New"), "connection");
@@ -223,15 +212,19 @@ public class Benchwell.Database.ConnectionList : Gtk.ListBox {
 		menu.add (menu_new);
 		menu.add (menu_connect);
 		menu.add (menu_test);
-		menu.add (menu_del);
+		menu.add ( menu_del);
 
 		button_press_event.connect((list, event) => {
-			if ( event.button != Gdk.BUTTON_SECONDARY){
+			if (event.button != Gdk.BUTTON_SECONDARY){
 				return false;
 			}
 
+			grab_focus ();
+			select_row (get_row_at_y ((int)event.y));
+
 			menu.show ();
 			menu.popup_at_pointer (event);
+
 			return true;
 		});
 
@@ -280,12 +273,18 @@ public class Benchwell.Database.ConnectionList : Gtk.ListBox {
 	}
 
 	private void on_new () {
-		var c = Config.add_connection ();
-		c.adapter = "mysql";
-		c.ttype = "tcp";
-		c.port = 3306;
+		try {
+			var c = Config.add_connection ();
 
-		update_items (c.id);
+			c.adapter = "mysql";
+			c.ttype = "tcp";
+			c.port = 3306;
+
+			update_items (c.id);
+		} catch (Benchwell.ConfigError err) {
+			Config.show_alert (this, err.message);
+			return;
+		}
 	}
 
 	private void on_delete () {

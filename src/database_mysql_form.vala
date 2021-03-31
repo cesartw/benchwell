@@ -29,30 +29,38 @@ public class Benchwell.Database.MysqlForm : Gtk.Box {
 		notebook.append_page (socket_form, socket_form.tab_label);
 
 		tcp_form.changed.connect ((entry) =>{
-			if ( connection == null ) {
-				connection = Config.add_connection ();
-			}
-			connection.name = tcp_form.name_entry.get_text ();
-			connection.host = tcp_form.host_entry.get_text ();
-			connection.port = int.parse (tcp_form.port_entry.get_text ());
-			connection.user = tcp_form.user_entry.get_text ();
-			connection.password = tcp_form.password_entry.get_text ();
-			connection.database = tcp_form.database_entry.get_text ();
+			try {
+				if ( connection == null ) {
+					connection = Config.add_connection ();
+				}
+				connection.name = tcp_form.name_entry.get_text ();
+				connection.host = tcp_form.host_entry.get_text ();
+				connection.port = int.parse (tcp_form.port_entry.get_text ());
+				connection.user = tcp_form.user_entry.get_text ();
+				connection.password = tcp_form.password_entry.get_text ();
+				connection.database = tcp_form.database_entry.get_text ();
 
-			changed (connection);
+				changed (connection);
+			} catch (Benchwell.ConfigError err) {
+				Config.show_alert (this, err.message);
+			}
 		});
 
 		socket_form.changed.connect ((entry) =>{
-			if ( connection == null ) {
-				connection = Config.add_connection ();
-			}
-			connection.name = socket_form.name_entry.get_text ();
-			connection.socket = socket_form.socket_entry.get_text ();
-			connection.user = socket_form.user_entry.get_text ();
-			connection.password = socket_form.password_entry.get_text ();
-			connection.database = socket_form.database_entry.get_text ();
+			try {
+				if ( connection == null ) {
+					connection = Config.add_connection ();
+				}
+				connection.name = socket_form.name_entry.get_text ();
+				connection.socket = socket_form.socket_entry.get_text ();
+				connection.user = socket_form.user_entry.get_text ();
+				connection.password = socket_form.password_entry.get_text ();
+				connection.database = socket_form.database_entry.get_text ();
 
-			changed (connection);
+				changed (connection);
+			} catch (Benchwell.ConfigError err) {
+				Config.show_alert (this, err.message);
+			}
 		});
 
 		add (notebook);

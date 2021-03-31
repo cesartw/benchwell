@@ -1,4 +1,4 @@
-public delegate void NoUpdateFunc ();
+public delegate void NoUpdateFunc () throws Benchwell.ConfigError;
 
 public class Benchwell.HttpCollection : Object {
 	public int64      id;
@@ -62,9 +62,7 @@ public class Benchwell.HttpCollection : Object {
 		string errmsg = "";
 		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);
 		if ( ec != Sqlite.OK ){
-			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
-			stderr.printf ("ERR: %s\n", errmsg);
-			throw new ConfigError.SAVE_CONNECTION(errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 
 		if (this.id == 0) {
@@ -92,9 +90,7 @@ public class Benchwell.HttpCollection : Object {
 		string errmsg = "";
 		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);
 		if ( ec != Sqlite.OK ){
-			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
-			stderr.printf ("ERR: %s\n", errmsg);
-			throw new ConfigError.SAVE_ENVVAR(errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 
 		Config.remove_http_collection (this);
@@ -102,7 +98,11 @@ public class Benchwell.HttpCollection : Object {
 
 	public void touch_without_save (NoUpdateFunc f) {
 		no_auto_save = true;
-		f ();
+		try {
+			f ();
+		} catch (Benchwell.ConfigError err) {
+			Config.show_alert (null, err.message);
+		}
 		no_auto_save = false;
 	}
 
@@ -221,7 +221,11 @@ public class Benchwell.HttpItem : Object {
 
 	public void touch_without_save (NoUpdateFunc f) {
 		no_auto_save = true;
-		f ();
+		try {
+			f ();
+		} catch (Benchwell.ConfigError err) {
+			Config.show_alert (null, err.message);
+		}
 		no_auto_save = false;
 	}
 
@@ -336,9 +340,7 @@ public class Benchwell.HttpItem : Object {
 		string errmsg = "";
 		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);
 		if ( ec != Sqlite.OK ){
-			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
-			stderr.printf ("ERR: %s\n", errmsg);
-			throw new ConfigError.SAVE_ENVVAR(errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 
 		if (id == 0) {
@@ -388,9 +390,7 @@ public class Benchwell.HttpItem : Object {
 		string errmsg = "";
 		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);
 		if ( ec != Sqlite.OK ){
-			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
-			stderr.printf ("ERR: %s\n", errmsg);
-			throw new ConfigError.SAVE_ENVVAR(errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 
 		if (id == 0) {
@@ -442,9 +442,7 @@ public class Benchwell.HttpItem : Object {
 		string errmsg = "";
 		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);
 		if ( ec != Sqlite.OK ){
-			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
-			stderr.printf ("ERR: %s\n", errmsg);
-			throw new ConfigError.SAVE_ENVVAR(errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 
 		if (id == 0) {
@@ -527,9 +525,7 @@ public class Benchwell.HttpItem : Object {
 		string errmsg = "";
 		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);
 		if ( ec != Sqlite.OK ){
-			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
-			stderr.printf ("ERR: %s\n", errmsg);
-			throw new ConfigError.SAVE_ENVVAR(errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 
 		// key values
@@ -546,9 +542,7 @@ public class Benchwell.HttpItem : Object {
 
 		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);
 		if ( ec != Sqlite.OK ){
-			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
-			stderr.printf ("ERR: %s\n", errmsg);
-			throw new ConfigError.SAVE_ENVVAR(errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 	}
 
@@ -592,7 +586,7 @@ public class Benchwell.HttpItem : Object {
 				return 0;
 			}, out errmsg);
 			if ( ec != Sqlite.OK ){
-				throw new ConfigError.GET_CONNECTIONS(errmsg);
+				throw new ConfigError.STORE(errmsg);
 			}
 
 			Benchwell.HttpKv[] kvs = {};
@@ -600,6 +594,7 @@ public class Benchwell.HttpItem : Object {
 				FROM http_kvs
 				WHERE http_items_id = %lld
 				ORDER BY sort ASC""".printf (id);
+
 			ec = Config.db.exec (query, (n_columns, values, column_names) => {
 				var kv = new Benchwell.HttpKv ();
 
@@ -618,7 +613,7 @@ public class Benchwell.HttpItem : Object {
 				return 0;
 			}, out errmsg);
 			if ( ec != Sqlite.OK ){
-				throw new ConfigError.GET_CONNECTIONS(errmsg);
+				throw new ConfigError.STORE(errmsg);
 			}
 
 			Benchwell.HttpKv[] new_headers = {};
@@ -681,11 +676,15 @@ public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
 
 	public void touch_without_save (NoUpdateFunc f) {
 		no_auto_save = true;
-		f ();
+		try {
+			f ();
+		} catch (Benchwell.ConfigError err) {
+			Config.show_alert (null, err.message);
+		}
 		no_auto_save = false;
 	}
 
-	public void save () throws ConfigError {
+	public void save () throws Benchwell.ConfigError {
 		Sqlite.Statement stmt;
 		string prepared_query_str = "";
 
@@ -756,9 +755,7 @@ public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
 		string errmsg = "";
 		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);
 		if ( ec != Sqlite.OK ){
-			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
-			stderr.printf ("ERR: %s\n", errmsg);
-			throw new ConfigError.SAVE_CONNECTION(errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 
 		if (this.id == 0) {
@@ -786,9 +783,7 @@ public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
 		string errmsg = "";
 		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);
 		if ( ec != Sqlite.OK ){
-			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
-			stderr.printf ("ERR: %s\n", errmsg);
-			throw new ConfigError.SAVE_ENVVAR(errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 	}
 }

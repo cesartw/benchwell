@@ -92,13 +92,17 @@ public class Benchwell.Database.ResultView : Gtk.Paned {
 		var filename = dialog.get_filename ();
 		dialog.destroy ();
 
-		string text;
-		var ok = GLib.FileUtils.get_contents (filename, out text, null);
-		if (!ok) {
-			return;
-		}
+		try {
+			string text;
+			var ok = GLib.FileUtils.get_contents (filename, out text, null);
+			if (!ok) {
+				return;
+			}
 
-		editor.get_buffer ().set_text (text);
+			editor.get_buffer ().set_text (text);
+		} catch( GLib.FileError err) {
+			Config.show_alert (this, err.message);
+		}
 	}
 
 	public void on_save_file () {
@@ -140,14 +144,18 @@ public class Benchwell.Database.ResultView : Gtk.Paned {
 		buffer.get_end_iter (out end);
 
 		var query_text = buffer.get_text (start, end, false);
-		var query = service.info.add_query ();
+		try {
+			var query = service.info.add_query ();
 
-		query.touch_without_save (() => {
-			query.query = query_text;
-			query.query_type = "fav";
-			query.name = query_name;
-		});
-		query.save ();
+			query.touch_without_save (() => {
+				query.query = query_text;
+				query.query_type = "fav";
+				query.name = query_name;
+			});
+			query.save ();
+		} catch (Benchwell.ConfigError err) {
+			Config.show_alert (this, err.message);
+		}
 		fav_saved ();
 	}
 

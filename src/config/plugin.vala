@@ -256,8 +256,10 @@ public class Benchwell.JSPlugin : Object, Benchwell.Plugin {
 
 				plugins += new JSPlugin (jsctx, file_name, call);
 			}
-		} catch (Error e) {
-			stderr.printf ("error %s\n", e.message);
+		} catch (GLib.IOError err) {
+			stderr.printf ("error %s\n", err.message);
+		} catch (GLib.Error err) {
+			stderr.printf ("error %s\n", err.message);
 		}
 
 

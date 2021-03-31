@@ -140,16 +140,14 @@ public class Benchwell.ConnectionInfo : Object {
 		string errmsg = "";
 		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);
 		if ( ec != Sqlite.OK ){
-			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
-			stderr.printf ("ERR: %s\n", errmsg);
-			throw new Benchwell.ConfigError.SAVE_CONNECTION(errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 
 		if (id == 0) {
 			id = Config.db.last_insert_rowid ();
 		}
 
-		Config.encrypt (this);
+		Config.encrypt.begin (this);
 	}
 
 	public void remove () throws Benchwell.ConfigError {
@@ -160,7 +158,7 @@ public class Benchwell.ConnectionInfo : Object {
 		string errmsg = "";
 		var ec = Config.db.exec (@"DELETE FROM db_connections WHERE ID = $(id)", null, out errmsg);
 		if ( ec != Sqlite.OK ){
-			throw new Benchwell.ConfigError.DELETE_CONNECTION (errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 	}
 
@@ -206,7 +204,7 @@ public class Benchwell.ConnectionInfo : Object {
 								 null,
 								 out errmsg);
 		if ( ec != Sqlite.OK ){
-			throw new Benchwell.ConfigError.DELETE_CONNECTION (errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 
 		var query = add_query ();
@@ -244,7 +242,7 @@ public class Benchwell.ConnectionInfo : Object {
 			},
 			out errmsg);
 		if ( ec != Sqlite.OK ){
-			throw new ConfigError.GET_CONNECTIONS(errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 		history = h;
 
@@ -272,7 +270,11 @@ public class Benchwell.Query : Object {
 
 	public void touch_without_save (NoUpdateFunc f) {
 		no_auto_save = true;
-		f ();
+		try {
+			f ();
+		} catch (ConfigError err) {
+			Config.show_alert (null, err.message);
+		}
 		no_auto_save = false;
 	}
 
@@ -284,7 +286,7 @@ public class Benchwell.Query : Object {
 		try {
 			save ();
 		} catch (ConfigError err) {
-			stderr.printf (err.message);
+			Config.show_alert (null, err.message);
 		}
 	}
 
@@ -341,9 +343,7 @@ public class Benchwell.Query : Object {
 		string errmsg = "";
 		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);
 		if ( ec != Sqlite.OK ){
-			stderr.printf ("SQL: %s\n", stmt.expanded_sql());
-			stderr.printf ("ERR: %s\n", errmsg);
-			throw new ConfigError.SAVE_CONNECTION(errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 
 		if (id == 0) {
@@ -360,7 +360,7 @@ public class Benchwell.Query : Object {
 		string errmsg = "";
 		var ec = Config.db.exec (@"DELETE FROM db_queries WHERE ID = $(id)", null, out errmsg);
 		if ( ec != Sqlite.OK ){
-			throw new ConfigError.DELETE_CONNECTION (errmsg);
+			throw new ConfigError.STORE(errmsg);
 		}
 	}
 }

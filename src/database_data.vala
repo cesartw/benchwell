@@ -93,7 +93,13 @@ public class Benchwell.Database.Data : Gtk.Paned {
 			return;
 		}
 
-		var sql = service.connection.get_create_table (tabledef.name);
+		string sql = "";
+		try {
+			sql = service.connection.get_create_table (tabledef.name);
+		} catch (Benchwell.Error err) {
+			Config.show_alert (this, err.message);
+			return;
+		}
 		var dialog = new Gtk.Dialog.with_buttons (@"$(tabledef.name) schema", window,
 								Gtk.DialogFlags.DESTROY_WITH_PARENT|Gtk.DialogFlags.MODAL,
 								_("Ok"), Gtk.ResponseType.OK);
@@ -134,7 +140,8 @@ public class Benchwell.Database.Data : Gtk.Paned {
 			tables.remove_selected ();
 		} catch (Benchwell.Error err) {
 			window.show_alert (err.message);
-			return;
+		} catch (Benchwell.ConfigError err) {
+			window.show_alert (err.message);
 		}
 	}
 

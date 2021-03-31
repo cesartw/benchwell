@@ -18,13 +18,13 @@ public class Benchwell.DatabaseService : Object {
 		yield Config.ping_dbus ();
 
 		if (info.password == "") {
-			var loop = new MainLoop ();
+			//var loop = new MainLoop ();
 			var password = "";
 			Config.decrypt.begin (info, (obj, res) => {
 				password = Config.decrypt.end (res);
-				loop.quit ();
+				//loop.quit ();
 			});
-			loop.run ();
+			//loop.run ();
 
 			info.password = password;
 		}

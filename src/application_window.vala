@@ -315,6 +315,27 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 			Config.settings.set_int64 (Benchwell.Settings.ENVIRONMENT_ID.to_string (), Config.environment.id);
 		});
 
+		Config.environment_added.connect ((env) => {
+			Gtk.TreeIter iter;
+			env_store.append (out iter);
+			env_store.set_value (iter, 0, env.id);
+			env_store.set_value (iter, 1, env.name);
+		});
+
+		Config.environment_removed.connect ((env) => {
+			Gtk.TreeIter? iter = null;
+			env_store.foreach ((model, path, i) => {
+				iter = i;
+				GLib.Value val;
+				env_store.get_value (iter, 0, out val);
+				return val.get_int64 () == env.id;
+			});
+
+			if (iter != null) {
+				env_store.remove (ref iter);
+			}
+		});
+
 		return grid;
 	}
 

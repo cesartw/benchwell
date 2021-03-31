@@ -191,10 +191,6 @@ public class Benchwell.KeyValue : Gtk.Box {
 		switch_enabled.show ();
 		sgbtn.add_widget (switch_enabled);
 
-		var string_enabled = (Benchwell.KeyValueTypes.STRING in supported_types);
-		var multi_enabled = (Benchwell.KeyValueTypes.MULTILINE in supported_types);
-		var file_enabled = (Benchwell.KeyValueTypes.FILE in supported_types);
-
 		entry_val = new Gtk.Entry ();
 		entry_val.placeholder_text = _("Value");
 

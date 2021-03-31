@@ -284,7 +284,7 @@ public class Benchwell.Database.Table : Gtk.Box {
 		var path = store.get_path (insertAt);
 		selection.unselect_all ();
 		selection.select_path (path);
-		table.row_activated (path, null);
+		table.row_activated (path, table.get_column(0));
 		table.scroll_to_cell (path, null, true, (float) 0.5, (float) 0);
 	}
 
@@ -391,7 +391,6 @@ public class Benchwell.Database.Table : Gtk.Box {
 			GLib.Value val;
 			var index = column_index;
 			tree_model.get_value (iter, index, out val);
-			var path = tree_model.get_path (iter);
 
 			if ( val.holds (GLib.Type.STRING) ) {
 				if ( val.get_string () == Benchwell.null_string ){

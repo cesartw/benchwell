@@ -89,7 +89,7 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		}
 	}
 
-	public bool disconnect () {
+	public new bool disconnect () {
 		return true;
 	}
 
@@ -306,7 +306,7 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		}
 	}
 
-	public string[] insert_record(string name, ColDef[] columns, string[] row) throws Benchwell.Error
+	public string[]? insert_record(string name, ColDef[] columns, string[] row) throws Benchwell.Error
 		requires (name != "")
 		requires (row.length > 0)
 		requires (columns.length == row.length)

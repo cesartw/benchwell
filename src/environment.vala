@@ -63,17 +63,6 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 			});
 		}
 
-		Config.environment_added.connect ((env) => {
-			var panel = new Benchwell.EnvironmentPanel (env);
-			panel.show ();
-			stack.add_titled (panel, env.name, env.name);
-			stack.set_visible_child (panel);
-			panel.entry_name.changed.connect (() => {
-				stack.child_set_property(panel, "title", panel.entry_name.text);
-				env.name = panel.entry_name.text;
-			});
-		});
-
 		var env_list_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
 		env_list_box.pack_start (switcher, true, true, 0);
 		env_list_box.pack_end (btn_box, false, false, 0);
@@ -85,6 +74,17 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 		btn_add.clicked.connect (on_add_env);
 		btn_remove.clicked.connect (on_remove_env);
 		btn_clone.clicked.connect (on_clone);
+
+		Config.environment_added.connect ((env) => {
+			var panel = new Benchwell.EnvironmentPanel (env);
+			panel.show ();
+			stack.add_titled (panel, env.name, env.name);
+			stack.set_visible_child (panel);
+			panel.entry_name.changed.connect (() => {
+				stack.child_set_property(panel, "title", panel.entry_name.text);
+				env.name = panel.entry_name.text;
+			});
+		});
 	}
 
 	private void on_add_env () {
@@ -124,7 +124,7 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 
 public class Benchwell.EnvironmentPanel : Gtk.Box {
 	public Gtk.Entry  entry_name;
-	public owned Benchwell.Environment environment { get; construct; }
+	public Benchwell.Environment environment { get; construct; }
 	public Benchwell.KeyValues keyvalues;
 
 	public EnvironmentPanel (Benchwell.Environment env) {
