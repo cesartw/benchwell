@@ -494,8 +494,13 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		ref int precision,
 		ref string[] options,
 		ref bool unsigned
-	) throws GLib.RegexError {
-		var regex = new Regex ("([a-z ]+)(\\((.+)\\))?\\s?(unsigned)?");
+	) {
+		Regex regex = null;
+		try {
+			regex = new Regex ("([a-z ]+)(\\((.+)\\))?\\s?(unsigned)?");
+		} catch (RegexError err) {
+		}
+
 		var parts = regex.split (t);
 
 		var tt = parts[1]; // type

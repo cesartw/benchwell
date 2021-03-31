@@ -267,29 +267,18 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 			return;
 		}
 
-		//Gtk.TreeIter parent;
+		try {
+			var new_item = selected_collection.clone_item (selected_item);
 
-		//var selected_item = get_selected_item (out parent);
-		//int64? http_item_id = null;
-		//if ( selected_item  != null )
-			//http_item_id = selected_item.id;
-
-		//Gtk.TreeIter? sibling = null;
-
-		//if (selected_item != null && !selected_item.is_folder) {
-			//sibling = parent;
-			//http_item_id = selected_item.parent_id;
-			//store.iter_parent (out parent, parent);
-		//}
-
-		var new_item = selected_collection.clone_item (selected_item);
-
-		iter = add_row (new_item, null, iter);
-		var path = store.get_path (iter);
-		name_renderer.editable = true;
-		treeview.expand_to_path (path);
-		treeview.set_cursor (path, name_column, true);
-		item_activated (new_item, iter);
+			iter = add_row (new_item, null, iter);
+			var path = store.get_path (iter);
+			name_renderer.editable = true;
+			treeview.expand_to_path (path);
+			treeview.set_cursor (path, name_column, true);
+			item_activated (new_item, iter);
+		} catch (Benchwell.ConfigError err) {
+			Config.show_alert (this, err.message);
+		}
 	}
 
 	private void on_add_folder () {

@@ -291,17 +291,17 @@ public class Benchwell.JSPlugin : Object, Benchwell.Plugin {
 public class Benchwell.BuiltinPlugin : Object, Benchwell.Plugin {
 	public delegate string call (GLib.Value[] parameters);
 	public string name { get; construct; }
-	private call f;
+	private call* f;
 
 	protected BuiltinPlugin (string name, call f) {
 		Object(
 			name: name
 		);
-		this.f = f;
+		this.f = &f;
 	}
 
 	public string callv (GLib.Value[] parameters) {
-		return f(parameters);
+		return ((call)*f)(parameters);
 	}
 
 	public static Benchwell.Plugin[] load () {

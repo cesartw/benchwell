@@ -14,9 +14,13 @@ public class Benchwell.Environment : Object {
 		notify["name"].connect (on_save);
 	}
 
-	public void touch_without_save (NoUpdateFunc f) throws Benchwell.ConfigError {
+	public void touch_without_save (NoUpdateFunc f) {
 		no_auto_save = true;
-		f ();
+		try {
+			f ();
+		} catch (Benchwell.ConfigError err) {
+			Config.show_alert (null, err.message);
+		}
 		no_auto_save = false;
 	}
 
@@ -250,9 +254,13 @@ public class Benchwell.EnvVar : Object, Benchwell.KeyValueI {
 		notify["kvtype"].connect (on_save);
 	}
 
-	public void touch_without_save (NoUpdateFunc f) throws Benchwell.ConfigError {
+	public void touch_without_save (NoUpdateFunc f) {
 		no_auto_save = true;
-		f ();
+		try {
+			f ();
+		} catch (Benchwell.ConfigError err) {
+			Config.show_alert (null, err.message);
+		}
 		no_auto_save = false;
 	}
 

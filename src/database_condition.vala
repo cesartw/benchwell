@@ -166,18 +166,8 @@ public class Benchwell.Database.Condition {
 public class Benchwell.Database.Conditions : Gtk.Grid {
 	private List<Benchwell.Database.Condition> conditions;
 	private Benchwell.ColDef[] _columns;
-	public Benchwell.ColDef[] columns {
-		get { return _columns; }
-		set {
-			_columns = value;
-			conditions.foreach ((condition) => {
-				condition.columns = _columns;
-			});
-		}
-	}
 
 	public signal void ready (Benchwell.CondStmt stmt);
-
 	public signal void search();
 
 	public Conditions () {
@@ -187,6 +177,17 @@ public class Benchwell.Database.Conditions : Gtk.Grid {
 		);
 		set_name ("conditions");
 		add_condition ();
+	}
+
+	public void set_columns (Benchwell.ColDef[] cols) {
+		_columns = cols;
+		conditions.foreach ((condition) => {
+			condition.columns = _columns;
+		});
+	}
+
+	public unowned Benchwell.ColDef[] get_columns () {
+		return _columns;
 	}
 
 	public Benchwell.Database.Condition add_condition () {

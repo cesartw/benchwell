@@ -356,13 +356,17 @@ public class Benchwell.Database.Data : Gtk.Paned {
 	}
 
 	private void fill () {
-		databases = service.connection.databases ();
-		databases.foreach ( db => {
-			database_combo.append (db, db);
-		});
+		try {
+			databases = service.connection.databases ();
+			databases.foreach ( db => {
+				database_combo.append (db, db);
+			});
 
-		if ( service.info.database != "" ) {
-			database_combo.set_active_id (service.info.database);
+			if ( service.info.database != "" ) {
+				database_combo.set_active_id (service.info.database);
+			}
+		} catch (Benchwell.Error err) {
+			Config.show_alert (this, err.message);
 		}
 	}
 
@@ -404,7 +408,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 		try {
 			service.load_table(null, null, current_page, page_size);
 			result_view.table.raw_mode = false;
-			result_view.table.conditions.columns = service.columns;
+			result_view.table.conditions.set_columns (service.columns);
 			result_view.table.load_table ();
 
 			var filters = Config.get_table_filters (service.info, service.table_def.name);
@@ -463,7 +467,7 @@ public class Benchwell.Views.CancelOverlay : Gtk.Overlay {
 	public Gtk.Button btn_cancel;
 	public Gtk.Spinner spinner;
 	public Gtk.Box controls;
-	private OnCancelFunc cancel;
+	private OnCancelFunc* cancel;
 	public Gtk.Widget overlayed { construct; }
 
 	public CancelOverlay (Gtk.Widget overlayed) {
@@ -495,7 +499,7 @@ public class Benchwell.Views.CancelOverlay : Gtk.Overlay {
 
 		btn_cancel.clicked.connect ( () => {
 			stop ();
-			cancel ();
+			((OnCancelFunc)(*cancel)) ();
 		});
 	}
 
@@ -503,7 +507,7 @@ public class Benchwell.Views.CancelOverlay : Gtk.Overlay {
 		controls.show ();
 		spinner.show ();
 		add_overlay (controls);
-		cancel = c;
+		cancel = &c;
 	}
 
 	public void stop () {

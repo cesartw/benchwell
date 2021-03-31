@@ -698,11 +698,17 @@ public class Benchwell.Http.Http : Gtk.Paned {
 								return;
 							}
 
-							var file_info = file.query_info ("*", FileQueryInfoFlags.NONE);
-
+							GLib.FileInfo file_info = null;
 							uint8[] content;
-							var ok = GLib.FileUtils.get_data (val, out content);
-							if (!ok) {
+							try {
+								file_info = file.query_info ("*", FileQueryInfoFlags.NONE);
+
+								var ok = GLib.FileUtils.get_data (val, out content);
+								if (!ok) {
+									return;
+								}
+							} catch (GLib.Error err) {
+								Config.show_alert (this, err.message);
 								return;
 							}
 
@@ -757,7 +763,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 					item.response_headers = result.headers_string();
 					item.save_response ();
 				}
-			} catch (ThreadError err) {
+			} catch (Benchwell.ConfigError err) {
 				Config.show_alert (this, err.message);
 			}
 			overlay.stop ();

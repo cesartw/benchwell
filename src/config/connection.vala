@@ -59,7 +59,11 @@ public class Benchwell.ConnectionInfo : Object {
 
 	public void touch_without_save (NoUpdateFunc f) {
 		no_auto_save = true;
-		f ();
+		try {
+			f ();
+		} catch (Benchwell.ConfigError err) {
+			Config.show_alert (null, err.message);
+		}
 		no_auto_save = false;
 	}
 

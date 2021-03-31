@@ -533,11 +533,11 @@ public class Benchwell.Database.Table : Gtk.Box {
 
 	private void on_column_search () {
 		var expr = search.get_buffer ().get_text ();
-		Regex regex;
+		Regex regex = null;
 		try {
 			regex = new Regex (expr, RegexCompileFlags.CASELESS);
 		} catch (RegexError e) {
-			regex = new Regex (".*");
+			try { regex = new Regex (".*"); } catch (RegexError err) {};
 		}
 
 

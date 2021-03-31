@@ -471,12 +471,16 @@ public class Benchwell._Config : Object {
 	}
 
 	public void load_http_tree_state () {
-		var tree_state = Json.from_string (settings.get_string ("http-tree-state"));
-		http_tree_state = new HashTable<int64?, bool?> (int64_hash, int64_equal);
+		try {
+			var tree_state = Json.from_string (settings.get_string ("http-tree-state"));
+			http_tree_state = new HashTable<int64?, bool?> (int64_hash, int64_equal);
 
-		tree_state.get_object ().get_members ().foreach ((key) => {
-			http_tree_state.insert (int64.parse (key), tree_state.get_object ().get_boolean_member (key));
-		});
+			tree_state.get_object ().get_members ().foreach ((key) => {
+				http_tree_state.insert (int64.parse (key), tree_state.get_object ().get_boolean_member (key));
+			});
+		} catch (GLib.Error err) {
+			Config.show_alert (null, err.message);
+		}
 	}
 
 	public void save_http_tree_state () {
