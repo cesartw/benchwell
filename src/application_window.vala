@@ -162,8 +162,10 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 
 		add(box);
 
-		set_default_size (Config.settings.get_int (Benchwell.Settings.WINDOW_SIZE_W.to_string ()), Config.settings.get_int (Benchwell.Settings.WINDOW_SIZE_H.to_string ()));
-		move (Config.settings.get_int (Benchwell.Settings.WINDOW_POS_X.to_string ()), Config.settings.get_int (Benchwell.Settings.WINDOW_POS_Y.to_string ()));
+		set_default_size (Config.settings.window_size_w,
+							Config.settings.window_size_h);
+		move (Config.settings.window_pos_x,
+			Config.settings.window_pos_y);
 
 		new_database_tab_menu.activate.connect (() => {
 			add_database_tab ();
@@ -191,10 +193,10 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		get_size (out width, out height);
 		get_position (out x, out y);
 
-		Config.settings.set_int (Benchwell.Settings.WINDOW_SIZE_W.to_string (), width);
-		Config.settings.set_int (Benchwell.Settings.WINDOW_SIZE_H.to_string (), height);
-		Config.settings.set_int (Benchwell.Settings.WINDOW_POS_X.to_string (), x);
-		Config.settings.set_int (Benchwell.Settings.WINDOW_POS_Y.to_string (), y);
+		Config.settings.window_size_w = width;
+		Config.settings.window_size_h = height;
+		Config.settings.window_pos_x =  x;
+		Config.settings.window_pos_y =  y;
 		Config.save_http_tree_state ();
 
 		return false;
@@ -279,7 +281,7 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		grid.attach (btn_env, 4, 0, 1, 1);
 		grid.get_style_context ().add_class ("link");
 
-		var selected_environment_id = Config.settings.get_int64 (Benchwell.Settings.ENVIRONMENT_ID.to_string ());
+		var selected_environment_id = Config.settings.environment_id;
 		for (var i = 0; i < Config.environments.length; i++) {
 			var env = Config.environments[i];
 			Gtk.TreeIter iter;
@@ -312,7 +314,7 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 				}
 			}
 
-			Config.settings.set_int64 (Benchwell.Settings.ENVIRONMENT_ID.to_string (), Config.environment.id);
+			Config.settings.environment_id = Config.environment.id;
 		});
 
 		Config.environment_added.connect ((env) => {

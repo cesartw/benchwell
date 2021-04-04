@@ -35,8 +35,8 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 			window: window
 		);
 
-		if (Config.settings.get_string("http-font") != "") {
-			override_font (Pango.FontDescription.from_string (Config.settings.get_string("http-font")));
+		if (Config.settings.http_font != "") {
+			Config.set_font (this, Pango.FontDescription.from_string (Config.settings.http_font));
 		}
 
 		// treeview
@@ -50,7 +50,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		treeview.enable_search = true;
 		treeview.reorderable = true; // would be nice
 		treeview.button_release_event.connect (on_button_release_event);
-		treeview.activate_on_single_click = Config.settings.get_boolean ("http-single-click-activate");
+		treeview.activate_on_single_click = Config.settings.http_single_click_activate;
 
 		store = new Benchwell.HttpStore.newv ({GLib.Type.OBJECT, GLib.Type.STRING, GLib.Type.STRING, GLib.Type.OBJECT});
 
@@ -78,7 +78,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 			}
 
 			if (!item.is_folder) {
-				var color = Benchwell.Colors.parse (item.method);
+				var color = Benchwell.HighlightColors.parse (item.method);
 				if (color == null) {
 					return;
 				}
@@ -167,7 +167,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 			Config.http_tree_state.remove (item.id);
 		});
 
-		var selected_collection_id = Config.settings.get_int64 (Benchwell.Settings.HTTP_COLLECTION_ID.to_string ());
+		var selected_collection_id = Config.settings.http_collection_id;
 		if (selected_collection_id > 0) {
 			collections_combo.set_active_id (selected_collection_id.to_string ());
 		}
@@ -206,11 +206,11 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		});
 
 		Config.settings.changed["http-font"].connect (() => {
-			override_font (Pango.FontDescription.from_string (Config.settings.get_string("http-font")));
+			Config.set_font (this, Pango.FontDescription.from_string (Config.settings.http_font));
 		});
 
 		Config.settings.changed["http-single-click-activate"].connect (() => {
-			treeview.activate_on_single_click = Config.settings.get_boolean ("http-single-click-activate");
+			treeview.activate_on_single_click = Config.settings.http_single_click_activate;
 		});
 	}
 
@@ -447,7 +447,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 
 			store.clear ();
 
-			Config.settings.set_int64 (Benchwell.Settings.HTTP_COLLECTION_ID.to_string (), collection.id);
+			Config.settings.http_collection_id = collection.id;
 
 			try {
 				Config.load_http_items (collection);

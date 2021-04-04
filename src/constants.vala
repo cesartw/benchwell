@@ -39,17 +39,6 @@ namespace Benchwell {
 		"#575756"
 	};
 	public const string null_string = "<NULL>";
-
-
-	public const string[] Methods = {
-		"GET",
-		"POST",
-		"PUT",
-		"PATCH",
-		"DELETE",
-		"OPTIONS",
-		"HEAD",
-	};
 }
 
 public enum Benchwell.ColorScheme {
@@ -58,8 +47,7 @@ public enum Benchwell.ColorScheme {
 	MAIN
 }
 
-
-public enum Benchwell.Colors {
+public enum Benchwell.HighlightColors {
 	MAIN,
 	BLACK,
 	GREY,
@@ -91,7 +79,7 @@ public enum Benchwell.Colors {
 		return colors[this];
 	}
 
-	public static Benchwell.Colors? parse(string? s) {
+	public static Benchwell.HighlightColors? parse(string? s) {
 		if  (s == null)
 			return GET;
 
@@ -117,33 +105,3 @@ public enum Benchwell.Colors {
 	}
 }
 
-public enum Benchwell.Settings {
-	WINDOW_SIZE_W,
-	WINDOW_SIZE_H,
-	WINDOW_POS_X,
-	WINDOW_POS_Y,
-	ENVIRONMENT_ID,
-	HTTP_COLLECTION_ID,
-	HTTP_ITEM_ID;
-
-	public string to_string () {
-		switch (this) {
-			case WINDOW_SIZE_W:
-				return "window-size-w";
-			case WINDOW_SIZE_H:
-				return "window-size-h";
-			case WINDOW_POS_X:
-				return "window-pos-x";
-			case WINDOW_POS_Y:
-				return "window-pos-y";
-			case ENVIRONMENT_ID:
-				return "environment-id";
-			case HTTP_COLLECTION_ID:
-				return "http-collection-id";
-			case HTTP_ITEM_ID:
-				return "http-item-id";
-			default:
-				return "";
-		}
-	}
-}

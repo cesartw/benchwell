@@ -76,7 +76,7 @@
 			<summary>Editor font</summary>
 			<description>Text editor font</description>
 		</key>
-		<key name="editor-tab-width" type="x">
+		<key name="editor-tab-width" type="i">
 			<default>4</default>
 			<summary>Tab width</summary>
 			<description>Text editor tab width</description>
@@ -96,22 +96,22 @@
 			<summary>Do not insert tabs</summary>
 			<description>Insert spaces instead of tabs</description>
 		</key>
-		<key name="pomodoro-duration" type="x">
+		<key name="pomodoro-duration" type="i">
 			<default>1500</default>
 			<summary>Work set seconds</summary>
 			<description>Pomodoro work set duration in seconds</description>
 		</key>
-		<key name="pomodoro-break-duration" type="x">
+		<key name="pomodoro-break-duration" type="i">
 			<default>300</default>
 			<summary>Short break duration</summary>
 			<description>Pomodoro short break duration in seconds</description>
 		</key>
-		<key name="pomodoro-long-break-duration" type="x">
+		<key name="pomodoro-long-break-duration" type="i">
 			<default>600</default>
 			<summary>Long break duration</summary>
 			<description>Pomodoro long break duration in seconds</description>
 		</key>
-		<key name="pomodoro-set-count" type="x">
+		<key name="pomodoro-set-count" type="i">
 			<default>4</default>
 			<summary>Work set count</summary>
 			<description>Pomodoro work set count before a long break</description>

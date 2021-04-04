@@ -26,13 +26,8 @@ public class Benchwell.Application : Gtk.Application {
 		window.add_database_tab ();
 		window.add_http_tab ();
 
-		Gtk.Settings.get_default ().gtk_application_prefer_dark_theme = Config.settings.get_boolean ("dark-mode");
-
-		//var notification = new GLib.Notification ("Benchwell");
-		//notification.set_body (_("yolo"));
-		//send_notification ("io.benchwell", notification);
+		Gtk.Settings.get_default ().gtk_application_prefer_dark_theme = Config.settings.dark_mode;
 	}
-
 
 	public void get_cursor_position (out int x, out int y) {
 		var pointer = Gdk.Display.get_default ().get_default_seat ().get_pointer ();

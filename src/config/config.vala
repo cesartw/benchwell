@@ -8,7 +8,7 @@ public errordomain Benchwell.ConfigError {
 
 public class Benchwell._Config : Object {
 	public Sqlite.Database db;
-	public GLib.Settings settings;
+	public Benchwell.Settings settings;
 	public Benchwell.Environment[] environments;
 	public Benchwell.ConnectionInfo[] connections;
 	public Benchwell.HttpCollection[] http_collections;
@@ -30,7 +30,7 @@ public class Benchwell._Config : Object {
 	public signal void connection_added(ConnectionInfo connection);
 
 	public _Config () throws Benchwell.ConfigError {
-		settings = new GLib.Settings ("io.benchwell");
+		settings = new Benchwell.Settings ();
 		string dbpath = GLib.Environment.get_user_config_dir () + "/benchwell/config.db";
 		int ec = Sqlite.Database.open_v2 (dbpath, out db, Sqlite.OPEN_READWRITE);
 		if (ec != Sqlite.OK) {
@@ -68,6 +68,23 @@ public class Benchwell._Config : Object {
 			return;
 		}
 		aw.show_alert (message, type, autohide, timeout);
+	}
+
+	public void set_font (Gtk.Widget w, Pango.FontDescription font) {
+		var size = font.get_size();
+		if (!font.get_size_is_absolute ()) {
+			size = size / Pango.SCALE;
+		}
+
+		try {
+			var style_provider = new Gtk.CssProvider ();
+			style_provider.load_from_data (
+				"* { font-family: %s; font-size: %dpx}".printf (font.get_family (), size), -1
+			);
+			w.get_style_context ().add_provider (style_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+		} catch (GLib.Error err) {
+			debug ("updating font %s", err.message);
+		}
 	}
 
 	public Gtk.PositionType tab_position () {
@@ -498,6 +515,221 @@ public class Benchwell._Config : Object {
 			filters = Json.from_string (settings.get_string ("db-filters"));
 		} catch (GLib.Error err) {
 			stderr.printf ("Loading saved filters: %s", err.message);
+		}
+	}
+}
+
+public class Benchwell.Settings : GLib.Settings {
+	public Settings () {
+		Object (
+			schema_id: "io.benchwell"
+		);
+	}
+
+	public int window_pos_x {
+		get {
+			return get_int ("window-pos-x");
+		}
+		set {
+			set_int ("window-pos-x", value);
+		}
+	}
+
+	public int window_pos_y {
+		get {
+			return get_int ("window-pos-y");
+		}
+		set {
+			set_int ("window-pos-y", value);
+		}
+	}
+
+	public int window_size_w {
+		get {
+			return get_int ("window-size-w");
+		}
+		set {
+			set_int ("window-size-w", value);
+		}
+	}
+
+	public int window_size_h {
+		get {
+			return get_int ("window-size-h");
+		}
+		set {
+			set_int ("window-size-h", value);
+		}
+	}
+
+	public string tab_position {
+		owned get {
+			return get_string ("tab-position");
+		}
+		set {
+			set_string ("tab_position", value);
+		}
+	}
+
+	public int64 environment_id {
+		get {
+			return get_int64 ("environment-id");
+		}
+		set {
+			set_int64 ("environment-id", value);
+		}
+	}
+
+	public int64 http_collection_id {
+		get {
+			return get_int64 ("http-collection-id");
+		}
+		set {
+			set_int64 ("http-collection-id", value);
+		}
+	}
+
+	public string http_tree_state {
+		owned get {
+			return get_string ("http-tree-state");
+		}
+		set {
+			set_string ("http-tree-state", value);
+		}
+	}
+
+	public string http_font {
+		owned get {
+			return get_string ("http-font");
+		}
+		set {
+			set_string ("http-font", value);
+		}
+	}
+
+	public int db_query_history_limit {
+		get {
+			return get_int ("db-query-history-limit");
+		}
+		set {
+			set_int ("db-query-history-limit", value);
+		}
+	}
+
+	public string db_filter {
+		owned get {
+			return get_string ("db-filters");
+		}
+		set {
+			set_string ("db-filters", value);
+		}
+	}
+
+	public bool http_single_click_activate {
+		get {
+			return get_boolean ("http-single-click-activate");
+		}
+		set {
+			set_boolean ("http-single-click-activate", value);
+		}
+	}
+
+	public bool dark_mode {
+		get {
+			return get_boolean ("dark-mode");
+		}
+		set {
+			set_boolean ("dark-mode", value);
+		}
+	}
+
+	public string editor_theme {
+		owned get {
+			return get_string ("editor-theme");
+		}
+		set {
+			set_string ("editor-theme", value);
+		}
+	}
+
+	public string editor_font {
+		owned get {
+			return get_string ("editor-font");
+		}
+		set {
+			set_string ("editor-font", value);
+		}
+	}
+
+	public int editor_tab_width {
+		get {
+			return get_int ("editor-tab-width");
+		}
+		set {
+			set_int ("editor-tab-width", value);
+		}
+	}
+
+	public bool editor_line_number {
+		get {
+			return get_boolean ("editor-line-number");
+		}
+		set {
+			set_boolean ("editor-line-number", value);
+		}
+	}
+
+	public bool editor_highlight_line {
+		get {
+			return get_boolean ("editor-highlight-line");
+		}
+		set {
+			set_boolean ("editor-highlight-line", value);
+		}
+	}
+
+	public bool editor_no_tabs {
+		get {
+			return get_boolean ("editor-no-tabs");
+		}
+		set {
+			set_boolean ("editor-no-tabs", value);
+		}
+	}
+
+	public int pomodoro_duration {
+		get {
+			return get_int ("pomodoro-duration");
+		}
+		set {
+			set_int ("pomodoro-duration", value);
+		}
+	}
+
+	public int pomodoro_break_duration {
+		get {
+			return get_int ("pomodoro-break-duration");
+		}
+		set {
+			set_int ("pomodoro-break-duration", value);
+		}
+	}
+
+	public int pomodoro_long_break_duration {
+		get {
+			return get_int ("pomodoro-long-break-duration");
+		}
+		set {
+			set_int ("pomodoro-long-break-duration", value);
+		}
+	}
+
+	public int pomodoro_set_count {
+		get {
+			return get_int ("pomodoro-set-count");
+		}
+		set {
+			set_int ("pomodoro-set-count", value);
 		}
 	}
 }

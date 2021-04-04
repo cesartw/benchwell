@@ -11,10 +11,10 @@ public class Benchwell.PomodoroCycler : Object {
 	// returns whether to stop
 	public void next (Benchwell.Pomodoro w, int64 elapse) {
 		var seconds = elapse / 1000000;
-		var pomodoro_duration = Config.settings.get_int64("pomodoro-duration");
-		var break_duration = Config.settings.get_int64("pomodoro-break-duration");
-		var long_break_duration = Config.settings.get_int64("pomodoro-long-break-duration");
-		var pomodoro_for_long_break = Config.settings.get_int64("pomodoro-set-count");
+		var pomodoro_duration = Config.settings.pomodoro_duration;
+		var break_duration = Config.settings.pomodoro_break_duration;
+		var long_break_duration = Config.settings.pomodoro_long_break_duration;
+		var pomodoro_for_long_break = Config.settings.pomodoro_set_count;
 
 		switch (state) {
 			case Benchwell.PomodoroStep.WORK:
@@ -89,7 +89,7 @@ public class Benchwell.Pomodoro : Gtk.Box {
 		clock_lbl = new Gtk.Label ("00:00");
 		clock_lbl.show ();
 
-		counter_lbl = new Gtk.Label (_("0 of %lld").printf (Config.settings.get_int64("pomodoro-set-count")));
+		counter_lbl = new Gtk.Label (_("0 of %lld").printf (Config.settings.pomodoro_set_count));
 		counter_lbl.get_style_context ().add_class ("pomodoro-counter");
 		counter_lbl.show ();
 
@@ -114,10 +114,10 @@ public class Benchwell.Pomodoro : Gtk.Box {
 					n = new GLib.Notification (_("Get back to work"));
 					break;
 				case Benchwell.PomodoroStep.BREAK:
-					n = new GLib.Notification (_("Take a %lldmin break").printf(Config.settings.get_int64("pomodoro-break-duration")/60));
+					n = new GLib.Notification (_("Take a %lldmin break").printf(Config.settings.pomodoro_break_duration/60));
 					break;
 				case Benchwell.PomodoroStep.LONG_BREAK:
-					n = new GLib.Notification (_("Take a %lldmin break").printf(Config.settings.get_int64("pomodoro-long-break-duration")/60));
+					n = new GLib.Notification (_("Take a %lldmin break").printf(Config.settings.pomodoro_long_break_duration/60));
 					break;
 				default:
 					n = new GLib.Notification (_("WAT"));
@@ -161,7 +161,7 @@ public class Benchwell.Pomodoro : Gtk.Box {
 		pause_btn.tooltip_text = _("%d set").printf (cycler.pomodoro_count+1);
 
 		if (cycler.state == Benchwell.PomodoroStep.WORK)
-			counter_lbl.set_text (_("%lld of %lld").printf (cycler.pomodoro_count+1, Config.settings.get_int64("pomodoro-set-count")));
+			counter_lbl.set_text (_("%lld of %lld").printf (cycler.pomodoro_count+1, Config.settings.pomodoro_set_count));
 		else
 			counter_lbl.set_text (_("BREAK"));
 

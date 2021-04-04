@@ -54,9 +54,9 @@ public class Benchwell.SettingsPanel : Gtk.Box {
 		pack_start (header_bar, false, false, 0);
 		pack_start (notebook, true, true, 0);
 
-		dark_switch.state = Config.settings.get_boolean ("dark-mode");
+		dark_switch.state = Config.settings.dark_mode;
 		dark_switch.state_set.connect ((state) => {
-			Config.settings.set_boolean ("dark-mode", state);
+			Config.settings.dark_mode = state;
 			Gtk.Settings.get_default ().gtk_application_prefer_dark_theme = state;
 			return false;
 		});
@@ -88,7 +88,7 @@ public class Benchwell.EditorSettings : Gtk.Grid {
 		foreach (var id in Gtk.SourceStyleSchemeManager.get_default ().scheme_ids) {
 			laf_theme_combo.append (id, id);
 		}
-		laf_theme_combo.set_active_id (Config.settings.get_string ("editor-theme"));
+		laf_theme_combo.set_active_id (Config.settings.editor_theme);
 		laf_theme_combo.show ();
 
 		var laf_theme_label = new Gtk.Label (_("Theme")) {
@@ -107,8 +107,8 @@ public class Benchwell.EditorSettings : Gtk.Grid {
 		laf_font_label.show ();
 
 		var laf_font_btn = new Gtk.FontButton ();
-		if (Config.settings.get_string ("editor-font") != "") {
-			laf_font_btn.font = Config.settings.get_string ("editor-font");
+		if (Config.settings.editor_font != "") {
+			laf_font_btn.font = Config.settings.editor_font;
 		}
 		laf_font_btn.show ();
 
@@ -129,7 +129,7 @@ public class Benchwell.EditorSettings : Gtk.Grid {
 		editing_tabwidth_label.show ();
 
 		var editing_tabwidth_spin = new Gtk.SpinButton.with_range (2, 8, 2);
-		editing_tabwidth_spin.value = (double) Config.settings.get_int64 ("editor-tab-width");
+		editing_tabwidth_spin.value = (double) Config.settings.editor_tab_width;
 		editing_tabwidth_spin.show ();
 		////////////
 
@@ -141,7 +141,7 @@ public class Benchwell.EditorSettings : Gtk.Grid {
 		editing_ln_label.show ();
 
 		var editing_ln_sw = new Gtk.Switch ();
-		editing_ln_sw.state = Config.settings.get_boolean ("editor-line-number");
+		editing_ln_sw.state = Config.settings.editor_line_number;
 		editing_ln_sw.show ();
 		///////////////////
 
@@ -153,7 +153,7 @@ public class Benchwell.EditorSettings : Gtk.Grid {
 		editing_hl_label.show ();
 
 		var editing_hl_sw = new Gtk.Switch ();
-		editing_hl_sw.state = Config.settings.get_boolean ("editor-highlight-line");
+		editing_hl_sw.state = Config.settings.editor_highlight_line;
 		editing_hl_sw.show ();
 		/////////////////////////
 
@@ -165,7 +165,7 @@ public class Benchwell.EditorSettings : Gtk.Grid {
 		editing_notabs_label.show ();
 
 		var editing_notabs_sw = new Gtk.Switch ();
-		editing_notabs_sw.state = Config.settings.get_boolean ("editor-no-tabs");
+		editing_notabs_sw.state = Config.settings.editor_no_tabs;
 		editing_notabs_sw.show ();
 		//////////////////
 
@@ -192,29 +192,29 @@ public class Benchwell.EditorSettings : Gtk.Grid {
 		attach (editing_notabs_sw, 5, 4, 1, 1);
 
 		laf_theme_combo.changed.connect (() => {
-			Config.settings.set_string ("editor-theme", laf_theme_combo.get_active_id ());
+			Config.settings.editor_theme = laf_theme_combo.get_active_id ();
 		});
 
 		laf_font_btn.font_set.connect (() => {
-			Config.settings.set_string ("editor-font", laf_font_btn.font);
+			Config.settings.editor_font = laf_font_btn.font;
 		});
 
 		editing_tabwidth_spin.changed.connect (() => {
-			Config.settings.set_int64 ("editor-tab-width", (int64)editing_tabwidth_spin.value);
+			Config.settings.editor_tab_width = (int)editing_tabwidth_spin.value;
 		});
 
 		editing_ln_sw.state_set.connect ((state) => {
-			Config.settings.set_boolean ("editor-line-number", state);
+			Config.settings.editor_line_number = state;
 			return false;
 		});
 
 		editing_hl_sw.state_set.connect ((state) => {
-			Config.settings.set_boolean ("editor-highlight-line", state);
+			Config.settings.editor_highlight_line = state;
 			return false;
 		});
 
 		editing_notabs_sw.state_set.connect ((state) => {
-			Config.settings.set_boolean ("editor-no-tabs", state);
+			Config.settings.editor_no_tabs = state;
 			return false;
 		});
 	}
@@ -244,8 +244,8 @@ public class Benchwell.HttpSettings : Gtk.Grid {
 		laf_font_label.show ();
 
 		var laf_font_btn = new Gtk.FontButton ();
-		if (Config.settings.get_string ("http-font") != "") {
-			laf_font_btn.font = Config.settings.get_string ("http-font");
+		if (Config.settings.http_font != "") {
+			laf_font_btn.font = Config.settings.http_font;
 		}
 		laf_font_btn.show ();
 
@@ -267,7 +267,7 @@ public class Benchwell.HttpSettings : Gtk.Grid {
 		requests_single_click_label.show ();
 
 		var requests_single_click_sw = new Gtk.Switch ();
-		requests_single_click_sw.state = Config.settings.get_boolean ("http-single-click-activate");
+		requests_single_click_sw.state = Config.settings.http_single_click_activate;
 		requests_single_click_sw.show ();
 		//////////////////
 
@@ -282,11 +282,11 @@ public class Benchwell.HttpSettings : Gtk.Grid {
 		attach (requests_single_click_sw, 5, 1, 1, 1);
 
 		laf_font_btn.font_set.connect (() => {
-			Config.settings.set_string ("http-font", laf_font_btn.font);
+			Config.settings.http_font = laf_font_btn.font;
 		});
 
 		requests_single_click_sw.state_set.connect ((state) => {
-			Config.settings.set_boolean ("http-single-click-activate", state);
+			Config.settings.http_single_click_activate = state;
 			return false;
 		});
 	}
@@ -315,7 +315,7 @@ public class Benchwell.PomodoroSettings : Gtk.Grid {
 		duration_label.show ();
 
 		var duration_spin = new Gtk.SpinButton.with_range (20, 60, 5);
-		duration_spin.value = (double)Config.settings.get_int64 ("pomodoro-duration") / 60;
+		duration_spin.value = (double)Config.settings.pomodoro_duration / 60;
 		duration_spin.show ();
 		////////////////
 
@@ -327,7 +327,7 @@ public class Benchwell.PomodoroSettings : Gtk.Grid {
 		break_duration_label.show ();
 
 		var break_duration_spin = new Gtk.SpinButton.with_range (5, 10, 1);
-		break_duration_spin.value = (double)Config.settings.get_int64 ("pomodoro-break-duration") / 60;
+		break_duration_spin.value = (double)Config.settings.pomodoro_break_duration / 60;
 		break_duration_spin.show ();
 		/////////////////
 
@@ -339,7 +339,7 @@ public class Benchwell.PomodoroSettings : Gtk.Grid {
 		long_break_duration_label.show ();
 
 		var long_break_duration_spin = new Gtk.SpinButton.with_range (10, 20, 1);
-		long_break_duration_spin.value = (double)Config.settings.get_int64 ("pomodoro-long-break-duration") / 60;
+		long_break_duration_spin.value = (double)Config.settings.pomodoro_long_break_duration / 60;
 		long_break_duration_spin.show ();
 		/////////////////
 
@@ -351,7 +351,7 @@ public class Benchwell.PomodoroSettings : Gtk.Grid {
 		set_count_label.show ();
 
 		var set_count_spin = new Gtk.SpinButton.with_range (10, 20, 1);
-		set_count_spin.value = (double)Config.settings.get_int64 ("pomodoro-set-count");
+		set_count_spin.value = (double)Config.settings.pomodoro_set_count;
 		set_count_spin.show ();
 		/////////////////
 
@@ -371,19 +371,19 @@ public class Benchwell.PomodoroSettings : Gtk.Grid {
 
 
 		duration_spin.changed.connect (() => {
-			Config.settings.set_int64 ("pomodoro-duration", (int64)duration_spin.value*60);
+			Config.settings.pomodoro_duration = (int)duration_spin.value*60;
 		});
 
 		break_duration_spin.changed.connect (() => {
-			Config.settings.set_int64 ("pomodoro-break-duration", (int64)break_duration_spin.value*60);
+			Config.settings.pomodoro_break_duration = (int)break_duration_spin.value*60;
 		});
 
 		long_break_duration_spin.changed.connect (() => {
-			Config.settings.set_int64 ("pomodoro-long-break-duration", (int64)long_break_duration_spin.value*60);
+			Config.settings.pomodoro_long_break_duration = (int)long_break_duration_spin.value*60;
 		});
 
 		set_count_spin.changed.connect (() => {
-			Config.settings.set_int64 ("pomodoro-set-count", (int64)set_count_spin.value);
+			Config.settings.pomodoro_set_count = (int)set_count_spin.value;
 		});
 	}
 }

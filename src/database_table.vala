@@ -362,7 +362,7 @@ public class Benchwell.Database.Table : Gtk.Box {
 		renderer.editable = true;
 		renderer.xpad = 10;
 		renderer.height = 23;
-		renderer.cell_background = Benchwell.Colors.PKHL.to_string ();
+		renderer.cell_background = Benchwell.HighlightColors.PKHL.to_string ();
 		renderer.cell_background_set = column.pk;
 		renderer.ellipsize = Pango.EllipsizeMode.END;
 
@@ -394,7 +394,7 @@ public class Benchwell.Database.Table : Gtk.Box {
 
 			if ( val.holds (GLib.Type.STRING) ) {
 				if ( val.get_string () == Benchwell.null_string ){
-					cell.set_property ("markup", @"<span foreground=\"$(Benchwell.Colors.NULLHL.to_string ())\">&lt;NULL&gt;</span>");
+					cell.set_property ("markup", @"<span foreground=\"$(Benchwell.HighlightColors.NULLHL.to_string ())\">&lt;NULL&gt;</span>");
 				}
 			}
 		});

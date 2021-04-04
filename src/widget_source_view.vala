@@ -8,9 +8,9 @@ public class Benchwell.SourceView : Gtk.SourceView {
 			accepts_tab: true,
 			highlight_current_line: false,
 			background_pattern: Gtk.SourceBackgroundPatternType.GRID,
-			tab_width: (uint)Config.settings.get_int64("editor-tab-width"),
-			show_line_numbers: Config.settings.get_boolean ("editor-line-number"),
-			insert_spaces_instead_of_tabs: Config.settings.get_boolean ("editor-no-tabs")
+			tab_width: (uint)Config.settings.editor_tab_width,
+			show_line_numbers: Config.settings.editor_line_number,
+			insert_spaces_instead_of_tabs: Config.settings.editor_no_tabs
 		);
 
 		set_language (lang);
@@ -18,38 +18,38 @@ public class Benchwell.SourceView : Gtk.SourceView {
 		var buffer = (Gtk.SourceBuffer) get_buffer ();
 		var sm = Gtk.SourceStyleSchemeManager.get_default ();
 
-		if (Config.settings.get_string("editor-theme") in sm.scheme_ids) {
-			buffer.set_style_scheme (sm.get_scheme (Config.settings.get_string("editor-theme")));
+		if (Config.settings.editor_theme in sm.scheme_ids) {
+			buffer.set_style_scheme (sm.get_scheme (Config.settings.editor_theme));
 		}
 
-		if (Config.settings.get_string("editor-font") != "") {
-			override_font (Pango.FontDescription.from_string (Config.settings.get_string("editor-font")));
+		if (Config.settings.editor_font != "") {
+			Config.set_font (this, Pango.FontDescription.from_string (Config.settings.editor_font));
 		}
 
 		Config.settings.changed["editor-theme"].connect (() => {
-			if (Config.settings.get_string("editor-theme") in sm.scheme_ids) {
-				buffer.set_style_scheme (sm.get_scheme (Config.settings.get_string("editor-theme")));
+			if (Config.settings.editor_theme in sm.scheme_ids) {
+				buffer.set_style_scheme (sm.get_scheme (Config.settings.editor_theme));
 			}
 		});
 
 		Config.settings.changed["editor-font"].connect (() => {
-			override_font (Pango.FontDescription.from_string (Config.settings.get_string("editor-font")));
+			Config.set_font (this, Pango.FontDescription.from_string (Config.settings.editor_font));
 		});
 
 		Config.settings.changed["editor-tab-width"].connect (() => {
-			tab_width = (uint)Config.settings.get_int64("editor-tab-width");
+			tab_width = (uint)Config.settings.editor_tab_width;
 		});
 
 		Config.settings.changed["editor-line-number"].connect (() => {
-			show_line_numbers = Config.settings.get_boolean ("editor-line-number");
+			show_line_numbers = Config.settings.editor_line_number;
 		});
 
 		Config.settings.changed["editor-highlight-line"].connect (() => {
-			highlight_current_line = Config.settings.get_boolean ("editor-highlight-line");
+			highlight_current_line = Config.settings.editor_highlight_line;
 		});
 
 		Config.settings.changed["editor-no-tabs"].connect (() => {
-			insert_spaces_instead_of_tabs = Config.settings.get_boolean ("editor-no-tabs");
+			insert_spaces_instead_of_tabs = Config.settings.editor_no_tabs;
 		});
 	}
 

@@ -9,6 +9,49 @@ public class Benchwell.Http.HttpAddressBar : Gtk.Box {
 
 	internal bool disable_changed = false;
 
+	enum Method {
+		GET,
+		POST,
+		PUT,
+		PATCH,
+		DELETE,
+		OPTIONS,
+		HEAD;
+
+		public string to_string () {
+			switch (this) {
+				case GET:
+					return "GET";
+				case POST:
+					return  "POST";
+				case PUT:
+					return "PUT";
+				case PATCH:
+					return "PATCH";
+				case DELETE:
+					return "DELETE";
+				case OPTIONS:
+					return "OPTIONS";
+				case HEAD:
+					return "HEAD";
+				default:
+					assert_not_reached ();
+			}
+		}
+
+		public static Method[] all () {
+			return {
+				GET,
+				POST,
+				PUT,
+				PATCH,
+				DELETE,
+				OPTIONS,
+				HEAD
+			};
+		}
+	}
+
 	public HttpAddressBar () {
 		Object (
 			orientation: Gtk.Orientation.HORIZONTAL,
@@ -17,9 +60,8 @@ public class Benchwell.Http.HttpAddressBar : Gtk.Box {
 		);
 
 		method_combo = new Gtk.ComboBoxText ();
-		for (var i = 0; i < Benchwell.Methods.length; i++) {
-			method_combo.append (Benchwell.Methods[i], Benchwell.Methods[i]);
-		}
+		foreach (Method method in Method.all())
+			method_combo.append (method.to_string (), method.to_string ());
 		method_combo.set_active (0);
 		method_combo.vexpand = false;
 		method_combo.set_valign (Gtk.Align.START);
