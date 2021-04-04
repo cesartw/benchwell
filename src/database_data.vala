@@ -1,5 +1,5 @@
 public class Benchwell.Database.Data : Gtk.Paned {
-	public Benchwell.ApplicationWindow window { get; construct; }
+	public weak Benchwell.ApplicationWindow window { get; construct; }
 	public Benchwell.DatabaseService service { get; construct; }
 
 	public Gtk.SearchEntry table_search;
@@ -103,7 +103,9 @@ public class Benchwell.Database.Data : Gtk.Paned {
 		var dialog = new Gtk.Dialog.with_buttons (@"$(tabledef.name) schema", window,
 								Gtk.DialogFlags.DESTROY_WITH_PARENT|Gtk.DialogFlags.MODAL,
 								_("Ok"), Gtk.ResponseType.OK);
-		dialog.set_default_size (400, 400);
+		int w, h;
+		window.get_size (out w, out h);
+		dialog.set_default_size ((int)(w*0.8), (int)(h*0.8));
 
 		var sv = new Benchwell.SourceView ();
 		sv.show ();

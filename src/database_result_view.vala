@@ -205,7 +205,14 @@ public class Benchwell.Database.ResultView : Gtk.Paned {
 	}
 
 	public void _exec_query () {
-		var query = editor.get_buffer ().text;
+		var buffer = editor.get_buffer ();
+		Gtk.TextIter start, end;
+
+		var query = buffer.text;
+		if (buffer.get_selection_bounds (out start, out end)) {
+			query = buffer.get_text (start, end, false);
+		}
+
 		exec_query (query);
 	}
 }

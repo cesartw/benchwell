@@ -6,8 +6,8 @@ public class Benchwell.SourceView : Gtk.SourceView {
 			vexpand: true,
 			auto_indent: true,
 			accepts_tab: true,
-			highlight_current_line: false,
 			background_pattern: Gtk.SourceBackgroundPatternType.GRID,
+			highlight_current_line: Config.settings.editor_highlight_line,
 			tab_width: (uint)Config.settings.editor_tab_width,
 			show_line_numbers: Config.settings.editor_line_number,
 			insert_spaces_instead_of_tabs: Config.settings.editor_no_tabs

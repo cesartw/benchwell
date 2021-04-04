@@ -10,8 +10,6 @@ public class Benchwell.Database.Table : Gtk.Box {
 			btn_next.sensitive = !_raw_mode;
 			btn_show_filters.sensitive = !_raw_mode;
 			btn_add_row.sensitive = !_raw_mode;
-			btn_delete_row.sensitive = !_raw_mode;
-			btn_save_row.sensitive = !_raw_mode;
 			btn_show_filters.active = !_raw_mode;
 		}
 	}
@@ -68,26 +66,40 @@ public class Benchwell.Database.Table : Gtk.Box {
 		menu.add (copy_menu);
 
 		// actionbar
-		btn_add_row = new Benchwell.Button ("add-record", Gtk.IconSize.BUTTON);
+		btn_add_row = new Benchwell.Button ("add-record", Gtk.IconSize.BUTTON) {
+			sensitive = false
+		};
 		btn_add_row.show ();
 
-		btn_delete_row = new Benchwell.Button ("delete-record", Gtk.IconSize.BUTTON);
+		btn_delete_row = new Benchwell.Button ("delete-record", Gtk.IconSize.BUTTON) {
+			sensitive = false
+		};
 		btn_delete_row.show ();
 
-		btn_save_row = new Benchwell.Button ("save-record", Gtk.IconSize.BUTTON);
+		btn_save_row = new Benchwell.Button ("save-record", Gtk.IconSize.BUTTON) {
+			sensitive = false
+		};
 		btn_save_row.sensitive = false;
 		btn_save_row.show ();
 
-		btn_show_filters = new Benchwell.ToggleButton ("filter", Gtk.IconSize.BUTTON);
+		btn_show_filters = new Benchwell.ToggleButton ("filter", Gtk.IconSize.BUTTON) {
+			sensitive = false
+		};
 		btn_show_filters.show ();
 
-		btn_prev = new Benchwell.Button ("back", Gtk.IconSize.BUTTON);
+		btn_prev = new Benchwell.Button ("back", Gtk.IconSize.BUTTON) {
+			sensitive = false
+		};
 		btn_prev.show ();
 
-		btn_next = new Benchwell.Button ("next", Gtk.IconSize.BUTTON);
+		btn_next = new Benchwell.Button ("next", Gtk.IconSize.BUTTON) {
+			sensitive = false
+		};
 		btn_next.show ();
 
-		btn_refresh = new Benchwell.Button ("refresh", Gtk.IconSize.BUTTON);
+		btn_refresh = new Benchwell.Button ("refresh", Gtk.IconSize.BUTTON) {
+			sensitive = false
+		};
 		btn_refresh.show ();
 
 		search = new Gtk.SearchEntry ();
@@ -116,6 +128,7 @@ public class Benchwell.Database.Table : Gtk.Box {
 		// signals
 		table.button_press_event.connect (on_button_press);
 		table.key_press_event.connect (on_table_key_press);
+		table.get_selection ().changed.connect (on_selection_changed);
 
 		btn_show_filters.toggled.connect (() => {
 			if (btn_show_filters.active) {
@@ -133,6 +146,10 @@ public class Benchwell.Database.Table : Gtk.Box {
 		btn_delete_row.clicked.connect (on_delete_row);
 
 		clone_menu.activate.connect (on_clone);
+	}
+
+	private void on_selection_changed () {
+		btn_delete_row.sensitive = btn_save_row.sensitive = get_selected_data ().length > 0;
 	}
 
 	private bool on_table_key_press (Gtk.Widget widget, Gdk.EventKey event) {
@@ -161,12 +178,18 @@ public class Benchwell.Database.Table : Gtk.Box {
 			var cb = Gtk.Clipboard.get_default (Gdk.Display.get_default ());
 			cb.set_text (builder.str, builder.str.length);
 		}
-		if (event.keyval != Gdk.Key.Delete) {
-			return false;
+
+		if (event.keyval == Gdk.Key.Escape) {
+			table.get_selection ().unselect_all ();
+			return true;
 		}
 
-		delete_rows ();
-		return true;
+		if (event.keyval == Gdk.Key.Delete) {
+			delete_rows ();
+			return true;
+		}
+
+		return false;
 	}
 
 	public Benchwell.SortOption[] get_sort_options () {
