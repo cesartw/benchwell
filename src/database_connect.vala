@@ -294,7 +294,8 @@ public class Benchwell.Database.ConnectionList : Gtk.ListBox {
 			conn.remove ();
 			Config.remove_connection(conn);
 		} catch (Benchwell.ConfigError err) {
-			stderr.printf (err.message);
+			Config.show_alert (this, err.message);
+			return;
 		}
 		update_items ();
 	}

@@ -321,7 +321,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 			try {
 				selected_collection.add_item (item);
 			} catch (ConfigError err) {
-				stderr.printf (err.message);
+				Config.show_alert (this, err.message);
 				return;
 			}
 
@@ -344,7 +344,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		try {
 			selected_collection.delete_item (item);
 		} catch (ConfigError err) {
-			stderr.printf (err.message);
+			Config.show_alert (this, err.message);
 			return;
 		}
 		store.remove (ref iter);
@@ -363,7 +363,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		try {
 			selected_item.save ();
 		} catch (ConfigError err) {
-			stderr.printf (err.message);
+			Config.show_alert (this, err.message);
 			return;
 		}
 
@@ -434,7 +434,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 				collections_combo.append (collection.id.to_string (), collection.name);
 				collections_combo.set_active_id (collection.id.to_string ());
 			} catch (Benchwell.ConfigError err) {
-				stderr.printf (err.message);
+				Config.show_alert (this, err.message);
 			}
 		}
 
@@ -452,8 +452,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 			try {
 				Config.load_http_items (collection);
 			} catch (Benchwell.ConfigError err) {
-				//result_view.show_alert (err.message);
-				stderr.printf (err.message);
+				Config.show_alert (this, err.message);
 				return;
 			}
 
@@ -496,7 +495,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 				var px = Gtk.IconTheme.get_default ().load_icon ("bw-directory", Gtk.IconSize.BUTTON, Gtk.IconLookupFlags.USE_BUILTIN);
 				store.set_value (iter, Benchwell.Http.Columns.ICON, px);
 			} catch (GLib.Error err) {
-				stderr.printf (err.message);
+				Config.show_alert (this, err.message);
 			}
 		} else {
 			store.set_value (iter, Benchwell.Http.Columns.METHOD, item.method);

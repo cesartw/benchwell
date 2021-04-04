@@ -31,7 +31,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 		try {
 			service.info.load_history ();
 		} catch (Benchwell.ConfigError err) {
-			stderr.printf ("loading history: %s", err.message);
+			Config.show_alert (this, err.message);
 		}
 
 		foreach (Benchwell.Query query in service.info.history) {
@@ -300,7 +300,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 			var query = service.info.save_history (interpolated);
 			add_history_row (query);
 		} catch (Benchwell.ConfigError err) {
-			stderr.printf ("saving history: %s", err.message);
+			Config.show_alert (this, err.message);
 		}
 
 		try {

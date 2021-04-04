@@ -4,6 +4,7 @@ public class Benchwell.SettingsPanel : Gtk.Box {
 	private Benchwell.EditorSettings editor_settings;
 	private Benchwell.HttpSettings http_settings;
 	private Benchwell.PomodoroSettings pomodoro_settings;
+	private Benchwell.About about;
 	private Gtk.Switch dark_switch;
 
 	public SettingsPanel () {
@@ -39,10 +40,14 @@ public class Benchwell.SettingsPanel : Gtk.Box {
 		pomodoro_settings = new Benchwell.PomodoroSettings ();
 		pomodoro_settings.show ();
 
+		about = new Benchwell.About ();
+		about.show ();
+
 		notebook.append_page (env_editor, new Gtk.Label (_("Environments")));
 		notebook.append_page (editor_settings, new Gtk.Label (_("Editor")));
 		notebook.append_page (http_settings, new Gtk.Label (_("HTTP")));
 		notebook.append_page (pomodoro_settings, new Gtk.Label (_("Pomodoro")));
+		notebook.append_page (about, new Gtk.Label (_("About")));
 
 		header_bar.pack_end (dark_switch);
 		header_bar.pack_end (dark_icon);
@@ -381,5 +386,8 @@ public class Benchwell.PomodoroSettings : Gtk.Grid {
 			Config.settings.set_int64 ("pomodoro-set-count", (int64)set_count_spin.value);
 		});
 	}
+}
+
+public class Benchwell.About : Gtk.Grid {
 }
 

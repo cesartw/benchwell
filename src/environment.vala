@@ -91,7 +91,7 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 		try {
 			Config.add_environment ();
 		} catch (ConfigError err) {
-			stderr.printf (err.message);
+			Config.show_alert (this, err.message);
 		}
 	}
 
@@ -100,7 +100,7 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 			var index = stack.get_children ().index (stack.get_visible_child ());
 			Config.environments[index].clone ();
 		} catch (ConfigError err) {
-			stderr.printf (err.message);
+			Config.show_alert (this, err.message);
 		}
 	}
 
@@ -111,7 +111,7 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 			var env = Config.environments[index];
 			env.remove ();
 		} catch(ConfigError err) {
-			stderr.printf (err.message);
+			Config.show_alert (this, err.message);
 		}
 
 		stack.remove (panel);
@@ -171,7 +171,7 @@ public class Benchwell.EnvironmentPanel : Gtk.Box {
 		try {
 			kv = (Benchwell.KeyValueI) environment.add_variable ();
 		} catch (ConfigError err) {
-			stderr.printf (err.message);
+			Config.show_alert (this, err.message);
 		}
 
 		return kv;
@@ -183,7 +183,7 @@ public class Benchwell.EnvironmentPanel : Gtk.Box {
 		//try {
 			//environment.save ();
 		//} catch (Error err) {
-			//stderr.printf (err.message);
+			//Config.show_alert (this, err.message);
 		//}
 	}
 }

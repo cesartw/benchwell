@@ -690,11 +690,11 @@ public class Benchwell.Http.Http : Gtk.Paned {
 						case Benchwell.KeyValueTypes.FILE:
 							var file = File.new_for_path (val);
 							if (!file.query_exists ()) {
-								stderr.printf (@"$(val) doesn't exist");
+								Config.show_alert (this, @"$(val) doesn't exist");
 								return;
 							}
 							if (file.query_file_type (0) == FileType.DIRECTORY) {
-								stderr.printf (@"$(val) is a directory");
+								Config.show_alert (this, @"$(val) is a directory");
 								return;
 							}
 
@@ -843,13 +843,13 @@ public class Benchwell.Http.Http : Gtk.Paned {
 					result.Headers = resp_headers;
 					break;
 				case Curl.Code.URL_MALFORMAT:
-					stderr.printf (@"========$(url)\n");
+					Config.show_alert (this, @"URL malformat: $(url)");
 					break;
 				case Curl.Code.ABORTED_BY_CALLBACK:
-					result = null;
+					Config.show_alert (this, @"ABORTED");
 					break;
 				default:
-					stderr.printf (@"========$((int)code)\n");
+					Config.show_alert (this, @"Unexpected code: $((int)code)");
 					break;
 			}
 
@@ -1127,7 +1127,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		//try {
 			//item.save ();
 		//} catch (ConfigError err) {
-			//stderr.printf (err.message);
+			//Config.show_alert (this, err.message);
 		//}
 	}
 
