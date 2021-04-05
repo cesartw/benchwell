@@ -36,7 +36,6 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		notebook.scrollable = true;
 		notebook.group_name = "mainwindow";
 		notebook.tab_pos = Config.tab_position ();
-		notebook.show ();
 		notebook.show_border = true;
 		notebook.key_press_event.connect ( (e) => {
 			var page = 0;
@@ -83,6 +82,7 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 
 			return false;
 		});
+		notebook.show ();
 
 		var box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
 		box.show ();

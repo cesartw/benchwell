@@ -12,7 +12,7 @@ public class Benchwell.Database.Connect : Gtk.Paned {
 	private MysqlForm mysql;
 	private SQLiteForm sqlite;
 
-	public signal void dbconnect(Benchwell.ConnectionInfo c);
+	public signal void dbconnect (Benchwell.ConnectionInfo c);
 
 	public Connect (Benchwell.ApplicationWindow window) {
 		Object(
@@ -113,8 +113,8 @@ public class Benchwell.Database.Connect : Gtk.Paned {
 
 			try {
 				engine.connect (c);
-			} catch (Benchwell.Error e) {
-				//info_message (e.message, Gtk.MessageType.ERROR);
+			} catch (Benchwell.Error err) {
+				Config.show_alert(this, err.message);
 			}
 		});
 

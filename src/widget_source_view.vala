@@ -15,6 +15,11 @@ public class Benchwell.SourceView : Gtk.SourceView {
 
 		set_language (lang);
 
+		// PRETTY
+		//get_space_drawer ().set_types_for_locations (Gtk.SourceSpaceLocationFlags.LEADING|Gtk.SourceSpaceLocationFlags.TRAILING, Gtk.SourceSpaceTypeFlags.ALL);
+		//get_space_drawer ().enable_matrix = true;
+
+
 		var buffer = (Gtk.SourceBuffer) get_buffer ();
 		var sm = Gtk.SourceStyleSchemeManager.get_default ();
 

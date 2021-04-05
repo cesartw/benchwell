@@ -94,8 +94,8 @@ public class Benchwell.Database.Tables : Gtk.ListBox {
 			return true;
 		});
 
-
 		row_activated.connect (on_row_activated);
+
 		set_filter_func (search);
 	}
 

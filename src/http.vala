@@ -128,73 +128,16 @@ public string RandomString (int length, string char_set = "abcdefghijklmnopqrstu
 	return builder.str;
 }
 
-// https://github.com/giuliopaci/ValaBindingsDevelopment/blob/master/libcurl-example.vala
-private size_t ReadResponseCallback (char* ptr, size_t size, size_t nmemb, void* data) {
-	size_t total_size = size*nmemb;
-	var buffer = (( buffer_s* ) data);
-	// remove the termination char(0)
-	if (buffer.buffer.length > 0 && buffer.buffer[buffer.buffer.length - 1] == 0) {
-		buffer.buffer = buffer.buffer[:buffer.buffer.length - 1];
-	}
-
-	for(int i = 0; i<total_size; i++)
-	{
-		buffer.buffer+= ptr[i];
-	}
-	buffer.buffer+= 0;
-	return total_size;
-}
-
-private size_t WriteRequestCallback (char* dest, size_t size, size_t nmemb, void* data) {
-	var wt = (( buffer_s2* ) data);
-	size_t buffer_size = size*nmemb;
-	if ( wt.size_left > 0) {
-		size_t copy_this_much = wt.size_left;
-		if (copy_this_much > buffer_size) {
-			copy_this_much = buffer_size;
-		}
-
-		Posix.memcpy(dest, wt.buffer, copy_this_much);
-
-		wt.buffer = wt.buffer[0:copy_this_much];
-		wt.size_left -= copy_this_much;
-		return copy_this_much;
-	}
-
-	return 0;
-}
-
-private size_t ReadHeaderCallback (char *dest, size_t size, size_t nmemb, void *data) {
-	var wt = ((HashTable<string,string>) data);
-	 //size_t numbytes = size * nmemb;
-	//printf("%.*s\n", numbytes, dest);
-	var header = (string)dest;
-	var at = header.index_of (":", 0);
-	if ( at != -1 ){
-		var key = header[0:at].strip ().casefold ();
-		var val = header[at+2:header.length];
-		wt.insert (key, val);
-	}
-	return size * nmemb;
-}
-
-private int RequestProgressCallback (void *clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
-	var canceled = ((bool*) clientp);
-	if (*canceled) {
-		return 1;
-	}
-	return 0;
-}
-
 public class Benchwell.HttpResult : Object {
-	public string Body;
-	public HashTable<string, string> Headers;
-	public int Status;
-	public int64 Duration;
+	public string body;
+	public HashTable<string, string> headers;
+	public int status;
+	public int64 duration;
+	public Curl.Code code;
 
 	public string headers_string () {
 		var builder = new StringBuilder ();
-		Headers.foreach ((key, val) => {
+		headers.foreach ((key, val) => {
 			builder.append (@"$key: $val");
 		});
 		return builder.str;
@@ -742,9 +685,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 				}
 				body_builder.append ("--\n");
 
-				//print ("====\n");
-				//print (body_builder.str);
-				//print ("====\n");
 				raw_body = body_builder.str;
 				break;
 			default:
@@ -758,10 +698,15 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		perform.begin (method, url, raw_body, (owned) headers, (obj, res) => {
 			try {
 				var result = perform.end (res);
-				if (result != null) {
-					item.response_body = set_response (result);
-					item.response_headers = result.headers_string();
-					item.save_response ();
+				switch (result.code) {
+					case Curl.Code.OK:
+						item.response_body = set_response (result);
+						item.response_headers = result.headers_string();
+						item.save_response ();
+						break;
+					default:
+						Config.show_alert (this, Curl.Global.strerror (result.code));
+						break;
 				}
 			} catch (Benchwell.ConfigError err) {
 				Config.show_alert (this, err.message);
@@ -832,25 +777,14 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			handle.setopt (Curl.Option.READDATA, ref tmp_body);
 
 			var then = get_real_time ();
-			var code = handle.perform ();
+			result.code = handle.perform ();
 			var now = get_real_time ();
 
-			switch (code) {
-				case Curl.Code.OK:
-					handle.getinfo(Curl.Info.RESPONSE_CODE, out result.Status);
-					result.Body = (string)tmp.buffer;
-					result.Duration = now - then;
-					result.Headers = resp_headers;
-					break;
-				case Curl.Code.URL_MALFORMAT:
-					Config.show_alert (this, @"URL malformat: $(url)");
-					break;
-				case Curl.Code.ABORTED_BY_CALLBACK:
-					Config.show_alert (this, @"ABORTED");
-					break;
-				default:
-					Config.show_alert (this, @"Unexpected code: $((int)code)");
-					break;
+			if (result.code == Curl.Code.OK) {
+				handle.getinfo(Curl.Info.RESPONSE_CODE, out result.status);
+				result.body = (string)tmp.buffer;
+				result.duration = now - then;
+				result.headers = resp_headers;
 			}
 
 			Idle.add((owned) callback);
@@ -885,10 +819,11 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		build_interpolated_label ();
 
 		this.item.touch_without_save (() => {
-			if (this.item.body != null)
+			if (this.item.body != null) {
 				body.get_buffer ().text = this.item.body;
-			else
+			} else {
 				body.get_buffer ().text = "";
+			}
 		});
 
 		response.get_buffer ().text = item.response_body;
@@ -1009,17 +944,17 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	}
 
 	public string set_response (HttpResult result) {
-		var content_type_header = result.Headers.get("Content-Type".casefold ());
+		var content_type_header = result.headers.get("Content-Type".casefold ());
 		string content_type = "";
 		if (content_type_header != null)
 			content_type = content_type_header.split(";")[0];
 
-		if (result.Body == null)
-			result.Body = "";
+		if (result.body == null)
+			result.body = "";
 
 		Gtk.TextIter iter;
 		response_headers.get_buffer ().get_end_iter (out iter);
-		result.Headers.foreach ((key, val) => {
+		result.headers.foreach ((key, val) => {
 			var line = @"$key: $val";
 			response_headers.get_buffer ().insert (ref iter, line, line.length);
 		});
@@ -1028,7 +963,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		var formatted_body = "";
 		Gtk.TextIter start_iter;
 		response.get_buffer ().get_start_iter (out start_iter);
-		if ( result.Body != "" ) {
+		if ( result.body != "" ) {
 			switch (content_type) {
 				case "application/json":
 					var json = new Json.Parser ();
@@ -1036,7 +971,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 					generator.indent = 4;
 					generator.pretty = true;
 					try {
-						json.load_from_data (result.Body);
+						json.load_from_data (result.body);
 						generator.set_root (json.get_root ());
 
 						formatted_body = generator.to_data (null);
@@ -1044,13 +979,13 @@ public class Benchwell.Http.Http : Gtk.Paned {
 						response.set_language ("json");
 					} catch (GLib.Error err) {
 						Config.show_alert (this, err.message);
-						formatted_body = result.Body;
+						formatted_body = result.body;
 						response.get_buffer ().insert_text (ref start_iter, formatted_body, formatted_body.length);
 					}
 					break;
 				default:
 					response.set_language (null);
-					formatted_body = result.Body;
+					formatted_body = result.body;
 					response.get_buffer ().insert_text (ref start_iter, formatted_body, formatted_body.length);
 					break;
 			}
@@ -1060,34 +995,34 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			response.get_buffer ().delete (ref start_iter, ref end_iter);
 		}
 
-		if (result.Body.length < 1024) {
-			response_size_label.set_text (@"$(result.Body.length)B");
+		if (result.body.length < 1024) {
+			response_size_label.set_text (@"$(result.body.length)B");
 		} else {
-			response_size_label.set_text (@"$(result.Body.length/1024)kB");
+			response_size_label.set_text (@"$(result.body.length/1024)kB");
 		}
 
-		var code = Benchwell.Http.CODES.parse (result.Status);
+		var code = Benchwell.Http.CODES.parse (result.status);
 		if (code == null) {
-			status_label.set_text (@"$(result.Status)");
+			status_label.set_text (@"$(result.status)");
 		} else {
-			status_label.set_text (@"$(result.Status) $(code)");
+			status_label.set_text (@"$(result.status) $(code)");
 		}
 
 		status_label.get_style_context ().remove_class("ok");
 		status_label.get_style_context ().remove_class("warning");
 		status_label.get_style_context ().remove_class("bad");
 
-		if (result.Status >= 200 && result.Status < 300) {
+		if (result.status >= 200 && result.status < 300) {
 			status_label.get_style_context ().add_class("ok");
 		}
-		if (result.Status >= 300 && result.Status < 500) {
+		if (result.status >= 300 && result.status < 500) {
 			status_label.get_style_context ().add_class("warning");
 		}
-		if (result.Status >= 500) {
+		if (result.status >= 500) {
 			status_label.get_style_context ().add_class("bad");
 		}
 
-		duration_label.set_text (@"$(result.Duration/1000)ms");
+		duration_label.set_text (@"$(result.duration/1000)ms");
 		return formatted_body;
 	}
 
@@ -1214,4 +1149,62 @@ public class Benchwell.HttpOverlay : Gtk.Overlay {
 		spinner.stop ();
 		box.hide ();
 	}
+}
+
+// https://github.com/giuliopaci/ValaBindingsDevelopment/blob/master/libcurl-example.vala
+private size_t ReadResponseCallback (char* ptr, size_t size, size_t nmemb, void* data) {
+	size_t total_size = size*nmemb;
+	var buffer = (( buffer_s* ) data);
+	// remove the termination char(0)
+	if (buffer.buffer.length > 0 && buffer.buffer[buffer.buffer.length - 1] == 0) {
+		buffer.buffer = buffer.buffer[:buffer.buffer.length - 1];
+	}
+
+	for(int i = 0; i<total_size; i++)
+	{
+		buffer.buffer+= ptr[i];
+	}
+	buffer.buffer+= 0;
+	return total_size;
+}
+
+private size_t WriteRequestCallback (char* dest, size_t size, size_t nmemb, void* data) {
+	var wt = (( buffer_s2* ) data);
+	size_t buffer_size = size*nmemb;
+	if ( wt.size_left > 0) {
+		size_t copy_this_much = wt.size_left;
+		if (copy_this_much > buffer_size) {
+			copy_this_much = buffer_size;
+		}
+
+		Posix.memcpy(dest, wt.buffer, copy_this_much);
+
+		wt.buffer = wt.buffer[0:copy_this_much];
+		wt.size_left -= copy_this_much;
+		return copy_this_much;
+	}
+
+	return 0;
+}
+
+private size_t ReadHeaderCallback (char *dest, size_t size, size_t nmemb, void *data) {
+	var wt = ((HashTable<string,string>) data);
+	 //size_t numbytes = size * nmemb;
+	//printf("%.*s\n", numbytes, dest);
+	var header = (string)dest;
+	var at = header.index_of (":", 0);
+	if ( at != -1 ){
+		var key = header[0:at].strip ().casefold ();
+		var val = header[at+2:header.length];
+		wt.insert (key, val);
+	}
+	return size * nmemb;
+}
+
+private int RequestProgressCallback (void *clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
+	var canceled = ((bool*) clientp);
+	if (*canceled) {
+		return 1;
+	}
+	return 0;
 }

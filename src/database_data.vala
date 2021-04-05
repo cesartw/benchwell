@@ -69,6 +69,27 @@ public class Benchwell.Database.Data : Gtk.Paned {
 
 		result_view.table.copy_insert_menu.activate.connect (on_copy_insert);
 
+		tables.key_press_event.connect ( (e) => {
+			if (e.state != Gdk.ModifierType.CONTROL_MASK || e.keyval != Gdk.Key.f) {
+				return false;
+			}
+
+			table_search.grab_focus ();
+
+			return true;
+		});
+
+		table_search.key_press_event.connect ( (e) => {
+			if (e.keyval != Gdk.Key.Escape) {
+				return false;
+			}
+
+			table_search.text = "";
+
+			return true;
+		});
+
+
 		fill ();
 	}
 

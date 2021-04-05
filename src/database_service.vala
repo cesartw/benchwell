@@ -12,20 +12,23 @@ public class Benchwell.DatabaseService : Object {
 		engine = new Benchwell.Engine ();
 	}
 
-	public async void connect (Benchwell.ConnectionInfo _info) throws Benchwell.Error {
+	public async void dbconnect (Benchwell.ConnectionInfo _info) throws Benchwell.Error, GLib.Error {
 		info = _info;
 
-		yield Config.ping_dbus ();
+		//yield Config.ping_dbus ();
 
 		if (info.password == "") {
-			//var loop = new MainLoop ();
 			var password = "";
 			Config.decrypt.begin (info, (obj, res) => {
-				password = Config.decrypt.end (res);
-				//loop.quit ();
+				try {
+					password = Config.decrypt.end (res);
+					dbconnect.callback ();
+				} catch (GLib.Error err) {
+					Config.show_alert (null, err.message);
+				}
 			});
-			//loop.run ();
 
+			yield;
 			info.password = password;
 		}
 

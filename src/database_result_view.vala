@@ -21,9 +21,6 @@ public class Benchwell.Database.ResultView : Gtk.Paned {
 
 		// editor
 		editor = new Benchwell.SourceView ("sql");
-		editor.show_line_numbers = true;
-		editor.show_line_marks = true;
-		editor.margin_top = 10;
 		editor.show ();
 
 		var editor_sw = new Gtk.ScrolledWindow (null, null);
@@ -50,15 +47,14 @@ public class Benchwell.Database.ResultView : Gtk.Paned {
 		window.add_action (action_save_fav);
 
 		var editor_actionbar = new Gtk.ActionBar ();
+		editor_actionbar.pack_start (save_menu);
+		editor_actionbar.pack_start (btn_load_query);
 		editor_actionbar.show ();
-		editor_actionbar.pack_end (save_menu);
-		editor_actionbar.pack_end (btn_load_query);
-		editor_actionbar.set_name ("queryactionbar");
 		/////////////////
 
 		var editor_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
+		editor_box.pack_start (editor_actionbar, false, false, 0);
 		editor_box.pack_start (editor_sw, true, true, 0);
-		editor_box.pack_end (editor_actionbar, false, false, 0);
 		editor_box.show ();
 
 		var table_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);

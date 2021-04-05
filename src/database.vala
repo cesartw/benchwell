@@ -29,9 +29,9 @@ public class Benchwell.Database.Database : Gtk.Box {
 
 	public async void launch_connection (owned Benchwell.ConnectionInfo c, Benchwell.TableDef? selected_tabledef = null) {
 		try {
-			yield service.connect (c);
+			yield service.dbconnect (c);
 		} catch (Benchwell.Error err) {
-			show_error_dialog (err.message);
+			Config.show_alert (this, err.message);
 			return;
 		}
 
@@ -56,12 +56,6 @@ public class Benchwell.Database.Database : Gtk.Box {
 		});
 
 		data_view.tables.selected_tabledef = selected_tabledef;
-	}
-
-	public void show_error_dialog (string message) {
-		var dialog = new Gtk.MessageDialog (window, Gtk.DialogFlags.DESTROY_WITH_PARENT, Gtk.MessageType.ERROR, Gtk.ButtonsType.CLOSE, message);
-		dialog.response.connect (dialog.destroy);
-		dialog.show ();
 	}
 
 	public void show_data () {
