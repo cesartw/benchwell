@@ -470,6 +470,7 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 	}
 
 	private void build_tree (Gtk.TreeIter? parent, Benchwell.HttpItem[] items) {
+		var selected_item_id = Config.settings.http_item_id;
 		foreach (var item in items) {
 			var folder_parent = add_row (item, parent, null);
 			var expanded = Config.http_tree_state.get (item.id);
@@ -482,6 +483,13 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 				if (expanded) {
 					treeview.expand_to_path (store.get_path(folder_parent));
 				}
+			}
+			if (item.id == selected_item_id) {
+				Timeout.add (0, () => { // so tree has finished building
+					treeview.get_selection ().select_iter (folder_parent);
+					treeview.row_activated (store.get_path (folder_parent), treeview.get_column(0));
+					return false;
+				});
 			}
 		}
 	}

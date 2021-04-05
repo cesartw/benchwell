@@ -798,6 +798,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 	private void on_item_activated (Benchwell.HttpItem item, Gtk.TreeIter iter) {
 		loading = true;
+		Config.settings.http_item_id = item.id;
 
 		this.item = item;
 		this.item_iter = iter;

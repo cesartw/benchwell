@@ -589,6 +589,15 @@ public class Benchwell.Settings : GLib.Settings {
 		}
 	}
 
+	public int64 http_item_id {
+		get {
+			return get_int64 ("http-item-id");
+		}
+		set {
+			set_int64 ("http-item-id", value);
+		}
+	}
+
 	public string http_tree_state {
 		owned get {
 			return get_string ("http-tree-state");
@@ -607,6 +616,15 @@ public class Benchwell.Settings : GLib.Settings {
 		}
 	}
 
+	public bool http_single_click_activate {
+		get {
+			return get_boolean ("http-single-click-activate");
+		}
+		set {
+			set_boolean ("http-single-click-activate", value);
+		}
+	}
+
 	public int db_query_history_limit {
 		get {
 			return get_int ("db-query-history-limit");
@@ -622,15 +640,6 @@ public class Benchwell.Settings : GLib.Settings {
 		}
 		set {
 			set_string ("db-filters", value);
-		}
-	}
-
-	public bool http_single_click_activate {
-		get {
-			return get_boolean ("http-single-click-activate");
-		}
-		set {
-			set_boolean ("http-single-click-activate", value);
 		}
 	}
 

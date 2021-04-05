@@ -36,6 +36,11 @@
 			<summary>HTTP Collection ID</summary>
 			<description>The last http collection id selected</description>
 		</key>
+		<key name="http-item-id" type="x">
+			<default>0</default>
+			<summary>HTTP Request ID</summary>
+			<description>The last http request opened</description>
+		</key>
 		<key name="http-tree-state" type="s">
 			<default>"{}"</default>
 			<summary>HTTP tree state</summary>
