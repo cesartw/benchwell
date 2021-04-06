@@ -342,8 +342,9 @@ public class Benchwell.HttpSettings : Gtk.Grid {
 			other_import_file_btn.sensitive = false;
 			other_import_type.sensitive = false;
 			import.begin (importer, other_import_file_btn.get_filename (), (obj, res) => {
-				import.end (res);
-				Config.show_alert (this, "Done", Gtk.MessageType.INFO, true, 5000);
+				var ok = import.end (res);
+				if (ok)
+					Config.show_alert (this, "Done", Gtk.MessageType.INFO, true, 5000);
 				other_import_file_btn.unselect_all ();
 				other_import_spinner.stop ();
 				other_import_file_btn.sensitive = true;
@@ -352,18 +353,26 @@ public class Benchwell.HttpSettings : Gtk.Grid {
 		});
 	}
 
-	private async void import (Benchwell.Importer importer, string filename) {
+	private async bool import (Benchwell.Importer importer, string filename) {
 		SourceFunc callback = import.callback;
 
+		bool ok = false;
 		ThreadFunc<bool> run = () => {
-			string text;
-			var ok = GLib.FileUtils.get_contents (filename, out text, null);
-			if (!ok) {
-				Config.show_alert (this, @"Could not read file $(filename)");
-				return true;
-			}
+			try {
+				string text;
+				var file_ok = GLib.FileUtils.get_contents (filename, out text, null);
+				if (!file_ok) {
+					Config.show_alert (this, @"Could not read file $(filename)");
+					return true;
+				}
 
-			importer.import (text);
+				importer.import (text);
+				ok = true;
+			} catch (GLib.Error err) {
+				Config.show_alert (this, err.message);
+			} catch (Benchwell.ImportError err) {
+				Config.show_alert (this, err.message);
+			}
 
 			Idle.add((owned) callback);
 			return true;
@@ -371,6 +380,7 @@ public class Benchwell.HttpSettings : Gtk.Grid {
 
 		new Thread<bool>("benchwell-http-import", run);
 		yield;
+		return ok;
 	}
 }
 
@@ -472,4 +482,3 @@ public class Benchwell.PomodoroSettings : Gtk.Grid {
 
 public class Benchwell.About : Gtk.Grid {
 }
-

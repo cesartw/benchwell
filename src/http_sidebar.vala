@@ -218,11 +218,6 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 	}
 
 	public void on_resort () {
-		//GLib.MainLoop loop = new GLib.MainLoop ();
-		//resort.begin ((obj, res) => {
-			//loop.quit ();
-		//});
-		//loop.run ();
 		resort ();
 	}
 

@@ -9,10 +9,10 @@ public class Benchwell.ImporterInsomnia : Benchwell.Importer, Object {
 		public string method {get;set;}
 		public string workspace_id {get;set;}
 		public ResourceBody request_body {get;set;}
-		public ResourceKV[] request_params {get;set;}
-		public ResourceKV[] request_headers {get;set;}
-		public Resource[] resources {get;set;}
-		public ResourceKV[] variables {get;set;}
+		public ResourceKV[] request_params;
+		public ResourceKV[] request_headers;
+		public Resource[] resources;
+		public ResourceKV[] variables;
 	}
 
 	public class ResourceBody : Object {
@@ -36,9 +36,13 @@ public class Benchwell.ImporterInsomnia : Benchwell.Importer, Object {
 		public string token {get;set;}
 	}
 
-	public void import (string source) throws Benchwell.ImportError {
+	public void import (string source) throws Benchwell.ImportError, Benchwell.ConfigError {
 		Json.Parser parser = new Json.Parser ();
-		parser.load_from_data (source, source.length);
+		try {
+			parser.load_from_data (source, source.length);
+		} catch (GLib.Error err) {
+			throw new Benchwell.ImportError.BASE (@"parsing Insomnia json: $(err.message)");
+		}
 
 		Json.Object root_object = parser.get_root ().get_object ();
 
@@ -131,7 +135,6 @@ public class Benchwell.ImporterInsomnia : Benchwell.Importer, Object {
 			foreach (var v in environment.variables) {
 				env.add_variable (v.name, v.value);
 			}
-
 		}
 
 		foreach (var workspace in resources) {
