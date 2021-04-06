@@ -56,7 +56,6 @@ public class Benchwell.SourceView : Gtk.SourceView {
 		//get_space_drawer ().set_types_for_locations (Gtk.SourceSpaceLocationFlags.LEADING|Gtk.SourceSpaceLocationFlags.TRAILING, Gtk.SourceSpaceTypeFlags.ALL);
 		//get_space_drawer ().enable_matrix = true;
 
-
 		var buffer = (Gtk.SourceBuffer) get_buffer ();
 		var sm = Gtk.SourceStyleSchemeManager.get_default ();
 
@@ -220,9 +219,7 @@ public class Benchwell.SourceView : Gtk.SourceView {
 	}
 
 	private void build_markers () {
-		//var px = Gtk.IconTheme.get_default ().load_icon ("bw-directory", Gtk.IconSize.BUTTON, Gtk.IconLookupFlags.USE_BUILTIN);
 		var mark_attr = new Gtk.SourceMarkAttributes ();
-		//mark_attr.set_pixbuf (px);
 		mark_attr.set_icon_name ("pan-down-symbolic");
 		set_mark_attributes ("fold_collapse", mark_attr, 0);
 
@@ -235,15 +232,15 @@ public class Benchwell.SourceView : Gtk.SourceView {
 		set_mark_attributes ("fold_more", mark_attr, 0);
 	}
 
-	private void dump_line_descriptions (owned line_desc[] meta) {
-		foreach (var m in meta) {
-			dump_line_description(m);
-		}
-	}
+	//private void dump_line_descriptions (owned line_desc[] meta) {
+		//foreach (var m in meta) {
+			//dump_line_description(m);
+		//}
+	//}
 
-	private void dump_line_description (owned line_desc m) {
-		print (@"===$(m.start_line):$(m.end_line)\n");
-	}
+	//private void dump_line_description (owned line_desc m) {
+		//print (@"===$(m.start_line):$(m.end_line)\n");
+	//}
 
 	private uint indent_level (owned string line) {
 		uint count = 0;

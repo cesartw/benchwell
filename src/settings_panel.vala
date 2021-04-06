@@ -1,4 +1,5 @@
 public class Benchwell.SettingsPanel : Gtk.Box {
+	public weak Benchwell.ApplicationWindow window { get; construct; }
 	private Gtk.Notebook notebook;
 	private Benchwell.EnvironmentEditor env_editor;
 	private Benchwell.EditorSettings editor_settings;
@@ -7,8 +8,9 @@ public class Benchwell.SettingsPanel : Gtk.Box {
 	private Benchwell.About about;
 	private Gtk.Switch dark_switch;
 
-	public SettingsPanel () {
+	public SettingsPanel (Benchwell.ApplicationWindow w) {
 		Object (
+			window: w,
 			orientation: Gtk.Orientation.VERTICAL,
 			vexpand: true,
 			hexpand: true
@@ -34,7 +36,7 @@ public class Benchwell.SettingsPanel : Gtk.Box {
 		editor_settings = new Benchwell.EditorSettings ();
 		editor_settings.show ();
 
-		http_settings = new Benchwell.HttpSettings ();
+		http_settings = new Benchwell.HttpSettings (w);
 		http_settings.show ();
 
 		pomodoro_settings = new Benchwell.PomodoroSettings ();
@@ -221,11 +223,17 @@ public class Benchwell.EditorSettings : Gtk.Grid {
 }
 
 public class Benchwell.HttpSettings : Gtk.Grid {
-	public HttpSettings () {
+	public weak Benchwell.ApplicationWindow window { get; construct; }
+	private Benchwell.ImporterInsomnia importer_insomnia;
+
+	public HttpSettings (Benchwell.ApplicationWindow w) {
 		Object (
+			window: w,
 			row_spacing: 5,
 			column_spacing: 5
 		);
+
+		importer_insomnia = new Benchwell.ImporterInsomnia ();
 
 		var label_alignment = Gtk.Align.START;
 
@@ -252,43 +260,117 @@ public class Benchwell.HttpSettings : Gtk.Grid {
 		///////
 
 		// OTHER
-		var requests_label = new Gtk.Label (_("Requests")) {
+		var other_label = new Gtk.Label (_("Requests")) {
 			valign = label_alignment,
 			halign = label_alignment
 		};
-		requests_label.show ();
+		other_label.show ();
 		////////
 
 		// ACTIVATE ON SINGLE CLICK
-		var requests_single_click_label = new Gtk.Label (_("Open on single click")) {
+		var other_single_click_label = new Gtk.Label (_("Open on single click")) {
 			valign = label_alignment,
 			halign = label_alignment
 		};
-		requests_single_click_label.show ();
+		other_single_click_label.show ();
 
-		var requests_single_click_sw = new Gtk.Switch ();
-		requests_single_click_sw.state = Config.settings.http_single_click_activate;
-		requests_single_click_sw.show ();
+		var other_single_click_sw = new Gtk.Switch ();
+		other_single_click_sw.state = Config.settings.http_single_click_activate;
+		other_single_click_sw.show ();
 		//////////////////
 
+		// IMPORTERS
+		var other_import_label = new Gtk.Label (_("Import")) {
+			valign = label_alignment,
+			halign = label_alignment
+		};
+		other_import_label.show ();
+
+		var other_import_type = new Gtk.ComboBoxText ();
+		other_import_type.append ("insomnia", "Insomnia V2");
+		other_import_type.set_active_id ("insomnia");
+		other_import_type.show ();
+
+		var import_dialog = new Gtk.FileChooserDialog (_("Select Insomnia V2 file"), window,
+											 Gtk.FileChooserAction.OPEN,
+											_("Import"), Gtk.ResponseType.OK,
+											_("Cancel"), Gtk.ResponseType.CANCEL);
+		import_dialog.add_filter (importer_insomnia.get_file_filter ());
+
+		var other_import_file_btn = new Gtk.FileChooserButton.with_dialog (import_dialog);
+		other_import_file_btn.show ();
+
+		var other_import_spinner = new Gtk.Spinner ();
+		other_import_spinner.show ();
+		////////////
 
 		attach (laf_label, 0, 0, 2, 1);
 
 		attach (laf_font_label, 1, 1, 1, 1);
 		attach (laf_font_btn, 2, 1, 1, 1);
 
-		attach (requests_label, 3, 0, 2, 1);
-		attach (requests_single_click_label, 4, 1, 1, 1);
-		attach (requests_single_click_sw, 5, 1, 1, 1);
+		attach (other_label, 3, 0, 2, 1);
+		attach (other_single_click_label, 4, 1, 1, 1);
+		attach (other_single_click_sw, 5, 1, 1, 1);
+
+		attach (other_import_label, 3, 2, 2, 1);
+		attach (other_import_type, 4, 3, 1, 1);
+		attach (other_import_file_btn, 5, 3, 1, 1);
+		attach (other_import_spinner, 6, 3, 1, 1);
 
 		laf_font_btn.font_set.connect (() => {
 			Config.settings.http_font = laf_font_btn.font;
 		});
 
-		requests_single_click_sw.state_set.connect ((state) => {
+		other_single_click_sw.state_set.connect ((state) => {
 			Config.settings.http_single_click_activate = state;
 			return false;
 		});
+
+		other_import_file_btn.file_set.connect (() => {
+			Benchwell.Importer importer = null;
+			switch (other_import_type.get_active_id ()) {
+				case "insomnia":
+					importer = importer_insomnia;
+					break;
+			}
+
+			if (importer == null)
+				return;
+
+			other_import_spinner.start ();
+			other_import_file_btn.sensitive = false;
+			other_import_type.sensitive = false;
+			import.begin (importer, other_import_file_btn.get_filename (), (obj, res) => {
+				import.end (res);
+				Config.show_alert (this, "Done", Gtk.MessageType.INFO, true, 5000);
+				other_import_file_btn.unselect_all ();
+				other_import_spinner.stop ();
+				other_import_file_btn.sensitive = true;
+				other_import_type.sensitive = true;
+			});
+		});
+	}
+
+	private async void import (Benchwell.Importer importer, string filename) {
+		SourceFunc callback = import.callback;
+
+		ThreadFunc<bool> run = () => {
+			string text;
+			var ok = GLib.FileUtils.get_contents (filename, out text, null);
+			if (!ok) {
+				Config.show_alert (this, @"Could not read file $(filename)");
+				return true;
+			}
+
+			importer.import (text);
+
+			Idle.add((owned) callback);
+			return true;
+		};
+
+		new Thread<bool>("benchwell-http-import", run);
+		yield;
 	}
 }
 

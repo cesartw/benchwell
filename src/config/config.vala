@@ -26,8 +26,8 @@ public class Benchwell._Config : Object {
 	public signal void environment_added (Benchwell.Environment env);
 	public signal void environment_removed (Benchwell.Environment env);
 	public signal void environment_changed ();
-	public signal void http_collection_added(HttpCollection collection);
-	public signal void connection_added(ConnectionInfo connection);
+	public signal void http_collection_added (HttpCollection collection);
+	public signal void connection_added (ConnectionInfo connection);
 
 	public _Config () throws Benchwell.ConfigError {
 		settings = new Benchwell.Settings ();
@@ -134,17 +134,20 @@ public class Benchwell._Config : Object {
 		environments = tmp;
 	}
 
-	public Benchwell.HttpCollection add_http_collection () throws ConfigError {
-		var collection = new Benchwell.HttpCollection ();
-		collection.name = @"New collection #$(http_collections.length)";
-		collection.save ();
+	public Benchwell.HttpCollection add_http_collection (Benchwell.HttpCollection? collection = null) throws ConfigError {
+		var c = collection;
+		if (c == null) {
+			c = new Benchwell.HttpCollection ();
+			c.name = @"New collection #$(http_collections.length)";
+		}
+		c.save ();
 
 		var tmp = http_collections;
-		tmp += collection;
+		tmp += c;
 		http_collections = tmp;
-		http_collection_added (collection);
+		http_collection_added (c);
 
-		return collection;
+		return c;
 	}
 
 	public void remove_http_collection (Benchwell.HttpCollection collection) {

@@ -272,7 +272,7 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 			popover.show ();
 		});
 
-		var settings_panel = new Benchwell.SettingsPanel ();
+		var settings_panel = new Benchwell.SettingsPanel (this);
 		settings_panel.show ();
 		popover.add (settings_panel);
 

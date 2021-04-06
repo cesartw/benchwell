@@ -1,139 +1,173 @@
-namespace Benchwell {
-	class Lexer {
-		static string[] whitespaces = {"\n", " ", "\t", "\r"};
+[Compact]
+public struct Benchwell.Token
+{
+	uint start;
+	uint end;
+	string val;
+	int type;
 
-		protected string _input;
-		public string input {
-			get {
-				return _input;
-			}
-		}
+	public string to_string () {
+		return @"$(val):$(type):$(start):$(end)";
+	}
+}
 
-		protected int _position;
-		public int position {
-			get {
-				return _position;
-			}
-		}
+public enum Benchwell.TokenType {
+	STRING,
+	NUMBER,
+	FLOAT,
+	KEYWORD,
+	IDENTIFIER
+}
 
-		public Lexer (string input) {
-			_input = input;
-		}
+public interface Benchwell.TokenTypeLexer : Object {
+	public abstract bool check (char c);
+	public abstract bool consume (out Benchwell.Token token, out uint taken, uint position, owned string input, char espace_char);
+}
 
-		public bool is_end_reached () {
-			return _position == _input.length;
-		}
+public class Benchwell.Lexer : Object {
+	//public bool     double_quoted_string  { get; construct; default = true; }
+	//public bool     single_quoted_string  { get; construct; default = true; }
+	//public bool     bare_string           { get; construct; default = true; }
+	//public string   bare_string_separator { get; construct; default = " "; }
+	//public bool     numbers               { get; construct; default = true; }
+	//public bool     float_numbers         { get; construct; default = true; }
+	public char     escape_char           { get; construct; default = '\\'; }
+	//public string[] keywords              { get; construct; }
+	//public string   identifier            { get; construct; default = "@acbcdefghijklmnopqrstuvxwyzACBCDEFGHIJKLMNOPQRSTUVXWYZ0123456789_"; }
 
-		public string peek (int length = 1, int offset = 0) {
-			var total_offset = offset + _position;
+	private Benchwell.TokenTypeLexer[] token_types;
 
-			if (!is_end_reached () && total_offset + length <= _input.length) {
-				return _input.substring(total_offset, length);
-			} else {
-				return "";
-			}
-		}
+	private uint position { get; set; }
 
-		public string next (int length = 1, int offset = 0) {
-			var str = peek (length, offset);
-
-			if (str != "") {
-				_position = _position + length + offset;
-			}
-
-			return str;
-		}
-
-		public void consume_whitespaces () {
-			while(true) {
-				if (is_end_reached() || !(peek (1) in Lexer.whitespaces)) {
-					break;
-				} else {
-					next (1);
-				}
-			}
-		}
-
-		public bool expect (string wish, int offset = 0) {
-			if (peek (wish.length, offset) == wish) {
-				next (wish.length, offset);
-				return true;
-			}
-
-			return false;
-		}
-
-		public bool expect_multiple (string[] wish) {
-			foreach(string single in wish) {
-				var matches = expect (single);
-
-				if (matches) {
-					return true;
-				}
-			}
-
-			return false;
-		}
+	public Lexer (Benchwell.TokenTypeLexer[] tt) {
+		token_types = tt;
 	}
 
-	enum NodeType {
-		O_BRACKET,
-		E_BRACKET,
-		VAR,
-		STRING;
-	}
+	public Benchwell.Token[]? parse (string input) {
+		position = 0;
+		Benchwell.Token[] tokens = {};
 
-	class Node {
-		public int start_at;
-		public int end_at;
-		public NodeType type;
-	}
+		while (true) {
+			if (position >= input.length - 1) {
+				return tokens;
+			}
 
-	class Parse {
-		public Lexer lexer;
-		public List<Node> tree;
-
-		public void parse (string input) {
-			lexer = new Lexer (input);
-
-			while (!lexer.is_end_reached ()){
-				var node = new Node ();
-				var last_node = tree.last ();
-				node.start_at = lexer.position;
-
-				if (is_o_bracket ()) {
-					node.type = NodeType.O_BRACKET;
-					node.end_at = node.start_at + 2;
-					tree.append (node);
+			var c = input.to_utf8 ()[position];
+			bool found = false;
+			foreach (var tt in token_types) {
+				if (!tt.check (c)) {
+					continue;
 				}
 
-				if (is_e_bracket ()) {
-					node.type = NodeType.E_BRACKET;
-					node.end_at = node.start_at + 2;
-					tree.append (node);
+				Benchwell.Token token;
+				uint taken = 0;
+				if (!tt.consume (out token, out taken, position, input, escape_char)) {
+					continue;
 				}
 
-				lexer.next ();
+				token.val = input[token.start:token.end+1];
+				found = true;
+				position += taken;
+				tokens += token;
+				break;
+			}
+			if (!found) {
+				break;
 			}
 		}
 
-		private bool is_o_bracket() {
-			return lexer.peek (2) == "{{";
-		}
-
-		private bool is_e_bracket() {
-			return lexer.peek (2) == "}}";
-		}
+		return tokens;
 	}
 
 	public static int main(string[] args) {
-		var t = new Parse ();
-		t.parse ("http://{{token}}/desk/api/v1/tickets.json");
-
-		t.tree.foreach ((node) => {
-			print (@"====$(node.start_at):$(node.end_at):$(node.type)\n");
+		var lx = new Lexer ({
+			new Benchwell.TemplateStart (),
+			new Benchwell.TemplateEnd (),
+			new Benchwell.BareString ()
 		});
+		var tokens = lx.parse ("http://{{token}}/desk/api/v1/tickets.json");
+
+		foreach (var t in tokens) {
+			print (@"=====$(t.start):$(t.end):$(t.val)\n");
+		}
 
 		return 0;
+	}
+}
+
+public class Benchwell.TemplateStart : Benchwell.TokenTypeLexer, Object {
+	public bool check (char c) {
+		return c == '{';
+	}
+
+	public bool consume (out Benchwell.Token token, out uint taken, uint position, owned string input, char espace_char) {
+		taken = 0;
+		var chars = input.to_utf8 ();
+
+		if (input.length < 2){
+			return false;
+		}
+
+		if (chars[position] != '{' || chars[position+1] != '{') {
+			return false;
+		}
+
+		taken = 2;
+		token = Benchwell.Token () {
+			start = position,
+			end = position + taken - 1,
+			type = Benchwell.TokenType.STRING
+		};
+		return true;
+	}
+}
+
+public class Benchwell.TemplateEnd : Benchwell.TokenTypeLexer, Object {
+	public bool check (char c) {
+		return c == '}';
+	}
+
+	public bool consume (out Benchwell.Token token, out uint taken, uint position, owned string input, char espace_char) {
+		taken = 0;
+		var chars = input.to_utf8 ();
+
+		if (input.length < 2){
+			return false;
+		}
+
+		if (chars[position] != '}' || chars[position+1] != '}') {
+			return false;
+		}
+
+		taken = 2;
+		token = Benchwell.Token () {
+			start = position,
+			end = position+taken - 1,
+			type = Benchwell.TokenType.STRING
+		};
+		return true;
+	}
+}
+
+public class Benchwell.BareString : Benchwell.TokenTypeLexer, Object {
+	public bool check (char c) {
+		return c != '{';
+	}
+
+	public bool consume (out Benchwell.Token token, out uint taken, uint position, owned string input, char espace_char) {
+		taken = 0;
+		var chars = input.to_utf8 ();
+		while (position < input.length && chars[position] != '{' && chars[position] != '}') {
+			taken++;
+			position++;
+		}
+
+		token = Benchwell.Token () {
+			start = position-taken,
+			end = position - 1,
+			type = Benchwell.TokenType.STRING
+		};
+
+		return true;
 	}
 }

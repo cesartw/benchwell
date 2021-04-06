@@ -18,7 +18,6 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 	public Gtk.MenuItem edit_menu;
 	public Gtk.MenuItem clone_request_menu;
 
-
 	public weak Benchwell.HttpCollection? selected_collection;
 
 	public signal void item_activated (Benchwell.HttpItem item, Gtk.TreeIter iter);
@@ -211,6 +210,10 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 
 		Config.settings.changed["http-single-click-activate"].connect (() => {
 			treeview.activate_on_single_click = Config.settings.http_single_click_activate;
+		});
+
+		Config.http_collection_added.connect ((collection) => {
+			collections_combo.append (collection.id.to_string (), collection.name);
 		});
 	}
 

@@ -75,9 +75,11 @@ executable(
 	'src/settings_panel.vala',
 	'src/pomodoro.vala',
 
+	'src/importer/importer.vala',
+	'src/importer/insomnia.vala',
+
 	'src/application.vala',
-	#'src/http_importer.vala',
-	#'src/main.vala',
+	# 'src/main.vala',
 
 	config_headers,
 	asresources,
