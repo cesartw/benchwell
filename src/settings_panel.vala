@@ -341,7 +341,7 @@ public class Benchwell.HttpSettings : Gtk.Grid {
 			other_import_spinner.start ();
 			other_import_file_btn.sensitive = false;
 			other_import_type.sensitive = false;
-			import.begin (importer, other_import_file_btn.get_filename (), (obj, res) => {
+			import.begin (importer, other_import_file_btn.get_file (), (obj, res) => {
 				var ok = import.end (res);
 				if (ok)
 					Config.show_alert (this, "Done", Gtk.MessageType.INFO, true, 5000);
@@ -353,24 +353,17 @@ public class Benchwell.HttpSettings : Gtk.Grid {
 		});
 	}
 
-	private async bool import (Benchwell.Importer importer, string filename) {
+	private async bool import (Benchwell.Importer importer, File file) {
 		SourceFunc callback = import.callback;
 
 		bool ok = false;
 		ThreadFunc<bool> run = () => {
 			try {
-				string text;
-				var file_ok = GLib.FileUtils.get_contents (filename, out text, null);
-				if (!file_ok) {
-					Config.show_alert (this, @"Could not read file $(filename)");
-					return true;
-				}
-
-				importer.import (text);
+				importer.import (file.read (null));
 				ok = true;
-			} catch (GLib.Error err) {
-				Config.show_alert (this, err.message);
 			} catch (Benchwell.ImportError err) {
+				Config.show_alert (this, err.message);
+			} catch (GLib.Error err) {
 				Config.show_alert (this, err.message);
 			}
 

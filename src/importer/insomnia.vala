@@ -49,10 +49,10 @@ public class Benchwell.ImporterInsomnia : Benchwell.Importer, Object {
 		public string token {get;set;}
 	}
 
-	public void import (string source) throws Benchwell.ImportError, Benchwell.ConfigError {
+	public void import (InputStream source) throws Benchwell.ImportError, Benchwell.ConfigError {
 		Json.Parser parser = new Json.Parser ();
 		try {
-			parser.load_from_data (source, source.length);
+			parser.load_from_stream (source, null);
 		} catch (GLib.Error err) {
 			throw new Benchwell.ImportError.BASE (@"parsing Insomnia json: $(err.message)");
 		}
