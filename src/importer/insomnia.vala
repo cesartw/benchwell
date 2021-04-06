@@ -18,17 +18,30 @@ public class Benchwell.ImporterInsomnia : Benchwell.Importer, Object {
 	public class ResourceBody : Object {
 		public string mimeType {get;set;}
 		public string text {get;set;}
+		public ResourceKV[] @params;
 	}
 
-	public class ResourceKV : Object {
+	public class ResourceKV : Object, Json.Serializable {
 		public string name {get;set;}
-		public string value {get;set;}
+		public string @value {get;set;}
 		public bool disabled {get;set;}
 
+		// body options
+		public bool multiline {get;set;}
+		public string param_type {get;set;}
+		public string fileName {get;set;}
+
 		public string to_string () {
-			return @"$name:$value";
+			return @"$name:$(@value)";
+		}
+
+		public unowned ParamSpec? find_property (string property_name) {
+			if (property_name == "type")
+				return ((ObjectClass) get_type ().class_ref ()).find_property ("param_type");
+			return ((ObjectClass) get_type ().class_ref ()).find_property (property_name);
 		}
 	}
+
 	public class ResourceAuth : Object {
 		public bool disabled {get;set;}
 		public string username {get;set;}
@@ -70,6 +83,17 @@ public class Benchwell.ImporterInsomnia : Benchwell.Importer, Object {
 						resource.request_body.mimeType = "none";
 					}
 
+					ResourceKV[] body_params = {};
+					switch (resource.request_body.mimeType) {
+						case "multipart/form-data", "application/x-www-form-urlencoded":
+							body_node.get_object ().get_array_member ("params").foreach_element ((harray, index, hnode) => {
+								var param = Json.gobject_deserialize (typeof (ResourceKV), hnode) as ResourceKV;
+								assert(param != null);
+								body_params += param;
+							});
+							break;
+					}
+
 					ResourceKV[] headers = {};
 					node.get_object ().get_array_member ("headers").foreach_element ((harray, index, hnode) => {
 						var header = Json.gobject_deserialize (typeof (ResourceKV), hnode) as ResourceKV;
@@ -105,7 +129,7 @@ public class Benchwell.ImporterInsomnia : Benchwell.Importer, Object {
 
 					resource.request_headers = headers;
 					resource.request_params = parameters;
-
+					resource.request_body.@params = body_params;
 					break;
 				case "environment":
 					var data = node.get_object ().get_object_member ("data");
@@ -193,7 +217,7 @@ public class Benchwell.ImporterInsomnia : Benchwell.Importer, Object {
 				}
 
 				var parent_folder = folder_map.get (request.parentId);
-				if (request.id != workspace.id && (parent_folder == null || parent_folder.http_collection_id != collection.id)) {
+				if (request.parentId != workspace.id && (parent_folder == null || parent_folder.http_collection_id != collection.id)) {
 					continue;
 				}
 
@@ -217,6 +241,26 @@ public class Benchwell.ImporterInsomnia : Benchwell.Importer, Object {
 					item.add_header (header.name, header.value);
 				foreach (var param in request.request_params)
 					item.add_param (param.name, param.value);
+				foreach (var param in request.request_body.@params) {
+					switch (param.param_type) {
+						case "text":
+							var p = item.add_form_param (param.name,  param.value);
+							if (param.multiline) {
+								p.kvtype = Benchwell.KeyValueTypes.MULTILINE;
+								break;
+							}
+							p.kvtype = Benchwell.KeyValueTypes.STRING;
+							break;
+						case "file":
+							var p = item.add_form_param (param.name,  param.fileName);
+							p.kvtype = Benchwell.KeyValueTypes.FILE;
+							break;
+						default:
+							item.add_form_param (param.name,  param.value);
+							break;
+					}
+				}
+
 
 				created = true;
 			}

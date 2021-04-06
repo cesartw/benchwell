@@ -287,11 +287,11 @@ public class Benchwell.HttpSettings : Gtk.Grid {
 		other_import_label.show ();
 
 		var other_import_type = new Gtk.ComboBoxText ();
-		other_import_type.append ("insomnia", "Insomnia V2");
+		other_import_type.append ("insomnia", "Insomnia v4(JSON)");
 		other_import_type.set_active_id ("insomnia");
 		other_import_type.show ();
 
-		var import_dialog = new Gtk.FileChooserDialog (_("Select Insomnia V2 file"), window,
+		var import_dialog = new Gtk.FileChooserDialog (_("Select Insomnia v4(JSON) file"), window,
 											 Gtk.FileChooserAction.OPEN,
 											_("Import"), Gtk.ResponseType.OK,
 											_("Cancel"), Gtk.ResponseType.CANCEL);
