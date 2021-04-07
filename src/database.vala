@@ -33,6 +33,9 @@ public class Benchwell.Database.Database : Gtk.Box {
 		} catch (Benchwell.Error err) {
 			Config.show_alert (this, err.message);
 			return;
+		} catch (GLib.Error err) {
+			Config.show_alert (this, err.message);
+			return;
 		}
 
 		data_view = new Benchwell.Database.Data(window, service);
