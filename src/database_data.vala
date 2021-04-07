@@ -7,6 +7,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 	public Benchwell.Database.Tables tables;
 	public Benchwell.Database.ResultView result_view;
 	public Gtk.ListBox history;
+	public Gtk.Button disconnect_btn;
 
 	private Benchwell.Views.CancelOverlay overlay;
 	private List<string> databases;
@@ -226,7 +227,15 @@ public class Benchwell.Database.Data : Gtk.Paned {
 		database_combo.set_id_column (0);
 		database_combo.show ();
 
-		sidebar.pack_start (database_combo, false, true, 0);
+		var database_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0);
+		database_box.show ();
+		disconnect_btn = new Gtk.Button.from_icon_name ("network-wired-disconnected");
+		disconnect_btn.show ();
+
+		database_box.pack_start (database_combo, true, true, 0);
+		database_box.pack_end (disconnect_btn, false, false, 0);
+
+		sidebar.pack_start (database_box, false, true, 0);
 		sidebar.pack_start (table_search, false, true, 0);
 		sidebar.pack_start (tables_and_history, true, true, 0);
 

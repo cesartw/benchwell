@@ -46,6 +46,12 @@ public class Benchwell.Database.Database : Gtk.Box {
 			title = @"$(c.name).$(dbname)";
 		});
 
+		data_view.disconnect_btn.clicked.connect (() => {
+			service.dbdisconnect ();
+			show_connect ();
+			data_view.dispose ();
+		});
+
 		data_view.tables.new_tab_menu.activate.connect (() => {
 			var tabledef = data_view.tables.selected_tabledef;
 			if (tabledef == null) {

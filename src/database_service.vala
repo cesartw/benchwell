@@ -35,6 +35,10 @@ public class Benchwell.DatabaseService : Object {
 		connection = engine.connect (info);
 	}
 
+	public void dbdisconnect () {
+		connection.disconnect ();
+	}
+
 	public void use_database (string _dbname) throws Benchwell.Error {
 		dbname = _dbname;
 

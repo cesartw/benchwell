@@ -187,7 +187,7 @@ public class Benchwell.SourceView : Gtk.SourceView {
 			foreach (var line in lines) {
 				line_number++;
 				var ilevel = indent_level (line);
-				if (ilevel == 0) {
+				if (line_number == 0) {
 					continue; // won't add mark at 0
 				}
 
@@ -242,7 +242,11 @@ public class Benchwell.SourceView : Gtk.SourceView {
 		//print (@"===$(m.start_line):$(m.end_line)\n");
 	//}
 
-	private uint indent_level (owned string line) {
+	private uint indent_level (owned string? line) {
+		if (line == null) {
+			return 0;
+		}
+
 		uint count = 0;
 
 		foreach (var c in line.to_utf8 ()) {
