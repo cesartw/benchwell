@@ -1,30 +1,30 @@
 public class Benchwell.Database.MysqlForm : Gtk.Box {
-	public Benchwell.ApplicationWindow window { get; construct; }
+	public weak Benchwell.ApplicationWindow window { get; construct; }
 	public Benchwell.Database.MysqlTCPForm tcp_form;
 	public Benchwell.Database.MysqlSocketForm socket_form;
 	public Benchwell.ConnectionInfo? connection;
 
-	public signal void changed(Benchwell.ConnectionInfo c);
+	public signal void changed (Benchwell.ConnectionInfo c);
 
-	public MysqlForm(Benchwell.ApplicationWindow w) {
-		Object(
+	public MysqlForm (Benchwell.ApplicationWindow w, Gtk.SizeGroup size_group) {
+		Object (
 			orientation: Gtk.Orientation.VERTICAL,
 			spacing: 5,
-			window: w
+			window: w,
+			valign: Gtk.Align.CENTER,
+			halign: Gtk.Align.CENTER
 		);
-		set_size_request (300, 200);
-		set_valign (Gtk.Align.CENTER);
-		set_halign (Gtk.Align.CENTER);
+		//set_size_request (300, 200);
 
 		var notebook = new Gtk.Notebook ();
+		notebook.can_focus = true;
 		notebook.show ();
-		notebook.set_can_focus (true);
 
-		tcp_form = new Benchwell.Database.MysqlTCPForm ();
+		tcp_form = new Benchwell.Database.MysqlTCPForm (window, size_group);
 		tcp_form.show ();
 		notebook.append_page (tcp_form, tcp_form.tab_label);
 
-		socket_form = new Benchwell.Database.MysqlSocketForm ();
+		socket_form = new Benchwell.Database.MysqlSocketForm (window, size_group);
 		socket_form.show ();
 		notebook.append_page (socket_form, socket_form.tab_label);
 
@@ -66,7 +66,7 @@ public class Benchwell.Database.MysqlForm : Gtk.Box {
 		add (notebook);
 	}
 
-	public void set_connection(ref Benchwell.ConnectionInfo conn) {
+	public void set_connection (ref Benchwell.ConnectionInfo conn) {
 		connection = conn;
 
 		switch (conn.ttype) {
@@ -79,19 +79,20 @@ public class Benchwell.Database.MysqlForm : Gtk.Box {
 		}
 	}
 
-	public Benchwell.ConnectionInfo? get_connection() {
+	public Benchwell.ConnectionInfo? get_connection () {
 		return connection;
 	}
 }
 
 public class Benchwell.Database.MysqlTCPForm : Gtk.Grid {
+	public weak Benchwell.ApplicationWindow window { get; construct; }
 	public Gtk.Label tab_label;
 
 	public Gtk.Entry name_entry;
 	public Gtk.Entry host_entry;
 	public Gtk.Entry port_entry;
 	public Gtk.Entry user_entry;
-	public SecretEntry password_entry;
+	public Benchwell.SecretEntry password_entry;
 	public Gtk.Entry database_entry;
 
 	public Gtk.Label name_lbl;
@@ -104,11 +105,13 @@ public class Benchwell.Database.MysqlTCPForm : Gtk.Grid {
 
 	public signal void changed(Gtk.Entry entry);
 
-	public MysqlTCPForm(){
-		Object();
-		set_name ("form");
-		set_column_homogeneous (true);
-		set_row_spacing (5);
+	public MysqlTCPForm (Benchwell.ApplicationWindow w, Gtk.SizeGroup size_group) {
+		Object(
+			window: w,
+			name: "form",
+			column_homogeneous: true,
+			row_spacing: 5
+		);
 
 		tab_label = new Gtk.Label ("TCP/IP");
 		tab_label.show ();
@@ -126,34 +129,40 @@ public class Benchwell.Database.MysqlTCPForm : Gtk.Grid {
 		user_entry = new Gtk.Entry();
 		user_entry.show ();
 
-		password_entry = new SecretEntry(true);
+		password_entry = new Benchwell.SecretEntry(true);
 		password_entry.show ();
 
 		database_entry = new Gtk.Entry();
 		database_entry.show ();
 
-		name_lbl = new Gtk.Label("Name");
-		name_lbl.set_halign (Gtk.Align.START);
+		name_lbl = new Gtk.Label (_("Name")) {
+			xalign = 0
+		};
 		name_lbl.show ();
 
-		host_lbl = new Gtk.Label("Host");
-		host_lbl.set_halign (Gtk.Align.START);
+		host_lbl = new Gtk.Label (_("Host")) {
+			xalign = 0
+		};
 		host_lbl.show ();
 
-		port_lbl = new Gtk.Label("Port");
-		port_lbl.set_halign (Gtk.Align.START);
+		port_lbl = new Gtk.Label (_("Port")) {
+			xalign = 0
+		};
 		port_lbl.show ();
 
-		user_lbl = new Gtk.Label("User");
-		user_lbl.set_halign (Gtk.Align.START);
+		user_lbl = new Gtk.Label (_("User")) {
+			xalign = 0
+		};
 		user_lbl.show ();
 
-		password_lbl = new Gtk.Label("Password");
-		password_lbl.set_halign (Gtk.Align.START);
+		password_lbl = new Gtk.Label (_("Password")) {
+			xalign = 0
+		};
 		password_lbl.show ();
 
-		database_lbl = new Gtk.Label("Database");
-		database_lbl.set_halign (Gtk.Align.START);
+		database_lbl = new Gtk.Label (_("Database")) {
+			xalign = 0
+		};
 		database_lbl.show ();
 
 		attach(name_lbl, 0, 0, 1, 1);
@@ -174,36 +183,59 @@ public class Benchwell.Database.MysqlTCPForm : Gtk.Grid {
 		attach(database_lbl, 0, 5, 1, 1);
 		attach(database_entry, 1, 5, 2, 1);
 
+		size_group.add_widget (name_lbl);
+		size_group.add_widget (name_entry);
+
+		size_group.add_widget (host_lbl);
+		size_group.add_widget (host_entry);
+
+		size_group.add_widget (port_lbl);
+		size_group.add_widget (port_entry);
+
+		size_group.add_widget (user_lbl);
+		size_group.add_widget (user_entry);
+
+		size_group.add_widget (password_lbl);
+		size_group.add_widget (password_entry);
+
+		size_group.add_widget (database_lbl);
+		size_group.add_widget (database_entry);
+
 		name_entry.changed.connect ((entry) => {
 			if ( _setting_connection ) {
 				return;
 			}
 			changed (name_entry);
 		});
+
 		host_entry.changed.connect ((entry) => {
 			if ( _setting_connection ) {
 				return;
 			}
 			changed (host_entry);
 		});
+
 		port_entry.changed.connect ((entry) => {
 			if ( _setting_connection ) {
 				return;
 			}
 			changed (port_entry);
 		});
+
 		user_entry.changed.connect ((entry) => {
 			if ( _setting_connection ) {
 				return;
 			}
 			changed (user_entry);
 		});
+
 		password_entry.changed.connect ((entry) => {
 			if ( _setting_connection ) {
 				return;
 			}
 			changed (password_entry);
 		});
+
 		database_entry.changed.connect ((entry) => {
 			if ( _setting_connection ) {
 				return;
@@ -212,7 +244,7 @@ public class Benchwell.Database.MysqlTCPForm : Gtk.Grid {
 		});
 	}
 
-	public void clear() {
+	public void clear () {
 		name_entry.set_text ("");
 		host_entry.set_text ("");
 		port_entry.set_text ("");
@@ -235,12 +267,13 @@ public class Benchwell.Database.MysqlTCPForm : Gtk.Grid {
 }
 
 public class Benchwell.Database.MysqlSocketForm : Gtk.Grid {
+	public weak Benchwell.ApplicationWindow window { get; construct; }
 	public Gtk.Label tab_label;
 
 	public Gtk.Entry name_entry;
 	public Gtk.Entry socket_entry;
 	public Gtk.Entry user_entry;
-	public SecretEntry password_entry;
+	public Benchwell.SecretEntry password_entry;
 	public Gtk.Entry database_entry;
 
 	public Gtk.Label name_lbl;
@@ -252,11 +285,13 @@ public class Benchwell.Database.MysqlSocketForm : Gtk.Grid {
 
 	public signal void changed(Gtk.Entry entry);
 
-	public MysqlSocketForm(){
-		Object();
-		set_name ("form");
-		set_column_homogeneous (true);
-		set_row_spacing (5);
+	public MysqlSocketForm (Benchwell.ApplicationWindow w, Gtk.SizeGroup size_group) {
+		Object(
+			window: w,
+			name: "form",
+			column_homogeneous: true,
+			row_spacing: 5
+		);
 
 		tab_label = new Gtk.Label ("Socket");
 		tab_label.show ();
@@ -270,31 +305,35 @@ public class Benchwell.Database.MysqlSocketForm : Gtk.Grid {
 		user_entry = new Gtk.Entry();
 		user_entry.show ();
 
-		password_entry = new SecretEntry(true);
+		password_entry = new Benchwell.SecretEntry(true);
 		password_entry.show ();
 
 		database_entry = new Gtk.Entry();
 		database_entry.show ();
 
-
-		name_lbl = new Gtk.Label("Name");
-		name_lbl.set_halign (Gtk.Align.START);
+		name_lbl = new Gtk.Label("Name") {
+			xalign = 0
+		};
 		name_lbl.show ();
 
-		socket_lbl = new Gtk.Label("Socket");
-		socket_lbl.set_halign (Gtk.Align.START);
+		socket_lbl = new Gtk.Label("Socket") {
+			xalign = 0
+		};
 		socket_lbl.show ();
 
-		user_lbl = new Gtk.Label("User");
-		user_lbl.set_halign (Gtk.Align.START);
+		user_lbl = new Gtk.Label("User") {
+			xalign = 0
+		};
 		user_lbl.show ();
 
-		password_lbl = new Gtk.Label("Password");
-		password_lbl.set_halign (Gtk.Align.START);
+		password_lbl = new Gtk.Label("Password") {
+			xalign = 0
+		};
 		password_lbl.show ();
 
-		database_lbl = new Gtk.Label("Database");
-		database_lbl.set_halign (Gtk.Align.START);
+		database_lbl = new Gtk.Label("Database") {
+			xalign = 0
+		};
 		database_lbl.show ();
 
 		attach(name_lbl, 0, 1, 1, 1);
@@ -312,32 +351,50 @@ public class Benchwell.Database.MysqlSocketForm : Gtk.Grid {
 		attach(database_lbl, 0, 5, 1, 1);
 		attach(database_entry, 1, 5, 2, 1);
 
+		size_group.add_widget (name_lbl);
+		size_group.add_widget (name_entry);
 
-		name_entry.changed.connect ( (entry) => {
+		size_group.add_widget (socket_lbl);
+		size_group.add_widget (socket_entry);
+
+		size_group.add_widget (user_lbl);
+		size_group.add_widget (user_entry);
+
+		size_group.add_widget (password_lbl);
+		size_group.add_widget (password_entry);
+
+		size_group.add_widget (database_lbl);
+		size_group.add_widget (database_entry);
+
+		name_entry.changed.connect ((entry) => {
 			if ( _setting_connection ) {
 				return;
 			}
 			changed (name_entry);
 		});
-		socket_entry.changed.connect ( (entry) => {
+
+		socket_entry.changed.connect ((entry) => {
 			if ( _setting_connection ) {
 				return;
 			}
 			changed (socket_entry);
 		});
-		user_entry.changed.connect ( (entry) => {
+
+		user_entry.changed.connect ((entry) => {
 			if ( _setting_connection ) {
 				return;
 			}
 			changed (user_entry);
 		});
-		password_entry.changed.connect ( (entry) => {
+
+		password_entry.changed.connect ((entry) => {
 			if ( _setting_connection ) {
 				return;
 			}
 			changed (password_entry);
 		});
-		database_entry.changed.connect ( (entry) => {
+
+		database_entry.changed.connect ((entry) => {
 			if ( _setting_connection ) {
 				return;
 			}
@@ -362,31 +419,5 @@ public class Benchwell.Database.MysqlSocketForm : Gtk.Grid {
 		database_entry.set_text (conn.database);
 		_setting_connection = false;
 		password_entry.open = false;
-	}
-}
-
-public class SecretEntry : Gtk.Entry {
-	private bool _open;
-	public bool open {
-		get { return _open; }
-		set {
-			_open = value;
-			if ( _open ) {
-				placeholder_text = "";
-			} else {
-				set_text ("");
-				placeholder_text = "Stored";
-			}
-		}
-	}
-
-	public SecretEntry (bool open = false) {
-		Object(
-			caps_lock_warning: true,
-			placeholder_text: open ? "" : "Stored",
-			input_purpose: Gtk.InputPurpose.PASSWORD,
-			visibility: false
-		);
-		this.open = open;
 	}
 }

@@ -53,7 +53,7 @@ public class Benchwell.SourceView : Gtk.SourceView {
 		set_language (lang);
 
 		// PRETTY
-		//get_space_drawer ().set_types_for_locations (Gtk.SourceSpaceLocationFlags.LEADING|Gtk.SourceSpaceLocationFlags.TRAILING, Gtk.SourceSpaceTypeFlags.ALL);
+		get_space_drawer ().set_types_for_locations (Gtk.SourceSpaceLocationFlags.TRAILING, Gtk.SourceSpaceTypeFlags.NEWLINE);
 		//get_space_drawer ().enable_matrix = true;
 
 		var buffer = (Gtk.SourceBuffer) get_buffer ();
@@ -96,6 +96,9 @@ public class Benchwell.SourceView : Gtk.SourceView {
 		build_markers ();
 
         buffer.create_tag ("foldable", "invisible", true);
+        var t = new Gtk.SourceTag ("ellipse");
+		t.draw_spaces = true;
+		buffer.tag_table.add (t);
 
 		buffer.changed.connect (on_buffer_changed);
 		line_mark_activated.connect (on_mark_activated);
@@ -118,9 +121,13 @@ public class Benchwell.SourceView : Gtk.SourceView {
 			buffer.get_iter_at_line (out end, end_line);
 			buffer.get_iter_at_line (out next_to_start, start_line + 1);
 
+			var start_eol = start.copy ();
+			start_eol.forward_to_line_end ();
+			start_eol.forward_char ();
 			switch (mark.category) {
 				case "fold_collapse":
 					buffer.apply_tag_by_name ("foldable", next_to_start, end);
+					buffer.apply_tag_by_name ("ellipse", start, start_eol);
 
 					buffer.remove_source_marks (start, start, null);
 					buffer.create_source_mark (@"$(mark_name)", "fold_expand", start);
@@ -129,6 +136,7 @@ public class Benchwell.SourceView : Gtk.SourceView {
 					break;
 				case "fold_expand", "fold_more":
 					buffer.remove_tag_by_name ("foldable", start , end);
+					buffer.remove_tag_by_name ("ellipse", start , start_eol);
 
 					buffer.remove_source_marks (start, start, null);
 					buffer.remove_source_marks (end, end, null);
@@ -186,6 +194,7 @@ public class Benchwell.SourceView : Gtk.SourceView {
 
 			foreach (var line in lines) {
 				line_number++;
+
 				var ilevel = indent_level (line);
 				if (line_number == 0) {
 					continue; // won't add mark at 0
@@ -209,6 +218,11 @@ public class Benchwell.SourceView : Gtk.SourceView {
 			}
 
 			foreach (var meta in lines_meta) {
+				if (meta.end_line == 0) {
+					// NOTE: looks weird when input doesn't end on empty line
+					meta.end_line = lines.length - 1;
+				}
+
 				Gtk.TextIter iter;
                 buffer.get_iter_at_line (out iter, (int)meta.start_line);
 				buffer.create_source_mark (@"$(meta.start_line)-$(meta.end_line)", "fold_collapse", iter);
@@ -231,16 +245,6 @@ public class Benchwell.SourceView : Gtk.SourceView {
 		mark_attr.set_icon_name ("view-more-symbolic");
 		set_mark_attributes ("fold_more", mark_attr, 0);
 	}
-
-	//private void dump_line_descriptions (owned line_desc[] meta) {
-		//foreach (var m in meta) {
-			//dump_line_description(m);
-		//}
-	//}
-
-	//private void dump_line_description (owned line_desc m) {
-		//print (@"===$(m.start_line):$(m.end_line)\n");
-	//}
 
 	private uint indent_level (owned string? line) {
 		if (line == null) {

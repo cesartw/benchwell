@@ -54,17 +54,17 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		store = new Benchwell.HttpStore.newv ({GLib.Type.OBJECT, GLib.Type.STRING, GLib.Type.STRING, GLib.Type.OBJECT});
 
 		name_renderer = new Gtk.CellRendererText ();
-		var icon_renderer = new Gtk.CellRendererPixbuf ();
+		//var icon_renderer = new Gtk.CellRendererPixbuf ();
 		var method_renderer = new Gtk.CellRendererText ();
 
 		name_column = new Gtk.TreeViewColumn ();
 		name_column.title = _("Name");
 		name_column.resizable = true;
 		// NOTE: must pack_* before add_attribute
-		name_column.pack_start (icon_renderer, false);
+		//name_column.pack_start (icon_renderer, false);
 		name_column.pack_start (method_renderer, false);
 		name_column.pack_start (name_renderer, true);
-		name_column.add_attribute (icon_renderer, "pixbuf", Benchwell.Http.Columns.ICON);
+		//name_column.add_attribute (icon_renderer, "pixbuf", Benchwell.Http.Columns.ICON);
 		name_column.add_attribute (method_renderer, "text", Benchwell.Http.Columns.METHOD);
 		name_column.add_attribute (name_renderer, "text", Benchwell.Http.Columns.TEXT);
 
@@ -87,20 +87,20 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 				cell.set_property ("visible", false);
 			}
 		});
-		name_column.set_cell_data_func (icon_renderer, (cell_layout, cell, tree_model, iter) => {
-			GLib.Value val;
-			tree_model.get_value (iter, Benchwell.Http.Columns.ITEM, out val);
-			var item = val.get_object () as Benchwell.HttpItem;
-			if (item == null) {
-				return;
-			}
+		//name_column.set_cell_data_func (icon_renderer, (cell_layout, cell, tree_model, iter) => {
+			//GLib.Value val;
+			//tree_model.get_value (iter, Benchwell.Http.Columns.ITEM, out val);
+			//var item = val.get_object () as Benchwell.HttpItem;
+			//if (item == null) {
+				//return;
+			//}
 
-			if (item.is_folder) {
-				cell.set_property ("visible", true);
-			} else {
-				cell.set_property ("visible", false);
-			}
-		});
+			//if (item.is_folder) {
+				//cell.set_property ("visible", true);
+			//} else {
+				//cell.set_property ("visible", false);
+			//}
+		//});
 
 		treeview.append_column (name_column);
 		treeview.set_model (store);
@@ -497,12 +497,13 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 		store.insert_before (out iter, parent, sibling);
 
 		if (item.is_folder) {
-			try {
-				var px = Gtk.IconTheme.get_default ().load_icon ("bw-directory", Gtk.IconSize.BUTTON, Gtk.IconLookupFlags.USE_BUILTIN);
-				store.set_value (iter, Benchwell.Http.Columns.ICON, px);
-			} catch (GLib.Error err) {
-				Config.show_alert (this, err.message);
-			}
+			//try {
+				//var px = Gtk.IconTheme.get_default ().load_icon ("bw-directory", Gtk.IconSize.BUTTON, Gtk.IconLookupFlags.FORCE_SIZE);
+				//px.scale_simple ( Gtk.IconSize.BUTTON, Gtk.IconSize.BUTTON, Gdk.InterpType.NEAREST);
+				//store.set_value (iter, Benchwell.Http.Columns.ICON, px);
+			//} catch (GLib.Error err) {
+				//Config.show_alert (this, err.message);
+			//}
 		} else {
 			store.set_value (iter, Benchwell.Http.Columns.METHOD, item.method);
 		}

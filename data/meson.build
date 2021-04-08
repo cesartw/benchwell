@@ -4,39 +4,35 @@ install_data(
 	rename: meson.project_name() + '.gschema.xml'
 )
 
-icon_sizes = ['16', '24', '32', '48', '64', '128']
-
 icons_dir = join_paths(get_option('datadir'), 'icons', 'hicolor')
-foreach size : icon_sizes
-		asset = join_paths('assets', 'icons', '@0@x@0@'.format(size), '@0@.svg'.format(meson.project_name()))
-		install_data(
-				asset,
-				install_dir:  join_paths(icons_dir, '@0@x@0@'.format(size), 'apps'),
-				rename: '@0@.svg'.format(application_id)
-		)
-		install_data(
-				asset,
-				install_dir: join_paths(icons_dir, '@0@x@0@@2'.format(size), 'apps'),
-				rename: '@0@.svg'.format(application_id)
-		)
-endforeach
-
 install_data(
-		join_paths('assets', 'icons', '128x128', '@0@.svg'.format(meson.project_name())),
-		install_dir: join_paths(icons_dir , 'scalable', 'apps'),
+		join_paths('assets', 'icons', 'scalable', '@0@.svg'.format(meson.project_name())),
+		install_dir:  join_paths(icons_dir, 'scalable', 'apps'),
 		rename: '@0@.svg'.format(application_id)
 )
 
 install_data(
 		join_paths('assets', 'icons', 'status', 'table.svg'),
-		install_dir: join_paths(icons_dir , '16x16', 'status'),
+		install_dir: join_paths(icons_dir , 'scalable', 'status'),
 		rename: 'bw-table.svg'
 )
 
 install_data(
 		join_paths('assets', 'icons', 'status', 'table-v.svg'),
-		install_dir: join_paths(icons_dir , '16x16', 'status'),
+		install_dir: join_paths(icons_dir , 'scalable', 'status'),
 		rename: 'bw-table-v.svg'
+)
+
+install_data(
+		join_paths('assets', 'icons', 'third-party', 'mariadb.svg'),
+		install_dir: join_paths(icons_dir , 'scalable', 'status'),
+		rename: 'bw-mariadb.svg'
+)
+
+install_data(
+		join_paths('assets', 'icons', 'third-party', 'sqlite.svg'),
+		install_dir: join_paths(icons_dir , 'scalable', 'status'),
+		rename: 'bw-sqlite.svg'
 )
 
 actions = [
@@ -55,7 +51,6 @@ actions = [
 	'directory.svg',
 	'edit-table.svg',
 	'filter.svg',
-	'meson.build',
 	'next.svg',
 	'open.svg',
 	'refresh.svg',
@@ -67,12 +62,12 @@ actions = [
 foreach action : actions
 	install_data(
 			join_paths('assets', 'icons', 'actions', 'orange', action),
-			install_dir: join_paths(icons_dir , '24x24', 'actions'),
+			install_dir: join_paths(icons_dir , 'scalable', 'actions'),
 			rename: 'bw-@0@'.format(action)
 	)
 	install_data(
 			join_paths('assets', 'icons', 'actions', 'white', action),
-			install_dir: join_paths(icons_dir , '16x16', 'actions'),
+			install_dir: join_paths(icons_dir , 'scalable', 'actions'),
 			rename: 'bw-white-@0@'.format(action)
 	)
 endforeach

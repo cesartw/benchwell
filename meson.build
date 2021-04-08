@@ -45,6 +45,7 @@ executable(
 	'src/widget_source_view.vala',
 	'src/widget_button_opt.vala',
 	'src/widget_keyvalues.vala',
+	'src/widget_secret_entry.vala',
 
 	'src/database_mysql_form.vala',
 	'src/database_sqlite_form.vala',

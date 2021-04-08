@@ -1,4 +1,5 @@
 public class Benchwell.SQLiteForm : Gtk.Grid {
+	public weak Benchwell.ApplicationWindow window { get; construct; }
 	public Benchwell.ConnectionInfo? connection;
 	public string filename;
 
@@ -11,11 +12,13 @@ public class Benchwell.SQLiteForm : Gtk.Grid {
 	public Gtk.Label name_lbl;
 	public Gtk.Label file_lbl;
 
-	public SQLiteForm(){
-		Object();
-		set_name ("form");
-		set_column_homogeneous (true);
-		set_row_spacing (5);
+	public SQLiteForm (Benchwell.ApplicationWindow w, Gtk.SizeGroup size_group){
+		Object(
+			window: w,
+			name: "form",
+			column_homogeneous: true,
+			row_spacing: 5
+		);
 
 		tab_label = new Gtk.Label ("SQLite");
 		tab_label.show ();
@@ -23,12 +26,14 @@ public class Benchwell.SQLiteForm : Gtk.Grid {
 		name_entry = new Gtk.Entry();
 		name_entry.show ();
 
-		name_lbl = new Gtk.Label("Name");
-		name_lbl.set_halign (Gtk.Align.START);
+		name_lbl = new Gtk.Label("Name") {
+			xalign = 0
+		};
 		name_lbl.show ();
 
-		file_lbl = new Gtk.Label("File");
-		file_lbl.set_halign (Gtk.Align.START);
+		file_lbl = new Gtk.Label("File") {
+			xalign = 0
+		};
 		file_lbl.show ();
 
 		file_dialog = new Gtk.FileChooserDialog ("Select", null, Gtk.FileChooserAction.OPEN,
@@ -42,6 +47,12 @@ public class Benchwell.SQLiteForm : Gtk.Grid {
 
 		attach(file_lbl, 0, 2, 1, 1);
 		attach(file_btn, 1, 2, 2, 1);
+
+		size_group.add_widget (name_lbl);
+		size_group.add_widget (name_entry);
+
+		size_group.add_widget (file_lbl);
+		size_group.add_widget (file_btn);
 	}
 
 	public void clear() {

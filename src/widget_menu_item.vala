@@ -11,7 +11,7 @@ public class Benchwell.MenuItem : Gtk.MenuItem {
 		if (asset.has_prefix ("gtk-")){
 			image =	new Gtk.Image.from_icon_name (asset, Gtk.IconSize.MENU);
 		} else {
-			image =	new Image (asset, Gtk.IconSize.MENU);
+			image =	new Benchwell.Image (asset, Gtk.IconSize.MENU);
 		}
 
 		image.show ();

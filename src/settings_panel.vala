@@ -16,6 +16,7 @@ public class Benchwell.SettingsPanel : Gtk.Box {
 			hexpand: true
 		);
 
+		set_name ("settings-panel");
 		var header_bar = new Gtk.HeaderBar ();
 		header_bar.title = _("Settings");
 		header_bar.show ();
@@ -42,8 +43,14 @@ public class Benchwell.SettingsPanel : Gtk.Box {
 		pomodoro_settings = new Benchwell.PomodoroSettings ();
 		pomodoro_settings.show ();
 
-		about = new Benchwell.About ();
+		about = new Benchwell.About (w);
 		about.show ();
+
+		env_editor.get_style_context ().add_class ("bw-spacing");
+		editor_settings.get_style_context ().add_class ("bw-spacing");
+		http_settings.get_style_context ().add_class ("bw-spacing");
+		pomodoro_settings.get_style_context ().add_class ("bw-spacing");
+		about.get_style_context ().add_class ("bw-spacing");
 
 		notebook.append_page (env_editor, new Gtk.Label (_("Environments")));
 		notebook.append_page (editor_settings, new Gtk.Label (_("Editor")));
@@ -474,4 +481,19 @@ public class Benchwell.PomodoroSettings : Gtk.Grid {
 }
 
 public class Benchwell.About : Gtk.Grid {
+	public weak Benchwell.ApplicationWindow window { get; construct; }
+
+	public About (Benchwell.ApplicationWindow w) {
+		Object (
+			window: w,
+			row_spacing: 5,
+			column_spacing: 5,
+			halign: Gtk.Align.CENTER
+		);
+
+		var logo = new Gtk.Image.from_icon_name ("io.benchwell", Gtk.IconSize.DIALOG);
+		logo.show ();
+
+		attach (logo, 0, 0, 1, 1);
+	}
 }

@@ -1,12 +1,9 @@
 public class Benchwell.Database.Connect : Gtk.Paned {
 	public Benchwell.ApplicationWindow window { get; construct; }
 	public Benchwell.Database.ConnectionList connections;
-	public string title;
 
-	// form buttons
 	public Gtk.Button btn_connect;
 	public Gtk.Button btn_test;
-	//public Gtk.Button btn_save;
 
 	private Gtk.Stack stack;
 	private MysqlForm mysql;
@@ -17,80 +14,77 @@ public class Benchwell.Database.Connect : Gtk.Paned {
 	public Connect (Benchwell.ApplicationWindow window) {
 		Object(
 			window: window,
-			orientation: Gtk.Orientation.HORIZONTAL
+			orientation: Gtk.Orientation.HORIZONTAL,
+			wide_handle: true
 		);
 
-		title = _("Connect");
-
-		set_vexpand (true);
-		set_hexpand (true);
-		set_wide_handle (true);
+		connections = new Benchwell.Database.ConnectionList ();
+		connections.show ();
 
 		var leftsw = new Gtk.ScrolledWindow (null, null);
 		leftsw.show ();
-
-		connections = new Benchwell.Database.ConnectionList ();
-		connections.set_hexpand (true);
-		connections.set_vexpand (true);
-		connections.show ();
 		leftsw.add (connections);
 
 		connections.update_items ();
 
 		var btn_box = new Gtk.ButtonBox (Gtk.Orientation.HORIZONTAL);
-		btn_box.show ();
 		btn_box.set_layout (Gtk.ButtonBoxStyle.EDGE);
+		btn_box.show ();
 
 		btn_connect = new Gtk.Button.with_label (_("Connect"));
 		btn_connect.get_style_context ().add_class ("suggested-action");
 		btn_connect.show ();
+
 		btn_test = new Gtk.Button.with_label (_("Test"));
 		btn_test.show ();
-		//btn_save = new Gtk.Button.with_label (_("Save"));
-		//btn_save.show ();
 
 		btn_box.add (btn_connect);
 		btn_box.add (btn_test);
-		//btn_box.add (btn_save);
 
-		var adapter_stack = new Gtk.StackSwitcher ();
+		var adapter_stack = new Gtk.StackSwitcher () {
+			vexpand = true,
+			hexpand = true,
+			homogeneous = true
+		};
+		adapter_stack.icon_size = Gtk.IconSize.DIALOG;
 		adapter_stack.show ();
-		adapter_stack.set_vexpand (true);
-		adapter_stack.set_hexpand (true);
 
-		stack = new Gtk.Stack ();
+		stack = new Gtk.Stack () {
+			vexpand = true,
+			hexpand = true
+		};
 		stack.show();
-		stack.set_homogeneous (true);
-		stack.set_vexpand (true);
-		stack.set_hexpand (true);
 		adapter_stack.set_stack (stack);
 
-		mysql = new MysqlForm(window);
+		var size_group = new Gtk.SizeGroup (Gtk.SizeGroupMode.BOTH);
+		mysql = new MysqlForm(window, size_group);
 		mysql.show ();
-		sqlite = new SQLiteForm();
+
+		sqlite = new SQLiteForm(window, size_group);
 		sqlite.show ();
 
 		stack.add_titled (mysql, "mysql", "Mysql");
-		stack.set_visible_child_name ("mysql");
 		stack.add_titled (sqlite, "sqlite", "SQLite");
+		stack.set_visible_child_name ("mysql");
 
-		var formbox = new Gtk.Box (Gtk.Orientation.VERTICAL, 5);
+		stack.child_set_property (mysql, "icon-name", "bw-mariadb");
+		stack.child_set_property (sqlite, "icon-name", "bw-sqlite");
+
+		var formbox = new Gtk.Box (Gtk.Orientation.VERTICAL, 5) {
+			valign = Gtk.Align.CENTER,
+			halign = Gtk.Align.CENTER
+		};
 		formbox.show ();
-		formbox.set_size_request (300, 200);
-		formbox.set_valign (Gtk.Align.CENTER);
-		formbox.set_halign (Gtk.Align.CENTER);
+		//formbox.set_size_request (500, 300);
 
-		formbox.pack_start (adapter_stack, false, true, 0);
+		formbox.pack_start (adapter_stack, true, true, 0);
 		formbox.pack_start (stack, true, false, 0);
 		formbox.pack_end (btn_box, false, true, 0);
-
 
 		pack1 (leftsw, true, true);
 		pack2 (formbox, true, false);
 
 		connections.row_selected.connect (on_row_selected);
-
-		//btn_save.clicked.connect (on_save);
 
 		enable_buttons (false);
 
@@ -167,18 +161,7 @@ public class Benchwell.Database.Connect : Gtk.Paned {
 		enable_buttons (ok);
 	}
 
-	//private void on_save () {
-		//var c = get_connection ();
-		//if ( c == null ) {
-			//return;
-		//}
-
-		//Config.save_connection (ref c);
-		//connections.update_items (c.id);
-	//}
-
 	private void enable_buttons (bool ok) {
-		//btn_save.set_sensitive (ok);
 		btn_test.set_sensitive (ok);
 		btn_connect.set_sensitive (ok);
 	}
