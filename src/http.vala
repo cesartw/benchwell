@@ -369,17 +369,19 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			item.body = body.get_buffer ().get_text (start, end, false);
 		});
 
-		headers.row_wanted.connect (() => {
+		headers.no_row_left.connect (() => {
 			if (item == null) {
-				return new Benchwell.HttpKv ();
+				//return new Benchwell.HttpKv ();
+				return ;
 			}
 
 			try {
-				return item.add_header ();
+				var kv = item.add_header ();
+				headers.add (kv);
 			} catch (ConfigError err) {
 				Config.show_alert (this, err.message);
 			}
-			return new Benchwell.HttpKv ();
+			//return new Benchwell.HttpKv ();
 		});
 
 		headers.row_removed.connect ((kvi) => {
@@ -398,18 +400,20 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			}
 		});
 
-		query_params.row_wanted.connect (() => {
+		query_params.no_row_left.connect (() => {
 			if (item == null) {
-				return new Benchwell.HttpKv ();
+				//return new Benchwell.HttpKv ();
+				return;
 			}
 
 			try {
-				return item.add_param ();
+				var kv = item.add_param ();
+				query_params.add (kv);
 			} catch (ConfigError err) {
 				Config.show_alert (this, err.message);
 			}
 
-			return new Benchwell.HttpKv ();
+			//return new Benchwell.HttpKv ();
 		});
 
 		query_params.row_removed.connect ((kvi) => {
@@ -429,18 +433,20 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		});
 
 
-		body_fields.row_wanted.connect (() => {
+		body_fields.no_row_left.connect (() => {
 			if (item == null) {
-				return new Benchwell.HttpKv ();
+				//return new Benchwell.HttpKv ();
+				return;
 			}
 
 			try {
-				return item.add_form_param ();
+				var kv = item.add_form_param ();
+				body_fields.add (kv);
 			} catch (ConfigError err) {
 				Config.show_alert (this, err.message);
 			}
 
-			return new Benchwell.HttpKv ();
+			//return new Benchwell.HttpKv ();
 		});
 
 		body_fields.row_removed.connect ((kvi) => {
@@ -464,8 +470,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		});
 
 		headers.row_added.connect ((kv) => {
-			if (kv.key.strip ().casefold () == "Content-Type".casefold ()) {
-				body.set_language_by_mime_type (kv.val);
+			if (kv.keyvalue.key.strip ().casefold () == "Content-Type".casefold ()) {
+				body.set_language_by_mime_type (kv.keyvalue.val);
 			}
 		});
 

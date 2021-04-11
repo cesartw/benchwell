@@ -15,10 +15,11 @@ public class Benchwell.KeyValues : Gtk.Box {
 	private Gtk.SizeGroup sgkey;
 	private Gtk.SizeGroup sgval;
 	private Gtk.SizeGroup sgbtn;
+
 	public signal void changed ();
-	public signal Benchwell.KeyValueI row_wanted ();
-	public signal void row_added (Benchwell.KeyValueI kvi);
-	public signal void row_removed (Benchwell.KeyValueI kvi);
+	public signal void no_row_left ();
+	public signal void row_added (Benchwell.KeyValue kv);
+	public signal void row_removed (Benchwell.KeyValue kv);
 
 	public KeyValues (Benchwell.KeyValueTypes types = Benchwell.KeyValueTypes.STRING) {
 		Object (
@@ -63,10 +64,11 @@ public class Benchwell.KeyValues : Gtk.Box {
 		});
 
 		kv.btn_remove.clicked.connect( () => {
-			row_removed (kv.keyvalue);
+			row_removed (kv);
 			remove(kv);
 			if (get_children ().length () == 0) {
-				add (row_wanted ());
+				//add (row_wanted ());
+				no_row_left ();
 			}
 		});
 
@@ -74,7 +76,7 @@ public class Benchwell.KeyValues : Gtk.Box {
 
 		kv.changed.connect (() => { changed ();});
 
-		row_added (kvi);
+		row_added (kv);
 	}
 
 	public void clear () {
@@ -97,7 +99,7 @@ public class Benchwell.KeyValues : Gtk.Box {
 			return;
 		}
 
-		add (row_wanted ());
+		no_row_left ();
 	}
 }
 

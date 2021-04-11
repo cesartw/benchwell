@@ -143,7 +143,7 @@ public class Benchwell.EnvironmentPanel : Gtk.Box {
 		vbox.show ();
 
 		keyvalues = new Benchwell.KeyValues (Benchwell.KeyValueTypes.STRING | Benchwell.KeyValueTypes.MULTILINE);
-		keyvalues.row_wanted.connect (on_row_added);
+		keyvalues.no_row_left.connect (on_row_added);
 		if (env.variables.length > 0) {
 			keyvalues.clear ();
 			foreach (var v in env.variables) {
@@ -158,23 +158,20 @@ public class Benchwell.EnvironmentPanel : Gtk.Box {
 		pack_start (vbox, true, true, 5);
 
 		// signals
-		//keyvalues.changed.connect (on_save);
 		entry_name.changed.connect (on_save);
 
 		if (keyvalues.get_children ().length () == 0) {
-			keyvalues.add (on_row_added ());
+			on_row_added ();
 		}
 	}
 
-	private Benchwell.KeyValueI on_row_added () {
-		KeyValueI kv = null;
+	private void on_row_added () {
 		try {
-			kv = (Benchwell.KeyValueI) environment.add_variable ();
+			var kv = (Benchwell.KeyValueI) environment.add_variable ();
+			keyvalues.add (kv);
 		} catch (ConfigError err) {
 			Config.show_alert (this, err.message);
 		}
-
-		return kv;
 	}
 
 	private void on_save () {
