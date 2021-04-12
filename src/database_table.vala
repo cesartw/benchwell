@@ -10,6 +10,7 @@ public class Benchwell.Database.Table : Gtk.Box {
 			btn_next.sensitive = !_raw_mode;
 			btn_show_filters.sensitive = !_raw_mode;
 			btn_add_row.sensitive = !_raw_mode;
+			btn_refresh.sensitive = !_raw_mode;
 			btn_show_filters.active = !_raw_mode;
 		}
 	}

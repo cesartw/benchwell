@@ -1,6 +1,7 @@
 TABS
 
 http tab
+	- Fix: refocus into a sourceview causes it to scroll to  top
 	- save last response mime
 
 decoding tab
