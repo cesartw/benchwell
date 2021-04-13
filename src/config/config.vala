@@ -192,7 +192,7 @@ public class Benchwell._Config : Object {
 	// ======== LOADERS ========
 	private void load_connections () throws ConfigError {
 		string errmsg;
-		var ec = db.exec ("SELECT * FROM db_connections", (n_columns, values, column_names) => {
+		var ec = db.exec ("SELECT rowid,* FROM db_connections", (n_columns, values, column_names) => {
 			var info = new Benchwell.ConnectionInfo ();
 			info.touch_without_save (() => {
 				//info.to
@@ -221,7 +221,7 @@ public class Benchwell._Config : Object {
 		}
 
 		Benchwell.Query[] queries = {};
-		ec = db.exec ("SELECT * FROM db_queries WHERE query_type = 'fav'", (n_columns, values, column_names) => {
+		ec = db.exec ("SELECT rowid,* FROM db_queries WHERE query_type = 'fav'", (n_columns, values, column_names) => {
 			var query = new Benchwell.Query ();
 			query.touch_without_save (() => {
 				query.id = int.parse (values[0]);
@@ -252,7 +252,7 @@ public class Benchwell._Config : Object {
 
 	private void load_http_collections () throws ConfigError {
 		string errmsg;
-		var query = """SELECT id, name, count
+		var query = """SELECT rowid, name, count
 					 FROM http_collections
 					 ORDER BY name
 					""";
@@ -278,7 +278,7 @@ public class Benchwell._Config : Object {
 	public void load_http_items (Benchwell.HttpCollection collection) throws ConfigError {
 		string errmsg;
 		Benchwell.HttpItem[] items = {};
-		var query = """SELECT id, name, is_folder, sort, http_collections_id, method, parent_id
+		var query = """SELECT rowid, name, is_folder, sort, http_collections_id, method, parent_id
 						FROM http_items
 						WHERE http_collections_id = %lld
 						ORDER BY sort ASC
@@ -328,7 +328,7 @@ public class Benchwell._Config : Object {
 
 	public void load_environments () throws Benchwell.ConfigError {
 		string errmsg;
-		var query = """SELECT *
+		var query = """SELECT rowid,*
 						FROM environments
 						""";
 
@@ -350,7 +350,7 @@ public class Benchwell._Config : Object {
 			throw new ConfigError.STORE(errmsg);
 		}
 
-		query = """SELECT * FROM environment_variables""";
+		query = """SELECT rowid,* FROM environment_variables""";
 
 		Benchwell.EnvVar[] variables = {};
 		ec = db.exec (query, (n_columns, values, column_names) => {

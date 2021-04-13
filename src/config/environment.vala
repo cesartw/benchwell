@@ -44,7 +44,7 @@ public class Benchwell.Environment : Object {
 			 prepared_query_str = """
 				UPDATE environments
 					SET name = $NAME
-				WHERE ID = $ID
+				WHERE rowid = $ID
 			""";
 		} else {
 			 prepared_query_str = """
@@ -99,7 +99,7 @@ public class Benchwell.Environment : Object {
 		}
 
 		Sqlite.Statement stmt;
-		string prepared_query_str = """DELETE FROM environments WHERE ID = $ID""";
+		string prepared_query_str = """DELETE FROM environments WHERE rowid = $ID""";
 
 		var ec = Config.db.prepare_v2 (prepared_query_str, prepared_query_str.length, out stmt);
 		if (ec != Sqlite.OK) {
@@ -287,7 +287,7 @@ public class Benchwell.EnvVar : Object, Benchwell.KeyValueI {
 			 prepared_query_str = """
 				UPDATE environment_variables
 					SET key = $KEY, value = $VALUE, enabled = $ENABLED, kvtype = $KVTYPE
-				WHERE ID = $ID
+				WHERE rowid = $ID
 			""";
 		} else {
 			 prepared_query_str = """

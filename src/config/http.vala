@@ -34,7 +34,7 @@ public class Benchwell.HttpCollection : Object {
 			 prepared_query_str = """
 				UPDATE http_collections
 				SET name = $NAME
-				WHERE ID = $ID
+				WHERE rowid = $ID
 			""";
 		} else {
 			 prepared_query_str = """
@@ -76,7 +76,7 @@ public class Benchwell.HttpCollection : Object {
 		}
 
 		Sqlite.Statement stmt;
-		string prepared_query_str = """DELETE FROM http_collections WHERE ID = $ID""";
+		string prepared_query_str = """DELETE FROM http_collections WHERE rowid = $ID""";
 
 		var ec = Config.db.prepare_v2 (prepared_query_str, prepared_query_str.length, out stmt);
 		if (ec != Sqlite.OK) {
@@ -293,7 +293,7 @@ public class Benchwell.HttpItem : Object {
 						parent_id = $PARENT_ID, is_folder = $IS_FOLDER,
 						sort = $SORT, http_collections_id = $HTTP_COLLECTION_ID,
 						method = $METHOD
-				WHERE ID = $ID
+				WHERE rowid = $ID
 			""";
 		} else {
 			 prepared_query_str = """
@@ -362,7 +362,7 @@ public class Benchwell.HttpItem : Object {
 			 prepared_query_str = """
 				UPDATE http_items
 				SET url = $URL, body = $BODY, mime = $MIME
-				WHERE ID = $ID
+				WHERE rowid = $ID
 			""";
 		}
 
@@ -417,7 +417,7 @@ public class Benchwell.HttpItem : Object {
 			 prepared_query_str = """
 				UPDATE http_items
 				SET response_body = $RESPONSE_BODY, response_headers = $RESPONSE_HEADERS
-				WHERE ID = $ID
+				WHERE rowid = $ID
 			""";
 		}
 
@@ -510,7 +510,7 @@ public class Benchwell.HttpItem : Object {
 		}
 
 		Sqlite.Statement stmt;
-		string prepared_query_str = "DELETE FROM http_items WHERE id = $ID";
+		string prepared_query_str = "DELETE FROM http_items WHERE rowid = $ID";
 
 		var ec = Config.db.prepare_v2 (prepared_query_str, prepared_query_str.length, out stmt);
 		if (ec != Sqlite.OK) {
@@ -575,7 +575,7 @@ public class Benchwell.HttpItem : Object {
 			var query = """SELECT ifnull(method,"GET"), ifnull(url,""), ifnull(body, ""), ifnull(mime,""),
 								 ifnull(response_body, ""), ifnull(response_headers, "")
 					FROM http_items
-					WHERE id = %lld""".printf (id);
+					WHERE rowid = %lld""".printf (id);
 			var ec = Config.db.exec (query, (n_columns, values, column_names) => {
 				method = values[0];
 				url = values[1];
@@ -590,7 +590,7 @@ public class Benchwell.HttpItem : Object {
 			}
 
 			Benchwell.HttpKv[] kvs = {};
-			query = """SELECT id, ifnull(key, ""), ifnull(value, ""), type, sort, enabled, http_items_id, kvtype
+			query = """SELECT rowid, ifnull(key, ""), ifnull(value, ""), type, sort, enabled, http_items_id, kvtype
 				FROM http_kvs
 				WHERE http_items_id = %lld
 				ORDER BY sort ASC""".printf (id);
@@ -709,7 +709,7 @@ public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
 					sort = $SORT,
 					enabled = $ENABLED,
 					kvtype = $KVTYPE
-				WHERE ID = $ID
+				WHERE rowid = $ID
 			""";
 		} else {
 			 prepared_query_str = """
@@ -769,7 +769,7 @@ public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
 		}
 
 		Sqlite.Statement stmt;
-		string prepared_query_str = "DELETE FROM http_kvs WHERE id = $ID";
+		string prepared_query_str = "DELETE FROM http_kvs WHERE rowid = $ID";
 
 		var ec = Config.db.prepare_v2 (prepared_query_str, prepared_query_str.length, out stmt);
 		if (ec != Sqlite.OK) {

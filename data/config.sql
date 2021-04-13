@@ -1,10 +1,8 @@
 CREATE TABLE "environments" (
-    id   INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     name TEXT NOT NULL
 );
 
 CREATE TABLE "environment_variables" (
-    id             INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     key            TEXT NOT NULL,
     value          TEXT NOT NULL,
     enabled        BOOLEAN NOT NULL DEFAULT 1 CHECK (enabled IN (0,1)),
@@ -13,7 +11,6 @@ CREATE TABLE "environment_variables" (
 );
 
 CREATE TABLE "db_connections" (
-    id        INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     name      TEXT NOT NULL,
     adapter   TEXT NOT NULL,
     type      TEXT NOT NULL,
@@ -31,7 +28,6 @@ CREATE TABLE "db_connections" (
 );
 
 CREATE TABLE "db_queries" (
-    id             INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     name           TEXT NOT NULL,
     query          TEXT NOT NULL,
     query_type     TEXT NOT NULL DEFAULT "fav", -- history
@@ -40,13 +36,11 @@ CREATE TABLE "db_queries" (
 );
 
 CREATE TABLE "http_collections" (
-    id    INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     count integer default 0,
     name  TEXT NOT NULL
 );
 
 CREATE TABLE "http_items" (
-	id                  INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
 	name                TEXT NOT NULL,
 	description         TEXT NOT NULL DEFAULT "",
 	parent_id           INTEGER,
@@ -67,16 +61,15 @@ CREATE TABLE "http_items" (
 
 CREATE TRIGGER increment_http_collections_count AFTER INSERT ON http_items
     BEGIN
-        UPDATE http_collections SET count = count + 1 WHERE http_collections.id = NEW.http_collections_id;
+        UPDATE http_collections SET count = count + 1 WHERE http_collections.rowid = NEW.http_collections_id;
     END;
 
 CREATE TRIGGER decrement_http_collections_count AFTER DELETE ON http_items
     BEGIN
-        UPDATE http_collections SET count = count - 1 WHERE http_collections.id = OLD.http_collections_id;
+        UPDATE http_collections SET count = count - 1 WHERE http_collections.rowid = OLD.http_collections_id;
     END;
 
 CREATE TABLE "http_kvs" (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     key           TEXT NOT NULL,
     value         TEXT NOT NULL,
     type          TEXT NOT NULL,

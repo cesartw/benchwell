@@ -88,7 +88,7 @@ public class Benchwell.ConnectionInfo : Object {
 				UPDATE db_connections
 					SET adapter = $ADAPTER, type = $TYPE, name = $NAME, socket = $SOCKET, file = $FILE, host = $HOST, port = $PORT,
 					user = $USER, database = $DATABASE, options = $OPT, encrypted = $ENC
-				WHERE ID = $ID
+				WHERE rowid = $ID
 			""";
 		} else {
 			 prepared_query_str = """
@@ -160,7 +160,7 @@ public class Benchwell.ConnectionInfo : Object {
 		}
 
 		string errmsg = "";
-		var ec = Config.db.exec (@"DELETE FROM db_connections WHERE ID = $(id)", null, out errmsg);
+		var ec = Config.db.exec (@"DELETE FROM db_connections WHERE rowid = $(id)", null, out errmsg);
 		if ( ec != Sqlite.OK ){
 			throw new ConfigError.STORE(errmsg);
 		}
@@ -198,12 +198,12 @@ public class Benchwell.ConnectionInfo : Object {
 		string errmsg = "";
 		var ec = Config.db.exec ("""DELETE FROM db_queries
 								 WHERE query_type = 'history'
-										AND id IN (
-											SELECT id
+										AND rowid IN (
+											SELECT rowid
 											FROM db_queries
 											WHERE query_type = 'history'
 												AND connections_id = %lld
-											ORDER BY id DESC
+											ORDER BY rowid DESC
 											LIMIT -1 OFFSET %d)""".printf (id, Config.settings.get_int("db-query-history-limit")),
 								 null,
 								 out errmsg);
@@ -229,7 +229,7 @@ public class Benchwell.ConnectionInfo : Object {
 	public Benchwell.Query[] load_history () throws Benchwell.ConfigError {
 		string errmsg;
 		Benchwell.Query[] h = {};
-		var ec = Config.db.exec (@"SELECT * FROM db_queries WHERE query_type = 'history' AND connections_id = $(id)",
+		var ec = Config.db.exec (@"SELECT rowid, * FROM db_queries WHERE query_type = 'history' AND connections_id = $(id)",
 			(n_columns, values, column_names) => {
 				var query = new Benchwell.Query ();
 				query.touch_without_save (() => {
@@ -306,7 +306,7 @@ public class Benchwell.Query : Object {
 			 prepared_query_str = """
 				UPDATE db_queries
 					SET name = $NAME, query = $query
-				WHERE ID = $ID
+				WHERE rowid = $ID
 			""";
 		} else {
 			 prepared_query_str = """
@@ -362,7 +362,7 @@ public class Benchwell.Query : Object {
 		}
 
 		string errmsg = "";
-		var ec = Config.db.exec (@"DELETE FROM db_queries WHERE ID = $(id)", null, out errmsg);
+		var ec = Config.db.exec (@"DELETE FROM db_queries WHERE rowid = $(id)", null, out errmsg);
 		if ( ec != Sqlite.OK ){
 			throw new ConfigError.STORE(errmsg);
 		}
