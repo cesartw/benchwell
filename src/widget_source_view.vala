@@ -210,10 +210,11 @@ public class Benchwell.SourceView : Gtk.SourceView {
 					continue;
 				}
 
-				if (!pointer_stack.empty () && ilevel <= lines_meta[pointer].ilevel) {
-					var pointer = pointer_stack.pop ();
-					lines_meta[pointer].end_line = line_number;
-					continue;
+				if (!pointer_stack.empty ()) {
+					if (ilevel <= lines_meta[pointer_stack.peek ()].ilevel) {
+						lines_meta[pointer_stack.pop ()].end_line = line_number;
+						continue;
+					}
 				}
 			}
 
