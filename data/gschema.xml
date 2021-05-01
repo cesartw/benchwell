@@ -41,6 +41,11 @@
 			<summary>HTTP Request ID</summary>
 			<description>The last http request opened</description>
 		</key>
+		<key name="http-history-limit" type="i">
+			<default>10</default>
+			<summary>HTTP History limit</summary>
+			<description>Maximum number of responses saved per request</description>
+		</key>
 		<key name="http-tree-state" type="s">
 			<default>"{}"</default>
 			<summary>HTTP tree state</summary>

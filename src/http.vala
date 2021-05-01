@@ -129,19 +129,15 @@ public string RandomString (int length, string char_set = "abcdefghijklmnopqrstu
 }
 
 public class Benchwell.HttpResult : Object {
+	public string method;
+	public string url;
 	public string body;
-	public HashTable<string, string> headers;
+	public string headers;
 	public int status;
 	public int64 duration;
+	public string content_type;
 	public Curl.Code code;
-
-	public string headers_string () {
-		var builder = new StringBuilder ();
-		headers.foreach ((key, val) => {
-			builder.append (@"$key: $val");
-		});
-		return builder.str;
-	}
+	public DateTime created_at;
 }
 
 public class Benchwell.CBNotebookTab : Gtk.Box {
@@ -202,6 +198,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	public Gtk.Label            status_label;
 	public Gtk.Label            duration_label;
 	public Gtk.Label            response_size_label;
+	public Benchwell.HttpHistoryPopover history_popover;
 	///////////
 
 	public Benchwell.HttpItem? item;
@@ -299,18 +296,34 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		details_box.show ();
 
 		status_label    = new Gtk.Label ("200 OK");
+		status_label.get_style_context ().add_class ("tag");
 		status_label.show ();
 
 		duration_label  = new Gtk.Label ("0ms");
+		duration_label.get_style_context ().add_class ("tag");
 		duration_label.show ();
 
 		response_size_label  = new Gtk.Label ("0KB");
+		response_size_label.get_style_context ().add_class ("tag");
 		response_size_label.show ();
+
+		var history_label = new Benchwell.Label (_("History"));
+		history_label.show ();
+
+		history_popover = new Benchwell.HttpHistoryPopover (history_label, null);
+		history_popover.position = Gtk.PositionType.BOTTOM;
+		history_label.clicked.connect ((e) => {
+			history_popover.show ();
+		});
+		history_popover.result_activated.connect ((result) => {
+			set_response (result);
+		});
 
 		details_box.get_style_context ().add_class ("responsemeta");
 		details_box.pack_start (status_label, false, false, 0);
 		details_box.pack_start (duration_label, false, false, 0);
-		details_box.pack_end (response_size_label, false, false, 0);
+		details_box.pack_start (response_size_label, false, false, 0);
+		details_box.pack_end (history_label, false, false, 0);
 
 		response_paned.pack1 (response_headers_sw, false, false);
 		response_paned.pack2 (response_sw, true, true);
@@ -706,9 +719,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 				var result = perform.end (res);
 				switch (result.code) {
 					case Curl.Code.OK:
-						item.response_body = set_response (result);
-						item.response_headers = result.headers_string();
-						item.save_response ();
+						item.save_response (result);
+						set_response (result);
 						break;
 					default:
 						Config.show_alert (this, Curl.Global.strerror (result.code));
@@ -730,6 +742,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 		SourceFunc callback = perform.callback;
 		HttpResult? result = new HttpResult ();
+		result.method = method;
+		result.url = url;
 
 		ThreadFunc<bool> run = () => {
 			var handle = new Curl.EasyHandle ();
@@ -790,7 +804,13 @@ public class Benchwell.Http.Http : Gtk.Paned {
 				handle.getinfo(Curl.Info.RESPONSE_CODE, out result.status);
 				result.body = (string)tmp.buffer;
 				result.duration = now - then;
-				result.headers = resp_headers;
+				var headers_string = "";
+				resp_headers.foreach ((key, val) => {
+					headers_string += @"$key: $val";
+					if (key.casefold () == "Content-Type".casefold())
+						result.content_type = val.split(";")[0];
+				});
+				result.headers = headers_string;
 			}
 
 			Idle.add((owned) callback);
@@ -816,6 +836,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			return;
 		}
 
+		history_popover.item = item;
 		title = item.name;
 
 		mime_switch.combo.set_active_id (item.mime);
@@ -833,8 +854,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			}
 		});
 
-		response.get_buffer ().text = item.response_body;
-		response_headers.get_buffer ().text = item.response_headers;
+		set_response (item.last_response ());
+
 		headers.clear ();
 		query_params.clear ();
 		body_fields.clear ();
@@ -950,28 +971,20 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		}
 	}
 
-	public string set_response (HttpResult result) {
-		var content_type_header = result.headers.get("Content-Type".casefold ());
-		string content_type = "";
-		if (content_type_header != null)
-			content_type = content_type_header.split(";")[0];
+	public void set_response (HttpResult? result) {
+		if (result == null)
+			return;
 
 		if (result.body == null)
 			result.body = "";
 
-		Gtk.TextIter iter;
-		response_headers.get_buffer ().get_end_iter (out iter);
-		result.headers.foreach ((key, val) => {
-			var line = @"$key: $val";
-			response_headers.get_buffer ().insert (ref iter, line, line.length);
-		});
-		response_headers.get_buffer ().insert (ref iter, "\n", 1);
+		response_headers.get_buffer ().text = result.headers;
 
 		var formatted_body = "";
 		Gtk.TextIter start_iter;
 		response.get_buffer ().get_start_iter (out start_iter);
 		if ( result.body != "" ) {
-			switch (content_type) {
+			switch (result.content_type) {
 				case "application/json":
 					var json = new Json.Parser ();
 					var generator = new Json.Generator ();
@@ -1030,7 +1043,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		}
 
 		duration_label.set_text (@"$(result.duration/1000)ms");
-		return formatted_body;
 	}
 
 	private void normalize_item (Benchwell.HttpItem item){
@@ -1099,6 +1111,97 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		values = _values;
 
 		return base_url;
+	}
+}
+
+public class Benchwell.HttpHistoryPopover : Gtk.Popover {
+	private Gtk.Grid grid;
+	public weak Benchwell.HttpItem? item {owned get; set;}
+
+	public signal void result_activated (Benchwell.HttpResult result);
+
+	public HttpHistoryPopover (Gtk.Widget relative_to, Benchwell.HttpItem? item) {
+		Object (
+			relative_to: relative_to,
+			item: item
+		);
+
+		build_results ();
+		notify["item"].connect (build_results);
+	}
+
+	private void build_results () {
+		if (item == null) {
+			return;
+		}
+		if (grid != null)
+			remove (grid);
+
+		grid = new Gtk.Grid ();
+		grid.row_spacing = 5;
+		grid.column_spacing = 5;
+		add (grid);
+
+		item.response_added.connect (build_results);
+
+		var i = 0;
+		foreach (var response in item.responses) {
+			add_response (i, response);
+			i++;
+		}
+
+		grid.show_all ();
+	}
+
+	private void add_response (int at, Benchwell.HttpResult response) {
+		var status_label = new Benchwell.Label ("0");
+		status_label.set_text (response.status.to_string ());
+		status_label.get_style_context ().add_class ("tag");
+
+		if (response.status >= 200 && response.status < 300) {
+			status_label.get_style_context ().add_class("ok");
+		}
+		if (response.status >= 300 && response.status < 500) {
+			status_label.get_style_context ().add_class("warning");
+		}
+		if (response.status >= 500) {
+			status_label.get_style_context ().add_class("bad");
+		}
+
+		var duration_label  = new Benchwell.Label (@"$(response.duration/1000)ms");
+		duration_label.get_style_context ().add_class ("tag");
+
+		var size_label  = new Benchwell.Label ("0KB");
+		size_label.get_style_context ().add_class ("tag");
+		if (response.body.length < 1024) {
+			size_label.set_text (@"$(response.body.length)B");
+		} else {
+			size_label.set_text (@"$(response.body.length/1024)kB");
+		}
+
+		var url_label = new Benchwell.Label (@"$(response.method) $(response.url)");
+		url_label.max_width_chars = 30;
+		url_label.ellipsize = Pango.EllipsizeMode.END;
+		url_label.tooltip_text = response.url;
+
+		var time_fmt = "%Y-%m-%d %H:%M:%S";
+		var now = new DateTime.now_local ();
+		if (now.get_day_of_year () == response.created_at.get_day_of_year ())
+			time_fmt = "%H:%M:%S";
+
+		var time_label = new Benchwell.Label (response.created_at.format (time_fmt));
+
+		grid.attach (status_label, 0, at, 1, 1);
+		grid.attach (duration_label, 1, at, 1, 1);
+		grid.attach (size_label, 2, at, 1, 1);
+		grid.attach (url_label, 3, at, 1, 1);
+		grid.attach (time_label, 4, at, 1, 1);
+
+		status_label.clicked.connect ( () => { result_activated (response); });
+		duration_label.clicked.connect ( () => { result_activated (response); });
+		size_label.clicked.connect ( () => { result_activated (response); });
+		url_label.clicked.connect ( () => { result_activated (response); });
+		time_label.clicked.connect ( () => { result_activated (response); });
 	}
 }
 

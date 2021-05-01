@@ -601,6 +601,15 @@ public class Benchwell.Settings : GLib.Settings {
 		}
 	}
 
+	public int http_history_limit {
+		get {
+			return get_int ("http-history-limit");
+		}
+		set {
+			set_int ("http-history-limit", value);
+		}
+	}
+
 	public string http_tree_state {
 		owned get {
 			return get_string ("http-tree-state");

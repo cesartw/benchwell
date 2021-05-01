@@ -195,16 +195,15 @@ public class Benchwell.HttpItem : Object {
 	public Benchwell.HttpKv[] headers;
 	public Benchwell.HttpKv[] query_params;
 	public Benchwell.HttpKv[] form_params;
+	public Benchwell.HttpResult[] responses;
 
-	public string             response_headers { get; set; }
-	public string             response_body { get; set; }
-
-	internal bool                  loaded;
-	private bool no_auto_save;
+	internal bool              loaded;
+	private bool               no_auto_save;
 
 	public signal Benchwell.HttpKv header_added (Benchwell.HttpKv kv);
 	public signal Benchwell.HttpKv query_param_added (Benchwell.HttpKv kv);
 	public signal Benchwell.HttpKv form_param_added (Benchwell.HttpKv kv);
+	public signal void response_added (owned Benchwell.HttpResult response);
 
 	public HttpItem () {
 		Object ();
@@ -403,23 +402,17 @@ public class Benchwell.HttpItem : Object {
 		save_body ();
 	}
 
-	public void save_response () throws Benchwell.ConfigError {
-		no_auto_save = true;
-		if (mime == null && is_folder) {
-			mime = "";
+	public void save_response (Benchwell.HttpResult result) throws Benchwell.ConfigError {
+		if (id == 0) {
+			return;
 		}
-		no_auto_save = false;
 
 		Sqlite.Statement stmt;
 		string prepared_query_str = "";
-
-		if (id > 0) {
-			 prepared_query_str = """
-				UPDATE http_items
-				SET response_body = $RESPONSE_BODY, response_headers = $RESPONSE_HEADERS
-				WHERE rowid = $ID
-			""";
-		}
+		prepared_query_str = """
+			INSERT INTO http_responses (http_items_id, method, url, content_type, body, headers, duration, code, created_at)
+			VALUES($HTTP_ITEM_ID, $METHOD, $URL, $CONTENT_TYPE, $BODY, $HEADERS, $DURATION, $CODE, $CREATED_AT)
+		""";
 
 		var ec = Config.db.prepare_v2 (prepared_query_str, prepared_query_str.length, out stmt);
 		if (ec != Sqlite.OK) {
@@ -428,16 +421,34 @@ public class Benchwell.HttpItem : Object {
 		}
 
 		int param_position;
-		if (id > 0) {
-			param_position = stmt.bind_parameter_index ("$ID");
-			stmt.bind_int64 (param_position, id);
-		}
 
-		param_position = stmt.bind_parameter_index ("$RESPONSE_BODY");
-		stmt.bind_text (param_position, response_body);
+		param_position = stmt.bind_parameter_index ("$HTTP_ITEM_ID");
+		stmt.bind_int64 (param_position, id);
 
-		param_position = stmt.bind_parameter_index ("$RESPONSE_HEADERS");
-		stmt.bind_text (param_position, response_headers);
+		param_position = stmt.bind_parameter_index ("$METHOD");
+		stmt.bind_text (param_position, result.method);
+
+		param_position = stmt.bind_parameter_index ("$URL");
+		stmt.bind_text (param_position, result.url);
+
+		param_position = stmt.bind_parameter_index ("$CONTENT_TYPE");
+		stmt.bind_text (param_position, result.content_type);
+
+		param_position = stmt.bind_parameter_index ("$BODY");
+		stmt.bind_text (param_position, result.body);
+
+		param_position = stmt.bind_parameter_index ("$HEADERS");
+		stmt.bind_text (param_position, result.headers);
+
+		param_position = stmt.bind_parameter_index ("$DURATION");
+		stmt.bind_int64 (param_position, result.duration);
+
+		param_position = stmt.bind_parameter_index ("$CODE");
+		stmt.bind_int (param_position, result.status);
+
+		result.created_at = new DateTime.now_local ();
+		param_position = stmt.bind_parameter_index ("$CREATED_AT");
+		stmt.bind_int64 (param_position, result.created_at.to_unix ());
 
 		string errmsg = "";
 		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);
@@ -445,9 +456,45 @@ public class Benchwell.HttpItem : Object {
 			throw new ConfigError.STORE(errmsg);
 		}
 
-		if (id == 0) {
-			id = Config.db.last_insert_rowid ();
+		Benchwell.HttpResult[] l_responses = {result};
+		foreach (var response in responses) {
+			l_responses += response;
+			if (l_responses.length == Config.settings.http_history_limit)
+				break;
 		}
+		responses = l_responses;
+
+
+		prepared_query_str = """DELETE FROM http_responses
+			WHERE
+			http_items_id = $HTTP_ITEM_ID AND
+			rowid NOT IN (
+				SELECT rowid
+				FROM http_responses
+				WHERE http_items_id = $HTTP_ITEM_ID
+				ORDER BY rowid DESC
+				LIMIT $LIMIT
+			)""";
+
+		ec = Config.db.prepare_v2 (prepared_query_str, prepared_query_str.length, out stmt);
+		if (ec != Sqlite.OK) {
+			stderr.printf ("Error: %d: %s\n", Config.db.errcode (), Config.db.errmsg ());
+			return;
+		}
+
+		param_position = stmt.bind_parameter_index ("$HTTP_ITEM_ID");
+		stmt.bind_int64 (param_position, id);
+
+		param_position = stmt.bind_parameter_index ("$LIMIT");
+		stmt.bind_int (param_position, Config.settings.http_history_limit);
+
+		errmsg = "";
+		ec = Config.db.exec (stmt.expanded_sql(), null, out errmsg);
+		if ( ec != Sqlite.OK ){
+			throw new ConfigError.STORE(errmsg);
+		}
+
+		response_added (result);
 	}
 
 	public Benchwell.HttpKv add_header (string key = "", string val = "") throws ConfigError {
@@ -572,8 +619,7 @@ public class Benchwell.HttpItem : Object {
 			string errmsg = "";
 
 			// request
-			var query = """SELECT ifnull(method,"GET"), ifnull(url,""), ifnull(body, ""), ifnull(mime,""),
-								 ifnull(response_body, ""), ifnull(response_headers, "")
+			var query = """SELECT ifnull(method,"GET"), ifnull(url,""), ifnull(body, ""), ifnull(mime,"")
 					FROM http_items
 					WHERE rowid = %lld""".printf (id);
 			var ec = Config.db.exec (query, (n_columns, values, column_names) => {
@@ -581,13 +627,38 @@ public class Benchwell.HttpItem : Object {
 				url = values[1];
 				body = values[2];
 				mime = values[3];
-				response_body = values[4];
-				response_headers = values[5];
 				return 0;
 			}, out errmsg);
 			if ( ec != Sqlite.OK ){
 				throw new ConfigError.STORE(errmsg);
 			}
+
+			// responses
+			Benchwell.HttpResult[] l_responses = {};
+			query = """SELECT method, url, headers, body, content_type, duration, code, created_at
+				FROM http_responses
+				WHERE http_items_id = %lld
+				ORDER BY created_at DESC""".printf (id);
+
+			ec = Config.db.exec (query, (n_columns, values, column_names) => {
+				var r = new Benchwell.HttpResult ();
+
+				r.method = values[0] ?? "";
+				r.url = values[1] ?? "";
+				r.headers = values[2] ?? "";
+				r.body = values[3] ?? "";
+				r.content_type = values[4] ?? "";
+				r.duration = int64.parse (values[5]);
+				r.status = int.parse (values[6]);
+				r.created_at = new DateTime.from_unix_local (int64.parse (values[7]));
+
+				l_responses += r;
+				return 0;
+			}, out errmsg);
+			if ( ec != Sqlite.OK ){
+				throw new ConfigError.STORE(errmsg);
+			}
+			responses = l_responses;
 
 			Benchwell.HttpKv[] kvs = {};
 			query = """SELECT rowid, ifnull(key, ""), ifnull(value, ""), type, sort, enabled, http_items_id, kvtype
@@ -637,6 +708,12 @@ public class Benchwell.HttpItem : Object {
 			form_params = new_form_params;
 			loaded = true;
 		});
+	}
+
+	public Benchwell.HttpResult? last_response () {
+		if (responses.length == 0)
+			return null;
+		return responses[0];
 	}
 }
 
