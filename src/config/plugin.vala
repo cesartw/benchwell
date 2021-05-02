@@ -5,7 +5,9 @@ public errordomain Benchwell.PluginError {
 }
 
 public interface Benchwell.Plugin : Object {
-	public abstract string name { get; construct; }
+	public abstract string name   { get; construct; }
+	public abstract string desc   { get; construct; }
+	public abstract string format { get; construct; }
 
 	// parse_params from text inputs
 	// {% myfunc param1 "param2" 3 'param3' true false @some_var %}
@@ -194,13 +196,17 @@ public interface Benchwell.Plugin : Object {
 
 public class Benchwell.JSPlugin : Object, Benchwell.Plugin {
 	public string name      { get; construct; }
+	public string desc      { get; construct; }
+	public string format    { get; construct; }
 	public JSC.Value call   { get; construct; }
 	public JSC.Context ctx  { get; construct; }
 
 	// example of JSC https://github.com/fread-ink/fread.ui/blob/master/web_extensions/fread.c
-	protected JSPlugin (owned JSC.Context ctx, string name, owned JSC.Value call) {
+	protected JSPlugin (owned JSC.Context ctx, string name, string desc, string format, owned JSC.Value call) {
 		Object(
 			name: name,
+			desc: desc,
+			format: format,
 			ctx: ctx,
 			call: call
 		);
@@ -238,11 +244,12 @@ public class Benchwell.JSPlugin : Object, Benchwell.Plugin {
 					stderr.printf ("at: %s#%zu:%zu \n", file_name, exception.get_line_number (), exception.get_column_number ());
 					var backtrace = exception.get_backtrace_string ();
 					if (backtrace != null) {
-						stderr.printf ("==========EXCEPTION==========\n%s\n=============================\n", backtrace);
+						stderr.printf ("BACKTRACE:\n%s\n", backtrace);
 					}
 					continue;
 				}
 
+				// TODO: obtain description and format
 				var call = jsctx.get_value ("call");
 
 				if ( !call.is_function ()) {
@@ -254,7 +261,7 @@ public class Benchwell.JSPlugin : Object, Benchwell.Plugin {
 					file_name = file_name.substring (0, file_name.length - 3);
 				}
 
-				plugins += new JSPlugin (jsctx, file_name, call);
+				plugins += new JSPlugin (jsctx, file_name, "", "\"\"", call);
 			}
 		} catch (GLib.IOError err) {
 			stderr.printf ("error %s\n", err.message);
@@ -290,12 +297,16 @@ public class Benchwell.JSPlugin : Object, Benchwell.Plugin {
 
 public class Benchwell.BuiltinPlugin : Object, Benchwell.Plugin {
 	public delegate string call (GLib.Value[] parameters);
-	public string name { get; construct; }
+	public string name   { get; construct; }
+	public string format { get; construct; }
+	public string desc   { get; construct; }
 	private call* f;
 
-	protected BuiltinPlugin (string name, call f) {
+	protected BuiltinPlugin (string name, string desc, string format, call f) {
 		Object(
-			name: name
+			name: name,
+			desc: desc,
+			format: format
 		);
 		this.f = &f;
 	}
@@ -308,7 +319,8 @@ public class Benchwell.BuiltinPlugin : Object, Benchwell.Plugin {
 		Benchwell.Plugin[] plugins = {};
 
 		// BASE64
-		plugins += new Benchwell.BuiltinPlugin("base64", (parameters) => {
+		var desc = """Encode a sequence of binary data into its Base-64 stringified representation.""";
+		plugins += new Benchwell.BuiltinPlugin("base64", desc, "\"\"", (parameters) => {
 			if (parameters.length == 0) {
 				return "";
 			}
@@ -321,7 +333,18 @@ public class Benchwell.BuiltinPlugin : Object, Benchwell.Plugin {
 		/////////
 
 		// ENCODE URL
-		plugins += new Benchwell.BuiltinPlugin("url_encode", (parameters) => {
+		desc = """
+This  function  converts the given input string to a URL encoded string
+and returns that as a new allocated string. All input  characters  that
+are not a-z, A-Z, 0-9, '-', '.', '_' or '~' are converted to their "URL
+escaped" version (%NN where NN is a two-digit hexadecimal number).
+
+If length is set to 0 (zero), curl_easy_escape(3) uses strlen() on  the
+input string to find out the size.
+
+You must curl_free(3) the returned string when you're done with it.
+		""";
+		plugins += new Benchwell.BuiltinPlugin("url_encode", desc, "\"\"", (parameters) => {
 			if (parameters.length == 0) {
 				return "";
 			}
@@ -339,3 +362,74 @@ public class Benchwell.BuiltinPlugin : Object, Benchwell.Plugin {
 	}
 }
 
+public class Benchwell.PluginCompletion : Object, Gtk.SourceCompletionProvider {
+	public string get_name () {
+		return _("Functions");
+	}
+
+	public bool match (Gtk.SourceCompletionContext context) {
+		var end = context.iter;
+		var start = context.iter;
+		if (!start.backward_chars (2))
+			return false;
+
+		var s = context.completion.view.get_buffer ().get_text (start, end, false);
+
+		return s == "{%";
+	}
+
+	public void populate (Gtk.SourceCompletionContext context) {
+		GLib.List<Gtk.SourceCompletionProposal> proposals = null;
+		foreach (var plugin in Config.plugins) {
+			proposals.append (new Benchwell.PluginCompletionProposal (plugin));
+		}
+		context.add_proposals (this, proposals, true);
+	}
+}
+
+public class Benchwell.PluginCompletionProposal : Object, Gtk.SourceCompletionProposal {
+	public weak Benchwell.Plugin plugin { get; construct; }
+
+	public PluginCompletionProposal (Benchwell.Plugin plugin) {
+		Object(
+			plugin: plugin
+		);
+	}
+
+	public bool equal (Gtk.SourceCompletionProposal other) {
+		var other_of_this_type = other as Benchwell.PluginCompletionProposal;
+		if (other_of_this_type == null)
+			return false;
+
+		return this.plugin.name == other_of_this_type.plugin.name;
+	}
+
+	public string get_text () {
+		return @" $(plugin.name) $(plugin.format) %}";
+	}
+
+	// get_markup has priority
+	public string get_label () {
+		return "";
+	}
+
+	public unowned GLib.Icon? get_gicon () {
+		return null;
+	}
+
+	public unowned Gdk.Pixbuf? get_icon () {
+		return null;
+	}
+
+	public unowned string? get_icon_name () {
+		return null;
+	}
+
+	public string? get_info () {
+		return plugin.desc;
+	}
+
+	public string get_markup () {
+		return plugin.name;
+	}
+}

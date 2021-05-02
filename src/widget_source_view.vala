@@ -102,6 +102,9 @@ public class Benchwell.SourceView : Gtk.SourceView {
 
 		buffer.changed.connect (on_buffer_changed);
 		line_mark_activated.connect (on_mark_activated);
+
+		completion.add_provider (new Benchwell.PluginCompletion ());
+		completion.add_provider (new Benchwell.EnvvarCompletion ());
 	}
 
 	private void on_mark_activated (Gtk.TextIter iter) {

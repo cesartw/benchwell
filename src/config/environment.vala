@@ -335,3 +335,78 @@ public class Benchwell.EnvVar : Object, Benchwell.KeyValueI {
 	}
 }
 
+
+
+public class Benchwell.EnvvarCompletion : Object, Gtk.SourceCompletionProvider {
+	public string get_name () {
+		return _("Envaronment vars");
+	}
+
+	public bool match (Gtk.SourceCompletionContext context) {
+		var end = context.iter;
+		var start = context.iter;
+		if (!start.backward_chars (2))
+			return false;
+
+		var s = context.completion.view.get_buffer ().get_text (start, end, false);
+
+		return s == "{{";
+	}
+
+	public void populate (Gtk.SourceCompletionContext context) {
+		GLib.List<Gtk.SourceCompletionProposal> proposals = null;
+		foreach (var envvar in Config.environment.variables) {
+			if (envvar.key == "")
+				continue;
+			proposals.append (new Benchwell.EnvvarCompletionProposal (envvar));
+		}
+		context.add_proposals (this, proposals, true);
+	}
+}
+
+public class Benchwell.EnvvarCompletionProposal : Object, Gtk.SourceCompletionProposal {
+	public weak Benchwell.EnvVar envvar { get; construct; }
+
+	public EnvvarCompletionProposal (Benchwell.EnvVar envvar) {
+		Object(
+			envvar: envvar
+		);
+	}
+
+	public bool equal (Gtk.SourceCompletionProposal other) {
+		var other_of_this_type = other as Benchwell.EnvvarCompletionProposal;
+		if (other_of_this_type == null)
+			return false;
+
+		return this.envvar.id == other_of_this_type.envvar.id;
+	}
+
+	public string get_text () {
+		return @" $(envvar.key) }}";
+	}
+
+	// get_markup has priority
+	public string get_label () {
+		return "";
+	}
+
+	public unowned GLib.Icon? get_gicon () {
+		return null;
+	}
+
+	public unowned Gdk.Pixbuf? get_icon () {
+		return null;
+	}
+
+	public unowned string? get_icon_name () {
+		return null;
+	}
+
+	public string? get_info () {
+		return envvar.val;
+	}
+
+	public string get_markup () {
+		return envvar.key;
+	}
+}
