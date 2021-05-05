@@ -836,8 +836,9 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			return;
 		}
 
-		history_popover.item = item;
-		title = item.name;
+		history_popover.disconnect_from_item ();
+		history_popover.item = this.item;
+		title = this.item.name;
 
 		mime_switch.combo.set_active_id (item.mime);
 
@@ -1116,7 +1117,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 public class Benchwell.HttpHistoryPopover : Gtk.Popover {
 	private Gtk.Grid grid;
-	public weak Benchwell.HttpItem? item {owned get; set;}
+	public weak Benchwell.HttpItem? item { owned get; set; }
 
 	public signal void result_activated (Benchwell.HttpResult result);
 
@@ -1127,22 +1128,34 @@ public class Benchwell.HttpHistoryPopover : Gtk.Popover {
 		);
 
 		build_results ();
-		notify["item"].connect (build_results);
+		notify["item"].connect ((sender, property) => {
+			if (this.item == null)
+				return;
+			this.item.response_added.connect (build_results);
+			build_results ();
+		});
+	}
+
+	public void disconnect_from_item () {
+		if (item == null)
+			return;
+		item.response_added.disconnect (build_results);
 	}
 
 	private void build_results () {
 		if (item == null) {
 			return;
 		}
-		if (grid != null)
+
+		if (grid != null) {
 			remove (grid);
+			grid.destroy ();
+		}
 
 		grid = new Gtk.Grid ();
 		grid.row_spacing = 5;
 		grid.column_spacing = 5;
 		add (grid);
-
-		item.response_added.connect (build_results);
 
 		var i = 0;
 		foreach (var response in item.responses) {
