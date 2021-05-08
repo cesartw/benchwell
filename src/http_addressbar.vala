@@ -83,7 +83,9 @@ public class Benchwell.Http.HttpAddressBar : Gtk.Box {
 		address_label_eventbox.show ();
 
 		// TODO: add to window
-		send_btn = new Benchwell.OptButton(_("SEND"), _("Save as"), "win.saveas");
+		send_btn = new Benchwell.OptButton(_("SEND"),
+										   _("Save as"), "win.saveas",
+										   _("Copy curl"), "win.copycurl");
 		send_btn.btn.get_style_context ().add_class ("suggested-action");
 		send_btn.menu_btn.get_style_context ().add_class ("suggested-action");
 		send_btn.sensitive = false;

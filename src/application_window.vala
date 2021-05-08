@@ -4,11 +4,12 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 	public Gtk.Button btn_env;
 	public Gtk.ComboBox env_combo;
 
-	public SimpleAction new_connection_menu;
-	public SimpleAction new_database_tab_menu;
-	public SimpleAction new_http_tab_menu;
-	public SimpleAction new_tab_menu;
-	public SimpleAction close_menu;
+	public SimpleAction new_connection_action;
+	public SimpleAction new_database_tab_action;
+	public SimpleAction new_http_tab_action;
+	public SimpleAction new_tab_action;
+	public SimpleAction close_action;
+	public SimpleAction copy_curl_action;
 
 	public Gtk.InfoBar infobar;
 	public Gtk.Label infobar_label;
@@ -21,15 +22,17 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		icon_name = "io.benchwell";
 		set_title ("Benchwell");
 
-		new_database_tab_menu = new SimpleAction("new.db", null);
-		new_http_tab_menu = new SimpleAction("new.http", null);
-		new_tab_menu = new SimpleAction("new.tab", null);
-		close_menu = new SimpleAction("close", null);
+		new_database_tab_action = new SimpleAction("new.db", null);
+		new_http_tab_action = new SimpleAction("new.http", null);
+		new_tab_action = new SimpleAction("new.tab", null);
+		close_action = new SimpleAction("close", null);
+		copy_curl_action = new SimpleAction("copycurl", null);
 
-		add_action(new_database_tab_menu);
-		add_action(new_http_tab_menu);
-		add_action(new_tab_menu);
-		add_action(close_menu);
+		add_action(new_database_tab_action);
+		add_action(new_http_tab_action);
+		add_action(new_tab_action);
+		add_action(close_action);
+		add_action(copy_curl_action);
 
 		notebook = new Gtk.Notebook ();
 		notebook.set_name ("MainNotebook");
@@ -167,15 +170,15 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		move (Config.settings.window_pos_x,
 			Config.settings.window_pos_y);
 
-		new_database_tab_menu.activate.connect (() => {
+		new_database_tab_action.activate.connect (() => {
 			add_database_tab ();
 		});
 
-		new_http_tab_menu.activate.connect (() => {
+		new_http_tab_action.activate.connect (() => {
 			add_http_tab ();
 		});
 
-		close_menu.activate.connect (() => {
+		close_action.activate.connect (() => {
 			notebook.remove_page (notebook.get_current_page ());
 		});
 
