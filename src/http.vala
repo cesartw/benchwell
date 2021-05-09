@@ -205,6 +205,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	public Gtk.TreeIter? item_iter;
 
 	private bool loading = false;
+	private Regex kvrg;
 
 	public Http(Benchwell.ApplicationWindow window) {
 		Object(
@@ -212,6 +213,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			orientation: Gtk.Orientation.HORIZONTAL,
 			wide_handle: true
 		);
+		kvrg = new Regex ("(.+)=(@?)(.+)");
 
 		title = _("HTTP");
 
@@ -573,7 +575,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		string[] headers = null;
 		string[] body = null;
 
-		var ok = build_request2 (out mime, out method, out url, out body, out headers);
+		var ok = build_request (out mime, out method, out url, out body, out headers);
 		if (!ok) {
 			Config.show_alert (this, _("couldn't build request"));
 			return;
@@ -618,26 +620,121 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 	// https://github.com/giuliopaci/ValaBindingsDevelopment/blob/master/libcurl-example.vala
 	private void on_send () {
-		string method = "";
-		string url = "";
-		string raw_body = "";
-		Curl.SList headers = null;
-		string[] headers_array = null;
+		string mime;
+		string method;
+		string url;
+		string[] raw_body;
+		string[] headers_array;
 
 		response_headers.get_buffer ().set_text ("", 0);
 		response.get_buffer ().set_text ("", 0);
 
-		var ok = build_request (out method, out url, out raw_body, out headers_array);
+		var ok = build_request (out mime, out method, out url, out raw_body, out headers_array);
 		if (!ok) {
 			Config.show_alert (this, _("couldn't build request"));
 			return;
 		}
 
+		// curl headers
+		Curl.SList headers = null;
 		foreach(var h in headers_array) {
 			headers = Curl.SList.append ((owned) headers, h);
 		}
 
-		perform.begin (method, url, raw_body, (owned) headers, (obj, res) => {
+		// curl BODY
+		string boundary = "";
+		string curl_body = "";
+		string content_type = "";
+		switch (mime) {
+			case "application/x-www-form-urlencoded":
+				var body_builder = new StringBuilder ();
+
+				for (var i = 0; i < raw_body.length; i++) {
+					body_builder.append (raw_body[i]);
+					if (i < raw_body.length - 1)
+						body_builder.append ("&");
+				}
+
+				curl_body = body_builder.str;
+				break;
+			case "multipart/form-data":
+				boundary = RandomString(60);
+				content_type = @"multipart/form-data; boundary=$(boundary)";
+				var body_builder = new StringBuilder ();
+
+				body_builder.append ("--");
+				body_builder.append (boundary);
+				for (var i = 0; i < raw_body.length; i++) {
+					body_builder.append ("\n");
+
+					var parts = kvrg.split (raw_body[i]);
+					var key = parts[1];
+					var val = parts[3];
+
+					if (parts[2] == "@") {
+						var file = File.new_for_path (val);
+						if (!file.query_exists ()) {
+							Config.show_alert (this, @"$(val) doesn't exist");
+							return;
+						}
+						if (file.query_file_type (0) == FileType.DIRECTORY) {
+							Config.show_alert (this, @"$(val) is a directory");
+							return;
+						}
+
+						GLib.FileInfo file_info = null;
+						uint8[] content;
+						try {
+							file_info = file.query_info ("*", FileQueryInfoFlags.NONE);
+
+							ok = GLib.FileUtils.get_data (val, out content);
+							if (!ok) {
+								Config.show_alert (this, @"could not read $(val)");
+								return;
+							}
+						} catch (GLib.Error err) {
+							Config.show_alert (this, err.message);
+							return;
+						}
+
+						body_builder.append ("Content-Disposition: form-data; name=\"").
+							append (key).
+							append ("; filename=\"").
+							append (file.get_basename ()).
+							append ("\"\n").
+							append ("Content-Type: ").
+							append (file_info.get_content_type ()).
+							append ("\n").
+							append ("Content-Transfer-Encoding: base64\n\n").
+							append (GLib.Base64.encode (content)).
+							append ("\n");
+
+						break;
+					} else {
+						body_builder.append ("Content-Disposition: form-data; name=\"").
+							append (key).
+							append ("\"\n").
+							append ("Content-Type: text/plain\n\n").
+							//append (handle.escape (val, val.length)).
+							append (val).
+							append ("\n");
+						break;
+					}
+
+					body_builder.append ("--");
+					body_builder.append (boundary);
+				}
+				body_builder.append ("--\n");
+
+				curl_body = body_builder.str;
+				break;
+			default:
+				curl_body = body.get_text ();
+				curl_body = Config.environment.interpolate (curl_body);
+				break;
+		}
+
+		perform.begin (method, url, curl_body, (owned) headers, (obj, res) => {
 			try {
 				var result = perform.end (res);
 				switch (result.code) {
@@ -656,7 +753,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		});
 	}
 
-	private bool build_request2 (
+	private bool build_request (
 		out string mime,
 		out string method,
 		out string url,
@@ -764,154 +861,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			l_headers_array += @"Content-Type: $(content_type)";
 		headers_array = l_headers_array;
 		raw_body = l_raw_body;
-		return true;
-	}
-
-	private bool build_request (out string method, out string url, out string raw_body, out string[] headers_array) {
-		headers_array = null;
-		var handle = new Curl.EasyHandle ();
-
-		url = Config.environment.interpolate (address.address.get_text ());
-		method = address.method_combo.get_active_id ();
-
-		var kv_params = query_params.get_kvs ();
-
-		// TODO: Improve URL parsing
-		var builder = new StringBuilder ();
-		if (url.index_of ("?") == -1 && kv_params.length > 0)
-			builder.append ("?");
-
-		for (var i = 0; i < kv_params.length; i++) {
-			var key = Config.environment.interpolate (kv_params[i].key);
-			var val = Config.environment.interpolate (kv_params[i].val);
-			key = handle.escape (key, key.length);
-			val = handle.escape (val, val.length);
-			builder.append (@"$key=$val");
-			if (i < kv_params.length - 1)
-				builder.append ("&");
-		}
-
-		if (url.index_of ("?") != -1 && !url.has_suffix("&"))
-			builder.prepend ("&");
-		url += builder.str;
-
-		var kv_headers = headers.get_kvs ();
-
-		// NOTE: can't tranfer ownership of null
-		string[] l_headers_array = null;
-		l_headers_array += "X-Powered-by: Benchwell";
-
-		var content_type = "";
-		for (var i = 0; i < kv_headers.length; i++) {
-			var key = Config.environment.interpolate (kv_headers[i].key);
-			var val = Config.environment.interpolate (kv_headers[i].val);
-			// NOTE: delayed appending content-type because multipart/form-data needs to include the bounday
-			if (key.strip ().casefold () == "Content-Type".casefold ()) {
-				content_type = val;
-				continue;
-			}
-			l_headers_array += @"$(kv_headers[i].key): $(val)";
-		}
-
-		// BODY
-		string boundary = "";
-		raw_body = "";
-		switch (mime_switch.combo.get_active_id ()) {
-			case "application/x-www-form-urlencoded":
-				var form_fields = body_fields.get_kvs ();
-				var body_builder = new StringBuilder ();
-
-				for (var i = 0; i < form_fields.length; i++) {
-					var key = Config.environment.interpolate (form_fields[i].key);
-					var val = Config.environment.interpolate (form_fields[i].val);
-					key = handle.escape (key, key.length);
-					val = handle.escape (val, val.length);
-					body_builder.append (@"$key=$val");
-					if (i < form_fields.length - 1)
-						body_builder.append ("&");
-				}
-
-				raw_body = body_builder.str;
-				break;
-			case "multipart/form-data":
-				var form_fields = body_fields.get_kvs ();
-
-				boundary = RandomString(60);
-				content_type = @"multipart/form-data; boundary=$(boundary)";
-				var body_builder = new StringBuilder ();
-
-				body_builder.append ("--");
-				body_builder.append (boundary);
-				for (var i = 0; i < form_fields.length; i++) {
-					body_builder.append ("\n");
-					var key = Config.environment.interpolate (form_fields[i].key);
-					var val = Config.environment.interpolate (form_fields[i].val);
-
-					switch (form_fields[i].kvtype) {
-						case Benchwell.KeyValueTypes.FILE:
-							var file = File.new_for_path (val);
-							if (!file.query_exists ()) {
-								Config.show_alert (this, @"$(val) doesn't exist");
-								return false;
-							}
-							if (file.query_file_type (0) == FileType.DIRECTORY) {
-								Config.show_alert (this, @"$(val) is a directory");
-								return false;
-							}
-
-							GLib.FileInfo file_info = null;
-							uint8[] content;
-							try {
-								file_info = file.query_info ("*", FileQueryInfoFlags.NONE);
-
-								var ok = GLib.FileUtils.get_data (val, out content);
-								if (!ok) {
-									return false;
-								}
-							} catch (GLib.Error err) {
-								Config.show_alert (this, err.message);
-								return false;
-							}
-
-							body_builder.append ("Content-Disposition: form-data; name=\"").
-								append (handle.escape (key, key.length)).
-								append ("; filename=\"").
-								append (handle.escape (file.get_basename (), file.get_basename ().length)).
-								append ("\"\n").
-								append ("Content-Type: ").
-								append (file_info.get_content_type ()).
-								append ("\n").
-								append ("Content-Transfer-Encoding: base64\n\n").
-								append (GLib.Base64.encode (content)).
-								append ("\n");
-
-							break;
-						default:
-							body_builder.append ("Content-Disposition: form-data; name=\"").
-								append (handle.escape (key, key.length)).
-								append ("\"\n").
-								append ("Content-Type: text/plain\n\n").
-								//append (handle.escape (val, val.length)).
-								append (val).
-								append ("\n");
-							break;
-					}
-
-					body_builder.append ("--");
-					body_builder.append (boundary);
-				}
-				body_builder.append ("--\n");
-
-				raw_body = body_builder.str;
-				break;
-			default:
-				raw_body = body.get_text ();
-				raw_body = Config.environment.interpolate (raw_body);
-				break;
-		}
-
-		l_headers_array += @"Content-Type: $(content_type)";
-		headers_array = l_headers_array;
 		return true;
 	}
 
