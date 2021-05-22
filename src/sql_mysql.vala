@@ -216,7 +216,7 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		int i = 0;
 
 		foreach (Benchwell.CondStmt cond in conditions) {
-			if ( cond.field.name == "" ) {
+			if (cond.field.name == "" || !cond.enabled) {
 				continue;
 			}
 

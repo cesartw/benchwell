@@ -190,7 +190,8 @@ public class Benchwell.ColDef : Object {
 public class Benchwell.CondStmt : Object {
 	public Benchwell.ColDef field { get; set; }
 	public Benchwell.Operator op  { get; set; }
-	public string val   { get; set; }
+	public string val             { get; set; }
+	public bool enabled           { get; set; }
 }
 
 public class Benchwell.SortOption: Object {

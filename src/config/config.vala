@@ -485,6 +485,10 @@ public class Benchwell._Config : Object {
 			var val_node = new Json.Node (Json.NodeType.VALUE);
 			val_node.set_string (stmt.val);
 			table_node.add_element (val_node);
+
+			var enable_node = new Json.Node (Json.NodeType.VALUE);
+			enable_node.set_string (stmt.enabled ? "true" : "false");
+			table_node.add_element (enable_node);
 		}
 
 		Config.settings.set_string ("db-filters", Json.to_string (filters, false));

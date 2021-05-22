@@ -160,7 +160,10 @@ public class Benchwell.Database.Table : Gtk.Box {
 			var builder = new StringBuilder ();
 			Gtk.TreeIter? iter = null;
 			selection.get_selected_rows (null).foreach ((path) => {
-				store.get_iter (out iter, path);
+				var ok = store.get_iter (out iter, path);
+				if (!ok) {
+					return;
+				}
 				for (var i = 0; i < service.columns.length; i++) {
 					GLib.Value val;
 					store.get_value (iter, i, out val);

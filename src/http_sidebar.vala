@@ -251,7 +251,9 @@ public class Benchwell.Http.HttpSideBar : Gtk.Box {
 	}
 
 	public unowned Benchwell.HttpItem? get_selected_item (out Gtk.TreeIter iter) {
-		treeview.get_selection ().get_selected (null, out iter);
+		var ok = treeview.get_selection ().get_selected (null, out iter);
+		if (!ok)
+			return null;
 
 		GLib.Value val;
 		store.get_value (iter, Benchwell.Http.Columns.ITEM, out val);

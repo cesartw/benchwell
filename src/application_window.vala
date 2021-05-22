@@ -301,7 +301,10 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 
 		env_combo.changed.connect (() => {
 			Gtk.TreeIter? iter = null;
-			env_combo.get_active_iter (out iter);
+			var ok = env_combo.get_active_iter (out iter);
+			if (!ok) {
+				return;
+			}
 			if ( iter == null ) {
 				return;
 			}

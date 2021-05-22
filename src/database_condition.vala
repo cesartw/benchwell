@@ -96,10 +96,6 @@ public class Benchwell.Database.Condition {
 	}
 
 	public Benchwell.CondStmt? get_condition () {
-		if (!active_switch.get_active () || !active_switch.sensitive) {
-			return null;
-		}
-
 		var column_name = selected_field ();
 		if (column_name == "" || column_name == null) {
 			return null;
@@ -134,13 +130,17 @@ public class Benchwell.Database.Condition {
 		stmt.field = column;
 		stmt.op = operator;
 		stmt.val = cvalue;
+		stmt.enabled = active_switch.get_active () && active_switch.sensitive;
 
 		return stmt;
 	}
 
 	private string? selected_field () {
 		Gtk.TreeIter? iter;
-		field_combo.get_active_iter (out iter);
+		var ok = field_combo.get_active_iter (out iter);
+		if (!ok) {
+			return null;
+		}
 		GLib.Value val;
 		store.get_value (iter, 0, out val);
 		var column_name = val.get_string ();
@@ -275,7 +275,7 @@ public class Benchwell.Database.Conditions : Gtk.Grid {
 	public void rebuild (string[] filters) {
 		clear (false);
 
-		for (var i = 0; i < filters.length; i+=3) {
+		for (var i = 0; i < filters.length; i+=4) {
 			var key = filters[i];
 			var op = filters[i+1];
 			var val = filters[i+2];
@@ -285,6 +285,7 @@ public class Benchwell.Database.Conditions : Gtk.Grid {
 			cond.value_entry.set_text (val);
 			cond.operator_combo.set_active_id (op);
 			cond.field_combo.set_active_id (key);
+			cond.active_switch.set_active (filters[i+3] == "true");
 			cond.no_ready = false;
 		}
 
