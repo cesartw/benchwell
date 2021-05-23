@@ -184,6 +184,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	public Benchwell.HttpOverlay overlay;
 
 	// request
+	public Gtk.Stack body_stack;
 	public Benchwell.SourceView body;
 	public Benchwell.KeyValues  body_fields;
 	public Benchwell.CBNotebookTab mime_switch;
@@ -226,16 +227,23 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		// request
 		body = new Benchwell.SourceView ();
 		body.show ();
-		body_fields = new Benchwell.KeyValues (Benchwell.KeyValueTypes.STRING|Benchwell.KeyValueTypes.MULTILINE|Benchwell.KeyValueTypes.FILE);
 
-		var body_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
-		body_box.add (body);
-		body_box.add (body_fields);
-		body_box.show ();
+		body_fields = new Benchwell.KeyValues (Benchwell.KeyValueTypes.STRING|Benchwell.KeyValueTypes.MULTILINE|Benchwell.KeyValueTypes.FILE);
+		body_fields.show ();
 
 		var body_sw = new Gtk.ScrolledWindow (null, null);
-		body_sw.add (body_box);
+		body_sw.add (body);
 		body_sw.show ();
+
+		var body_fields_sw = new Gtk.ScrolledWindow (null, null);
+		body_fields_sw.add (body_fields);
+		body_fields_sw.show ();
+
+		body_stack = new Gtk.Stack ();
+		body_stack.add_named (body_sw, "editor");
+		body_stack.add_named (body_fields_sw, "fields");
+		body_stack.set_visible_child_name ("editor");
+		body_stack.show ();
 
 		item = new Benchwell.HttpItem ();
 		headers = new Benchwell.KeyValues (Benchwell.KeyValueTypes.STRING|Benchwell.KeyValueTypes.MULTILINE);
@@ -261,7 +269,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		mime_switch.show ();
 
 		var body_notebook = new Gtk.Notebook ();
-		body_notebook.append_page (body_sw, mime_switch);
+		body_notebook.append_page (body_stack, mime_switch);
 		body_notebook.append_page (query_params, params_label);
 		body_notebook.append_page (headers, headers_label);
 		body_notebook.show ();
@@ -451,7 +459,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 		body_fields.no_row_left.connect (() => {
 			if (item == null) {
-				//return new Benchwell.HttpKv ();
 				return;
 			}
 
@@ -461,8 +468,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			} catch (ConfigError err) {
 				Config.show_alert (this, err.message);
 			}
-
-			//return new Benchwell.HttpKv ();
 		});
 
 		body_fields.row_removed.connect ((kvi) => {
@@ -539,18 +544,15 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 		switch (mime_switch.combo.get_active_id ()) {
 			case "application/x-www-form-urlencoded":
-				body.hide ();
-				body_fields.show ();
+				body_stack.set_visible_child_name ("fields");
 				body_fields.supported_types = Benchwell.KeyValueTypes.STRING|Benchwell.KeyValueTypes.MULTILINE;
 				break;
 			case "multipart/form-data":
-				body.hide ();
-				body_fields.show ();
+				body_stack.set_visible_child_name ("fields");
 				body_fields.supported_types = Benchwell.KeyValueTypes.STRING|Benchwell.KeyValueTypes.MULTILINE|Benchwell.KeyValueTypes.FILE;
 				break;
 			default:
-				body.show ();
-				body_fields.hide ();
+				body_stack.set_visible_child_name ("editor");
 				break;
 		}
 
@@ -1020,11 +1022,9 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 		if (this.item.mime == "application/x-www-form-urlencoded" ||
 			this.item.mime == "multipart/form-data") {
-			body_fields.show ();
-			body.hide ();
+			body_stack.set_visible_child_name ("fields");
 		} else {
-			body_fields.hide ();
-			body.show ();
+			body_stack.set_visible_child_name ("editor");
 		}
 		loading = false;
 	}
