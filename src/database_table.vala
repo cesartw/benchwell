@@ -20,6 +20,9 @@ public class Benchwell.Database.Table : Gtk.Box {
 	public Gtk.MenuItem copy_insert_menu;
 	public Gtk.MenuItem copy_menu;
 	public Gtk.ListStore store;
+
+	public Gtk.Button btn_load_query;
+	public Gtk.MenuButton save_menu;
 	public Gtk.Button btn_prev;
 	public Gtk.Button btn_next;
 	public Gtk.Button btn_refresh;
@@ -28,10 +31,14 @@ public class Benchwell.Database.Table : Gtk.Box {
 	public Gtk.Button btn_delete_row;
 	public Gtk.Button btn_save_row;
 	public Gtk.SearchEntry search;
+
 	public Benchwell.Database.Conditions conditions;
 
 	public signal void field_changed (Benchwell.ColDef[] column, string[] row);
 	public signal bool delete_record (string[]? data);
+	public signal void file_opened (string query);
+	public signal void file_saved (string filename);
+	public signal void fav_saved (string query_name);
 
 	public Table (Benchwell.ApplicationWindow window, Benchwell.DatabaseService service) {
 		Object (
@@ -103,6 +110,28 @@ public class Benchwell.Database.Table : Gtk.Box {
 		};
 		btn_refresh.show ();
 
+		btn_load_query = new Benchwell.Button ("open", Gtk.IconSize.BUTTON);
+		btn_load_query.show ();
+
+		var img = new Benchwell.Image("save");
+		save_menu = new Gtk.MenuButton ();
+		save_menu.show ();
+		save_menu.set_image (img);
+
+		var save_menu_model = new GLib.Menu ();
+		save_menu_model.append (_("Save As"), "win.save.file");
+		save_menu_model.append (_("Save fav"), "win.save.fav");
+
+		save_menu.set_menu_model (save_menu_model);
+		var action_save_file = new GLib.SimpleAction ("save.file", null);
+		var action_save_fav = new GLib.SimpleAction ("save.fav", null);
+		window.add_action (action_save_file);
+		window.add_action (action_save_fav);
+
+		action_save_file.activate.connect (on_save_file);
+		action_save_fav.activate.connect (on_save_fav);
+		btn_load_query.clicked.connect (on_open_file);
+
 		search = new Gtk.SearchEntry ();
 		search.set_placeholder_text (_("Column filter: .*"));
 		search.show ();
@@ -115,6 +144,8 @@ public class Benchwell.Database.Table : Gtk.Box {
 		table_actionbar.add (btn_show_filters);
 
 		table_actionbar.pack_end (search);
+		table_actionbar.pack_end (btn_load_query);
+		table_actionbar.pack_end (save_menu);
 		table_actionbar.pack_end (btn_refresh);
 		table_actionbar.pack_end (btn_next);
 		table_actionbar.pack_end (btn_prev);
@@ -194,6 +225,91 @@ public class Benchwell.Database.Table : Gtk.Box {
 		}
 
 		return false;
+	}
+
+	public void on_open_file () {
+		var dialog = new Gtk.FileChooserDialog (_("Select file"), window,
+											 Gtk.FileChooserAction.OPEN,
+											_("Open"), Gtk.ResponseType.OK,
+											_("Cancel"), Gtk.ResponseType.CANCEL);
+		var resp = (Gtk.ResponseType) dialog.run ();
+
+		if (resp == Gtk.ResponseType.CANCEL) {
+			dialog.destroy ();
+			return;
+		}
+
+		var filename = dialog.get_filename ();
+		dialog.destroy ();
+
+		try {
+			string text;
+			var ok = GLib.FileUtils.get_contents (filename, out text, null);
+			if (!ok) {
+				return;
+			}
+
+			file_opened (text);
+		} catch( GLib.FileError err) {
+			Config.show_alert (this, err.message);
+		}
+	}
+
+	public void on_save_file () {
+		var dialog = new Gtk.FileChooserDialog (_("Save file"), window,
+											 Gtk.FileChooserAction.SAVE,
+											_("Ok"), Gtk.ResponseType.OK,
+											_("Cancel"), Gtk.ResponseType.CANCEL);
+		var resp = (Gtk.ResponseType) dialog.run ();
+
+		if (resp == Gtk.ResponseType.CANCEL) {
+			dialog.destroy ();
+			return;
+		}
+
+		file_saved (dialog.get_filename ());
+		dialog.destroy ();
+	}
+
+	public void on_save_fav () {
+		var query_name = ask_fav_name ();
+		if (query_name == "") {
+			return;
+		}
+
+		fav_saved (query_name);
+	}
+
+	private string ask_fav_name () {
+		var dialog = new Gtk.Dialog.with_buttons (_("Choose"), window,
+									Gtk.DialogFlags.DESTROY_WITH_PARENT|Gtk.DialogFlags.MODAL,
+									_("Ok"), Gtk.ResponseType.OK,
+									_("Cancel"), Gtk.ResponseType.CANCEL);
+		dialog.set_default_size (250, 130);
+
+		var label = new Gtk.Label (_("Enter favorite name"));
+		label.show ();
+
+		var entry = new Gtk.Entry ();
+		entry.show ();
+
+		var box = new Gtk.Box (Gtk.Orientation.VERTICAL, 10);
+		box.show ();
+
+		box.pack_start (label, true, true, 0);
+		box.pack_start (entry, true, true, 0);
+
+		dialog.get_content_area ().add (box);
+
+		var resp = (Gtk.ResponseType) dialog.run ();
+		var filename = entry.get_text ();
+		dialog.destroy ();
+
+		if (resp != Gtk.ResponseType.OK) {
+			return "";
+		}
+
+		return filename;
 	}
 
 	public Benchwell.SortOption[] get_sort_options () {

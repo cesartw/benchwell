@@ -17,7 +17,6 @@ public class Benchwell.Database.Database : Gtk.Box {
 		title = _("Connect");
 
 		connect_view = new Benchwell.Database.Connect (window);
-		//data = new Benchwell.Database.Data (window);
 		connect_view.show ();
 
 		show_connect ();
