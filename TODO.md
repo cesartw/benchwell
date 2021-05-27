@@ -1,8 +1,6 @@
 TABS
 
 http tab
-	- Fix: refocus into a sourceview causes it to scroll to  top
-	- save last response mime
 	- auto collapse / collapse all response
 
 decoding tab
@@ -24,7 +22,14 @@ Feature:
 
 
 Packaging/Distribution
-	- build flak
-	- build makepkg (arch-based distro)
-	- build deb (ubunto-based distro)
-	-
+	- Free software ?
+
+Fuzzy search
+	search: cee
+					missing: 0
+					score matchlen desc
+					      sep asc
+	ceaser        matchlen: 2 sep: 2 missing: 0
+	cesara        matchlen: 2 sep: 0 missing: 1
+	casera        matchlen: 0 sep: 2 missing: 1
+

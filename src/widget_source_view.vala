@@ -35,6 +35,12 @@ class SimpleStack<T> {
 public class Benchwell.SourceView : Gtk.SourceView {
 	private uint indent_timeout = 0;
 
+	private Gtk.Menu menu;
+	public Gtk.MenuItem collapse_menu;
+	public Gtk.MenuItem expand_menu;
+	public Gtk.MenuItem copy_menu;
+	public Gtk.MenuItem paste_menu;
+
 	public SourceView (string lang = "auto") {
 		Object (
 			show_right_margin: false,
@@ -49,6 +55,24 @@ public class Benchwell.SourceView : Gtk.SourceView {
 			show_line_marks: true,
 			insert_spaces_instead_of_tabs: Config.settings.editor_no_tabs
 		);
+
+		menu = new Gtk.Menu ();
+		collapse_menu = new Benchwell.MenuItem (_("Collapse"), "gtk-goto-top");
+		collapse_menu.show ();
+
+		expand_menu = new Benchwell.MenuItem (_("Expand"), "gtk-goto-bottom");
+		expand_menu.show ();
+
+		copy_menu = new Benchwell.MenuItem (_("Copy"), "gtk-copy");
+		copy_menu.show ();
+
+		paste_menu = new Benchwell.MenuItem (_("Paste"), "gtk-paste");
+		paste_menu.show ();
+
+		menu.add (collapse_menu);
+		menu.add (expand_menu);
+		menu.add (copy_menu);
+		menu.add (paste_menu);
 
 		set_language (lang);
 
@@ -102,9 +126,22 @@ public class Benchwell.SourceView : Gtk.SourceView {
 
 		buffer.changed.connect (on_buffer_changed);
 		line_mark_activated.connect (on_mark_activated);
+		collapse_menu.activate.connect (on_collapse_all);
+		expand_menu.activate.connect (on_expand_all);
 
 		completion.add_provider (new Benchwell.PluginCompletion ());
 		completion.add_provider (new Benchwell.EnvvarCompletion ());
+
+
+		button_press_event.connect ((list, event) => {
+			if ( event.button != Gdk.BUTTON_SECONDARY){
+				return false;
+			}
+
+			menu.show ();
+			menu.popup_at_pointer (event);
+			return true;
+		});
 	}
 
 	private void on_mark_activated (Gtk.TextIter iter) {
@@ -148,6 +185,70 @@ public class Benchwell.SourceView : Gtk.SourceView {
 					break;
 				default:
 					return;
+			}
+		}
+	}
+
+	private void on_collapse_all () {
+		var buffer = get_buffer () as Gtk.SourceBuffer;
+		for (var l = 0; l < buffer.get_line_count (); l++) {
+			var marks = buffer.get_source_marks_at_line (l, "fold_collapse");
+
+			foreach (var mark in marks) {
+				// NOTE: I use the mark.name to transfer the line span {start-line}-{end-line}. Hacky asf
+				var mark_name = mark.name;
+				var start_end = mark_name.split ("-");
+				Gtk.TextIter start, end, next_to_start;
+
+				int start_line = int.parse (start_end[0]);
+				int end_line = int.parse (start_end[1]);
+
+				buffer.get_iter_at_line (out start, start_line);
+				buffer.get_iter_at_line (out end, end_line);
+				buffer.get_iter_at_line (out next_to_start, start_line + 1);
+
+				var start_eol = start.copy ();
+				start_eol.forward_to_line_end ();
+				start_eol.forward_char ();
+
+				buffer.apply_tag_by_name ("foldable", next_to_start, end);
+				buffer.apply_tag_by_name ("ellipse", start, start_eol);
+
+				buffer.remove_source_marks (start, start, null);
+				buffer.create_source_mark (@"$(mark_name)", "fold_expand", start);
+				buffer.create_source_mark (@"$(mark_name)-more", "fold_more", end);
+			}
+		}
+	}
+
+	private void on_expand_all () {
+		var buffer = get_buffer () as Gtk.SourceBuffer;
+		for (var l = 0; l < buffer.get_line_count (); l++) {
+			var marks = buffer.get_source_marks_at_line (l, "fold_expand");
+
+			foreach (var mark in marks) {
+				// NOTE: I use the mark.name to transfer the line span {start-line}-{end-line}. Hacky asf
+				var mark_name = mark.name;
+				var start_end = mark_name.split ("-");
+				Gtk.TextIter start, end, next_to_start;
+
+				int start_line = int.parse (start_end[0]);
+				int end_line = int.parse (start_end[1]);
+
+				buffer.get_iter_at_line (out start, start_line);
+				buffer.get_iter_at_line (out end, end_line);
+				buffer.get_iter_at_line (out next_to_start, start_line + 1);
+
+				var start_eol = start.copy ();
+				start_eol.forward_to_line_end ();
+				start_eol.forward_char ();
+
+				buffer.remove_tag_by_name ("foldable", start , end);
+				buffer.remove_tag_by_name ("ellipse", start , start_eol);
+
+				buffer.remove_source_marks (start, start, null);
+				buffer.remove_source_marks (end, end, null);
+				buffer.create_source_mark (@"$(mark_name)", "fold_collapse", start);
 			}
 		}
 	}
