@@ -15,6 +15,7 @@ public class Benchwell.Database.Table : Gtk.Box {
 		}
 	}
 	public Gtk.TreeView table;
+	public Benchwell.Database.EditPanel edit_panel;
 	public Gtk.Menu menu;
 	public Gtk.MenuItem clone_menu;
 	public Gtk.MenuItem copy_insert_menu;
@@ -34,11 +35,13 @@ public class Benchwell.Database.Table : Gtk.Box {
 
 	public Benchwell.Database.Conditions conditions;
 
-	public signal void field_changed (Benchwell.ColDef[] column, string[] row);
-	public signal bool delete_record (string[]? data);
+	public signal void field_changed (Benchwell.Column[] columns);
+	public signal bool delete_record (Benchwell.Column[]? data);
 	public signal void file_opened (string query);
 	public signal void file_saved (string filename);
 	public signal void fav_saved (string query_name);
+
+	private bool disable_selection;
 
 	public Table (Benchwell.ApplicationWindow window, Benchwell.DatabaseService service) {
 		Object (
@@ -58,6 +61,16 @@ public class Benchwell.Database.Table : Gtk.Box {
 		var table_sw = new Gtk.ScrolledWindow (null, null);
 		table_sw.add (table);
 		table_sw.show ();
+
+		var table_edit_paned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL);
+		table_edit_paned.wide_handle = true;
+		table_edit_paned.show ();
+
+		if (Config.settings.db_edit_panel) {
+			table_edit_paned.pack2 (build_edit_panel (), true, true);
+		}
+
+		table_edit_paned.pack1 (table_sw, true, false);
 
 		menu = new Gtk.Menu ();
 		clone_menu = new Benchwell.MenuItem (_("Clone row"), "copy");
@@ -155,7 +168,7 @@ public class Benchwell.Database.Table : Gtk.Box {
 
 		pack_start (table_actionbar, false, false, 0);
 		pack_start (conditions, false,false, 5);
-		pack_start (table_sw, true, true, 0);
+		pack_start (table_edit_paned, true, true, 0);
 
 		// signals
 		table.button_press_event.connect (on_button_press);
@@ -181,7 +194,26 @@ public class Benchwell.Database.Table : Gtk.Box {
 	}
 
 	private void on_selection_changed () {
-		btn_delete_row.sensitive = btn_save_row.sensitive = get_selected_data ().length > 0;
+		if (disable_selection)
+			return;
+
+		btn_delete_row.sensitive = btn_save_row.sensitive = table.get_selection ().count_selected_rows () != 0;
+
+		if (table.get_selection ().count_selected_rows () == 0)
+			return;
+
+		var data = get_selected_data ();
+		if (data == null)
+			return;
+
+		if (table.get_selection ().count_selected_rows () > 1) {
+			edit_panel.get_parent ().hide ();
+			return;
+		}
+
+		edit_panel.set_record (data);
+		edit_panel.get_parent ().show ();
+		edit_panel.show ();
 	}
 
 	private bool on_table_key_press (Gtk.Widget widget, Gdk.EventKey event) {
@@ -225,6 +257,16 @@ public class Benchwell.Database.Table : Gtk.Box {
 		}
 
 		return false;
+	}
+
+	public Gtk.Widget build_edit_panel () {
+		edit_panel = new Benchwell.Database.EditPanel ();
+		edit_panel.show ();
+
+		var edit_panel_sw = new Gtk.ScrolledWindow (null, null);
+		edit_panel_sw.add (edit_panel);
+		edit_panel_sw.show ();
+		return edit_panel_sw;
 	}
 
 	public void on_open_file () {
@@ -340,6 +382,9 @@ public class Benchwell.Database.Table : Gtk.Box {
 	}
 
 	public void load_table () {
+		disable_selection = true;
+		edit_panel.clear ();
+		table.get_selection ().unselect_all ();
 		if (store != null) {
 			store.clear ();
 		}
@@ -364,6 +409,7 @@ public class Benchwell.Database.Table : Gtk.Box {
 		service.data.foreach ( (row) => {
 			add_row (row);
 		});
+		disable_selection = false;
 	}
 
 	public void refresh_data () {
@@ -431,9 +477,12 @@ public class Benchwell.Database.Table : Gtk.Box {
 		table.scroll_to_cell (path, null, true, (float) 0.5, (float) 0);
 	}
 
-	public string[]? get_selected_data () {
+	public Benchwell.Column[]? get_selected_data () {
 		Gtk.TreeIter? selected = null;
 		var selection = table.get_selection ();
+		if (selection.count_selected_rows () == 0)
+			return null;
+
 		selection.selected_foreach ( (model, path, iter) => {
 			if (selected != null){
 				return;
@@ -445,24 +494,29 @@ public class Benchwell.Database.Table : Gtk.Box {
 			return null;
 		}
 
-		var values = new string[service.columns.length];
+		//var values = new string[service.columns.length];
+		var values = new Benchwell.Column[service.columns.length];
 		for (var i = 0; i < service.columns.length; i++) {
 			GLib.Value val;
 			store.get_value (selected, i, out val);
 
-			values[i] = val.get_string ();
+			values[i] = new Benchwell.Column ();
+			values[i].val = val.get_string ();
+			values[i].coldef = service.columns[i];
 		}
 
 		return values;
 	}
 
-	public string[]? get_data_at (Gtk.TreeIter iter) {
-		var values = new string[service.columns.length];
+	public Benchwell.Column[]? get_data_at (Gtk.TreeIter iter) {
+		var values = new Benchwell.Column[service.columns.length];
 		for (var i = 0; i < service.columns.length; i++) {
 			GLib.Value val;
 			store.get_value (iter, i, out val);
 
-			values[i] = val.get_string ();
+			values[i] = new Benchwell.Column ();
+			values[i].coldef = service.columns[i];
+			values[i].val = val.get_string ();
 		}
 
 		return values;
@@ -481,7 +535,7 @@ public class Benchwell.Database.Table : Gtk.Box {
 		});
 	}
 
-	public void update_selected_row (string[] data) {
+	public void update_selected_row (Benchwell.Column[] data) {
 		Gtk.TreeIter? selected = null;
 		var selection = table.get_selection ();
 		selection.selected_foreach ( (model, path, iter) => {
@@ -496,7 +550,7 @@ public class Benchwell.Database.Table : Gtk.Box {
 		}
 
 		for(var i = 0; i < data.length; i++) {
-			store.set_value (selected, i, data[i]);
+			store.set_value (selected, i, data[i].val);
 		}
 	}
 
@@ -566,39 +620,24 @@ public class Benchwell.Database.Table : Gtk.Box {
 
 
 		// update record
-		Benchwell.ColDef[] pks = {};
-		string[] values = {};
-		var col_id = 0;
+		var columns = new Benchwell.Column[service.columns.length + 1];
+		for (var i = 0; i < service.columns.length; i++) {
+			store.get_value (iter, i, out val);
+			columns[i] = new Benchwell.Column ();
+			columns[i].coldef = service.columns[i];
+			columns[i].val = val.get_string ();
 
-		foreach (var column in service.columns) {
-			if (!column.pk) {
-				col_id++;
-				continue;
+			if (column_index == i && val.get_string () == new_value) {
+				return;
 			}
-			store.get_value (iter, col_id, out val);
-
-			pks += column;
-			values += val.get_string ();
-
-			col_id++;
 		};
 
-		if (pks.length == 0) {
-			col_id = 0;
-			foreach (var column in service.columns) {
-				pks += column;
-				values += val.get_string ();
-
-				col_id++;
-			};
-		}
-
-		// // append changing value
-		pks += service.columns[column_index];
-		values += new_value;
+		columns[service.columns.length] = new Benchwell.Column ();
+		columns[service.columns.length].coldef = service.columns[column_index];
+		columns[service.columns.length].val = new_value;
 
 		store.set_value (iter, column_index, new_value);
-		field_changed (pks, values);
+		field_changed (columns);
 	}
 
 	private bool on_button_press (Gtk.Widget w, Gdk.EventButton event) {
@@ -687,5 +726,54 @@ public class Benchwell.Database.Table : Gtk.Box {
 		table.get_columns ().foreach ((column) => {
 			column.visible = regex.match (column.get_title ().replace ("__", "_"));
 		});
+	}
+}
+
+public class Benchwell.Database.EditPanel : Gtk.Box {
+	public Gtk.Button btn_save;
+
+	public EditPanel () {
+		Object (
+			orientation: Gtk.Orientation.VERTICAL
+		);
+
+		btn_save = new Gtk.Button.with_label (_("Save"));
+		btn_save.get_style_context ().add_class ("suggested-action");
+	}
+
+	public void clear () {
+		get_children ().foreach ((w) => {
+			w.destroy ();
+		});
+	}
+
+	public void set_record (Benchwell.Column[] columns) {
+		clear ();
+
+		for (var i = 0; i < columns.length; i++) {
+			var label = new Gtk.Label (@"<b>$(columns[i].coldef.name)</b>") {
+				halign = Gtk.Align.START,
+				use_markup = true
+			};
+			pack_start (label, false, false, 5);
+
+			Gtk.Widget input;
+			columns[i].coldef.ttype == Benchwell.ColType.LongString;
+			if (columns[i].coldef.ttype == Benchwell.ColType.LongString || (columns[i].val != null && columns[i].val.index_of ("\n") == -1)) {
+				input = new Gtk.Entry () {
+					text = columns[i].val
+				};
+			} else {
+				var tx = new Gtk.TextView ();
+				input = tx;
+				if (columns[i].val != null)
+					tx.get_buffer ().set_text (columns[i].val);
+			}
+
+			label.show ();
+			input.show ();
+
+			pack_start (input, false, false, 5);
+		}
 	}
 }

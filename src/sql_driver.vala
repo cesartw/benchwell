@@ -19,12 +19,12 @@ public interface Benchwell.Connection : Object {
 		int limit,
 		int offset
 		) throws Benchwell.Error;
-	public abstract void update_field (string name, ColDef[] defs, string[] row) throws Error;
-	public abstract string[]? insert_record(string name, ColDef[] defs, string[] row) throws Error;
-	public abstract void delete_record(string name, ColDef[] defs, string[] row) throws Error;
+	public abstract void update_field (string name, Column[] columns) throws Error;
+	public abstract Column[]? insert_record(string name, Column[] columns) throws Error;
+	public abstract void delete_record(string name, Column[] columns) throws Error;
 	public abstract string get_create_table(string name) throws Error;
 	public abstract void query(string query, out string[] columns, out List<List<string?>> rows) throws Error;
-	public abstract string get_insert_statement(string name, ColDef[] columns, string[] row);
+	public abstract string get_insert_statement(string name, Column[] columns);
 
 	//public abstract string get_select_statement(TableDef def) throws Error;
 	//public abstract string update_record(string name, ColDef[] defs, string[] newrow, string[] oldrow) throws Error; // new, oldvalues;
@@ -185,6 +185,11 @@ public class Benchwell.ColDef : Object {
 	public ColDef.with_name (string n) {
 		name = n;
 	}
+}
+
+public class Benchwell.Column : Object {
+	public Benchwell.ColDef coldef;
+	public string val;
 }
 
 public class Benchwell.CondStmt : Object {

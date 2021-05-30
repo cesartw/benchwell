@@ -659,6 +659,15 @@ public class Benchwell.Settings : GLib.Settings {
 		}
 	}
 
+	public bool db_edit_panel {
+		get {
+			return get_boolean ("db-edit-panel");
+		}
+		set {
+			set_boolean ("db-edit-panel", value);
+		}
+	}
+
 	public bool dark_mode {
 		get {
 			return get_boolean ("dark-mode");

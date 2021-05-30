@@ -284,8 +284,7 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		return rows;
 	}
 
-	public void update_field (string table, ColDef[] columns, string[] row) throws Benchwell.Error
-		requires(columns.length == row.length)
+	public void update_field (string table, Column[] columns) throws Benchwell.Error
 		requires(columns.length > 1)
 	{
 		if (db.ping () != 0) {
@@ -294,22 +293,21 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 
 		string[] wheres = {};
 		for (var i = 0; i < columns.length - 1; i++) {
-			var val = sanitize_string (row[i]);
-			wheres += @"`$(columns[i].name)` = $val";
+			var val = sanitize_string (columns[i].val);
+			wheres += @"`$(columns[i].coldef.name)` = $val";
 		}
 
-		var new_value = sanitize_string (row[row.length - 1]);
-		var query = @"UPDATE `$table` SET `$(columns[columns.length -1].name)` = $new_value WHERE $(string.joinv (" AND ", wheres))";
+		var new_value = sanitize_string (columns[columns.length - 1].val);
+		var query = @"UPDATE `$table` SET `$(columns[columns.length -1].coldef.name)` = $new_value WHERE $(string.joinv (" AND ", wheres))";
 		var rc = db.query (query);
 		if ( rc != 0 ) {
 			throw new Benchwell.Error.QUERY (db.error());
 		}
 	}
 
-	public string[]? insert_record(string name, ColDef[] columns, string[] row) throws Benchwell.Error
+	public Benchwell.Column[]? insert_record(string name, Column[] columns) throws Benchwell.Error
 		requires (name != "")
-		requires (row.length > 0)
-		requires (columns.length == row.length)
+		requires (columns.length > 0)
 	{
 		if (db.ping () != 0) {
 			throw new Benchwell.Error.CONNECTION(@"connection lost");
@@ -319,9 +317,9 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		builder.append ("INSERT INTO `");
 		builder.append (name);
 		builder.append ("`(");
-		for (var i = 0; i < row.length; i++) {
-			builder.append (columns[i].name);
-			if (i != row.length -1) {
+		for (var i = 0; i < columns.length; i++) {
+			builder.append (columns[i].coldef.name);
+			if (i != columns.length -1) {
 				builder.append (",");
 			}
 		}
@@ -329,9 +327,9 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		builder.append (") VALUES (");
 
 
-		for (var i=0;i<row.length;i++) {
-			builder.append(sanitize_string (row[i]));
-			if (i != row.length -1) {
+		for (var i=0;i<columns.length;i++) {
+			builder.append(sanitize_string (columns[i].val));
+			if (i != columns.length -1) {
 				builder.append (",");
 			}
 		}
@@ -348,14 +346,14 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 
 		string? pk = null;
 		foreach (var column in columns) {
-			if (column.pk) {
-				pk = column.name;
+			if (column.coldef.pk) {
+				pk = column.coldef.name;
 				break;
 			}
 		}
 
 		if (pk == null || pk == "") {
-			return row;
+			return columns;
 		}
 
 		query = @"SELECT * FROM `$name` WHERE `$pk` = $id";
@@ -366,17 +364,20 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		}
 
 		var result = db.use_result ();
-		while ((row = result.fetch_row () ) != null) {
-			return row;
+		string[] data;
+		while ((data = result.fetch_row () ) != null) {
+			for (var i = 0; i < data.length; i++) {
+				columns[i].val = data[i];
+			}
+			return columns;
 		}
 
 		return null;
 	}
 
-	public void delete_record(string name, ColDef[] columns, string[] row) throws Benchwell.Error
+	public void delete_record(string name, Column[] columns) throws Benchwell.Error
 		requires (name != "")
-		requires (row.length > 0)
-		requires (columns.length == row.length)
+		requires (columns.length > 0)
 	{
 		if (db.ping () != 0) {
 			throw new Benchwell.Error.CONNECTION (@"connection lost");
@@ -385,31 +386,31 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		string[] wheres = {};
 		// delete using PK
 		for (var i = 0; i < columns.length; i++) {
-			if (!columns[i].pk) {
+			if (!columns[i].coldef.pk) {
 				continue;
 			}
 
 			var val = "";
-			if (row[i] == Benchwell.null_string) {
+			if (columns[i].val == Benchwell.null_string) {
 				val = "IS NULL";
 			} else {
-				val = @"= \"$(row[i])\"";
+				val = @"= \"$(columns[i].val)\"";
 			}
 
-				wheres += @"`$(columns[i].name)` $val";
+				wheres += @"`$(columns[i].coldef.name)` $val";
 		}
 
 		if (wheres.length == 0) {
 			for (var i = 0; i < columns.length; i++) {
 				string val = "";
-				if (row[i] == Benchwell.null_string) {
+				if (columns[i].val == Benchwell.null_string) {
 					val = "IS NULL";
 				} else {
-					val = @"= $(row[i])";
+					val = @"= $(columns[i].val)";
 				}
 
 				wheres += @"";
-				wheres += @"`$(columns[i].name)` $val";
+				wheres += @"`$(columns[i].coldef.name)` $val";
 			}
 		}
 
@@ -574,8 +575,7 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		return string.joinv (",", clean);
 	}
 
-	public string get_insert_statement(string name, Benchwell.ColDef[] columns, string[] row)
-		requires(columns.length == row.length)
+	public string get_insert_statement(string name, Benchwell.Column[] columns)
 		requires(columns.length > 1)
 	{
 		var builder = new StringBuilder ();
@@ -585,7 +585,7 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 
 		for (var i = 0; i < columns.length; i++){
 			builder.append ("`")
-				.append (columns[i].name)
+				.append (columns[i].coldef.name)
 				.append ("`");
 			if (i < columns.length -1) {
 				builder.append (", ");
@@ -593,9 +593,9 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		}
 
 		builder.append(") VALUES(");
-		for (var i = 0; i < row.length; i++){
-			builder.append (sanitize_string (row[i]));
-			if (i < row.length - 1) {
+		for (var i = 0; i < columns[i].val.length; i++){
+			builder.append (sanitize_string (columns[i].val));
+			if (i < columns[i].val.length - 1) {
 				builder.append (", ");
 			}
 		}

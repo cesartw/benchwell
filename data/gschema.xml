@@ -66,6 +66,11 @@
 			<summary>Database filters</summary>
 			<description>JSON serialization of filters used</description>
 		</key>
+		<key name="db-edit-panel" type="b">
+			<default>true</default>
+			<summary>Database edit panel</summary>
+			<description>Whether to show the row edit panel</description>
+		</key>
 		<key name="http-single-click-activate" type="b">
 			<default>true</default>
 			<summary>Request activation</summary>

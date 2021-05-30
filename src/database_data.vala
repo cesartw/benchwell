@@ -104,7 +104,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 			return;
 		}
 
-		var st = service.connection.get_insert_statement (service.table_def.name, service.columns, data);
+		var st = service.connection.get_insert_statement (service.table_def.name, data);
 		var cb = Gtk.Clipboard.get_default (Gdk.Display.get_default ());
 		cb.set_text (st, st.length);
 	}
@@ -272,7 +272,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 			}
 
 			try {
-				data = service.connection.insert_record (service.table_def.name, service.columns, data);
+				data = service.connection.insert_record (service.table_def.name, data);
 				result_view.table.update_selected_row (data);
 			} catch (Benchwell.Error err) {
 				window.show_alert (err.message);
@@ -284,7 +284,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 			window.infobar.hide ();
 
 			try {
-				service.connection.delete_record (service.table_def.name, service.columns, data);
+				service.connection.delete_record (service.table_def.name, data);
 				//result_view.table.delete_selected_row ();
 			} catch (Benchwell.Error err) {
 				window.show_alert (err.message);
@@ -417,14 +417,14 @@ public class Benchwell.Database.Data : Gtk.Paned {
 		window.show_alert (_("Using %s").printf (dbname), Gtk.MessageType.INFO, true);
 	}
 
-	private void on_field_changed(Benchwell.ColDef[] columns, string[] row) {
+	private void on_field_changed(Benchwell.Column[] columns) {
 		window.infobar.hide ();
 		if (service.table_def == null) {
 			window.show_alert (_("No table selected"), Gtk.MessageType.ERROR);
 			return;
 		}
 		try {
-			service.connection.update_field (service.table_def.name, columns, row);
+			service.connection.update_field (service.table_def.name, columns);
 		} catch (Benchwell.Error err) {
 			window.show_alert (err.message);
 			return;
