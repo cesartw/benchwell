@@ -143,7 +143,7 @@ namespace Benchwell {
 					return;
 				}
 
-				var conn = Config.connections[index];
+				var conn = Config.connections.at (index);
 
 				if (conn == null) {
 					return;
@@ -222,13 +222,15 @@ namespace Benchwell {
 					remove (row);
 				});
 
-				foreach (Benchwell.ConnectionInfo item in Config.connections) {
-					var row = build_row (item);
+				Config.connections.for_each ((item) => {
+					var conn = item as ConnectionInfo;
+					var row = build_row (conn);
 					add (row);
-					if (item.id == selected_id) {
+					if (conn.id == selected_id) {
 						select_row (row);
 					}
-				}
+					return false;
+				});
 			}
 
 			private Gtk.ListBoxRow build_row (Benchwell.ConnectionInfo item) {
@@ -259,7 +261,7 @@ namespace Benchwell {
 
 			private void on_new () {
 				try {
-					var c = Config.add_connection ();
+					var c = Config.connections.add () as ConnectionInfo;
 
 					c.adapter = "mysql";
 					c.ttype = "tcp";
@@ -274,10 +276,10 @@ namespace Benchwell {
 
 			private void on_delete () {
 				var row = get_selected_row ();
-				var conn = Config.connections[row.get_index ()];
+				var conn = Config.connections.at (row.get_index ());
 				try {
 					conn.remove ();
-					Config.remove_connection(conn);
+					Config.connections.remove (conn);
 				} catch (Benchwell.ConfigError err) {
 					Config.show_alert (this, err.message);
 					return;

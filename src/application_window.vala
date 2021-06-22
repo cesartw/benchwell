@@ -285,7 +285,8 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		grid.get_style_context ().add_class ("link");
 
 		var selected_environment_id = Config.settings.environment_id;
-		Config.environments.for_each ((env) => {
+		Config.environments.for_each ((item) => {
+			var env = item as Environment;
 			Gtk.TreeIter iter;
 			env_store.append (out iter);
 
@@ -312,7 +313,8 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 			GLib.Value val;
 			env_store.get_value (iter, 0, out val);
 			var id = val.get_int64 ();
-			Config.environments.for_each ((env) => {
+			Config.environments.for_each ((item) => {
+				var env = item as Environment;
 				if (env.id != id) {
 					return false;
 				}

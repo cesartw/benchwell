@@ -52,7 +52,8 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 
 		switcher.stack = stack;
 
-		Config.environments.for_each ((env) => {
+		Config.environments.for_each ((item) => {
+			var env = item as Environment;
 			var panel = new Benchwell.EnvironmentPanel (env);
 			panel.show ();
 			stack.add_titled (panel, env.name, env.name);

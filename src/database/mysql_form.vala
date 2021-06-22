@@ -33,7 +33,7 @@ namespace Benchwell {
 				tcp_form.changed.connect ((entry) =>{
 					try {
 						if ( connection == null ) {
-							connection = Config.add_connection ();
+							connection = Config.connections.add () as ConnectionInfo;
 						}
 						connection.name = tcp_form.name_entry.get_text ();
 						connection.host = tcp_form.host_entry.get_text ();
@@ -51,7 +51,7 @@ namespace Benchwell {
 				socket_form.changed.connect ((entry) =>{
 					try {
 						if ( connection == null ) {
-							connection = Config.add_connection ();
+							connection = Config.connections.add () as ConnectionInfo;
 						}
 						connection.name = socket_form.name_entry.get_text ();
 						connection.socket = socket_form.socket_entry.get_text ();

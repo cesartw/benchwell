@@ -4,75 +4,75 @@ namespace Benchwell {
 		STORE
 	}
 
-	public class Environments {
-		private Benchwell.Environment[] environments;
+	public interface CollectionWithSelectedItem : Object {
+		public abstract int64 id { get; set; }
+		public abstract string name { get; set; }
+	}
 
-		public weak Benchwell.Environment? _selected;
-		public Benchwell.Environment? selected {
+	public class CollectionWithSelected<T> {
+		private T[] items;
+
+		public weak T? _selected;
+		public T? selected {
 			owned get { return _selected; }
 			set { _selected = value; selected_changed (); }
 		}
 
-		public signal void added (owned Benchwell.Environment env);
-		public signal void removed (owned Benchwell.Environment env);
+		public signal void added (owned T item);
+		public signal void removed (owned T item);
 		public signal void selected_changed ();
 
-		public Environments (owned Environment[] envs) {
-			environments = envs;
+		public CollectionWithSelected (owned T[] items) {
+			this.items = items;
 		}
 
 		public int length () {
-			return environments.length;
+			return items.length;
 		}
 
-		public void select (Environment env) {
-			for (var i = 0; i < environments.length; i++) {
-				if (environments[i].id == env.id) {
-					selected = environments[i];
+		public void select (T item)
+			requires (item is CollectionWithSelectedItem) {
+			for (var i = 0; i < items.length; i++) {
+				if ((items[i] as CollectionWithSelectedItem).id == (item as CollectionWithSelectedItem).id) {
+					selected = items[i];
 					return;
 				}
 			}
 		}
 
-		public unowned Environment at (int i)
-			requires (i < environments.length)
+		public unowned T at (int i)
+			requires (i < items.length)
 		{
-			return environments[i];
+			return items[i];
 		}
 
-		public Environment add (Environment? env = null) {
-			var e = env;
-			if (env == null) {
-				e = new Benchwell.Environment ();
-				e.name = @"New environment #$(environments.length)";
-			}
+		public T add (owned T item = null) {
+			var tmp = items;
+			tmp += (owned) item;
+			items = tmp;
+			added (item);
 
-			var tmp = environments;
-			tmp += e;
-			environments = tmp;
-			added (e);
-
-			return e;
+			return item;
 		}
 
-		public void remove (Benchwell.Environment env) {
-			Benchwell.Environment[] tmp = {};
+		public void remove (T item) {
+			T[] tmp = {};
 
-			for (var i = 0; i < environments.length; i++) {
-				if (environments[i].id == env.id)	 {
+			for (var i = 0; i < items.length; i++) {
+				if ((items[i] as CollectionWithSelectedItem).id == (item as CollectionWithSelectedItem).id) {
 					continue;
 				}
-				tmp += environments[i];
+				tmp += items[i];
 			}
 
-			removed (env);
-			environments = tmp;
+			removed (item);
+			item = tmp;
 		}
 
-		public delegate bool ForEachEnvironment (owned Environment env);
-		public void for_each (ForEachEnvironment f) {
-			for (var i = 0; i < environments.length; i++) {
-				if (f (environments[i])) {
+		public delegate bool ForEachItem<T> (owned T item);
+		public void for_each (ForEachItem f) {
+			for (var i = 0; i < items.length; i++) {
+				if (f (items[i])) {
 					return;
 				}
 			}
@@ -82,8 +82,8 @@ namespace Benchwell {
 	public class _Config : Object {
 		public Sqlite.Database db;
 		public Benchwell.Settings settings;
-		public Benchwell.Environments environments;
-		public Benchwell.ConnectionInfo[] connections;
+		public Benchwell.CollectionWithSelected<Environment> environments;
+		public Benchwell.CollectionWithSelected<ConnectionInfo> connections;
 		public Benchwell.HttpCollection[] http_collections;
 		public Secret.Schema schema;
 		public Benchwell.Plugin[] plugins;
@@ -91,7 +91,6 @@ namespace Benchwell {
 		public HashTable<int64?, bool?> http_tree_state;
 
 		public signal void http_collection_added (HttpCollection collection);
-		public signal void connection_added (ConnectionInfo connection);
 
 		public _Config () throws Benchwell.ConfigError {
 			settings = new Benchwell.Settings ();
@@ -151,35 +150,6 @@ namespace Benchwell {
 			}
 		}
 
-		//public Benchwell.Environment add_environment (Benchwell.Environment? env = null) throws ConfigError {
-			//var e = env;
-			//if (env == null) {
-				//e = new Benchwell.Environment ();
-				//e.name = @"New environment #$(environments.length ())";
-			//}
-
-			//var tmp = environments;
-			//tmp += e;
-			//environments = tmp;
-			//environment_added (e);
-
-			//return e;
-		//}
-
-		//public void remove_environment (Benchwell.Environment env) {
-			//Benchwell.Environment[] tmp = {};
-
-			//for (var i = 0; i < environments.length; i++) {
-				//if (environments[i].id == env.id)	 {
-					//continue;
-				//}
-				//tmp += environments[i];
-			//}
-
-			//environment_removed (env);
-			//environments = tmp;
-		//}
-
 		public Benchwell.HttpCollection add_http_collection (Benchwell.HttpCollection? collection = null) throws ConfigError {
 			var c = collection;
 			if (c == null) {
@@ -209,62 +179,37 @@ namespace Benchwell {
 			http_collections = tmp;
 		}
 
-		public Benchwell.ConnectionInfo add_connection () throws ConfigError {
-			var connection = new Benchwell.ConnectionInfo ();
-			connection.name = @"New connection #$(connections.length)";
-			connection.save ();
-
-			var tmp = connections;
-			tmp += connection;
-			connections = tmp;
-			connection_added (connection);
-
-			return connection;
-		}
-
-		public void remove_connection (Benchwell.ConnectionInfo connection) {
-			Benchwell.ConnectionInfo[] tmp = {};
-
-			foreach (Benchwell.ConnectionInfo c in Config.connections) {
-				if (c.id == connection.id)	 {
-					continue;
-				}
-				tmp += c;
-			}
-
-			connections = tmp;
-		}
-
 		// ======== LOADERS ========
 		private void load_connections () throws ConfigError {
 			string errmsg;
+			ConnectionInfo[] conns = {};
 			var ec = db.exec ("SELECT rowid,* FROM db_connections", (n_columns, values, column_names) => {
-				var info = new Benchwell.ConnectionInfo ();
-				info.touch_without_save (() => {
-					//info.to
-					info.id = int.parse (values[0]);
-					info.name = values[1];
-					info.adapter = values[2];
-					info.ttype = values[3];
-					info.database = values[4];
-					info.host = values[5];
-					info.user = values[7];
-					info.port = int.parse(values[8]);
-					info.encrypted = values[9] == "1";
-					info.socket = values[10];
-					info.file = values[11];
+				var conn = new Benchwell.ConnectionInfo ();
+				conn.touch_without_save (() => {
+					conn.id = int.parse (values[0]);
+					conn.name = values[1];
+					conn.adapter = values[2];
+					conn.ttype = values[3];
+					conn.database = values[4];
+					conn.host = values[5];
+					conn.user = values[7];
+					conn.port = int.parse(values[8]);
+					conn.encrypted = values[9] == "1";
+					conn.socket = values[10];
+					conn.file = values[11];
 				});
 
-				ConnectionInfo[] tmp = connections;
-				tmp += info;
-				connections = tmp;
+				ConnectionInfo[] tmp = conns;
+				tmp += conn;
+				conns = tmp;
 				return 0;
 			}, out errmsg);
-
 
 			if ( ec != Sqlite.OK ){
 				throw new ConfigError.STORE(errmsg);
 			}
+
+			connections = new CollectionWithSelected<ConnectionInfo> (conns);
 
 			Benchwell.Query[] queries = {};
 			ec = db.exec ("SELECT rowid,* FROM db_queries WHERE query_type = 'fav'", (n_columns, values, column_names) => {
@@ -285,7 +230,8 @@ namespace Benchwell {
 				throw new ConfigError.STORE(errmsg);
 			}
 
-			foreach (Benchwell.ConnectionInfo conn in connections) {
+			connections.for_each ((item) => {
+				var conn = item as ConnectionInfo;
 				Benchwell.Query[] qq = {};
 				foreach (Benchwell.Query query in queries) {
 					if (query.connection_id == conn.id) {
@@ -293,7 +239,8 @@ namespace Benchwell {
 					}
 				}
 				conn.queries = qq;
-			}
+				return false;
+			});
 		}
 
 		private void load_http_collections () throws ConfigError {
@@ -395,7 +342,8 @@ namespace Benchwell {
 				throw new ConfigError.STORE(errmsg);
 			}
 
-			environments = new Environments(envs);
+			//environments = new Environments(envs);
+			environments = new CollectionWithSelected<Environment> (envs);
 			query = """SELECT rowid,* FROM environment_variables""";
 
 			Benchwell.EnvVar[] variables = {};
@@ -419,7 +367,8 @@ namespace Benchwell {
 				throw new ConfigError.STORE(errmsg);
 			}
 
-			environments.for_each ((env) => {
+			environments.for_each ((item) => {
+				var env = item as Environment;
 				Benchwell.EnvVar[] envvars = {};
 				foreach (var v in variables) {
 					if (env.id == v.environment_id) {
