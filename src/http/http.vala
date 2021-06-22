@@ -591,7 +591,7 @@ namespace Benchwell {
 						break;
 					default:
 						curl_body = body.get_text ();
-						curl_body = Config.environment.interpolate (curl_body);
+						curl_body = Config.environments.selected.interpolate (curl_body);
 						break;
 				}
 
@@ -627,7 +627,7 @@ namespace Benchwell {
 
 				var handle = new Curl.EasyHandle ();
 
-				url = Config.environment.interpolate (address.address.get_text ());
+				url = Config.environments.selected.interpolate (address.address.get_text ());
 				method = address.method_combo.get_active_id ();
 
 				var kv_params = query_params.get_kvs ();
@@ -638,8 +638,8 @@ namespace Benchwell {
 					builder.append ("?");
 
 				for (var i = 0; i < kv_params.length; i++) {
-					var key = Config.environment.interpolate (kv_params[i].key);
-					var val = Config.environment.interpolate (kv_params[i].val);
+					var key = Config.environments.selected.interpolate (kv_params[i].key);
+					var val = Config.environments.selected.interpolate (kv_params[i].val);
 					key = handle.escape (key, key.length);
 					val = handle.escape (val, val.length);
 					builder.append (@"$key=$val");
@@ -659,8 +659,8 @@ namespace Benchwell {
 
 				var content_type = "";
 				for (var i = 0; i < kv_headers.length; i++) {
-					var key = Config.environment.interpolate (kv_headers[i].key);
-					var val = Config.environment.interpolate (kv_headers[i].val);
+					var key = Config.environments.selected.interpolate (kv_headers[i].key);
+					var val = Config.environments.selected.interpolate (kv_headers[i].val);
 					// NOTE: delayed appending content-type because multipart/form-data needs to include the bounday
 					if (key.strip ().casefold () == "Content-Type".casefold ()) {
 						content_type = val;
@@ -677,8 +677,8 @@ namespace Benchwell {
 						var form_fields = body_fields.get_kvs ();
 
 						for (var i = 0; i < form_fields.length; i++) {
-							var key = Config.environment.interpolate (form_fields[i].key);
-							var val = Config.environment.interpolate (form_fields[i].val);
+							var key = Config.environments.selected.interpolate (form_fields[i].key);
+							var val = Config.environments.selected.interpolate (form_fields[i].val);
 							key = handle.escape (key, key.length);
 							val = handle.escape (val, val.length);
 							l_raw_body += @"$key=$val";
@@ -689,8 +689,8 @@ namespace Benchwell {
 						var form_fields = body_fields.get_kvs ();
 
 						for (var i = 0; i < form_fields.length; i++) {
-							var key = Config.environment.interpolate (form_fields[i].key);
-							var val = Config.environment.interpolate (form_fields[i].val);
+							var key = Config.environments.selected.interpolate (form_fields[i].key);
+							var val = Config.environments.selected.interpolate (form_fields[i].val);
 
 							switch (form_fields[i].kvtype) {
 								case Benchwell.KeyValueTypes.FILE:
@@ -714,7 +714,7 @@ namespace Benchwell {
 
 						break;
 					default:
-						l_raw_body += Config.environment.interpolate (body.get_text ());
+						l_raw_body += Config.environments.selected.interpolate (body.get_text ());
 						break;
 				}
 
@@ -918,8 +918,8 @@ namespace Benchwell {
 					return;
 				}
 				Interpolator interpolator = (s) => { return s; };
-				if (Config.environment != null) {
-					interpolator = Config.environment.dry_interpolate;
+				if (Config.environments.selected != null) {
+					interpolator = Config.environments.selected.dry_interpolate;
 				}
 
 				var interpolated_url = interpolator (item.url);

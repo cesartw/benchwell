@@ -90,7 +90,7 @@ public class Benchwell.Environment : Object {
 			env.add_variable (kv.key, kv.val);
 		}
 
-		Config.add_environment (env);
+		Config.environments.add (env);
 	}
 
 	public void remove () throws ConfigError {
@@ -118,7 +118,7 @@ public class Benchwell.Environment : Object {
 			throw new ConfigError.STORE(errmsg);
 		}
 
-		Config.remove_environment (this);
+		Config.environments.remove (this);
 	}
 
 	public string interpolate (string s) {
@@ -355,7 +355,7 @@ public class Benchwell.EnvvarCompletion : Object, Gtk.SourceCompletionProvider {
 
 	public void populate (Gtk.SourceCompletionContext context) {
 		GLib.List<Gtk.SourceCompletionProposal> proposals = null;
-		foreach (var envvar in Config.environment.variables) {
+		foreach (var envvar in Config.environments.selected.variables) {
 			if (envvar.key == "")
 				continue;
 			proposals.append (new Benchwell.EnvvarCompletionProposal (envvar));

@@ -52,8 +52,7 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 
 		switcher.stack = stack;
 
-		for (var i = 0; i < Config.environments.length; i++) {
-			var env = Config.environments[i];
+		Config.environments.for_each ((env) => {
 			var panel = new Benchwell.EnvironmentPanel (env);
 			panel.show ();
 			stack.add_titled (panel, env.name, env.name);
@@ -61,7 +60,8 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 				stack.child_set_property(panel, "title", panel.entry_name.text);
 				env.name = panel.entry_name.text;
 			});
-		}
+			return false;
+		});
 
 		var env_list_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
 		env_list_box.pack_start (switcher, true, true, 0);
@@ -75,7 +75,7 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 		btn_remove.clicked.connect (on_remove_env);
 		btn_clone.clicked.connect (on_clone);
 
-		Config.environment_added.connect ((env) => {
+		Config.environments.added.connect ((env) => {
 			var panel = new Benchwell.EnvironmentPanel (env);
 			panel.show ();
 			stack.add_titled (panel, env.name, env.name);
@@ -89,7 +89,7 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 
 	private void on_add_env () {
 		try {
-			Config.add_environment ();
+			Config.environments.add ();
 		} catch (ConfigError err) {
 			Config.show_alert (this, err.message);
 		}
@@ -98,7 +98,7 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 	private void on_clone () {
 		try {
 			var index = stack.get_children ().index (stack.get_visible_child ());
-			Config.environments[index].clone ();
+			Config.environments.at(index).clone ();
 		} catch (ConfigError err) {
 			Config.show_alert (this, err.message);
 		}
@@ -108,7 +108,7 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 		var panel = stack.get_visible_child ();
 		var index = stack.get_children ().index (panel);
 		try {
-			var env = Config.environments[index];
+			var env = Config.environments.at(index);
 			env.remove ();
 		} catch(ConfigError err) {
 			Config.show_alert (this, err.message);

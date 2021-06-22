@@ -59,9 +59,9 @@ namespace Benchwell {
 				pack_start(address_box, true, true, 0);
 				pack_end(send_btn, false, false, 0);
 
-				Config.environment_changed.connect (() => {
-					if (Config.environment != null) {
-						address.tooltip_text = Config.environment.interpolate (address.text);
+				Config.environments.selected_changed.connect (() => {
+					if (Config.environments.selected != null) {
+						address.tooltip_text = Config.environments.selected.interpolate (address.text);
 						address_label.set_text (address.tooltip_text);
 					}
 				});

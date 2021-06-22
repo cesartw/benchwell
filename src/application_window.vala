@@ -38,7 +38,7 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		notebook.set_name ("MainNotebook");
 		notebook.scrollable = true;
 		notebook.group_name = "mainwindow";
-		notebook.tab_pos = Config.tab_position ();
+		notebook.tab_pos = Config.settings.tab_position;
 		notebook.show_border = true;
 		notebook.key_press_event.connect ( (e) => {
 			var page = 0;
@@ -285,8 +285,7 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		grid.get_style_context ().add_class ("link");
 
 		var selected_environment_id = Config.settings.environment_id;
-		for (var i = 0; i < Config.environments.length; i++) {
-			var env = Config.environments[i];
+		Config.environments.for_each ((env) => {
 			Gtk.TreeIter iter;
 			env_store.append (out iter);
 
@@ -294,10 +293,11 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 			env_store.set_value (iter, 1, env.name);
 			if (selected_environment_id == env.id) {
 				env_combo.set_active_iter (iter);
-				Config.environment = env;
+				Config.environments.select (env);
 				settings_panel.select_env (env);
 			}
-		}
+			return false;
+		});
 
 		env_combo.changed.connect (() => {
 			Gtk.TreeIter? iter = null;
@@ -312,25 +312,27 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 			GLib.Value val;
 			env_store.get_value (iter, 0, out val);
 			var id = val.get_int64 ();
-			foreach (var env in Config.environments) {
-				if (env.id == id) {
-					Config.environment = env;
-					settings_panel.select_env (env);
-					break;
+			Config.environments.for_each ((env) => {
+				if (env.id != id) {
+					return false;
 				}
-			}
 
-			Config.settings.environment_id = Config.environment.id;
+				Config.environments.select (env);
+				settings_panel.select_env (env);
+				return true;
+			});
+
+			Config.settings.environment_id = Config.environments.selected.id;
 		});
 
-		Config.environment_added.connect ((env) => {
+		Config.environments.added.connect ((env) => {
 			Gtk.TreeIter iter;
 			env_store.append (out iter);
 			env_store.set_value (iter, 0, env.id);
 			env_store.set_value (iter, 1, env.name);
 		});
 
-		Config.environment_removed.connect ((env) => {
+		Config.environments.removed.connect ((env) => {
 			Gtk.TreeIter? iter = null;
 			env_store.foreach ((model, path, i) => {
 				iter = i;

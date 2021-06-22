@@ -155,7 +155,7 @@ public class Benchwell.ImporterInsomnia : Benchwell.Importer, Object {
 
 			var env = new Benchwell.Environment ();
 			env.name = environment.name;
-			Config.add_environment (env);
+			Config.environments.add (env);
 			foreach (var v in environment.variables) {
 				env.add_variable (v.name, v.value);
 			}

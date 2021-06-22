@@ -328,8 +328,8 @@ namespace Benchwell {
 				window.infobar.hide ();
 
 				var interpolated = raw_query;
-				interpolated = Config.environment.interpolate_variables (interpolated);
-				interpolated = Config.environment.interpolate_functions (interpolated);
+				interpolated = Config.environments.selected.interpolate_variables (interpolated);
+				interpolated = Config.environments.selected.interpolate_functions (interpolated);
 
 				try {
 					var query = service.info.save_history (interpolated);
