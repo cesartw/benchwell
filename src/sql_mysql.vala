@@ -59,7 +59,10 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		if ( ! isConnected ) {
 			throw new Benchwell.Error.CONNECTION (@"$(db.errno()): $(db.error())");
 		}
-		db.options (Mysql.Option.OPT_RECONNECT, "1");
+		var r = db.options (Mysql.Option.OPT_RECONNECT, "1");
+		if (r != 0) {
+			throw new Benchwell.Error.CONNECTION (@"unable to set RECONNECT");
+		}
 	}
 
 	public List<string> databases () throws Benchwell.Error {
@@ -124,7 +127,7 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		return tables;
 	}
 
-	public ColDef[] table_definition(string name) throws Benchwell.Error {
+	public ColDef[] table_definition (string name) throws Benchwell.Error {
 		if (db.ping () != 0) {
 			throw new Benchwell.Error.CONNECTION(@"connection lost");
 		}
@@ -163,7 +166,7 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		return cols;
 	}
 
-	public void delete_table(Benchwell.TableDef def) throws Benchwell.Error {
+	public void delete_table (Benchwell.TableDef def) throws Benchwell.Error {
 		if (db.ping () != 0) {
 			throw new Benchwell.Error.CONNECTION(@"connection lost");
 		}
@@ -182,7 +185,7 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		}
 	}
 
-	public void truncate_table(Benchwell.TableDef def) throws Benchwell.Error {
+	public void truncate_table (Benchwell.TableDef def) throws Benchwell.Error {
 		if (db.ping () != 0) {
 			throw new Benchwell.Error.CONNECTION(@"connection lost");
 		}
@@ -292,9 +295,25 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		}
 
 		string[] wheres = {};
+		bool hasPk = false;
 		for (var i = 0; i < columns.length - 1; i++) {
+			if (!columns[i].coldef.pk) {
+				continue;
+			}
+			hasPk = true;
 			var val = sanitize_string (columns[i].val);
 			wheres += @"`$(columns[i].coldef.name)` = $val";
+		}
+
+		if (!hasPk) {
+			for (var i = 0; i < columns.length - 1; i++) {
+				var val = sanitize_string (columns[i].val);
+				if (val == "NULL") {
+					wheres += @"`$(columns[i].coldef.name)` IS NULL";
+				} else {
+					wheres += @"`$(columns[i].coldef.name)` = $val";
+				}
+			}
 		}
 
 		var new_value = sanitize_string (columns[columns.length - 1].val);
@@ -305,7 +324,51 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		}
 	}
 
-	public Benchwell.Column[]? insert_record(string name, Column[] columns) throws Benchwell.Error
+	public void update_fields (string table, Column[] columns) throws Benchwell.Error
+		requires(columns.length > 1)
+		requires(columns.length % 2 == 0)
+	{
+		if (db.ping () != 0) {
+			throw new Benchwell.Error.CONNECTION(@"connection lost");
+		}
+
+		string[] wheres = {};
+		bool hasPk = false;
+		for (var i = 0; i < columns.length / 2; i++) {
+			if (!columns[i].coldef.pk) {
+				continue;
+			}
+			hasPk = true;
+			var val = sanitize_string (columns[i].val);
+			wheres += @"`$(columns[i].coldef.name)` = $val";
+		}
+
+		if (!hasPk) {
+			for (var i = 0; i < columns.length - 1; i++) {
+				var val = sanitize_string (columns[i].val);
+				if (val == "NULL") {
+					wheres += @"`$(columns[i].coldef.name)` IS NULL";
+				} else {
+					wheres += @"`$(columns[i].coldef.name)` = $val";
+				}
+			}
+		}
+
+		string[] sets = {};
+		for (var i = columns.length / 2; i < columns.length; i++) {
+			var new_value = sanitize_string (columns[i].val);
+			sets += @"`$(columns[i].coldef.name)` = $new_value";
+		}
+		var query = @"UPDATE `$table` SET $(string.joinv (",", sets)) WHERE $(string.joinv (" AND ", wheres))";
+		print (@"=====$(query)\n");
+		return;
+		var rc = db.query (query);
+		if ( rc != 0 ) {
+			throw new Benchwell.Error.QUERY (db.error());
+		}
+	}
+
+	public Benchwell.Column[]? insert_record (string name, Column[] columns) throws Benchwell.Error
 		requires (name != "")
 		requires (columns.length > 0)
 	{
@@ -375,7 +438,7 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		return null;
 	}
 
-	public void delete_record(string name, Column[] columns) throws Benchwell.Error
+	public void delete_record (string name, Column[] columns) throws Benchwell.Error
 		requires (name != "")
 		requires (columns.length > 0)
 	{
@@ -423,7 +486,7 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		return;
 	}
 
-	public string get_create_table(string name) throws Benchwell.Error {
+	public string get_create_table (string name) throws Benchwell.Error {
 		if (db.ping () != 0) {
 			throw new Benchwell.Error.CONNECTION(@"connection lost");
 		}
@@ -443,7 +506,7 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		return "";
 	}
 
-	public void query(string query, out string[] columns, out List<List<string?>> rows) throws Benchwell.Error {
+	public void query (string query, out string[] columns, out List<List<string?>> rows) throws Benchwell.Error {
 		if (db.ping () != 0) {
 			throw new Benchwell.Error.CONNECTION (@"connection lost");
 		}
@@ -489,7 +552,7 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		}
 	}
 
-	private void parse_type(
+	private void parse_type (
 		string t,
 		ref Benchwell.ColType coltype,
 		ref int precision,

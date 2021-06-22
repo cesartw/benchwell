@@ -892,6 +892,9 @@ public class Benchwell.Http.Http : Gtk.Paned {
 				case "POST":
 					handle.setopt (Curl.Option.POST, true);
 					break;
+				case "PUT":
+					handle.setopt (Curl.Option.PUT, true);
+					break;
 				case "PATCH":
 					handle.setopt (Curl.Option.POST, true);
 					handle.setopt (Curl.Option.CUSTOMREQUEST, "PATCH");
