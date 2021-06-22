@@ -195,7 +195,7 @@ public class Benchwell.HttpItem : Object {
 	public Benchwell.HttpKv[] headers;
 	public Benchwell.HttpKv[] query_params;
 	public Benchwell.HttpKv[] form_params;
-	public Benchwell.HttpResult[] responses;
+	public Benchwell.Http.Result[] responses;
 
 	internal bool              loaded;
 	private bool               no_auto_save;
@@ -203,7 +203,7 @@ public class Benchwell.HttpItem : Object {
 	public signal Benchwell.HttpKv header_added (Benchwell.HttpKv kv);
 	public signal Benchwell.HttpKv query_param_added (Benchwell.HttpKv kv);
 	public signal Benchwell.HttpKv form_param_added (Benchwell.HttpKv kv);
-	public signal void response_added (owned Benchwell.HttpResult response);
+	public signal void response_added (owned Benchwell.Http.Result response);
 
 	public HttpItem () {
 		Object ();
@@ -402,7 +402,7 @@ public class Benchwell.HttpItem : Object {
 		save_body ();
 	}
 
-	public void save_response (Benchwell.HttpResult result) throws Benchwell.ConfigError {
+	public void save_response (Benchwell.Http.Result result) throws Benchwell.ConfigError {
 		if (id == 0) {
 			return;
 		}
@@ -456,7 +456,7 @@ public class Benchwell.HttpItem : Object {
 			throw new ConfigError.STORE(errmsg);
 		}
 
-		Benchwell.HttpResult[] l_responses = {result};
+		Benchwell.Http.Result[] l_responses = {result};
 		foreach (var response in responses) {
 			l_responses += response;
 			if (l_responses.length == Config.settings.http_history_limit)
@@ -634,14 +634,14 @@ public class Benchwell.HttpItem : Object {
 			}
 
 			// responses
-			Benchwell.HttpResult[] l_responses = {};
+			Benchwell.Http.Result[] l_responses = {};
 			query = """SELECT method, url, headers, body, content_type, duration, code, created_at
 				FROM http_responses
 				WHERE http_items_id = %lld
 				ORDER BY created_at DESC""".printf (id);
 
 			ec = Config.db.exec (query, (n_columns, values, column_names) => {
-				var r = new Benchwell.HttpResult ();
+				var r = new Benchwell.Http.Result ();
 
 				r.method = values[0] ?? "";
 				r.url = values[1] ?? "";
@@ -710,7 +710,7 @@ public class Benchwell.HttpItem : Object {
 		});
 	}
 
-	public Benchwell.HttpResult? last_response () {
+	public Benchwell.Http.Result? last_response () {
 		if (responses.length == 0)
 			return null;
 		return responses[0];

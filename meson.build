@@ -48,6 +48,7 @@ executable(
 	'src/widget_secret_entry.vala',
 	'src/widget_label.vala',
 	'src/widget_cancel.vala',
+	'src/widget_combo_tab.vala',
 
 	'src/database/condition.vala',
 	'src/database/connect.vala',
@@ -59,9 +60,10 @@ executable(
 	'src/database/table.vala',
 	'src/database/tables.vala',
 
-	'src/http.vala',
-	'src/http_addressbar.vala',
-	'src/http_sidebar.vala',
+	'src/http/addressbar.vala',
+	'src/http/const.vala',
+	'src/http/http.vala',
+	'src/http/sidebar.vala',
 
 	'src/database_service.vala',
 
