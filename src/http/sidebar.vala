@@ -193,7 +193,7 @@ namespace Benchwell {
 				treeview.drag_motion.connect ( (ctx, x, y, time) => {
 					int cellx, celly;
 					Gtk.TreePath path;
-					treeview.get_path_at_pos (x,y, out path, null, out cellx, out celly);
+					treeview.get_path_at_pos (x, y, out path, null, out cellx, out celly);
 					store.drop_path = path;
 
 					return false;
@@ -550,6 +550,7 @@ namespace Benchwell {
 		}
 
 		public class Store : Gtk.TreeStore, Gtk.TreeDragDest, Gtk.TreeModel {
+			private bool bubble_block = false;
 			public Gtk.TreePath drop_path;
 			public Store.newv (GLib.Type[] types) {
 				Object();
@@ -559,40 +560,37 @@ namespace Benchwell {
 			public bool row_drop_possible (Gtk.TreePath dest, Gtk.SelectionData selection_data) {
 				var path = dest.copy ();
 
-				// NOTE: this method is called for each index in the path.
-				//       drop_path helps to know which was the actual drop path :shrug:
+				if (bubble_block) {
+					bubble_block = false;
+					return false;
+				}
 				if (drop_path.compare (path) != 0) {
-					drop_path.append_index (0);
-					if (drop_path.compare(path) != 0) {
+					bubble_block = true;
+					return false;
+				}
+
+				// dropping between items
+				var indices = dest.get_indices ();
+				if (indices.length == dest.get_depth ()) {
+					bool ok;
+					Gtk.TreeIter iter;
+					GLib.Value val;
+
+					ok = path.up ();
+					if (!ok) {
 						return false;
 					}
-				}
-
-				if (path.get_depth () == 0) {
-					return false;
-				}
-
-				// dropping between items. must make sure the parent is a folder
-				var indices = path.get_indices ();
-				if (indices[indices.length -1] == 0) {
-					var ok = path.up ();
+					ok = get_iter (out iter, path);
 					if (!ok) {
-						return false; //not never reach this point as depth is checked previously
+						return false;
 					}
+
+					get_value (iter, Benchwell.Http.Columns.ITEM, out val);
+					var drop_item = val as Benchwell.HttpItem;
+					return drop_item.is_folder;
 				}
 
-				// we only care the drop area is a folder
-				Gtk.TreeIter iter;
-				var ok = get_iter (out iter, path);
-				if (!ok) {
-					return false;
-				}
-
-				GLib.Value val;
-				get_value (iter, Benchwell.Http.Columns.ITEM, out val);
-
-				var drop_item = val as Benchwell.HttpItem;
-				return drop_item.is_folder;
+				return false;
 			}
 		}
 	}
