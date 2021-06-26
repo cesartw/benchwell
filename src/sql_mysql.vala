@@ -209,7 +209,8 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		Benchwell.CondStmt[]? conditions,
 		Benchwell.SortOption[]? sorts,
 		int limit,
-		int offset
+		int offset,
+		out QueryInfo? query_info
 	) throws Benchwell.Error {
 		if (db.ping () != 0) {
 			throw new Benchwell.Error.CONNECTION(@"connection lost");
@@ -266,16 +267,21 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 			sortStmt = @"ORDER BY $(string.joinv (", ", _sorts))";
 		}
 
+		var then = get_real_time ();
+		int64 row_count = 0;
 		var query = @"SELECT * FROM $name $whereStmt $sortStmt LIMIT $(limit) OFFSET $(offset)";
 		var rc = db.query (query);
 		if ( rc != 0 ) {
 			throw new Benchwell.Error.QUERY (db.error());
 		}
+		var now = get_real_time ();
 
 		var rows = new List<List<string?>> ();
 		var result = db.use_result ();
+
 		string[] row;
 		while ((row = result.fetch_row () ) != null) {
+			row_count++;
 			List<string> rowl = null;
 			foreach (string s in row) {
 				rowl.append (s);
@@ -284,6 +290,7 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 			rows.append ((owned) rowl);
 		}
 
+		query_info = new QueryInfo (now - then, row_count);
 		return rows;
 	}
 
@@ -506,15 +513,19 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		return "";
 	}
 
-	public void query (string query, out string[] columns, out List<List<string?>> rows) throws Benchwell.Error {
+	public void query (string query, out string[] columns, out List<List<string?>> rows, out Benchwell.QueryInfo? query_info) throws Benchwell.Error {
 		if (db.ping () != 0) {
 			throw new Benchwell.Error.CONNECTION (@"connection lost");
 		}
+
+		var then = get_real_time ();
+		int64 row_count = 0;
 
 		var rc = db.query (query);
 		if ( rc != 0 ) {
 			throw new Benchwell.Error.QUERY (@"$(db.errno()): $(db.error())");
 		}
+		var now = get_real_time ();
 
 		var result = db.use_result ();
 		Mysql.Field* field;
@@ -530,6 +541,7 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 
 			string[] row;
 			while ((row = result.fetch_row () ) != null) {
+				row_count++;
 				List<string> rowl = null;
 				foreach (string s in row) {
 					rowl.append (s);
@@ -550,6 +562,8 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 
 			rows.append ((owned) rowl);
 		}
+
+		query_info = new QueryInfo (now - then, row_count);
 	}
 
 	private void parse_type (

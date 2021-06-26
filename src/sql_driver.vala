@@ -2,6 +2,18 @@ public interface Benchwell.Driver {
 	public abstract Benchwell.Connection connect(Benchwell.ConnectionInfo c) throws Benchwell.Error;
 }
 
+public class Benchwell.QueryInfo : Object {
+	public int64 duration { get; construct; }
+	public int64 row_count { get; construct; }
+
+	public QueryInfo (int64 d, int64 c) {
+		Object (
+			duration: d,
+			row_count: c
+		);
+	}
+}
+
 public interface Benchwell.Connection : Object {
 	public abstract List<string> databases () throws Benchwell.Error;
 	public abstract void use_database (string name) throws Benchwell.Error;
@@ -17,14 +29,14 @@ public interface Benchwell.Connection : Object {
 		Benchwell.CondStmt[]? conditions,
 		Benchwell.SortOption[]? opts,
 		int limit,
-		int offset
-		) throws Benchwell.Error;
+		int offset,
+		out QueryInfo? query_info) throws Benchwell.Error;
 	public abstract void update_field (string name, Column[] columns) throws Error;
 	public abstract void update_fields (string name, Column[] columns) throws Error;
 	public abstract Column[]? insert_record(string name, Column[] columns) throws Error;
 	public abstract void delete_record(string name, Column[] columns) throws Error;
 	public abstract string get_create_table(string name) throws Error;
-	public abstract void query(string query, out string[] columns, out List<List<string?>> rows) throws Error;
+	public abstract void query(string query, out string[] columns, out List<List<string?>> rows, out QueryInfo? query_info) throws Error;
 	public abstract string get_insert_statement(string name, Column[] columns);
 
 	//public abstract string get_select_statement(TableDef def) throws Error;

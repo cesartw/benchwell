@@ -79,6 +79,7 @@ executable(
 	'src/environment.vala',
 	'src/settings_panel.vala',
 	'src/pomodoro.vala',
+	'src/sql_parser.vala',
 
 	'src/importer/importer.vala',
 	'src/importer/insomnia.vala',

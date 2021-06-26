@@ -26,6 +26,7 @@ namespace Benchwell {
 
 			public Gtk.Button btn_load_query;
 			public Gtk.MenuButton save_menu;
+			public Gtk.Label lbl_query_info;
 			public Gtk.Button btn_prev;
 			public Gtk.Button btn_next;
 			public Gtk.Button btn_refresh;
@@ -113,6 +114,9 @@ namespace Benchwell {
 				};
 				btn_show_filters.show ();
 
+				lbl_query_info = new Gtk.Label ("");
+				lbl_query_info.show ();
+
 				btn_prev = new Benchwell.Button ("back", Gtk.IconSize.BUTTON) {
 					sensitive = false
 				};
@@ -167,6 +171,7 @@ namespace Benchwell {
 				table_actionbar.pack_end (btn_refresh);
 				table_actionbar.pack_end (btn_next);
 				table_actionbar.pack_end (btn_prev);
+				table_actionbar.pack_end (lbl_query_info);
 				////////////
 
 				conditions = new Benchwell.Database.Conditions ();
@@ -435,6 +440,7 @@ namespace Benchwell {
 			}
 
 			public void load_table () {
+				set_query_info ();
 				disable_selection = true;
 				if (Config.settings.db_edit_panel) {
 					edit_panel.clear ();
@@ -473,9 +479,20 @@ namespace Benchwell {
 					store.clear ();
 				}
 
+				set_query_info ();
 				service.data.foreach ( (row) => {
 					add_row (row);
 				});
+			}
+
+			public void set_query_info () {
+				double d = service.query_info.duration / 1000.0;
+				var u = "ms";
+				if (d > 1000) {
+					d = d / 1000.0;
+					u = "s";
+				}
+				lbl_query_info.set_text ("count: %lld time: %.2f%s".printf (service.query_info.row_count, d, u));
 			}
 
 			public void add_row (List<string?> data) {

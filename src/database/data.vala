@@ -93,7 +93,6 @@ namespace Benchwell {
 					return true;
 				});
 
-
 				fill ();
 			}
 
@@ -341,7 +340,8 @@ namespace Benchwell {
 				try {
 					string[] columns;
 					List<List<string?>> data;
-					service.connection.query(interpolated, out columns, out data);
+					QueryInfo query_info;
+					service.connection.query(interpolated, out columns, out data, out query_info);
 
 					Benchwell.ColDef[] cols = {};
 					foreach (var column in columns) {
@@ -350,6 +350,7 @@ namespace Benchwell {
 
 					service.columns = cols;
 					service.data = (owned) data;
+					service.query_info = (owned) query_info;
 					result_view.table.load_table ();
 					result_view.table.raw_mode = true;
 				} catch (Benchwell.Error err) {

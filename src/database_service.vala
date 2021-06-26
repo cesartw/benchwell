@@ -7,6 +7,7 @@ public class Benchwell.DatabaseService : Object {
 	public Benchwell.TableDef[]? tables;
 	public Benchwell.ColDef[]? columns;
 	public List<List<string?>> data;
+	public QueryInfo query_info;
 
 	public DatabaseService () {
 		engine = new Benchwell.Engine ();
@@ -14,8 +15,6 @@ public class Benchwell.DatabaseService : Object {
 
 	public async void dbconnect (Benchwell.ConnectionInfo _info) throws Benchwell.Error, GLib.Error {
 		info = _info;
-
-		//yield Config.ping_dbus ();
 
 		if (info.password == "") {
 			var password = "";
@@ -74,6 +73,7 @@ public class Benchwell.DatabaseService : Object {
 		data = connection.fetch_table (table_def.name,
 										 conditions,
 										 sorts,
-										 page_size, page*page_size);
+										 page_size, page*page_size,
+										 out query_info);
 	}
 }
