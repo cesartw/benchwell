@@ -16,6 +16,8 @@ public class Benchwell.DatabaseService : Object {
 	public async void dbconnect (Benchwell.ConnectionInfo _info) throws Benchwell.Error, GLib.Error {
 		info = _info;
 
+		yield Config.ping_dbus ();
+
 		if (info.password == "") {
 			var password = "";
 			Config.decrypt.begin (info, (obj, res) => {

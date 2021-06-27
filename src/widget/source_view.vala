@@ -132,7 +132,6 @@ public class Benchwell.SourceView : Gtk.SourceView {
 		completion.add_provider (new Benchwell.PluginCompletion ());
 		completion.add_provider (new Benchwell.EnvvarCompletion ());
 
-
 		button_press_event.connect ((list, event) => {
 			if ( event.button != Gdk.BUTTON_SECONDARY){
 				return false;

@@ -72,6 +72,8 @@ namespace Benchwell {
 						Config.show_alert (this, err.message);
 					}
 				});
+
+				editor.completion.add_provider (new Benchwell.SQL.TableCompletion (service));
 			}
 
 			private bool on_editor_key_press (Gtk.Widget widget, Gdk.EventKey event) {

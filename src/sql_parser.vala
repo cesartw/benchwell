@@ -1,6 +1,25 @@
 namespace Benchwell {
 	namespace SQL {
+
+		[Compact]
+		public class GrammarNode {
+			public TokenType[] token_types;
+			public GrammarNode next_node;
+		}
+
+		public class Parser {
+			private GrammarNode sql_grammar;
+
+			public Parser () {
+				//var select_grammar = new GrammarNode ();
+				//select_grammar.token_types = { TokenType.SELECT };
+				//var column_grammar = new GrammarNode ();
+				//column_grammar
+			}
+		}
+
 		public enum TokenType {
+			ROOT,
 			ADD,
 			ALL,
 			ALTER,
@@ -59,8 +78,9 @@ namespace Benchwell {
 			WHERE,
 
 			OPEN_PARENTHESIS,
-			CLOSE_PARENTHESIS
-			;
+			CLOSE_PARENTHESIS,
+			DOT,
+			COMMA;
 
 			public static TokenType[] all () {
 				return {
@@ -122,7 +142,9 @@ namespace Benchwell {
 					WHERE,
 
 					OPEN_PARENTHESIS,
-					CLOSE_PARENTHESIS
+					CLOSE_PARENTHESIS,
+					DOT,
+					COMMA
 				};
 			}
 		}
@@ -157,7 +179,7 @@ namespace Benchwell {
 		}
 
 		public class Tokenizer : Object {
-			public Token[] parse (string sql) {
+			public static Token[] parse (string sql) {
 				Token[] tokens = {};
 
 				TokenState state = TokenState ();
@@ -268,7 +290,7 @@ namespace Benchwell {
 
 							ctoken = Token ();
 							continue;
-						case ';':
+						case ';', ',':
 							// continue string
 							if (state.string_wrapping_c != 0) {
 								ctoken.append_char (c);
@@ -299,7 +321,7 @@ namespace Benchwell {
 
 							ctoken = Token ();
 							continue;
-						case ' ', '\t':
+						case ' ', '\t', '\n':
 							// continue string
 							if (state.string_wrapping_c != 0) {
 								ctoken.append_char (c);
@@ -468,7 +490,7 @@ namespace Benchwell {
 				return tokens;
 			}
 
-			private TokenType set_token_type (string token, TokenType default_type = TokenType.BAREWORD) {
+			private static TokenType set_token_type (string token, TokenType default_type = TokenType.BAREWORD) {
 				var ntoken = token.casefold ().normalize (-1, GLib.NormalizeMode.ALL_COMPOSE);
 
 				if (ntoken == "null") {
@@ -616,12 +638,6 @@ namespace Benchwell {
 				if (ntoken == "show") {
 					return TokenType.SHOW;
 				}
-				if (ntoken == "string") {
-					return TokenType.STRING;
-				}
-				if (ntoken == "symbol") {
-					return TokenType.SYMBOL;
-				}
 				if (ntoken == "table") {
 					return TokenType.TABLE;
 				}
@@ -649,56 +665,129 @@ namespace Benchwell {
 				if (ntoken == ")") {
 					return TokenType.CLOSE_PARENTHESIS;
 				}
+				if (ntoken == ",") {
+					return TokenType.COMMA;
+				}
+				if (ntoken == ".") {
+					return TokenType.DOT;
+				}
 
 				return default_type;
 			}
 		}
 
-		public class Node {
-			public Token? parent;
-			public int start;
-			public int end;
+		public class TableCompletion : Object, Gtk.SourceCompletionProvider {
+			public weak DatabaseService db { get; construct; }
+			private string prefix;
+			public TableCompletion (DatabaseService db) {
+				Object (
+					db: db
+				);
+			}
+
+			public string get_name () {
+				return _("Tables");
+			}
+
+			public bool match (Gtk.SourceCompletionContext context) {
+				var end = context.iter;
+				Gtk.TextIter start;
+				var buffer = context.completion.view.get_buffer ();
+				buffer.get_start_iter (out start);
+
+				var tokens = Benchwell.SQL.Tokenizer.parse (buffer.get_text (start, end, false));
+				if (tokens.length == 0) {
+					return false;
+				}
+
+				//for (var i = 0; i < tokens.length; i++) {
+				//print (@"=======\"$((string) tokens[i].chars)\" $(tokens[i].type)\n");
+				//}
+
+				var ok = tokens[tokens.length - 1].type == TokenType.FROM;
+
+				if (!ok && tokens.length > 1) {
+					ok = tokens[tokens.length - 2].type == TokenType.FROM &&
+						(tokens[tokens.length - 1].type == TokenType.STRING || tokens[tokens.length - 1].type == TokenType.BAREWORD);
+					if (ok) {
+						prefix = (string) tokens[tokens.length - 1].chars;
+						if (tokens[tokens.length - 1].type == TokenType.STRING) {
+							prefix = prefix.replace ("\"", "");
+						}
+					}
+				}
+
+				//print (@"=======ok $(ok)\n");
+				return ok;
+			}
+
+			public void populate (Gtk.SourceCompletionContext context) {
+				GLib.List<Gtk.SourceCompletionProposal> proposals = null;
+
+				foreach (var table in db.tables) {
+					if (table.ttype != TableType.Regular)
+						continue;
+
+					if (prefix == null || table.name.has_prefix (prefix)) {
+						proposals.append (new CompletionProposal (table.name, prefix));
+					}
+				}
+				prefix = null;
+				context.add_proposals (this, proposals, true);
+			}
 		}
 
-		public class SelectNode : Node {
-			public SelectFieldListNode columns;
-			public SelectFromNode from;
-			public WhereNode where;
+		public class CompletionProposal : Object, Gtk.SourceCompletionProposal {
+			public string name { get; construct; }
+			public string? prefix { get; construct; }
+
+			public CompletionProposal (string name, string? prefix = null) {
+				Object(
+					name: name,
+					prefix: prefix
+				);
+			}
+
+			public bool equal (Gtk.SourceCompletionProposal other) {
+				var other_of_this_type = other as CompletionProposal;
+				if (other_of_this_type == null)
+					return false;
+
+				return this.name == other_of_this_type.name;
+			}
+
+			public string get_text () {
+				return name;
+			}
+
+			// get_markup has priority
+			public string get_label () {
+				return "";
+			}
+
+			public unowned GLib.Icon? get_gicon () {
+				return null;
+			}
+
+			public unowned Gdk.Pixbuf? get_icon () {
+				return null;
+			}
+
+			public unowned string? get_icon_name () {
+				return "bw-table";
+			}
+
+			public string? get_info () {
+				return "";
+			}
+
+			public string get_markup () {
+				if (prefix != null) {
+					return name.replace (prefix, @"<b>$prefix</b>");
+				}
+				return name;
+			}
 		}
 
-		public class SelectFieldListNode : Node {
-			public ColumnNameNode[] fields;
-		}
-
-		public class ColumnNameNode : Node {
-			public Token token;
-		}
-
-		public class SelectFromNode : Node {
-			public Token table;
-			public SelectNode select;
-		}
-
-		public class WhereNode : Node {
-			public BinOpNode[] statements;
-		}
-
-		public class BinOpNode : Node {
-			public ColumnNameNode column;
-			public OperatorNode operator;
-			public ValueNode? val;
-			public BinOpNode? binNode;
-		}
-
-		public class OperatorNode : Node {
-			public Token token;
-		}
-
-		public class ValueNode : Node {
-			public Token token;
-		}
-
-		public class AST : Object {
-		}
 	}
 }
