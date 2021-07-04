@@ -1,5 +1,5 @@
 public class Benchwell.Environment : Object {
-	public int64  id;
+	public int64  id { get; set; }
 	public string name { get; set; }
 	public Benchwell.EnvVar[] variables;
 
@@ -334,8 +334,6 @@ public class Benchwell.EnvVar : Object, Benchwell.KeyValueI {
 		}
 	}
 }
-
-
 
 public class Benchwell.EnvvarCompletion : Object, Gtk.SourceCompletionProvider {
 	public string get_name () {

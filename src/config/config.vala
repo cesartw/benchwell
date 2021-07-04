@@ -30,13 +30,14 @@ namespace Benchwell {
 			return items.length;
 		}
 
-		public void select (T item)
-			requires (item is CollectionWithSelectedItem) {
+		public void select (T item) {
 			for (var i = 0; i < items.length; i++) {
-				if ((items[i] as CollectionWithSelectedItem).id == (item as CollectionWithSelectedItem).id) {
-					selected = items[i];
-					return;
+				if (item != items[i]) {
+					continue;
 				}
+
+				selected = items[i];
+				return;
 			}
 		}
 
