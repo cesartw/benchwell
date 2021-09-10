@@ -77,6 +77,7 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 		btn_clone.clicked.connect (on_clone);
 
 		Config.environments.added.connect ((env) => {
+			env.name = @"Environment #$(Config.environments.length ())";
 			var panel = new Benchwell.EnvironmentPanel (env);
 			panel.show ();
 			stack.add_titled (panel, env.name, env.name);
@@ -89,11 +90,8 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 	}
 
 	private void on_add_env () {
-		try {
-			Config.environments.add ();
-		} catch (ConfigError err) {
-			Config.show_alert (this, err.message);
-		}
+		var env = new Benchwell.Environment();
+		Config.environments.add (env);
 	}
 
 	private void on_clone () {

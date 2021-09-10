@@ -47,13 +47,15 @@ namespace Benchwell {
 			return items[i];
 		}
 
-		public T add (owned T item = null) {
+		public T add (owned T item = null)
+			requires (item != null)
+		{
 			var tmp = items;
 			tmp += (owned) item;
 			items = tmp;
-			added (item);
+			added (items[items.length -1]);
 
-			return item;
+			return items[items.length -1];
 		}
 
 		public void remove (T item) {
@@ -380,6 +382,7 @@ namespace Benchwell {
 
 				return false;
 			});
+			print (@"LOADED ENVIRONMENTS $(environments.length ())\n");
 		}
 		// =========================
 

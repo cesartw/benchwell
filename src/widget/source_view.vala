@@ -32,8 +32,13 @@ class SimpleStack<T> {
 	}
 }
 
+public interface Benchwell.SourceViewStatementSelector : Object {
+	public abstract bool select (Gtk.SourceBuffer buffer);
+}
+
 public class Benchwell.SourceView : Gtk.SourceView {
 	private uint indent_timeout = 0;
+	public Benchwell.SourceViewStatementSelector? statement_selector { owned get; set; }
 
 	private Gtk.Menu menu;
 	public Gtk.MenuItem collapse_menu;
@@ -140,6 +145,22 @@ public class Benchwell.SourceView : Gtk.SourceView {
 			menu.show ();
 			menu.popup_at_pointer (event);
 			return true;
+		});
+
+		key_press_event.connect ((e) => {
+			if ((e.state & Gdk.ModifierType.CONTROL_MASK) == 0) {
+				return false;
+			}
+
+			if (Gdk.Key.A != e.keyval){
+				return false;
+			}
+
+			if (statement_selector == null) {
+				return false;
+			}
+
+			return statement_selector.select ((Gtk.SourceBuffer) get_buffer ());
 		});
 	}
 

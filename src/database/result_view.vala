@@ -23,6 +23,8 @@ namespace Benchwell {
 				editor = new Benchwell.SourceView ("sql");
 				editor.show ();
 
+				editor.statement_selector = new SqlStatementSelector ();
+
 				var editor_sw = new Gtk.ScrolledWindow (null, null);
 				editor_sw.show ();
 				editor_sw.add (editor);
@@ -99,6 +101,49 @@ namespace Benchwell {
 				}
 
 				exec_query (query);
+			}
+		}
+
+		public class SqlStatementSelector : Benchwell.SourceViewStatementSelector, Object {
+			public bool select (Gtk.SourceBuffer buffer) {
+				Gtk.TextIter backward_iter;
+				buffer.get_iter_at_offset (out backward_iter, buffer.cursor_position);
+
+				Gtk.TextIter forward_iter;
+				buffer.get_iter_at_offset (out forward_iter, buffer.cursor_position);
+
+				do {
+					Gtk.TextIter end;
+					backward_iter.set_line_offset (0);
+
+					buffer.get_iter_at_line (out end, backward_iter.get_line ());
+					if (!end.ends_line ())
+						end.forward_to_line_end ();
+					var txt = buffer.get_text (backward_iter, end, false);
+					if (txt.strip () == "" || txt == "\n" || txt == null) {
+						break;
+					}
+				} while (backward_iter.backward_line());
+
+				if (backward_iter.get_line () > 0) {
+					backward_iter.forward_line ();
+				}
+
+				do {
+					forward_iter.set_line_offset (0);
+					Gtk.TextIter end;
+					buffer.get_iter_at_line (out end, forward_iter.get_line ());
+					end.forward_to_line_end ();
+					var txt = buffer.get_text (forward_iter, end, false);
+					if (txt == "" || txt == "\n" || txt == null) {
+						break;
+					}
+				} while (forward_iter.forward_line());
+
+				buffer.select_range (backward_iter, forward_iter);
+
+
+				return true;
 			}
 		}
 	}

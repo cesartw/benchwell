@@ -292,15 +292,13 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 
 			env_store.set_value (iter, 0, env.id);
 			env_store.set_value (iter, 1, env.name);
-			if (selected_environment_id != env.id) {
-				return false;
+			if (selected_environment_id == env.id) {
+				env_combo.set_active_iter (iter);
+				Config.environments.select (env);
+				settings_panel.select_env (env);
 			}
 
-			env_combo.set_active_iter (iter);
-			Config.environments.select (env);
-			settings_panel.select_env (env);
-
-			return true;
+			return false;
 		});
 
 		env_combo.changed.connect (() => {

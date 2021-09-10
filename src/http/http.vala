@@ -1179,10 +1179,13 @@ namespace Benchwell {
 
 				var size_label  = new Benchwell.Label ("0KB");
 				size_label.get_style_context ().add_class ("tag");
-				if (response.body.length < 1024) {
-					size_label.set_text (@"$(response.body.length)B");
-				} else {
-					size_label.set_text (@"$(response.body.length/1024)kB");
+				size_label.set_text (@"0B");
+				if (response.body != null) {
+					if (response.body.length < 1024) {
+						size_label.set_text (@"$(response.body.length)B");
+					} else {
+						size_label.set_text (@"$(response.body.length/1024)kB");
+					}
 				}
 
 				var url_label = new Benchwell.Label (@"$(response.method) $(response.url)");
