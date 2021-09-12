@@ -151,6 +151,7 @@ namespace Benchwell {
 					var item = val as Benchwell.HttpItem;
 
 					Config.http_tree_state.insert (item.id, true);
+					Config.save_http_tree_state ();
 				});
 
 				treeview.row_collapsed.connect ((iter, path) => {
@@ -159,6 +160,7 @@ namespace Benchwell {
 					var item = val as Benchwell.HttpItem;
 
 					Config.http_tree_state.remove (item.id);
+					Config.save_http_tree_state ();
 				});
 
 				var selected_collection_id = Config.settings.http_collection_id;
@@ -394,43 +396,8 @@ namespace Benchwell {
 
 			private void on_collection_selected () {
 				if (collections_combo.get_active_id () == "new") {
-					var dialog = new Gtk.Dialog.with_buttons (_("Add collection"), window,
-												Gtk.DialogFlags.DESTROY_WITH_PARENT|Gtk.DialogFlags.MODAL,
-												_("Save"), Gtk.ResponseType.OK,
-												_("Cancel"), Gtk.ResponseType.CANCEL);
-					dialog.set_default_size (250, 130);
-
-					var label = new Gtk.Label (_("Enter collection name"));
-					label.show ();
-
-					var entry = new Gtk.Entry ();
-					entry.show ();
-
-					var box = new Gtk.Box (Gtk.Orientation.VERTICAL, 10);
-					box.show ();
-
-					box.pack_start (label, true, true, 0);
-					box.pack_start (entry, true, true, 0);
-
-					dialog.get_content_area ().add (box);
-
-					var resp = (Gtk.ResponseType) dialog.run ();
-					var name = entry.get_text ();
-					dialog.destroy ();
-
-					if (resp != Gtk.ResponseType.OK) {
-						return;
-					}
-
-					try {
-						var collection = Config.add_http_collection ();
-						collection.name = name;
-
-						collections_combo.append (collection.id.to_string (), collection.name);
-						collections_combo.set_active_id (collection.id.to_string ());
-					} catch (Benchwell.ConfigError err) {
-						Config.show_alert (this, err.message);
-					}
+					on_add_new_collection ();
+					return;
 				}
 
 				var collection_id = int64.parse (collections_combo.get_active_id ());
@@ -456,6 +423,46 @@ namespace Benchwell {
 					selected_collection = collection;
 
 					break;
+				}
+			}
+
+			private void on_add_new_collection () {
+				var dialog = new Gtk.Dialog.with_buttons (_("Add collection"), window,
+											Gtk.DialogFlags.DESTROY_WITH_PARENT|Gtk.DialogFlags.MODAL,
+											_("Save"), Gtk.ResponseType.OK,
+											_("Cancel"), Gtk.ResponseType.CANCEL);
+				dialog.set_default_size (250, 130);
+
+				var label = new Gtk.Label (_("Enter collection name"));
+				label.show ();
+
+				var entry = new Gtk.Entry ();
+				entry.show ();
+
+				var box = new Gtk.Box (Gtk.Orientation.VERTICAL, 10);
+				box.show ();
+
+				box.pack_start (label, true, true, 0);
+				box.pack_start (entry, true, true, 0);
+
+				dialog.get_content_area ().add (box);
+
+				var resp = (Gtk.ResponseType) dialog.run ();
+				var name = entry.get_text ();
+				dialog.destroy ();
+
+				if (resp != Gtk.ResponseType.OK) {
+					return;
+				}
+
+				try {
+					var collection = new Benchwell.HttpCollection ();
+					collection.name = name;
+					Config.add_http_collection (collection);
+					//collections_combo.append (collection.id.to_string (), collection.name);
+					collections_combo.set_active_id (collection.id.to_string ());
+				} catch (Benchwell.ConfigError err) {
+					Config.show_alert (this, err.message);
 				}
 			}
 
