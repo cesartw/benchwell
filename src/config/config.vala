@@ -92,7 +92,7 @@ namespace Benchwell {
 		public Secret.Schema schema;
 		public Benchwell.Plugin[] plugins;
 		public Json.Node filters;
-		public HashTable<int64?, bool?> http_tree_state;
+		public HashTable<string?, bool?> http_tree_state;
 
 		public signal void http_collection_added (HttpCollection collection);
 
@@ -668,10 +668,10 @@ namespace Benchwell {
 		public void load_http_tree_state () {
 			try {
 				var tree_state = Json.from_string (settings.get_string ("http-tree-state"));
-				http_tree_state = new HashTable<int64?, bool?> (int64_hash, int64_equal);
+				http_tree_state = new HashTable<string?, bool?> (int64_hash, int64_equal);
 
 				tree_state.get_object ().get_members ().foreach ((key) => {
-					http_tree_state.insert (int64.parse (key), tree_state.get_object ().get_boolean_member (key));
+					http_tree_state.insert (key, tree_state.get_object ().get_boolean_member (key));
 				});
 			} catch (GLib.Error err) {
 				Config.show_alert (null, err.message);

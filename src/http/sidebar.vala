@@ -150,7 +150,7 @@ namespace Benchwell {
 					store.get_value (iter, Benchwell.Http.Columns.ITEM, out val);
 					var item = val as Benchwell.HttpItem;
 
-					Config.http_tree_state.insert (item.id, true);
+					Config.http_tree_state.insert (item.id.to_string (), true);
 					Config.save_http_tree_state ();
 				});
 
@@ -159,7 +159,7 @@ namespace Benchwell {
 					store.get_value (iter, Benchwell.Http.Columns.ITEM, out val);
 					var item = val as Benchwell.HttpItem;
 
-					Config.http_tree_state.remove (item.id);
+					Config.http_tree_state.remove (item.id.to_string ());
 					Config.save_http_tree_state ();
 				});
 
@@ -468,21 +468,21 @@ namespace Benchwell {
 
 			private void load_collection (Benchwell.HttpCollection collection) {
 				store.clear ();
-				build_tree (null, collection.items);
+				build_tree (null, collection.items, true);
 			}
 
-			private void build_tree (Gtk.TreeIter? parent, Benchwell.HttpItem[] items) {
+			private void build_tree (Gtk.TreeIter? parent, Benchwell.HttpItem[] items, bool is_parent_expanded) {
 				var selected_item_id = Config.settings.http_item_id;
 				foreach (var item in items) {
 					var folder_parent = add_row (item, parent, null);
-					var expanded = Config.http_tree_state.get (item.id);
+					var expanded = Config.http_tree_state.get (item.id.to_string ());
 					if (expanded == null)
 						expanded = false;
 
 					if (item.is_folder) {
-						build_tree (folder_parent, item.items);
+						build_tree (folder_parent, item.items, expanded && is_parent_expanded);
 
-						if (expanded) {
+						if (expanded && is_parent_expanded) {
 							treeview.expand_to_path (store.get_path(folder_parent));
 						}
 					}
