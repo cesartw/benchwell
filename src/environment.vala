@@ -12,30 +12,30 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 			orientation: Gtk.Orientation.HORIZONTAL
 		);
 
-		btn_add = new Benchwell.Button ("white-add", Gtk.IconSize.SMALL_TOOLBAR);
-		btn_add.halign = Gtk.Align.START;
-		btn_add.show ();
+		//btn_add = new Benchwell.Button ("white-add", Gtk.IconSize.SMALL_TOOLBAR);
+		//btn_add.halign = Gtk.Align.START;
+		//btn_add.show ();
 
-		btn_clone = new Benchwell.Button ("white-copy", Gtk.IconSize.SMALL_TOOLBAR);
-		btn_clone.halign = Gtk.Align.START;
-		btn_clone.show ();
+		//btn_clone = new Benchwell.Button ("white-copy", Gtk.IconSize.SMALL_TOOLBAR);
+		//btn_clone.halign = Gtk.Align.START;
+		//btn_clone.show ();
 
-		btn_remove = new Benchwell.Button ("white-close", Gtk.IconSize.SMALL_TOOLBAR);
-		btn_remove.halign = Gtk.Align.END;
-		btn_remove.show ();
+		//btn_remove = new Benchwell.Button ("white-close", Gtk.IconSize.SMALL_TOOLBAR);
+		//btn_remove.halign = Gtk.Align.END;
+		//btn_remove.show ();
 
-		var btn_box = new Gtk.ButtonBox (Gtk.Orientation.HORIZONTAL);
-		btn_box.name = "EnvActions";
-		btn_box.get_style_context ().add_class("linked");
-		btn_box.layout_style = Gtk.ButtonBoxStyle.SPREAD;
-		btn_box.hexpand = false;
-		btn_box.homogeneous = false;
-		btn_box.spacing = 0;
-		btn_box.add (btn_add);
-		btn_box.add (btn_clone);
-		btn_box.add (btn_remove);
-		btn_box.height_request = 5;
-		btn_box.show ();
+		//var btn_box = new Gtk.ButtonBox (Gtk.Orientation.HORIZONTAL);
+		//btn_box.name = "EnvActions";
+		//btn_box.get_style_context ().add_class("linked");
+		//btn_box.layout_style = Gtk.ButtonBoxStyle.SPREAD;
+		//btn_box.hexpand = false;
+		//btn_box.homogeneous = false;
+		//btn_box.spacing = 0;
+		//btn_box.add (btn_add);
+		//btn_box.add (btn_clone);
+		//btn_box.add (btn_remove);
+		//btn_box.height_request = 5;
+		//btn_box.show ();
 
 		var switcher = new Gtk.StackSwitcher ();
 		switcher.orientation = Gtk.Orientation.VERTICAL;
@@ -64,17 +64,55 @@ public class Benchwell.EnvironmentEditor : Gtk.Paned {
 			return false;
 		});
 
-		var env_list_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
-		env_list_box.pack_start (switcher, true, true, 0);
-		env_list_box.pack_end (btn_box, false, false, 0);
-		env_list_box.show ();
+		//var env_list_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
+		//env_list_box.pack_start (switcher, true, true, 0);
+		//env_list_box.pack_end (btn_box, false, false, 0);
+		//env_list_box.show ();
 
-		pack1 (env_list_box, false, true);
-		pack2 (stack, true, false);
+		var sww = new Gtk.ScrolledWindow (null, null);
+		sww.hscrollbar_policy = Gtk.PolicyType.NEVER;
+		sww.show ();
+		var sws = new Gtk.ScrolledWindow (null, null);
+		sws.hscrollbar_policy = Gtk.PolicyType.NEVER;
+		sws.show ();
 
-		btn_add.clicked.connect (on_add_env);
-		btn_remove.clicked.connect (on_remove_env);
-		btn_clone.clicked.connect (on_clone);
+		sww.add (switcher);
+		sws.add (stack);
+
+		pack1 (sww, false, true);
+		pack2 (sws, true, false);
+
+		//btn_add.clicked.connect (on_add_env);
+		//btn_remove.clicked.connect (on_remove_env);
+		//btn_clone.clicked.connect (on_clone);
+
+		var menu = new Gtk.Menu ();
+		var add_menu = new Benchwell.MenuItem (_("Add"), "add");
+		add_menu.activate.connect (on_add_env);
+		add_menu.show ();
+
+		var remove_menu = new Benchwell.MenuItem (_("Remove"), "close");
+		remove_menu.activate.connect (on_remove_env);
+		remove_menu.show ();
+
+		var clone_menu = new Benchwell.MenuItem (_("Copy"), "copy");
+		clone_menu.activate.connect (on_clone);
+		clone_menu.show ();
+
+		menu.add (add_menu);
+		menu.add (remove_menu);
+		menu.add (clone_menu);
+
+		switcher.button_press_event.connect ( (list, event) => {
+			if (event.button != Gdk.BUTTON_SECONDARY) {
+				return false;
+
+			}
+			menu.show ();
+			menu.popup_at_pointer (event);
+
+			return false;
+		});
 
 		Config.environments.added.connect ((env) => {
 			env.name = @"Environment #$(Config.environments.length ())";
