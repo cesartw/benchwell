@@ -106,8 +106,15 @@ namespace Benchwell {
 				headers = new Benchwell.KeyValues (Benchwell.KeyValueTypes.STRING|Benchwell.KeyValueTypes.MULTILINE);
 				headers.show ();
 
+				var headersw = new Gtk.ScrolledWindow (null, null);
+				headersw.add (headers);
+				headersw.show ();
+
 				query_params = new Benchwell.KeyValues (Benchwell.KeyValueTypes.STRING|Benchwell.KeyValueTypes.MULTILINE);
 				query_params.show ();
+				var query_paramsw = new Gtk.ScrolledWindow (null, null);
+				query_paramsw.add (query_params);
+				query_paramsw.show ();
 
 				var params_label = new Gtk.Label (_("Params"));
 				params_label.show ();
@@ -127,8 +134,8 @@ namespace Benchwell {
 
 				var body_notebook = new Gtk.Notebook ();
 				body_notebook.append_page (body_stack, mime_switch);
-				body_notebook.append_page (query_params, params_label);
-				body_notebook.append_page (headers, headers_label);
+				body_notebook.append_page (query_paramsw, params_label);
+				body_notebook.append_page (headersw, headers_label);
 				body_notebook.show ();
 
 				body_notebook.switch_page.connect ((page, page_num) => {
@@ -203,7 +210,7 @@ namespace Benchwell {
 				ws_paned.hexpand = true;
 				ws_paned.wide_handle = true;
 				ws_paned.show ();
-				ws_paned.pack1 (body_notebook, false, false);
+				ws_paned.pack1 (body_notebook, true, false);
 				ws_paned.pack2 (response_box, true, true);
 
 				var ws_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 5);
@@ -270,12 +277,12 @@ namespace Benchwell {
 						return;
 					}
 
-					var kv = kvi as HttpKv;
+					var kv = kvi as Benchwell.KeyValue;
 					if (kv == null) {
 						return;
 					}
 					try {
-						kv.delete ();
+						(kv.keyvalue as HttpKv).delete ();
 					} catch (ConfigError err) {
 						Config.show_alert (this, err.message);
 					}
@@ -302,17 +309,16 @@ namespace Benchwell {
 						return;
 					}
 
-					var kv = kvi as HttpKv;
+					var kv = kvi as Benchwell.KeyValue;
 					if (kv == null) {
 						return;
 					}
 					try {
-						kv.delete ();
+						(kv.keyvalue as HttpKv).delete ();
 					} catch (ConfigError err) {
 						Config.show_alert (this, err.message);
 					}
 				});
-
 
 				body_fields.no_row_left.connect (() => {
 					if (item == null) {
@@ -332,12 +338,12 @@ namespace Benchwell {
 						return;
 					}
 
-					var kv = kvi as HttpKv;
+					var kv = kvi as Benchwell.KeyValue;
 					if (kv == null) {
 						return;
 					}
 					try {
-						kv.delete ();
+						(kv.keyvalue as HttpKv).delete ();
 					} catch (ConfigError err) {
 						Config.show_alert (this, err.message);
 					}
