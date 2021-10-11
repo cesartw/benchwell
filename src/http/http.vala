@@ -1,14 +1,12 @@
 namespace Benchwell {
 	namespace Http {
 		[Compact]
-		private struct buffer_s
-		{
+		private struct buffer_s {
 			uchar[] buffer;
 		}
 
 		[Compact]
-		private struct buffer_s2
-		{
+		private struct buffer_s2 {
 			uchar[] buffer;
 			size_t size_left;
 		}
@@ -205,8 +203,8 @@ namespace Benchwell {
 				ws_paned.hexpand = true;
 				ws_paned.wide_handle = true;
 				ws_paned.show ();
-				ws_paned.add1 (body_notebook);
-				ws_paned.add2 (response_box);
+				ws_paned.pack1 (body_notebook, false, false);
+				ws_paned.pack2 (response_box, true, true);
 
 				var ws_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 5);
 				ws_box.vexpand = true;
@@ -443,33 +441,36 @@ namespace Benchwell {
 				}
 
 				var builder = new StringBuilder ();
-				builder.append (@"curl --request $method\\\n");
-				builder.append (@"     --url $url\\\n");
+				builder.append (@"curl --request $method \\\n");
+				builder.append (@"     --url $url \\\n");
 
 				for (var i = 0; i < headers.length; i++) {
 					var h = headers[i].replace ("'", "\\'");
 					builder.append (@"     --header '$(h)'");
-					if (i < headers.length - 1)
-						builder.append (@"\\\n");
+					if (i < headers.length-1)
+						builder.append (@" \\\n");
 				}
 
-				switch (mime) {
-					case "application/x-www-form-urlencoded":
-						for (var i = 0; i < body.length; i++) {
+				if (body.length > 0) {
+					builder.append ("\n");
+					switch (mime) {
+						case "application/x-www-form-urlencoded":
+							for (var i = 0; i < body.length; i++) {
+								var b = body[0].replace ("'", "\\'");
+								builder.append (@"     --data '$(b)'\\\n");
+							}
+							break;
+						case "multipart/form-data":
+							for (var i = 0; i < body.length; i++) {
+								var b = body[0].replace ("'", "\\'");
+								builder.append (@"     --form '$(b)'\\\n");
+							}
+							break;
+						default:
 							var b = body[0].replace ("'", "\\'");
 							builder.append (@"     --data '$(b)'\\\n");
-						}
-						break;
-					case "multipart/form-data":
-						for (var i = 0; i < body.length; i++) {
-							var b = body[0].replace ("'", "\\'");
-							builder.append (@"     --form '$(b)'\\\n");
-						}
-						break;
-					default:
-						var b = body[0].replace ("'", "\\'");
-						builder.append (@"     --data '$(b)'\\\n");
-						break;
+							break;
+					}
 				}
 
 				var cmd = builder.str;
