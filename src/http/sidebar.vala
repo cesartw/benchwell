@@ -192,15 +192,6 @@ namespace Benchwell {
 
 				treeview.drag_end.connect (on_resort);
 
-				treeview.drag_motion.connect ( (ctx, x, y, time) => {
-					int cellx, celly;
-					Gtk.TreePath path;
-					treeview.get_path_at_pos (x, y, out path, null, out cellx, out celly);
-					store.drop_path = path;
-
-					return false;
-				});
-
 				Config.settings.changed["http-font"].connect (() => {
 					Config.set_font (this, Pango.FontDescription.from_string (Config.settings.http_font));
 				});
@@ -557,8 +548,6 @@ namespace Benchwell {
 		}
 
 		public class Store : Gtk.TreeStore, Gtk.TreeDragDest, Gtk.TreeModel {
-			private bool bubble_block = false;
-			public Gtk.TreePath drop_path;
 			public Store.newv (GLib.Type[] types) {
 				Object();
 				set_column_types (types);
@@ -567,37 +556,32 @@ namespace Benchwell {
 			public bool row_drop_possible (Gtk.TreePath dest, Gtk.SelectionData selection_data) {
 				var path = dest.copy ();
 
-				if (bubble_block) {
-					bubble_block = false;
+				var indices = dest.get_indices();
+				var lastIndex = indices[indices.length - 1];
+
+				if (lastIndex != 0) {
+					return true;
+				}
+
+				Gtk.TreeIter iter;
+				GLib.Value val;
+				var ok = get_iter (out iter, path);
+				if (ok) {
+					return true;
+				}
+
+				ok = path.up ();
+				if (!ok) {
 					return false;
 				}
-				if (drop_path.compare (path) != 0) {
-					bubble_block = true;
+				ok = get_iter (out iter, path);
+				if (!ok) {
 					return false;
 				}
 
-				// dropping between items
-				var indices = dest.get_indices ();
-				if (indices.length == dest.get_depth ()) {
-					bool ok;
-					Gtk.TreeIter iter;
-					GLib.Value val;
-
-					ok = path.up ();
-					if (!ok) {
-						return false;
-					}
-					ok = get_iter (out iter, path);
-					if (!ok) {
-						return false;
-					}
-
-					get_value (iter, Benchwell.Http.Columns.ITEM, out val);
-					var drop_item = val as Benchwell.HttpItem;
-					return drop_item.is_folder;
-				}
-
-				return false;
+				get_value (iter, Benchwell.Http.Columns.ITEM, out val);
+				var drop_item = val as Benchwell.HttpItem;
+				return drop_item.is_folder;
 			}
 		}
 	}
