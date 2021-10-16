@@ -43,14 +43,14 @@ namespace Benchwell {
 
 				table_search.search_changed.connect ( () => {
 					var expr = table_search.get_buffer ().get_text ();
-					Regex regex;
-					try {
-						regex = new Regex (expr, RegexCompileFlags.CASELESS);
-					} catch (RegexError e) {
-						regex = new Regex (".*");
-					}
+					//Regex regex;
+					//try {
+						//regex = new Regex (expr, RegexCompileFlags.CASELESS);
+					//} catch (RegexError e) {
+						//regex = new Regex (".*");
+					//}
 
-					tables.filter = regex;
+					tables.filter = expr;
 					tables.invalidate_filter ();
 				});
 

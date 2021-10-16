@@ -22,6 +22,7 @@ namespace Benchwell {
 			private Gtk.TreeViewColumn name_column;
 			private int cursor_x;
 			private int cursor_y;
+			private bool auto_expanding = false;
 
 			public SideBar (Benchwell.ApplicationWindow window) {
 				Object (
@@ -45,6 +46,19 @@ namespace Benchwell {
 				treeview.reorderable = true; // would be nice
 				treeview.button_release_event.connect (on_button_release_event);
 				treeview.activate_on_single_click = Config.settings.http_single_click_activate;
+				treeview.set_search_equal_func((model, column, key, iter) => {
+					GLib.Value val;
+					model.get_value (iter, column, out val);
+					var name = val.get_string ();
+					int score = 0;
+					return !Benchwell.Utils.fuzzy_match (key, name, out score);
+				});
+				treeview.start_interactive_search.connect(() => {
+					auto_expanding = true;
+					treeview.expand_all ();
+					auto_expanding = false;
+					return true;
+				});
 
 				store = new Benchwell.Http.Store.newv ({GLib.Type.OBJECT, GLib.Type.STRING, GLib.Type.STRING, GLib.Type.OBJECT});
 
@@ -143,6 +157,7 @@ namespace Benchwell {
 				collections_combo.changed.connect (on_collection_selected);
 				treeview.row_activated.connect (on_load_item);
 				treeview.row_expanded.connect ((iter, path) => {
+					if (auto_expanding) { return; }
 					if (selected_collection == null) {
 						return;
 					}
@@ -155,6 +170,7 @@ namespace Benchwell {
 				});
 
 				treeview.row_collapsed.connect ((iter, path) => {
+					if (auto_expanding) { return; }
 					GLib.Value val;
 					store.get_value (iter, Benchwell.Http.Columns.ITEM, out val);
 					var item = val as Benchwell.HttpItem;

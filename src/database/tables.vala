@@ -9,7 +9,8 @@ namespace Benchwell {
 			public Gtk.MenuItem truncate_menu;
 			public Gtk.MenuItem delete_menu;
 			public Gtk.MenuItem refresh_menu;
-			public Regex? filter;
+			//public Regex? filter;
+			public string? filter;
 			public Benchwell.TableDef? selected_tabledef {
 				get {
 					var row = get_selected_row ();
@@ -153,7 +154,13 @@ namespace Benchwell {
 				var box = (Gtk.Box) row.get_child();
 
 				var lbl = (Gtk.Label) box.get_children().nth_data (1);
-				return filter.match (lbl.get_label ());
+				//return filter.match (lbl.get_label ());
+				int score = 0;
+				var r = Benchwell.Utils.fuzzy_match (filter, lbl.get_label (), out score);
+				if (r) {
+					print (@"===score $(lbl.get_label ()) $(score)\n");
+				}
+				return r;
 			}
 
 			public unowned Benchwell.TableDef get_selected_table () {
