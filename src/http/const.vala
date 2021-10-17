@@ -108,6 +108,7 @@ namespace Benchwell {
 		}
 
 		enum Columns {
+			VISIBILITY,
 			ICON,
 			TEXT,
 			METHOD,

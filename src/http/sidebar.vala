@@ -4,7 +4,9 @@ namespace Benchwell {
 			public Benchwell.ApplicationWindow    window { get; construct; }
 			public Gtk.TreeView treeview;
 			public Benchwell.Http.Store store;
+			public Gtk.TreeModelFilter filter_store;
 			public Gtk.ComboBoxText collections_combo;
+			public Gtk.SearchEntry search_entry;
 
 			public Gtk.Menu menu;
 			public Gtk.MenuItem add_request_menu;
@@ -46,21 +48,31 @@ namespace Benchwell {
 				treeview.reorderable = true; // would be nice
 				treeview.button_release_event.connect (on_button_release_event);
 				treeview.activate_on_single_click = Config.settings.http_single_click_activate;
-				treeview.set_search_equal_func((model, column, key, iter) => {
-					GLib.Value val;
-					model.get_value (iter, column, out val);
-					var name = val.get_string ();
-					int score = 0;
-					return !Benchwell.Utils.fuzzy_match (key, name, out score);
-				});
-				treeview.start_interactive_search.connect(() => {
-					auto_expanding = true;
-					treeview.expand_all ();
-					auto_expanding = false;
-					return true;
-				});
+				// treeview.set_search_equal_func((model, column, key, iter) => {
+				// 	GLib.Value val;
+				// 	model.get_value (iter, column, out val);
+				// 	var name = val.get_string ();
+				// 	int score = 0;
+				// 	return !Benchwell.Utils.fuzzy_match (key, name, out score);
+				// });
+				// treeview.start_interactive_search.connect(() => {
+				// 	auto_expanding = true;
+				// 	treeview.expand_all ();
+				// 	auto_expanding = false;
+				// 	return true;
+				// });
 
-				store = new Benchwell.Http.Store.newv ({GLib.Type.OBJECT, GLib.Type.STRING, GLib.Type.STRING, GLib.Type.OBJECT});
+				search_entry = new Gtk.SearchEntry ();
+
+				store = new Benchwell.Http.Store ({
+					GLib.Type.BOOLEAN,
+					GLib.Type.OBJECT,
+					GLib.Type.STRING,
+					GLib.Type.STRING,
+					GLib.Type.OBJECT
+				});
+				filter_store = new Gtk.TreeModelFilter (store, null);
+				filter_store.set_visible_column (Benchwell.Http.Columns.VISIBILITY);
 
 				name_renderer = new Gtk.CellRendererText ();
 				//var icon_renderer = new Gtk.CellRendererPixbuf ();
@@ -130,19 +142,19 @@ namespace Benchwell {
 
 				menu = new Gtk.Menu ();
 
-				add_folder_menu = new Benchwell.MenuItem(_("New folder"), "directory");
+				add_folder_menu = new Benchwell.MenuItem (_("New folder"), "directory");
 				add_folder_menu.show ();
 
-				add_request_menu = new Benchwell.MenuItem(_("New request"), "add");
+				add_request_menu = new Benchwell.MenuItem (_("New request"), "add");
 				add_request_menu.show ();
 
-				clone_request_menu = new Benchwell.MenuItem(_("Clone request"), "copy");
+				clone_request_menu = new Benchwell.MenuItem (_("Clone request"), "copy");
 				clone_request_menu.show ();
 
-				delete_menu = new Benchwell.MenuItem(_("Delete"), "close");
+				delete_menu = new Benchwell.MenuItem (_("Delete"), "close");
 				delete_menu.show ();
 
-				edit_menu = new Benchwell.MenuItem(_("Rename"), "config");
+				edit_menu = new Benchwell.MenuItem (_("Rename"), "config");
 				edit_menu.show ();
 
 				menu.add (add_request_menu);
@@ -152,7 +164,70 @@ namespace Benchwell {
 				menu.add (delete_menu);
 
 				pack_start (collections_combo, false, false, 0);
+				pack_start (search_entry, false, false, 5);
 				pack_start (treeview_sw, true, true, 0);
+
+				// SIGNALS
+
+				search_entry.key_press_event.connect ((widget, event) => {
+					if (event.keyval != Gdk.Key.Escape) {
+						return false;
+					}
+					treeview.set_model (store);
+
+					search_entry.get_buffer().delete_text (0 , -1);
+					treeview.grab_focus ();
+
+					return false;
+				});
+
+				search_entry.search_changed.connect (() => {
+					var term = search_entry.get_buffer ().get_text ();
+					store.foreach ((model, path, iter) => {
+						GLib.Value val;
+						int score = 0;
+
+						store.get_value (iter, Columns.TEXT, out val);
+						var matched = Utils.fuzzy_match(term, val.get_string (), out score);
+						store.set_value (iter, Columns.VISIBILITY, matched);
+
+						return false;
+					});
+
+					auto_expanding = true;
+					treeview.expand_all ();
+					auto_expanding = false;
+					filter_store.refilter ();
+				});
+
+				search_entry.focus_out_event.connect (() => {
+					if (search_entry.get_buffer ().get_text () == "") {
+						search_entry.hide ();
+						treeview.grab_focus ();
+						auto_expanding = true;
+						store.foreach ((model, path, iter) => {
+							GLib.Value val;
+							store.get_value (iter, Columns.ITEM, out val);
+
+							var item = val.get_object() as HttpItem;
+							var expanded = Config.http_tree_state.get (item.id.to_string ());
+							if (expanded == null)
+								expanded = false;
+
+							var selected_path = store.get_path (iter);
+							if (expanded)
+								treeview.expand_row (selected_path, false);
+							else
+								treeview.collapse_row (selected_path);
+
+
+							return false;
+						});
+						auto_expanding = false;
+					}
+
+					return Gdk.EVENT_PROPAGATE;
+				});
 
 				collections_combo.changed.connect (on_collection_selected);
 				treeview.row_activated.connect (on_load_item);
@@ -162,7 +237,7 @@ namespace Benchwell {
 						return;
 					}
 					GLib.Value val;
-					store.get_value (iter, Benchwell.Http.Columns.ITEM, out val);
+					treeview.model.get_value (iter, Benchwell.Http.Columns.ITEM, out val);
 					var item = val as Benchwell.HttpItem;
 
 					Config.http_tree_state.insert (item.id.to_string (), true);
@@ -172,11 +247,27 @@ namespace Benchwell {
 				treeview.row_collapsed.connect ((iter, path) => {
 					if (auto_expanding) { return; }
 					GLib.Value val;
-					store.get_value (iter, Benchwell.Http.Columns.ITEM, out val);
+					treeview.model.get_value (iter, Benchwell.Http.Columns.ITEM, out val);
 					var item = val as Benchwell.HttpItem;
 
 					Config.http_tree_state.remove (item.id.to_string ());
 					Config.save_http_tree_state ();
+				});
+
+				treeview.key_press_event.connect ((widget, event) => {
+					if (event.keyval != Gdk.Key.f) {
+						return false;
+					}
+
+					if (event.state != Gdk.ModifierType.CONTROL_MASK) {
+						return false;
+					}
+
+					search_entry.show ();
+					search_entry.grab_focus ();
+					treeview.set_model (filter_store);
+
+					return true;
 				});
 
 				var selected_collection_id = Config.settings.http_collection_id;
@@ -184,19 +275,20 @@ namespace Benchwell {
 					collections_combo.set_active_id (selected_collection_id.to_string ());
 				}
 
-				// SIGNALS
 				// edit hack
 				edit_menu.activate.connect ( () => {
 					Gtk.TreeIter iter;
 					treeview.get_selection ().get_selected (null, out iter);
 
-					var path = store.get_path (iter);
+					var path = treeview.model.get_path (iter);
 					name_renderer.editable = true;
 					treeview.set_cursor (path, name_column, true);
 				});
+
 				name_renderer.edited.connect ( () => {
 					name_renderer.editable = false;
 				});
+
 				name_renderer.edited.connect (on_save_item_name);
 				name_renderer.editing_canceled.connect ( () => {
 					name_renderer.editable = false;
@@ -227,16 +319,16 @@ namespace Benchwell {
 
 			public void resort () {
 				var sort = 0;
-				store.foreach ((model, path, iter) => {
+				treeview.model.foreach ((model, path, iter) => {
 					GLib.Value val;
-					store.get_value (iter, Benchwell.Http.Columns.ITEM, out val);
+					treeview.model.get_value (iter, Benchwell.Http.Columns.ITEM, out val);
 					var item = val.get_object () as Benchwell.HttpItem;
 
 					// PARENT CHANGE
 					Gtk.TreeIter? parent_iter = null;
-					var ok = store.iter_parent (out parent_iter, iter);
+					var ok = treeview.model.iter_parent (out parent_iter, iter);
 					if (ok) {
-						store.get_value (parent_iter, Benchwell.Http.Columns.ITEM, out val);
+						treeview.model.get_value (parent_iter, Benchwell.Http.Columns.ITEM, out val);
 						var parent_item = val.get_object () as Benchwell.HttpItem;
 						if (parent_item != null && parent_item.is_folder) {
 							item.parent_id = parent_item.id; // notify isn't working here... why?
@@ -260,7 +352,7 @@ namespace Benchwell {
 					return null;
 
 				GLib.Value val;
-				store.get_value (iter, Benchwell.Http.Columns.ITEM, out val);
+				treeview.model.get_value (iter, Benchwell.Http.Columns.ITEM, out val);
 				return val.get_object () as Benchwell.HttpItem;
 			}
 
@@ -275,7 +367,7 @@ namespace Benchwell {
 					var new_item = selected_collection.clone_item (selected_item);
 
 					iter = add_row (new_item, null, iter);
-					var path = store.get_path (iter);
+					var path = treeview.model.get_path (iter);
 					name_renderer.editable = true;
 					treeview.expand_to_path (path);
 					treeview.set_cursor (path, name_column, true);
@@ -304,9 +396,9 @@ namespace Benchwell {
 
 				var ok = treeview.get_path_at_pos (cursor_x, cursor_y, out path, null, out cell_x, out cell_y);
 				if (ok) {
-					ok = store.get_iter (out parent_iter, path);
+					ok = treeview.model.get_iter (out parent_iter, path);
 					if (ok) {
-						store.get_value (parent_iter, Benchwell.Http.Columns.ITEM, out val);
+						treeview.model.get_value (parent_iter, Benchwell.Http.Columns.ITEM, out val);
 						selected_item = val.get_object () as Benchwell.HttpItem;
 					}
 				}
@@ -318,7 +410,7 @@ namespace Benchwell {
 							item.parent_id = selected_item.id;
 						 } else {
 							sibling_iter = parent_iter;
-							store.iter_parent (out parent_iter, parent_iter);
+							treeview.model.iter_parent (out parent_iter, parent_iter);
 						}
 					}
 
@@ -334,7 +426,7 @@ namespace Benchwell {
 				var iter = add_row (item, parent_iter, sibling_iter);
 
 				name_renderer.editable = true;
-				path = store.get_path (iter);
+				path = treeview.model.get_path (iter);
 				treeview.expand_to_path (path);
 				treeview.set_cursor (path, name_column, true);
 				if (item.is_folder)
@@ -371,7 +463,9 @@ namespace Benchwell {
 					return;
 				}
 
-				store.set_value (iter, Benchwell.Http.Columns.TEXT, new_text);
+				Gtk.TreeIter child_iter;
+				filter_store.convert_iter_to_child_iter (out child_iter, iter);
+				store.set_value (child_iter, Benchwell.Http.Columns.TEXT, new_text);
 			}
 
 			private void on_load_item () {
@@ -519,6 +613,7 @@ namespace Benchwell {
 					store.set_value (iter, Benchwell.Http.Columns.METHOD, item.method);
 				}
 
+				store.set_value (iter, Benchwell.Http.Columns.VISIBILITY, true);
 				store.set_value (iter, Benchwell.Http.Columns.TEXT, item.name);
 				store.set_value (iter, Benchwell.Http.Columns.ITEM, item);
 
@@ -564,9 +659,8 @@ namespace Benchwell {
 		}
 
 		public class Store : Gtk.TreeStore, Gtk.TreeDragDest, Gtk.TreeModel {
-			public Store.newv (GLib.Type[] types) {
-				Object();
-				set_column_types (types);
+			public Store (GLib.Type[] types) {
+				set_column_types ( types);
 			}
 
 			public bool row_drop_possible (Gtk.TreePath dest, Gtk.SelectionData selection_data) {
