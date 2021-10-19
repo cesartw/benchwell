@@ -156,11 +156,7 @@ namespace Benchwell {
 				var lbl = (Gtk.Label) box.get_children().nth_data (1);
 				//return filter.match (lbl.get_label ());
 				int score = 0;
-				var r = Benchwell.Utils.fuzzy_match (filter, lbl.get_label (), out score);
-				if (r) {
-					print (@"===score $(lbl.get_label ()) $(score)\n");
-				}
-				return r;
+				return Benchwell.Utils.fuzzy_match (filter, lbl.get_label (), out score);
 			}
 
 			public unowned Benchwell.TableDef get_selected_table () {

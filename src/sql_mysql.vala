@@ -367,7 +367,6 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 			sets += @"`$(columns[i].coldef.name)` = $new_value";
 		}
 		var query = @"UPDATE `$table` SET $(string.joinv (",", sets)) WHERE $(string.joinv (" AND ", wheres))";
-		print (@"=====$(query)\n");
 		return;
 		var rc = db.query (query);
 		if ( rc != 0 ) {

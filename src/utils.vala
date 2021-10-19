@@ -1,5 +1,24 @@
 namespace Benchwell.Utils {
-	public bool fuzzy_match (string term, string item, out int score) {
+	public bool fuzzy_match (string phrase, string item, out int score) {
+		var terms = phrase.split ("|", -1);
+		bool matched = false;
+		score = 99999999;
+		foreach (var term in terms) {
+			int local_score = 0;
+			if (fuzzy_term_match (term, item, out local_score)) {
+				matched = true;
+				if (local_score < score)
+					score = local_score;
+			}
+		}
+		if (!matched) {
+			score = 0;
+		}
+
+		return matched;
+	}
+
+	private bool fuzzy_term_match (string term, string item, out int score) {
 		score = 0;
 		unichar termC;
 		int termIndex = 0;

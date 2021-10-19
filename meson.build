@@ -74,6 +74,8 @@ executable(
 	'src/config/keyvalue.vala',
 	'src/config/connection.vala',
 
+	'src/utils.vala',
+
 	'src/constants.vala',
 	'src/application_window.vala',
 	'src/environment.vala',
