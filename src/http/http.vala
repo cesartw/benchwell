@@ -235,9 +235,9 @@ namespace Benchwell {
 				sidebar.item_removed.connect (on_item_removed);
 
 				address.send_btn.btn.clicked.connect (on_send);
-				address.send_btn.menu_btn.activate.connect (on_save_as);
-				//address.save_btn.clicked.connect (on_save);
+				//address.send_btn.menu_btn.activate.connect (on_save_as);
 				window.copy_curl_action.activate.connect (on_copy_curl);
+				window.saveas.activate.connect (on_save_as);
 
 				address.changed.connect (on_request_changed);
 				address.changed.connect (build_interpolated_label);
@@ -418,7 +418,6 @@ namespace Benchwell {
 						body_stack.set_visible_child_name ("editor");
 						break;
 				}
-
 			}
 
 			private void on_request_changed () {
@@ -430,7 +429,59 @@ namespace Benchwell {
 			}
 
 			private void on_save_as () {
-				print ("=======saveas\n");
+				var selector = new SaveAsSelector (window);
+				selector.show ();
+				var dialog = new Gtk.Dialog.with_buttons (_("Save As"), window,
+											Gtk.DialogFlags.DESTROY_WITH_PARENT|Gtk.DialogFlags.MODAL);
+				var ok_button = dialog.add_button (_("Ok"), Gtk.ResponseType.OK);
+				dialog.add_button (_("Cancel"), Gtk.ResponseType.CANCEL);
+				dialog.set_default_size (250, 130);
+				dialog.get_content_area ().spacing = 5;
+				dialog.get_content_area ().add (selector);
+				ok_button.sensitive = false;
+				selector.changed.connect (() => {
+					ok_button.sensitive = selector.get_selected_collection_id () != null && selector.get_name () != "";
+				});
+
+				var resp = (Gtk.ResponseType) dialog.run ();
+				if (resp != Gtk.ResponseType.OK) {
+					return;
+				}
+
+				var collection_id = selector.get_selected_collection_id ();
+				var folder_id = selector.get_selected_item_id ();
+				var name = selector.get_name ();
+				dialog.destroy ();
+
+				var new_item = new Benchwell.HttpItem ();
+				new_item.touch_without_save (() => {
+					if (folder_id != null)
+						new_item.parent_id = folder_id;
+					new_item.name = name;
+					new_item.http_collection_id = collection_id;
+					new_item.body = item.body;
+
+					new_item.description = item.description;
+					new_item.method = item.method;
+					new_item.url = item.url;
+					new_item.body = item.body;
+					new_item.mime = item.mime;
+				});
+
+				var collection = Config.get_http_collection_by_id (collection_id);
+				try {
+					collection.add_item (new_item);
+					foreach (var h in item.headers)
+						new_item.add_header (h.key, h.val);
+					foreach (var p in item.query_params)
+						new_item.add_param (p.key, p.val);
+					foreach (var p in item.form_params)
+						new_item.add_form_param (p.key, p.val, p.kvtype);
+				} catch (Benchwell.ConfigError err) {
+					Config.show_alert (this, err.message);
+				}
+
+				dialog.destroy ();
 			}
 
 			private void on_copy_curl () {
@@ -662,7 +713,7 @@ namespace Benchwell {
 
 				// NOTE: can't tranfer ownership of null
 				string[] l_headers_array = null;
-				l_headers_array += "X-Powered-by: Benchwell";
+				//l_headers_array += "X-Powered-by: Benchwell";
 
 				var content_type = "";
 				for (var i = 0; i < kv_headers.length; i++) {
@@ -1274,6 +1325,90 @@ namespace Benchwell {
 			public void stop () {
 				spinner.stop ();
 				box.hide ();
+			}
+		}
+
+		public class SaveAsSelector : Gtk.Grid {
+			public Benchwell.ApplicationWindow   window { get; construct; }
+			private CollectionsComboBox collections_combo;
+			private Gtk.ComboBoxText folder_combo;
+			private Gtk.Entry name_entry;
+
+			public signal void changed ();
+
+			public SaveAsSelector (Benchwell.ApplicationWindow window) {
+				Object(
+					window: window,
+					row_spacing: 5,
+					column_spacing: 5
+				);
+
+				collections_combo = new CollectionsComboBox (window);
+				collections_combo.show ();
+
+				folder_combo = new Gtk.ComboBoxText ();
+				folder_combo.show ();
+				folder_combo.sensitive = Config.settings.http_collection_id != 0;
+				folder_combo.append (null, "");
+
+				name_entry = new Gtk.Entry ();
+				name_entry.show ();
+
+				attach (collections_combo, 0, 0, 1, 1);
+				attach (folder_combo, 1, 0, 1, 1);
+				attach (name_entry, 0, 1, 2, 1);
+
+				collections_combo.changed.connect (on_collection_selected);
+				load_folder ();
+
+				collections_combo.changed.connect (()=>{changed ();});
+				folder_combo.changed.connect (()=>{changed ();});
+				name_entry.changed.connect (()=>{changed ();});
+			}
+
+			public int64? get_selected_collection_id () {
+				var string_id = collections_combo.get_active_id ();
+				if (string_id == null)
+					return null;
+
+				return int64.parse (string_id);
+			}
+
+			public int64? get_selected_item_id () {
+				var string_id = folder_combo.get_active_id ();
+				if (string_id == null)
+					return null;
+
+				return int64.parse (string_id);
+			}
+
+			public string get_name () {
+				return name_entry.text;
+			}
+
+			private void on_collection_selected () {
+				folder_combo.remove_all ();
+			}
+
+			private void load_folder ()
+				requires (Config.settings.http_collection_id != 0) {
+
+				var collection = Config.get_selected_http_collection ();
+				append_items_name_with_parent (null, collection.items);
+			}
+
+			private void append_items_name_with_parent (string? parent, HttpItem[] items) {
+				foreach(var item in items) {
+					if (!item.is_folder)
+						continue;
+
+					var name = item.name;
+					if (parent != null)
+						name = @"$parent -> $name";
+
+					folder_combo.append (item.id.to_string (), name);
+					append_items_name_with_parent (name, item.items);
+				}
 			}
 		}
 

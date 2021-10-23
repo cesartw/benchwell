@@ -836,8 +836,8 @@ namespace Benchwell {
 					pack_start (label, false, false, 5);
 
 					Gtk.Widget input;
-					columns[i].coldef.ttype == Benchwell.ColType.LongString;
-					if (columns[i].coldef.ttype == Benchwell.ColType.LongString || (columns[i].val != null && columns[i].val.index_of ("\n") == -1)) {
+					columns[i].coldef.ttype == Benchwell.ColType.LONG_STRING;
+					if (columns[i].coldef.ttype == Benchwell.ColType.LONG_STRING || (columns[i].val != null && columns[i].val.index_of ("\n") == -1)) {
 						input = new Gtk.Entry () {
 							text = columns[i].val
 						};

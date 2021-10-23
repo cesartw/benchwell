@@ -290,7 +290,6 @@ namespace Benchwell {
 					throw new Benchwell.ConfigError.INIT (@"unable to initialize config file: $errmsg $q");
 				}
 			}
-
 		}
 
 		public void show_alert (Gtk.Widget? w, string message, Gtk.MessageType type = Gtk.MessageType.ERROR, bool autohide = false, int timeout = 0) {
@@ -338,6 +337,30 @@ namespace Benchwell {
 			http_collection_added (c);
 
 			return c;
+		}
+
+		public unowned Benchwell.HttpCollection? get_selected_http_collection () {
+			foreach(weak Benchwell.HttpCollection collection in http_collections) {
+				if (collection.id != settings.http_collection_id){
+					continue;
+				}
+
+				return collection;
+			}
+
+			return null;
+		}
+
+		public unowned Benchwell.HttpCollection? get_http_collection_by_id (int64 id) {
+			foreach(weak Benchwell.HttpCollection collection in http_collections) {
+				if (collection.id != id){
+					continue;
+				}
+
+				return collection;
+			}
+
+			return null;
 		}
 
 		public void remove_http_collection (Benchwell.HttpCollection collection) {

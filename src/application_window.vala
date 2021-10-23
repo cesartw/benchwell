@@ -10,6 +10,7 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 	public SimpleAction new_tab_action;
 	public SimpleAction close_action;
 	public SimpleAction copy_curl_action;
+	public SimpleAction saveas;
 
 	public Gtk.InfoBar infobar;
 	public Gtk.Label infobar_label;
@@ -27,12 +28,14 @@ public class Benchwell.ApplicationWindow : Gtk.ApplicationWindow {
 		new_tab_action = new SimpleAction("new.tab", null);
 		close_action = new SimpleAction("close", null);
 		copy_curl_action = new SimpleAction("copycurl", null);
+		saveas = new SimpleAction("saveas", null);
 
 		add_action(new_database_tab_action);
 		add_action(new_http_tab_action);
 		add_action(new_tab_action);
 		add_action(close_action);
 		add_action(copy_curl_action);
+		add_action(saveas);
 
 		notebook = new Gtk.Notebook ();
 		notebook.set_name ("MainNotebook");

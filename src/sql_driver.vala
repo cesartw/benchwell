@@ -54,13 +54,14 @@ public errordomain Benchwell.Error {
 }
 
 public enum Benchwell.ColType {
-	Boolean,
-	String,
-	LongString,
-	Float,
-	Int,
-	Date,
-	List
+	BOOLEAN,
+	STRING,
+	LONG_STRING,
+	FLOAT,
+	INT,
+	DATE,
+	LIST,
+	BLOB
 }
 
 public enum Benchwell.TableType {

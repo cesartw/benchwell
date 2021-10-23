@@ -149,7 +149,7 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 			col.nullable = row[2] == "YES";
 			col.pk = row[3] == "PRI";
 
-			var coltype = Benchwell.ColType.String;
+			var coltype = Benchwell.ColType.STRING;
 			int precision = 0;
 			bool unsigned = false;
 			string[] options = null;
@@ -583,7 +583,7 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 		var tt = parts[1]; // type
 		var s = parts[3];  // precision
 
-		coltype = Benchwell.ColType.String;
+		coltype = Benchwell.ColType.STRING;
 
 		if ( parts.length >= 5 ) {
 			unsigned = parts[4] == "unsigned"; // unsigned
@@ -591,36 +591,42 @@ public class Benchwell.MysqlConnection : Benchwell.Connection, Object {
 
 		switch (tt) {
 			case "enum":
-				coltype = Benchwell.ColType.List;
+				coltype = Benchwell.ColType.LIST;
 				options = s.split (",");
 				unsigned = false;
 				break;
-			case "text", "mediumtext", "longtext", "blob", "mediumblob", "longblob":
-				coltype = Benchwell.ColType.String;
+			case "text", "mediumtext":
+				coltype = Benchwell.ColType.STRING;
 				unsigned = false;
 				break;
+			case "blob", "mediumblob", "longblob":
+				coltype = Benchwell.ColType.BLOB;
+				break;
+			case "longtext":
+				coltype = Benchwell.ColType.LONG_STRING;
+				break;
 			case "varchar", "tinytext":
-				coltype = Benchwell.ColType.String;
+				coltype = Benchwell.ColType.STRING;
 				precision = int.parse(s);
 				break;
 			case "int", "smallint", "mediumint", "bigint":
-				coltype = Benchwell.ColType.Int;
+				coltype = Benchwell.ColType.INT;
 				precision = int.parse(s);
 				break;
 			case "tinyint":
 				if ( s == "1" ) {
-					coltype = Benchwell.ColType.Boolean;
+					coltype = Benchwell.ColType.BOOLEAN;
 					break;
 				}
 
 				precision = int.parse(s);
-				coltype = Benchwell.ColType.Int;
+				coltype = Benchwell.ColType.INT;
 				break;
 			case "double precision", "double", "float", "decimal":
-				coltype = Benchwell.ColType.Float;
+				coltype = Benchwell.ColType.FLOAT;
 				break;
 			case "time", "datetime":
-				coltype = Benchwell.ColType.Date;
+				coltype = Benchwell.ColType.DATE;
 				break;
 		}
 	}

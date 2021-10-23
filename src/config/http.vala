@@ -8,7 +8,7 @@ public class Benchwell.HttpCollection : Object {
 
 	private bool no_auto_save;
 
-	public signal Benchwell.HttpItem item_added (Benchwell.HttpItem item);
+	public signal void item_added (Benchwell.HttpItem item);
 
 	public HttpCollection () {
 		notify["name"].connect (on_save);
@@ -112,7 +112,7 @@ public class Benchwell.HttpCollection : Object {
 		}
 		item.http_collection_id = id;
 
-		item.save ();
+		item.save_all ();
 
 		if (item.parent_id == 0) {
 			var tmp = items;
@@ -533,12 +533,13 @@ public class Benchwell.HttpItem : Object {
 		return kv;
 	}
 
-	public Benchwell.HttpKv add_form_param (string key = "", string val = "") throws ConfigError {
+	public Benchwell.HttpKv add_form_param (string key = "", string val = "", KeyValueTypes kvtype = KeyValueTypes.STRING) throws ConfigError {
 		var kv = new Benchwell.HttpKv ();
 		kv.touch_without_save (() => {
 			kv.key = key;
 			kv.val = val;
 			kv.type = "form_param";
+			kv.kvtype = kvtype;
 			kv.http_item_id = id;
 		});
 		kv.save ();
