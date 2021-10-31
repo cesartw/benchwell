@@ -1,5 +1,10 @@
 namespace Benchwell.Utils {
 	public bool fuzzy_match (string phrase, string item, out int score) {
+		if (phrase == "") {
+			score = 0;
+			return true;
+		}
+
 		var terms = phrase.split ("|", -1);
 		bool matched = false;
 		score = 99999999;
@@ -34,7 +39,7 @@ namespace Benchwell.Utils {
 			while (item.get_next_char (ref itemIndex, out itemC)) {
 				if (itemC == termC) {
 					found = true;
-					indices += itemIndex;
+					indices += itemIndex-1;
 					break;
 				}
 			}
@@ -44,7 +49,7 @@ namespace Benchwell.Utils {
 		}
 
 		for (var i = 1; i < indices.length; i++) {
-			score += indices[i-1] + indices[i];
+			score += indices[i] - indices[i-1] - 1;
 		}
 
 		score += (term.length - item.length).abs ();

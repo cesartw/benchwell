@@ -115,3 +115,25 @@ subdir('data')
 subdir('po')
 
 meson.add_install_script('build-aux/post_install.py')
+
+# TESTING
+test_sources = files(
+	'src/utils.vala',
+	'src/utils_test.vala',
+	'src/test.vala'
+)
+
+test_unit = 'unit-test'
+test_gtk = 'gtk-test'
+
+test_deps = [
+	dependency('glib-2.0'),
+	dependency('gobject-2.0'),
+	dependency('gtk+-3.0'),
+]
+
+test_unit_exec = executable(test_unit, sources: test_sources, dependencies: test_deps)
+test_gtk_exec = executable(test_gtk, sources: test_sources, dependencies: test_deps)
+
+test(test_unit, test_unit_exec)
+test(test_gtk, test_gtk_exec)

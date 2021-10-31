@@ -48,29 +48,25 @@ namespace Benchwell {
 				treeview.reorderable = true; // would be nice
 				treeview.button_release_event.connect (on_button_release_event);
 				treeview.activate_on_single_click = Config.settings.http_single_click_activate;
-				// treeview.set_search_equal_func((model, column, key, iter) => {
-				// 	GLib.Value val;
-				// 	model.get_value (iter, column, out val);
-				// 	var name = val.get_string ();
-				// 	int score = 0;
-				// 	return !Benchwell.Utils.fuzzy_match (key, name, out score);
-				// });
-				// treeview.start_interactive_search.connect(() => {
-				// 	auto_expanding = true;
-				// 	treeview.expand_all ();
-				// 	auto_expanding = false;
-				// 	return true;
-				// });
 
 				search_entry = new Gtk.SearchEntry ();
 
+				// VISIBILITY
+				// SORT
+				// ICON
+				// TEXT
+				// METHOD
+				// ITEM
 				store = new Benchwell.Http.Store ({
 					GLib.Type.BOOLEAN,
+					GLib.Type.INT64,
 					GLib.Type.OBJECT,
 					GLib.Type.STRING,
 					GLib.Type.STRING,
 					GLib.Type.OBJECT
 				});
+				store.set_sort_column_id (Benchwell.Http.Columns.SORT, Gtk.SortType.ASCENDING);
+				store.set_default_sort_func((iter1,iter2) => {return 0;});
 				filter_store = new Gtk.TreeModelFilter (store, null);
 				filter_store.set_visible_column (Benchwell.Http.Columns.VISIBILITY);
 
@@ -168,7 +164,9 @@ namespace Benchwell {
 					if (event.keyval != Gdk.Key.Escape) {
 						return false;
 					}
-					treeview.set_model (store);
+					//treeview.set_model (filter_store);
+
+					clear_search ();
 
 					search_entry.get_buffer().delete_text (0 , -1);
 					treeview.grab_focus ();
@@ -178,47 +176,41 @@ namespace Benchwell {
 
 				search_entry.search_changed.connect (() => {
 					var term = search_entry.get_buffer ().get_text ();
+					if (term == "") {
+						clear_search ();
+						return;
+					}
+
+					treeview.freeze_child_notify ();
+					store.set_sort_column_id(-1, Gtk.SortType.ASCENDING);
 					store.foreach ((model, path, iter) => {
 						GLib.Value val;
 						int score = 0;
 
 						store.get_value (iter, Columns.TEXT, out val);
 						var matched = Utils.fuzzy_match(term, val.get_string (), out score);
-						store.set_value (iter, Columns.VISIBILITY, matched);
+						if (!matched) {
+							score = 9999;
+						}
+						//store.set_value (iter, Columns.VISIBILITY, true);
+						store.set_value (iter, Columns.SORT, score);
 
 						return false;
 					});
+					store.set_sort_column_id(Columns.SORT, Gtk.SortType.ASCENDING);
+					treeview.thaw_child_notify ();
 
 					auto_expanding = true;
 					treeview.expand_all ();
 					auto_expanding = false;
-					filter_store.refilter ();
+					//filter_store.refilter ();
 				});
 
 				search_entry.focus_out_event.connect (() => {
 					if (search_entry.get_buffer ().get_text () == "") {
 						search_entry.hide ();
 						treeview.grab_focus ();
-						auto_expanding = true;
-						store.foreach ((model, path, iter) => {
-							GLib.Value val;
-							store.get_value (iter, Columns.ITEM, out val);
-
-							var item = val.get_object() as HttpItem;
-							var expanded = Config.http_tree_state.get (item.id.to_string ());
-							if (expanded == null)
-								expanded = false;
-
-							var selected_path = store.get_path (iter);
-							if (expanded)
-								treeview.expand_row (selected_path, false);
-							else
-								treeview.collapse_row (selected_path);
-
-
-							return false;
-						});
-						auto_expanding = false;
+						clear_search ();
 					}
 
 					return Gdk.EVENT_PROPAGATE;
@@ -260,7 +252,7 @@ namespace Benchwell {
 
 					search_entry.show ();
 					search_entry.grab_focus ();
-					treeview.set_model (filter_store);
+					//treeview.set_model (filter_store);
 
 					return true;
 				});
@@ -335,6 +327,31 @@ namespace Benchwell {
 				if (Config.settings.http_collection_id != 0) {
 					on_collection_selected ();
 				}
+			}
+
+			private void clear_search () {
+				treeview.freeze_child_notify ();
+				store.set_sort_column_id(-1, Gtk.SortType.ASCENDING);
+				store.foreach ((model, path, iter) => {
+					GLib.Value val;
+					store.get_value (iter, Columns.ITEM, out val);
+					var item = val.get_object () as HttpItem;
+					store.set_value (iter, Columns.SORT, item.sort);
+
+					var expanded = Config.http_tree_state.get (item.id.to_string ());
+					if (expanded == null)
+						expanded = false;
+
+					var selected_path = store.get_path (iter);
+					if (expanded)
+						treeview.expand_row (selected_path, false);
+					else
+						treeview.collapse_row (selected_path);
+
+					return false;
+				});
+				store.set_sort_column_id(Columns.SORT, Gtk.SortType.ASCENDING);
+				treeview.thaw_child_notify ();
 			}
 
 			public void on_resort () {
@@ -487,9 +504,9 @@ namespace Benchwell {
 					return;
 				}
 
-				Gtk.TreeIter child_iter;
-				filter_store.convert_iter_to_child_iter (out child_iter, iter);
-				store.set_value (child_iter, Benchwell.Http.Columns.TEXT, new_text);
+				//Gtk.TreeIter child_iter;
+				//filter_store.convert_iter_to_child_iter (out child_iter, iter);
+				store.set_value (iter, Benchwell.Http.Columns.TEXT, new_text);
 			}
 
 			private void on_load_item () {

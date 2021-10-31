@@ -6,6 +6,9 @@
 	<name>Benchwell</name>
 	<summary>Benchwell - Toolkit</summary>
 	<description>
+		<p>
+		Developer's aid
+		</p>
 	</description>
 	<provides>
 		<binary>@appid@</binary>
