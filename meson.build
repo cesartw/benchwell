@@ -64,6 +64,11 @@ executable(
 	'src/http/const.vala',
 	'src/http/http.vala',
 	'src/http/sidebar.vala',
+	'src/http/overlay.vala',
+	'src/http/saveas.vala',
+	'src/http/historypopover.vala',
+	'src/http/collections_combobox.vala',
+	'src/http/http_store.vala',
 
 	'src/database_service.vala',
 

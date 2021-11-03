@@ -576,7 +576,6 @@ namespace Benchwell {
 
 				return false;
 			});
-			print (@"LOADED ENVIRONMENTS $(environments.length ())\n");
 		}
 		// =========================
 
