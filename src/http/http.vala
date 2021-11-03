@@ -60,7 +60,7 @@ namespace Benchwell {
 			///////////
 
 			public Benchwell.HttpItem? item;
-			public Gtk.TreeIter? item_iter;
+			public weak Gtk.TreeIter? item_iter;
 
 			private bool loading = false;
 			private Regex kvrg;
@@ -956,6 +956,7 @@ namespace Benchwell {
 
 				if (item.id == removed_item.id) {
 					item = null;
+					item_iter = null;
 
 					address.address.text = "";
 					address.method_combo.set_active_id ("GET");

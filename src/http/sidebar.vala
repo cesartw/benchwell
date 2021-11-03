@@ -484,8 +484,8 @@ namespace Benchwell {
 					Config.show_alert (this, err.message);
 					return;
 				}
-				store.remove (ref iter);
 				item_removed (item);
+				store.remove (ref iter);
 			}
 
 			private void on_save_item_name (Gtk.CellRendererText renderer, string path, string new_text) {
