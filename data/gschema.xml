@@ -76,6 +76,11 @@
 			<summary>Request activation</summary>
 			<description>Single click activates request</description>
 		</key>
+		<key name="http-follow-redirect" type="b">
+			<default>true</default>
+			<summary>Follow redirect</summary>
+			<description>Location header will be followed</description>
+		</key>
 		<key name="dark-mode" type="b">
 			<default>true</default>
 			<summary>Dark Mode</summary>

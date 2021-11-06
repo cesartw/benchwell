@@ -286,6 +286,18 @@ public class Benchwell.HttpSettings : Gtk.Grid {
 		other_single_click_sw.show ();
 		//////////////////
 
+		// FOLLOW REDIRECT
+		var follow_redirect_click_label = new Gtk.Label (_("Follow redirect")) {
+			valign = label_alignment,
+			halign = label_alignment
+		};
+		follow_redirect_click_label.show ();
+
+		var follow_redirect_click_sw = new Gtk.Switch ();
+		follow_redirect_click_sw.state = Config.settings.http_follow_redirect;
+		follow_redirect_click_sw.show ();
+		//////////////////
+
 		// IMPORTERS
 		var other_import_label = new Gtk.Label (_("Import")) {
 			valign = label_alignment,
@@ -320,10 +332,13 @@ public class Benchwell.HttpSettings : Gtk.Grid {
 		attach (other_single_click_label, 4, 1, 1, 1);
 		attach (other_single_click_sw, 5, 1, 1, 1);
 
-		attach (other_import_label, 3, 2, 2, 1);
-		attach (other_import_type, 4, 3, 1, 1);
-		attach (other_import_file_btn, 5, 3, 1, 1);
-		attach (other_import_spinner, 6, 3, 1, 1);
+		attach (follow_redirect_click_label, 4, 2, 1, 1);
+		attach (follow_redirect_click_sw, 5, 2, 1, 1);
+
+		attach (other_import_label, 3, 3, 2, 1);
+		attach (other_import_type, 4, 4, 1, 1);
+		attach (other_import_file_btn, 5, 4, 1, 1);
+		attach (other_import_spinner, 6, 4, 1, 1);
 
 		laf_font_btn.font_set.connect (() => {
 			Config.settings.http_font = laf_font_btn.font;
@@ -331,6 +346,11 @@ public class Benchwell.HttpSettings : Gtk.Grid {
 
 		other_single_click_sw.state_set.connect ((state) => {
 			Config.settings.http_single_click_activate = state;
+			return false;
+		});
+
+		follow_redirect_click_sw.state_set.connect ((state) => {
+			Config.settings.http_follow_redirect = state;
 			return false;
 		});
 

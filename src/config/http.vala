@@ -207,6 +207,10 @@ public class Benchwell.HttpItem : Object {
 
 	public HttpItem () {
 		Object ();
+
+		headers = {};
+		query_params = {};
+		form_params = {};
 		notify["name"].connect (on_save);
 		notify["description"].connect (on_save);
 		notify["sort"].connect (on_save);
@@ -229,7 +233,7 @@ public class Benchwell.HttpItem : Object {
 	}
 
 	private void on_save (Object obj, ParamSpec spec) {
-		if (no_auto_save) {
+		if (no_auto_save || http_collection_id == 0) {
 			return;
 		}
 
@@ -523,7 +527,8 @@ public class Benchwell.HttpItem : Object {
 			kv.type = "param";
 			kv.http_item_id = id;
 		});
-		kv.save ();
+		if (http_collection_id != 0)
+			kv.save ();
 
 		var tmp = query_params;
 		tmp += kv;
@@ -542,7 +547,8 @@ public class Benchwell.HttpItem : Object {
 			kv.kvtype = kvtype;
 			kv.http_item_id = id;
 		});
-		kv.save ();
+		if (http_collection_id != 0)
+			kv.save ();
 
 		var tmp = form_params;
 		tmp += kv;

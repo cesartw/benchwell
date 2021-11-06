@@ -79,7 +79,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		body_stack.set_visible_child_name ("editor");
 		body_stack.show ();
 
-		item = new Benchwell.HttpItem ();
 		headers = new Benchwell.KeyValues (Benchwell.KeyValueTypes.STRING|Benchwell.KeyValueTypes.MULTILINE);
 		headers.show ();
 
@@ -340,6 +339,10 @@ public class Benchwell.Http.Http : Gtk.Paned {
 				}
 			});
 		});
+
+		item = new Benchwell.HttpItem ();
+		headers.add (item.add_header ());
+		query_params.add (item.add_param ());
 	}
 
 	private void on_mime_switch_change () {
@@ -510,6 +513,117 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		cb.set_text (builder.str, builder.str.length);
 	}
 
+	private bool build_request (
+		out string mime,
+		out string method,
+		out string url,
+		out string[] raw_body,
+		out string[] headers_array
+	) {
+		headers_array = null;
+		raw_body = null;
+		mime = mime_switch.combo.get_active_id ();
+
+		var handle = new Curl.EasyHandle ();
+
+		url = Config.environments.selected.interpolate (address.address.get_text ());
+		method = address.method_combo.get_active_id ();
+
+		var kv_params = query_params.get_kvs ();
+
+		// TODO: Improve URL parsing
+		var builder = new StringBuilder ();
+		if (url.index_of ("?") == -1 && kv_params.length > 0)
+			builder.append ("?");
+
+		for (var i = 0; i < kv_params.length; i++) {
+			var key = Config.environments.selected.interpolate (kv_params[i].key);
+			var val = Config.environments.selected.interpolate (kv_params[i].val);
+			key = handle.escape (key, key.length);
+			val = handle.escape (val, val.length);
+			builder.append (@"$key=$val");
+			if (i < kv_params.length - 1)
+				builder.append ("&");
+		}
+
+		if (url.index_of ("?") != -1 && !url.has_suffix("&"))
+			builder.prepend ("&");
+		url += builder.str;
+
+		var kv_headers = headers.get_kvs ();
+
+		// NOTE: can't tranfer ownership of null
+		string[] l_headers_array = null;
+		l_headers_array += "User-Agent: Benchwell";
+
+		var content_type = "";
+		for (var i = 0; i < kv_headers.length; i++) {
+			var key = Config.environments.selected.interpolate (kv_headers[i].key);
+			var val = Config.environments.selected.interpolate (kv_headers[i].val);
+			// NOTE: delayed appending content-type because multipart/form-data needs to include the bounday
+			if (key.strip ().casefold () == "Content-Type".casefold ()) {
+				content_type = val;
+				continue;
+			}
+			l_headers_array += @"$(kv_headers[i].key): $(val)";
+		}
+
+		// BODY
+		string boundary = "";
+		string[] l_raw_body = null;
+		switch (mime_switch.combo.get_active_id ()) {
+			case "application/x-www-form-urlencoded":
+				var form_fields = body_fields.get_kvs ();
+
+				for (var i = 0; i < form_fields.length; i++) {
+					var key = Config.environments.selected.interpolate (form_fields[i].key);
+					var val = Config.environments.selected.interpolate (form_fields[i].val);
+					key = handle.escape (key, key.length);
+					val = handle.escape (val, val.length);
+					l_raw_body += @"$key=$val";
+				}
+
+				break;
+			case "multipart/form-data":
+				var form_fields = body_fields.get_kvs ();
+
+				for (var i = 0; i < form_fields.length; i++) {
+					var key = Config.environments.selected.interpolate (form_fields[i].key);
+					var val = Config.environments.selected.interpolate (form_fields[i].val);
+
+					switch (form_fields[i].kvtype) {
+						case Benchwell.KeyValueTypes.FILE:
+							var file = File.new_for_path (val);
+							if (!file.query_exists ()) {
+								Config.show_alert (this, @"$(val) doesn't exist");
+								return false;
+							}
+							if (file.query_file_type (0) == FileType.DIRECTORY) {
+								Config.show_alert (this, @"$(val) is a directory");
+								return false;
+							}
+
+							l_raw_body += @"$key=@$val";
+							break;
+						default:
+							l_raw_body += @"$key=$val";
+							break;
+					}
+				}
+
+				break;
+			default:
+				l_raw_body += Config.environments.selected.interpolate (body.get_text ());
+				break;
+		}
+
+		if (content_type != "")
+			l_headers_array += @"Content-Type: $(content_type)";
+		headers_array = l_headers_array;
+		raw_body = l_raw_body;
+		return true;
+	}
+
 	// https://github.com/giuliopaci/ValaBindingsDevelopment/blob/master/libcurl-example.vala
 	private void on_send () {
 		string mime;
@@ -645,118 +759,8 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		});
 	}
 
-	private bool build_request (
-		out string mime,
-		out string method,
-		out string url,
-		out string[] raw_body,
-		out string[] headers_array
-	) {
-		headers_array = null;
-		raw_body = null;
-		mime = mime_switch.combo.get_active_id ();
-
-		var handle = new Curl.EasyHandle ();
-
-		url = Config.environments.selected.interpolate (address.address.get_text ());
-		method = address.method_combo.get_active_id ();
-
-		var kv_params = query_params.get_kvs ();
-
-		// TODO: Improve URL parsing
-		var builder = new StringBuilder ();
-		if (url.index_of ("?") == -1 && kv_params.length > 0)
-			builder.append ("?");
-
-		for (var i = 0; i < kv_params.length; i++) {
-			var key = Config.environments.selected.interpolate (kv_params[i].key);
-			var val = Config.environments.selected.interpolate (kv_params[i].val);
-			key = handle.escape (key, key.length);
-			val = handle.escape (val, val.length);
-			builder.append (@"$key=$val");
-			if (i < kv_params.length - 1)
-				builder.append ("&");
-		}
-
-		if (url.index_of ("?") != -1 && !url.has_suffix("&"))
-			builder.prepend ("&");
-		url += builder.str;
-
-		var kv_headers = headers.get_kvs ();
-
-		// NOTE: can't tranfer ownership of null
-		string[] l_headers_array = null;
-		//l_headers_array += "X-Powered-by: Benchwell";
-
-		var content_type = "";
-		for (var i = 0; i < kv_headers.length; i++) {
-			var key = Config.environments.selected.interpolate (kv_headers[i].key);
-			var val = Config.environments.selected.interpolate (kv_headers[i].val);
-			// NOTE: delayed appending content-type because multipart/form-data needs to include the bounday
-			if (key.strip ().casefold () == "Content-Type".casefold ()) {
-				content_type = val;
-				continue;
-			}
-			l_headers_array += @"$(kv_headers[i].key): $(val)";
-		}
-
-		// BODY
-		string boundary = "";
-		string[] l_raw_body = null;
-		switch (mime_switch.combo.get_active_id ()) {
-			case "application/x-www-form-urlencoded":
-				var form_fields = body_fields.get_kvs ();
-
-				for (var i = 0; i < form_fields.length; i++) {
-					var key = Config.environments.selected.interpolate (form_fields[i].key);
-					var val = Config.environments.selected.interpolate (form_fields[i].val);
-					key = handle.escape (key, key.length);
-					val = handle.escape (val, val.length);
-					l_raw_body += @"$key=$val";
-				}
-
-				break;
-			case "multipart/form-data":
-				var form_fields = body_fields.get_kvs ();
-
-				for (var i = 0; i < form_fields.length; i++) {
-					var key = Config.environments.selected.interpolate (form_fields[i].key);
-					var val = Config.environments.selected.interpolate (form_fields[i].val);
-
-					switch (form_fields[i].kvtype) {
-						case Benchwell.KeyValueTypes.FILE:
-							var file = File.new_for_path (val);
-							if (!file.query_exists ()) {
-								Config.show_alert (this, @"$(val) doesn't exist");
-								return false;
-							}
-							if (file.query_file_type (0) == FileType.DIRECTORY) {
-								Config.show_alert (this, @"$(val) is a directory");
-								return false;
-							}
-
-							l_raw_body += @"$key=@$val";
-							break;
-						default:
-							l_raw_body += @"$key=$val";
-							break;
-					}
-				}
-
-				break;
-			default:
-				l_raw_body += Config.environments.selected.interpolate (body.get_text ());
-				break;
-		}
-
-		if (content_type != "")
-			l_headers_array += @"Content-Type: $(content_type)";
-		headers_array = l_headers_array;
-		raw_body = l_raw_body;
-		return true;
-	}
-
 	private async Result? perform (string method, string url, string body, owned Curl.SList headers) {
+		print (@"==========perform\n");
 		overlay.start ();
 		bool canceled = false;
 		var cancel_handler_id = overlay.cancel.connect (() => {
@@ -796,7 +800,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			}
 
 			handle.setopt (Curl.Option.URL, url);
-			handle.setopt (Curl.Option.FOLLOWLOCATION, true);
+			handle.setopt (Curl.Option.FOLLOWLOCATION, Config.settings.http_follow_redirect);
 			handle.setopt (Curl.Option.HTTPHEADER, headers);
 
 			buffer_s tmp = buffer_s(){ buffer = new uchar[0] };
