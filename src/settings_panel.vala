@@ -83,14 +83,11 @@ public class Benchwell.EditorSettings : Gtk.Grid {
 			column_spacing: 5
 		);
 
-		var label_alignment = Gtk.Align.START;
+		var look_and_feel_col = new Benchwell.SettingColumn (_("Look & Feel"));
+		look_and_feel_col.show ();
 
-		// LOOK & FEEL
-		var laf_label = new Gtk.Label (_("Look & Feel")) {
-			valign = label_alignment,
-			halign = label_alignment
-		};
-		laf_label.show ();
+		var editing_col = new Benchwell.SettingColumn (_("Editing"));
+		editing_col.show ();
 
 		// EDITOR THEME
 		var laf_theme_combo = new Gtk.ComboBoxText ();
@@ -100,19 +97,13 @@ public class Benchwell.EditorSettings : Gtk.Grid {
 		laf_theme_combo.set_active_id (Config.settings.editor_theme);
 		laf_theme_combo.show ();
 
-		var laf_theme_label = new Gtk.Label (_("Theme")) {
-			valign = label_alignment,
-			halign = label_alignment
-		};
+		var laf_theme_label = new Gtk.Label (_("Theme"));
 		laf_theme_label.show ();
-
+		look_and_feel_col.add (laf_theme_label, laf_theme_combo);
 		///////////////
 
 		// FONT
-		var laf_font_label = new Gtk.Label (_("Font")) {
-			valign = label_alignment,
-			halign = label_alignment
-		};
+		var laf_font_label = new Gtk.Label (_("Font"));
 		laf_font_label.show ();
 
 		var laf_font_btn = new Gtk.FontButton ();
@@ -120,85 +111,55 @@ public class Benchwell.EditorSettings : Gtk.Grid {
 			laf_font_btn.font = Config.settings.editor_font;
 		}
 		laf_font_btn.show ();
-
+		look_and_feel_col.add (laf_font_label, laf_font_btn);
 		///////
 
 		// EDITING
-		var editing_label = new Gtk.Label (_("Editing")) {
-			valign = label_alignment,
-			halign = label_alignment
-		};
-		editing_label.show ();
-
 		// TAB WIDTH
-		var editing_tabwidth_label = new Gtk.Label (_("Tab width")) {
-			valign = label_alignment,
-			halign = label_alignment
-		};
+		var editing_tabwidth_label = new Gtk.Label (_("Tab width"));
 		editing_tabwidth_label.show ();
 
 		var editing_tabwidth_spin = new Gtk.SpinButton.with_range (2, 8, 2);
 		editing_tabwidth_spin.value = (double) Config.settings.editor_tab_width;
 		editing_tabwidth_spin.show ();
+		editing_col.add (editing_tabwidth_label, editing_tabwidth_spin);
 		////////////
 
 		// SHOW LINE NUMBER
-		var editing_ln_label = new Gtk.Label (_("Show line number")) {
-			valign = label_alignment,
-			halign = label_alignment
-		};
+		var editing_ln_label = new Gtk.Label (_("Show line number"));
 		editing_ln_label.show ();
 
 		var editing_ln_sw = new Gtk.Switch ();
 		editing_ln_sw.state = Config.settings.editor_line_number;
+		editing_ln_sw.halign = Gtk.Align.START;
 		editing_ln_sw.show ();
+		editing_col.add (editing_ln_label, editing_ln_sw);
 		///////////////////
 
 		// HIGHLIGHT CURRENT LINE
-		var editing_hl_label = new Gtk.Label (_("Highlight current line")) {
-			valign = label_alignment,
-			halign = label_alignment
-		};
+		var editing_hl_label = new Gtk.Label (_("Highlight current line"));
 		editing_hl_label.show ();
 
 		var editing_hl_sw = new Gtk.Switch ();
 		editing_hl_sw.state = Config.settings.editor_highlight_line;
+		editing_hl_sw.halign = Gtk.Align.START;
 		editing_hl_sw.show ();
+		editing_col.add (editing_hl_label, editing_hl_sw);
 		/////////////////////////
 
 		// SPACES FOR TABS
-		var editing_notabs_label = new Gtk.Label (_("Insert spaces instead of tabs")) {
-			valign = label_alignment,
-			halign = label_alignment
-		};
+		var editing_notabs_label = new Gtk.Label (_("Insert spaces instead of tabs"));
 		editing_notabs_label.show ();
 
 		var editing_notabs_sw = new Gtk.Switch ();
 		editing_notabs_sw.state = Config.settings.editor_no_tabs;
+		editing_notabs_sw.halign = Gtk.Align.START;
 		editing_notabs_sw.show ();
+		editing_col.add (editing_notabs_label, editing_notabs_sw);
 		//////////////////
 
-		attach (laf_label, 0, 0, 2, 1);
-
-		attach (laf_theme_label, 1, 1, 1, 1);
-		attach (laf_theme_combo, 2, 1, 1, 1);
-
-		attach (laf_font_label, 1, 2, 1, 1);
-		attach (laf_font_btn, 2, 2, 1, 1);
-
-		attach (editing_label, 3, 0, 2, 1);
-
-		attach (editing_tabwidth_label, 4, 1, 1, 1);
-		attach (editing_tabwidth_spin, 5, 1, 1, 1);
-
-		attach (editing_ln_label, 4, 2, 1, 1);
-		attach (editing_ln_sw, 5, 2, 1, 1);
-
-		attach (editing_hl_label, 4, 3, 1, 1);
-		attach (editing_hl_sw, 5, 3, 1, 1);
-
-		attach (editing_notabs_label, 4, 4, 1, 1);
-		attach (editing_notabs_sw, 5, 4, 1, 1);
+		attach (look_and_feel_col, 0, 0, 1, 1);
+		attach (editing_col, 1, 0, 1, 1);
 
 		laf_theme_combo.changed.connect (() => {
 			Config.settings.editor_theme = laf_theme_combo.get_active_id ();
@@ -229,6 +190,38 @@ public class Benchwell.EditorSettings : Gtk.Grid {
 	}
 }
 
+public class Benchwell.SettingColumn : Gtk.Grid {
+	private int current_row = 1;
+
+	public class SettingColumn (string title) {
+		Object (
+			column_spacing: 5,
+			row_spacing: 5
+		);
+
+		var lbl = new Gtk.Label(title) {
+			valign = Gtk.Align.START,
+			halign = Gtk.Align.START
+		};
+		lbl.show ();
+		attach (lbl, 0, 0, 2, 1);
+	}
+
+	public new void add (Gtk.Widget? lbl, Gtk.Widget? w) {
+		if (lbl != null) {
+			lbl.valign = Gtk.Align.START;
+			lbl.halign = Gtk.Align.START;
+			attach (lbl, 1, current_row, 1, 1);
+		}
+
+		if (w != null)
+			attach (w, 2, current_row, 1, 1);
+
+		if (w != null || lbl != null)
+			current_row += 1;
+	}
+}
+
 public class Benchwell.HttpSettings : Gtk.Grid {
 	public weak Benchwell.ApplicationWindow window { get; construct; }
 	private Benchwell.ImporterInsomnia importer_insomnia;
@@ -242,20 +235,19 @@ public class Benchwell.HttpSettings : Gtk.Grid {
 
 		importer_insomnia = new Benchwell.ImporterInsomnia ();
 
-		var label_alignment = Gtk.Align.START;
-
 		// LOOK & FEEL
-		var laf_label = new Gtk.Label (_("Look & Feel")) {
-			valign = label_alignment,
-			halign = label_alignment
-		};
-		laf_label.show ();
+		var look_and_feel_col = new Benchwell.SettingColumn (_("Look & Feel"));
+		look_and_feel_col.show ();
+
+		var other_col = new Benchwell.SettingColumn (_("Requests"));
+		other_col.show ();
+
+		var import_col = new Benchwell.SettingColumn (_("Import"));
+		import_col.show ();
+
 
 		// FONT
-		var laf_font_label = new Gtk.Label (_("Font")) {
-			valign = label_alignment,
-			halign = label_alignment
-		};
+		var laf_font_label = new Gtk.Label (_("Font"));
 		laf_font_label.show ();
 
 		var laf_font_btn = new Gtk.FontButton ();
@@ -263,48 +255,30 @@ public class Benchwell.HttpSettings : Gtk.Grid {
 			laf_font_btn.font = Config.settings.http_font;
 		}
 		laf_font_btn.show ();
-
+		look_and_feel_col.add (laf_font_label, laf_font_btn);
 		///////
 
-		// OTHER
-		var other_label = new Gtk.Label (_("Requests")) {
-			valign = label_alignment,
-			halign = label_alignment
-		};
-		other_label.show ();
-		////////
-
 		// ACTIVATE ON SINGLE CLICK
-		var other_single_click_label = new Gtk.Label (_("Open on single click")) {
-			valign = label_alignment,
-			halign = label_alignment
-		};
+		var other_single_click_label = new Gtk.Label (_("Open on single click"));
 		other_single_click_label.show ();
 
 		var other_single_click_sw = new Gtk.Switch ();
 		other_single_click_sw.state = Config.settings.http_single_click_activate;
 		other_single_click_sw.show ();
+		other_col.add (other_single_click_label, other_single_click_sw);
 		//////////////////
 
 		// FOLLOW REDIRECT
-		var follow_redirect_click_label = new Gtk.Label (_("Follow redirect")) {
-			valign = label_alignment,
-			halign = label_alignment
-		};
+		var follow_redirect_click_label = new Gtk.Label (_("Follow redirect"));
 		follow_redirect_click_label.show ();
 
 		var follow_redirect_click_sw = new Gtk.Switch ();
 		follow_redirect_click_sw.state = Config.settings.http_follow_redirect;
 		follow_redirect_click_sw.show ();
+		other_col.add (follow_redirect_click_label, follow_redirect_click_sw);
 		//////////////////
 
 		// IMPORTERS
-		var other_import_label = new Gtk.Label (_("Import")) {
-			valign = label_alignment,
-			halign = label_alignment
-		};
-		other_import_label.show ();
-
 		var other_import_type = new Gtk.ComboBoxText ();
 		other_import_type.append ("insomnia", "Insomnia v4(JSON)");
 		other_import_type.set_active_id ("insomnia");
@@ -321,24 +295,28 @@ public class Benchwell.HttpSettings : Gtk.Grid {
 
 		var other_import_spinner = new Gtk.Spinner ();
 		other_import_spinner.show ();
+		import_col.add (other_import_type, other_import_file_btn);
+		import_col.add (other_import_spinner, null);
 		////////////
 
-		attach (laf_label, 0, 0, 2, 1);
+		attach (look_and_feel_col, 0, 0, 1, 1);
+		attach (other_col, 1, 0, 1, 1);
+		attach (import_col, 1, 1, 1, 1);
+		//attach (laf_label, 0, 0, 2, 1);
+		//attach (laf_font_label, 1, 1, 1, 1);
+		//attach (laf_font_btn, 2, 1, 1, 1);
 
-		attach (laf_font_label, 1, 1, 1, 1);
-		attach (laf_font_btn, 2, 1, 1, 1);
+		//attach (other_label, 3, 0, 2, 1);
+		//attach (other_single_click_label, 4, 1, 1, 1);
+		//attach (other_single_click_sw, 5, 1, 1, 1);
 
-		attach (other_label, 3, 0, 2, 1);
-		attach (other_single_click_label, 4, 1, 1, 1);
-		attach (other_single_click_sw, 5, 1, 1, 1);
+		//attach (follow_redirect_click_label, 4, 2, 1, 1);
+		//attach (follow_redirect_click_sw, 5, 2, 1, 1);
 
-		attach (follow_redirect_click_label, 4, 2, 1, 1);
-		attach (follow_redirect_click_sw, 5, 2, 1, 1);
-
-		attach (other_import_label, 3, 3, 2, 1);
-		attach (other_import_type, 4, 4, 1, 1);
-		attach (other_import_file_btn, 5, 4, 1, 1);
-		attach (other_import_spinner, 6, 4, 1, 1);
+		//attach (other_import_label, 3, 3, 2, 1);
+		//attach (other_import_type, 4, 4, 1, 1);
+		//attach (other_import_file_btn, 5, 4, 1, 1);
+		//attach (other_import_spinner, 6, 4, 1, 1);
 
 		laf_font_btn.font_set.connect (() => {
 			Config.settings.http_font = laf_font_btn.font;
@@ -411,76 +389,50 @@ public class Benchwell.PomodoroSettings : Gtk.Grid {
 			column_spacing: 5
 		);
 
-		var label_alignment = Gtk.Align.START;
-
-		var timings_label = new Gtk.Label (_("Timings")) {
-			valign = label_alignment,
-			halign = label_alignment
-		};
-		timings_label.show ();
+		var timing_col = new Benchwell.SettingColumn (_("Timings"));
+		timing_col.show ();
 
 		// WORK DURATION
-		var duration_label = new Gtk.Label (_("Work session duration")) {
-			valign = label_alignment,
-			halign = label_alignment
-		};
+		var duration_label = new Gtk.Label (_("Work session duration"));
 		duration_label.show ();
 
 		var duration_spin = new Gtk.SpinButton.with_range (20, 60, 5);
 		duration_spin.value = (double)Config.settings.pomodoro_duration / 60;
 		duration_spin.show ();
+		timing_col.add (duration_label, duration_spin);
 		////////////////
 
 		// BREAK DURATION
-		var break_duration_label = new Gtk.Label (_("Short break duration")) {
-			valign = label_alignment,
-			halign = label_alignment
-		};
+		var break_duration_label = new Gtk.Label (_("Short break duration"));
 		break_duration_label.show ();
 
 		var break_duration_spin = new Gtk.SpinButton.with_range (5, 10, 1);
 		break_duration_spin.value = (double)Config.settings.pomodoro_break_duration / 60;
 		break_duration_spin.show ();
+		timing_col.add (break_duration_label, break_duration_spin);
 		/////////////////
 
 		// LONG BREAK DURATION
-		var long_break_duration_label = new Gtk.Label (_("Long break duration")) {
-			valign = label_alignment,
-			halign = label_alignment
-		};
+		var long_break_duration_label = new Gtk.Label (_("Long break duration"));
 		long_break_duration_label.show ();
 
 		var long_break_duration_spin = new Gtk.SpinButton.with_range (10, 20, 1);
 		long_break_duration_spin.value = (double)Config.settings.pomodoro_long_break_duration / 60;
 		long_break_duration_spin.show ();
+		timing_col.add (long_break_duration_label, long_break_duration_spin);
 		/////////////////
 
 		// SET COUNT
-		var set_count_label = new Gtk.Label (_("Sets before long break")) {
-			valign = label_alignment,
-			halign = label_alignment
-		};
+		var set_count_label = new Gtk.Label (_("Sets before long break"));
 		set_count_label.show ();
 
 		var set_count_spin = new Gtk.SpinButton.with_range (10, 20, 1);
 		set_count_spin.value = (double)Config.settings.pomodoro_set_count;
 		set_count_spin.show ();
+		timing_col.add (set_count_label, set_count_spin);
 		/////////////////
 
-		attach (timings_label, 0, 0, 2, 1);
-
-		attach (duration_label, 1, 1, 1, 1);
-		attach (duration_spin, 2, 1, 1, 1);
-
-		attach (break_duration_label, 1, 2, 1, 1);
-		attach (break_duration_spin, 2, 2, 1, 1);
-
-		attach (long_break_duration_label, 1, 3, 1, 1);
-		attach (long_break_duration_spin, 2, 3, 1, 1);
-
-		attach (set_count_label, 1, 4, 1, 1);
-		attach (set_count_spin, 2, 4, 1, 1);
-
+		attach (timing_col, 0, 0, 2, 1);
 
 		duration_spin.changed.connect (() => {
 			Config.settings.pomodoro_duration = (int)duration_spin.value*60;
