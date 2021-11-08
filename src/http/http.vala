@@ -416,16 +416,23 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		dialog.get_content_area ().add (selector);
 		ok_button.sensitive = false;
 		selector.changed.connect (() => {
-			ok_button.sensitive = selector.get_selected_collection_id () != null && selector.get_name () != "";
+			ok_button.sensitive = selector.collection != null && selector.get_name () != "";
 		});
 
 		var resp = (Gtk.ResponseType) dialog.run ();
 		if (resp != Gtk.ResponseType.OK) {
+			dialog.destroy ();
 			return;
 		}
 
-		var collection_id = selector.get_selected_collection_id ();
-		var folder_id = selector.get_selected_item_id ();
+		int64? collection_id = null;
+		if (selector.collection != null) {
+			collection_id = selector.collection.id;
+		}
+		int64? folder_id = null;
+		if (selector.folder != null) {
+			folder_id = selector.folder.id;
+		}
 		var name = selector.get_name ();
 		dialog.destroy ();
 
@@ -760,7 +767,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	}
 
 	private async Result? perform (string method, string url, string body, owned Curl.SList headers) {
-		print (@"==========perform\n");
 		overlay.start ();
 		bool canceled = false;
 		var cancel_handler_id = overlay.cancel.connect (() => {
