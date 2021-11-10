@@ -240,6 +240,16 @@ public class Benchwell.Http.SideBar : Gtk.Box {
 		});
 
 		treeview.key_press_event.connect ((widget, event) => {
+			if (event.keyval == Gdk.Key.F2) {
+				Gtk.TreeIter iter;
+				treeview.get_selection ().get_selected (null, out iter);
+
+				var path = treeview.model.get_path (iter);
+				name_renderer.editable = true;
+				treeview.set_cursor (path, name_column, true);
+				return true;
+			}
+
 			if (event.keyval != Gdk.Key.f) {
 				return false;
 			}
