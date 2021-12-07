@@ -25,6 +25,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	//public Gtk.ComboBoxText     mime;
 	public Benchwell.KeyValues  headers;
 	public Benchwell.KeyValues  query_params;
+	public Gtk.TextView  note;
 	//////////
 
 	// response
@@ -98,6 +99,17 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		var headers_label = new Gtk.Label (_("Headers"));
 		headers_label.show ();
 
+		note = new Gtk.TextView ();
+		note.show ();
+
+		var notesw = new Gtk.ScrolledWindow (null, null);
+		notesw.add (note);
+		notesw.show ();
+
+		var note_label = new Gtk.Label (_("Note"));
+		note_label.show ();
+
+
 		mime_switch = new Benchwell.ComboTab (_("Body"), true);
 		mime_switch.combo.append("plain/text", "Other");
 		mime_switch.combo.append("application/json", "JSON");
@@ -112,6 +124,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		body_notebook.append_page (body_stack, mime_switch);
 		body_notebook.append_page (query_paramsw, params_label);
 		body_notebook.append_page (headersw, headers_label);
+		body_notebook.append_page (notesw, note_label);
 		body_notebook.show ();
 
 		body_notebook.switch_page.connect ((page, page_num) => {
@@ -343,6 +356,9 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		item = new Benchwell.HttpItem ();
 		headers.add (item.add_header ());
 		query_params.add (item.add_param ());
+		note.buffer.changed.connect (() => {
+			item.description = note.buffer.text;
+		});
 	}
 
 	private void on_mime_switch_change () {
@@ -875,6 +891,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		history_popover.disconnect_from_item ();
 		history_popover.item = this.item;
 		title = this.item.name;
+		note.get_buffer ().set_text (item.description == null ? "" : item.description);
 
 		mime_switch.combo.set_active_id (item.mime);
 

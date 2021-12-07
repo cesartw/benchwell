@@ -626,7 +626,7 @@ public class Benchwell.HttpItem : Object {
 			string errmsg = "";
 
 			// request
-			var query = """SELECT ifnull(method,"GET"), ifnull(url,""), ifnull(body, ""), ifnull(mime,"")
+			var query = """SELECT ifnull(method,"GET"), ifnull(url,""), ifnull(body, ""), ifnull(mime,""), ifnull(description,"")
 					FROM http_items
 					WHERE rowid = %lld""".printf (id);
 			var ec = Config.db.exec (query, (n_columns, values, column_names) => {
@@ -634,6 +634,7 @@ public class Benchwell.HttpItem : Object {
 				url = values[1];
 				body = values[2];
 				mime = values[3];
+				description = values[4];
 				return 0;
 			}, out errmsg);
 			if ( ec != Sqlite.OK ){
