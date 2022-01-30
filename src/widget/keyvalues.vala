@@ -40,7 +40,7 @@ public class Benchwell.KeyValues : Gtk.Box {
 
 		get_children ().foreach ( (child) => {
 			var kv = child as Benchwell.KeyValue;
-			if (kv.entry_key.get_text () == "" || !kv.switch_enabled.state) {
+			if (kv.entry_key.get_text () == "" || !kv.switch_enabled.active) {
 				return;
 			}
 
@@ -115,14 +115,14 @@ public class Benchwell.KeyValue : Gtk.Box {
 		set {
 			enabled_update = false;
 			_keyvalue = value;
+			switch_enabled.active = true;
 			if (_keyvalue != null) {
 				if (_keyvalue.key != null)
 					entry_key.text = _keyvalue.key;
 				if (_keyvalue.val != null)
 					entry_val.text = _keyvalue.val;
-				switch_enabled.state = _keyvalue.enabled;
+				switch_enabled.active = _keyvalue.enabled;
 			}
-			switch_enabled.state = true;
 			enabled_update = true;
 		}
 	}
@@ -189,7 +189,7 @@ public class Benchwell.KeyValue : Gtk.Box {
 		switch_enabled = new Gtk.Switch ();
 		switch_enabled.valign = Gtk.Align.CENTER;
 		switch_enabled.vexpand = false;
-		switch_enabled.state = true;
+		switch_enabled.active = true;
 		switch_enabled.show ();
 		sgbtn.add_widget (switch_enabled);
 
@@ -298,7 +298,7 @@ public class Benchwell.KeyValue : Gtk.Box {
 
 		keyvalue.key = entry_key.text;
 		keyvalue.val = entry_val.text;
-		keyvalue.enabled = switch_enabled.state;
+		keyvalue.enabled = switch_enabled.active;
 		changed ();
 	}
 
@@ -310,7 +310,7 @@ public class Benchwell.KeyValue : Gtk.Box {
 			return false;
 		}
 
-		keyvalue.enabled = switch_enabled.state;
+		keyvalue.enabled = switch_enabled.active;
 		changed ();
 
 		return false;

@@ -405,6 +405,10 @@ public class Benchwell.Http.SideBar : Gtk.Box {
 		return val.get_object () as Benchwell.HttpItem;
 	}
 
+	public void touch (Benchwell.HttpItem item) {
+		store.set_value (loaded_iter, Benchwell.Http.Columns.ITEM, item);
+	}
+
 	private void on_clone_request () {
 		Gtk.TreeIter iter;
 		var selected_item = get_selected_item (out iter);
@@ -517,6 +521,7 @@ public class Benchwell.Http.SideBar : Gtk.Box {
 		store.set_value (iter, Benchwell.Http.Columns.TEXT, new_text);
 	}
 
+	private Gtk.TreeIter loaded_iter;
 	private void on_load_item () {
 		Gtk.TreeIter iter;
 		var selected_item = get_selected_item (out iter);
@@ -541,6 +546,7 @@ public class Benchwell.Http.SideBar : Gtk.Box {
 			return;
 		}
 
+		loaded_iter = iter;
 		item_activated (selected_item, iter);
 	}
 

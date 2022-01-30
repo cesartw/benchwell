@@ -38,7 +38,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	///////////
 
 	public Benchwell.HttpItem? item;
-	public weak Gtk.TreeIter? item_iter;
 
 	private bool loading = false;
 	private Regex kvrg;
@@ -413,11 +412,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	}
 
 	private void on_request_changed () {
-		if (item_iter == null)
-			return;
-
-		// NOTE: hacky way to force external item changes to be updated in the sidebar
-		sidebar.store.set_value (item_iter, Benchwell.Http.Columns.ITEM, item);
+		sidebar.touch (item);
 	}
 
 	private void on_save_as () {
@@ -879,7 +874,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		Config.settings.http_item_id = item.id;
 
 		this.item = item;
-		this.item_iter = iter;
 		try {
 			this.item.load_full_item ();
 		} catch (ConfigError err) {
@@ -956,7 +950,6 @@ public class Benchwell.Http.Http : Gtk.Paned {
 
 		if (item.id == removed_item.id) {
 			item = null;
-			item_iter = null;
 			title = _("HTTP");
 
 			address.address.text = "";

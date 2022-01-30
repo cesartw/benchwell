@@ -629,7 +629,6 @@ public class Benchwell.Database.Table : Gtk.Box {
 		var renderer = new Gtk.CellRendererText ();
 		renderer.editable = !Config.settings.db_edit_panel;
 		renderer.xpad = 10;
-		renderer.height = 23;
 		renderer.cell_background = Benchwell.HighlightColors.PKHL.to_string ();
 		renderer.cell_background_set = column.pk;
 		renderer.ellipsize = Pango.EllipsizeMode.END;
@@ -637,8 +636,6 @@ public class Benchwell.Database.Table : Gtk.Box {
 		var _column = new Gtk.TreeViewColumn.with_attributes (column.name.replace ("_", "__"), renderer, "text", column_index);
 		_column.resizable = true;
 		_column.clickable = true;
-		_column.min_width = 85;
-		//_column.max_width = 250;
 
 		_column.clicked.connect (() => {
 			if ( !_column.sort_indicator ) {
@@ -779,7 +776,7 @@ public class Benchwell.Database.Table : Gtk.Box {
 			if (service.columns[i].pk) {
 				continue;
 			}
-			store.set_value (iter, i, data[i]);
+			store.set_value (iter, i, data[i].val);
 		}
 		store.set_value (iter, service.columns.length, 1);
 		selection.select_iter (iter);
