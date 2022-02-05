@@ -700,10 +700,6 @@ namespace Benchwell {
 					return false;
 				}
 
-				//for (var i = 0; i < tokens.length; i++) {
-				//print (@"=======\"$((string) tokens[i].chars)\" $(tokens[i].type)\n");
-				//}
-
 				var ok = tokens[tokens.length - 1].type == TokenType.FROM;
 
 				if (!ok && tokens.length > 1) {
@@ -717,7 +713,6 @@ namespace Benchwell {
 					}
 				}
 
-				//print (@"=======ok $(ok)\n");
 				return ok;
 			}
 

@@ -506,10 +506,21 @@ public class Benchwell.Http.Http : Gtk.Paned {
 			builder.append ("\n");
 			switch (mime) {
 				case "application/x-www-form-urlencoded":
-					for (var i = 0; i < body.length; i++) {
-						var b = body[0].replace ("'", "\\'");
-						builder.append (@"     --data '$(b)'\\\n");
+					var form_fields = body_fields.get_kvs ();
+					var handle = new Curl.EasyHandle ();
+
+					var builder_data = new StringBuilder ();
+					for (var i = 0; i < form_fields.length; i++) {
+						if (i != 0) {
+							builder_data.append("&");
+						}
+						var key = Config.environments.selected.interpolate (form_fields[i].key);
+						var val = Config.environments.selected.interpolate (form_fields[i].val);
+						key = handle.escape (key, key.length);
+						val = handle.escape (val, val.length);
+						builder_data.append (@"$key=$val");
 					}
+					builder.append (@"     --data '$(builder_data.str)'\\\n");
 					break;
 				case "multipart/form-data":
 					for (var i = 0; i < body.length; i++) {

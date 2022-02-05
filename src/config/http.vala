@@ -678,6 +678,7 @@ public class Benchwell.HttpItem : Object {
 				var kv = new Benchwell.HttpKv ();
 
 				kv.touch_without_save (() => {
+
 					kv.id = int64.parse (values[0]);
 					kv.key = values[1];
 					kv.val = values[2];
@@ -740,6 +741,7 @@ public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
 	public HttpKv () {
 		Object ();
 
+		enabled = true;
 		kvtype = Benchwell.KeyValueTypes.STRING;
 		notify["key"].connect (on_save);
 		notify["val"].connect (on_save);
@@ -780,7 +782,12 @@ public class Benchwell.HttpKv : Object, Benchwell.KeyValueI {
 		if (key == null) {
 			return;
 		}
+
 		if (type == null) {
+			return;
+		}
+
+		if (http_item_id == 0) {
 			return;
 		}
 

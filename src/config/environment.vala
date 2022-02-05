@@ -146,6 +146,9 @@ public class Benchwell.Environment : Object {
 					var to_replace = info.fetch (i-1);
 
 					foreach (var envvar in variables) {
+						if (!envvar.enabled)
+							continue;
+
 						if (envvar.key == var_name) {
 							result = result.replace (to_replace, envvar.val);
 						}
