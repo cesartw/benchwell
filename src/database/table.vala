@@ -19,6 +19,7 @@ public class Benchwell.Database.Table : Gtk.Box {
 	public Gtk.Menu menu;
 	public Gtk.MenuItem clone_menu;
 	public Gtk.MenuItem copy_insert_menu;
+	public Gtk.MenuItem copy_json_menu;
 	public Gtk.MenuItem copy_menu;
 	public Gtk.ListStore store;
 
@@ -80,13 +81,17 @@ public class Benchwell.Database.Table : Gtk.Box {
 		clone_menu = new Benchwell.MenuItem (_("Clone row"), "copy");
 		clone_menu.show ();
 
-		copy_insert_menu = new Benchwell.MenuItem (_("Copy insert"), "copy");
+		copy_insert_menu = new Benchwell.MenuItem (_("Copy INSERT"), "copy");
 		copy_insert_menu.show ();
+
+		copy_json_menu = new Benchwell.MenuItem (_("Copy JSON"), "copy");
+		copy_json_menu.show ();
 
 		copy_menu = new Benchwell.MenuItem (_("Copy value"), "copy");
 		copy_menu.show ();
 
 		menu.add (clone_menu);
+		menu.add (copy_json_menu);
 		menu.add (copy_insert_menu);
 		menu.add (copy_menu);
 
@@ -579,6 +584,31 @@ public class Benchwell.Database.Table : Gtk.Box {
 		return values;
 	}
 
+	public List<List<Benchwell.Column?>>? get_multiple_selected_data () {
+		var selection = table.get_selection ();
+		if (selection.count_selected_rows () == 0)
+			return null;
+
+		var rows = new List<List<Benchwell.Column?>> ();
+
+		selection.selected_foreach ( (model, path, iter) => {
+			List<Benchwell.Column?> row = null;
+			for (var i = 0; i < service.columns.length; i++) {
+				GLib.Value val;
+				store.get_value (iter, i, out val);
+
+				var col = new Benchwell.Column ();
+				col.val = val.get_string ();
+				col.coldef = service.columns[i];
+				row.append ((owned) col);
+			}
+
+			rows.append ((owned) row);
+		});
+
+		return (owned) rows;
+	}
+
 	public Benchwell.Column[]? get_data_at (Gtk.TreeIter iter) {
 		var values = new Benchwell.Column[service.columns.length];
 		for (var i = 0; i < service.columns.length; i++) {
@@ -632,6 +662,7 @@ public class Benchwell.Database.Table : Gtk.Box {
 		renderer.cell_background = Benchwell.HighlightColors.PKHL.to_string ();
 		renderer.cell_background_set = column.pk;
 		renderer.ellipsize = Pango.EllipsizeMode.END;
+		renderer.height = 40;
 
 		var _column = new Gtk.TreeViewColumn.with_attributes (column.name.replace ("_", "__"), renderer, "text", column_index);
 		_column.resizable = true;

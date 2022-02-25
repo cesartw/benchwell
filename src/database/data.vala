@@ -70,6 +70,7 @@ public class Benchwell.Database.Data : Gtk.Paned {
 		result_view.table.btn_next.clicked.connect (on_next_page);
 
 		result_view.table.copy_insert_menu.activate.connect (on_copy_insert);
+		result_view.table.copy_json_menu.activate.connect (on_copy_json);
 
 		tables.key_press_event.connect ( (e) => {
 			if (e.state != Gdk.ModifierType.CONTROL_MASK || e.keyval != Gdk.Key.f) {
@@ -107,6 +108,43 @@ public class Benchwell.Database.Data : Gtk.Paned {
 		var st = service.connection.get_insert_statement (service.table_def.name, data);
 		var cb = Gtk.Clipboard.get_default (Gdk.Display.get_default ());
 		cb.set_text (st, st.length);
+	}
+
+	private void on_copy_json () {
+		var rows = result_view.table.get_multiple_selected_data ();
+		if (rows == null) {
+			return;
+		}
+
+		var array = new Json.Array ();
+
+		rows.foreach( (row) => {
+			var rowjson = new Json.Object ();
+			row.foreach ((col) => {
+				switch (col.coldef.ttype) {
+				case ColType.FLOAT:
+					rowjson.set_double_member (col.coldef.name, double.parse (col.val));
+					break;
+				case ColType.INT:
+					rowjson.set_int_member (col.coldef.name, int.parse (col.val));
+					break;
+				case ColType.BOOLEAN:
+					rowjson.set_boolean_member (col.coldef.name, bool.parse (col.val));
+					break;
+				default:
+					rowjson.set_string_member (col.coldef.name, col.val);
+					break;
+				}
+			});
+			array.add_object_element (rowjson);
+		});
+
+		var json = new Json.Node (Json.NodeType.ARRAY);
+		json.set_array (array);
+
+		var cb = Gtk.Clipboard.get_default (Gdk.Display.get_default ());
+		var result = Json.to_string (json, true);
+		cb.set_text (result, result.length);
 	}
 
 	private void on_show_schema () {

@@ -25,7 +25,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 	//public Gtk.ComboBoxText     mime;
 	public Benchwell.KeyValues  headers;
 	public Benchwell.KeyValues  query_params;
-	public Gtk.TextView  note;
+	public Benchwell.SourceView  note;
 	//////////
 
 	// response
@@ -98,7 +98,7 @@ public class Benchwell.Http.Http : Gtk.Paned {
 		var headers_label = new Gtk.Label (_("Headers"));
 		headers_label.show ();
 
-		note = new Gtk.TextView ();
+		note = new Benchwell.SourceView ();
 		note.show ();
 
 		var notesw = new Gtk.ScrolledWindow (null, null);
